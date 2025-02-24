@@ -1,0 +1,11 @@
+﻿@model Simone.ViewModels.RegistroViewModel
+<h2>Registro</h2>
+<form asp-action="Registro">
+    <label>Nombre Completo</label>
+    <input asp-for="Nombre" class="form-control" />
+    <label>Email</label>
+    <input asp-for="Email" class="form-control" />
+    <label>Contraseña</label>
+    <input asp-for="Password" class="form-control" type="password" />
+    <button type="submit" class="btn btn-success">Registrar</button>
+</form>

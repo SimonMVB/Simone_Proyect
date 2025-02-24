@@ -1,0 +1,214 @@
+﻿/* ============================= */
+/* 🔹 GENERAL STYLES */
+/* ============================= */
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+@media (max-width: 768px) {
+    html {
+        font-size: 14px;
+    }
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    background-color: #f8f9fa;
+    margin-bottom: 60px;
+    transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* ============================= */
+/* 🔹 NAVBAR */
+/* ============================= */
+.navbar {
+    transition: all 0.3s ease-in-out;
+    font-weight: 500;
+}
+
+    .navbar .navbar-brand {
+        font-size: 1.5rem;
+        font-weight: bold;
+        transition: color 0.3s ease-in-out;
+    }
+
+    .navbar .nav-link {
+        transition: color 0.3s ease-in-out;
+    }
+
+        .navbar .nav-link:hover {
+            color: #258cfb !important;
+        }
+
+.navbar-toggler {
+    border: none;
+}
+
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+
+/* ============================= */
+/* 🔹 BUTTONS */
+/* ============================= */
+.btn {
+    transition: all 0.3s ease-in-out;
+    font-weight: 600;
+}
+
+.btn-primary {
+    background-color: #258cfb;
+    border: none;
+}
+
+    .btn-primary:hover {
+        background-color: #1d6edb;
+    }
+
+.btn:focus,
+.btn:active:focus,
+.btn-link.nav-link:focus,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(37, 140, 251, 0.5);
+}
+
+/* ============================= */
+/* 🔹 FOOTER */
+/* ============================= */
+.footer {
+    background: #222;
+    color: white;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+    .footer a {
+        color: #258cfb;
+        transition: color 0.3s ease-in-out;
+    }
+
+        .footer a:hover {
+            color: #1d6edb;
+        }
+
+/* ============================= */
+/* 🔹 FORMULARIOS Y CAMPOS DE ENTRADA */
+/* ============================= */
+.form-control {
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    transition: all 0.3s ease-in-out;
+}
+
+    .form-control:focus {
+        border-color: #258cfb;
+    }
+
+/* ============================= */
+/* 🔹 TABLAS */
+/* ============================= */
+.table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    background: white;
+}
+
+    .table th {
+        background: #258cfb;
+        color: white;
+        text-align: left;
+        padding: 10px;
+    }
+
+    .table td {
+        padding: 10px;
+    }
+
+    .table tbody tr:nth-child(odd) {
+        background: #f2f2f2;
+    }
+
+    .table tbody tr:hover {
+        background: #d4e3fc;
+    }
+
+/* ============================= */
+/* 🔹 ALERTS (MENSAJES DE ÉXITO Y ERROR) */
+/* ============================= */
+.alert {
+    border-radius: 5px;
+    padding: 15px;
+    font-weight: 500;
+}
+
+.alert-success {
+    background-color: #d1e7dd;
+    border: 1px solid #badbcc;
+    color: #0f5132;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border: 1px solid #f5c2c7;
+    color: #842029;
+}
+
+/* ============================= */
+/* 🔹 ANIMACIONES SUAVES */
+/* ============================= */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* ============================= */
+/* 🔹 Estilos para el Banner */
+/* ============================= */
+.banner-img {
+    height: 500px;
+    object-fit: cover;
+}
+
+.carousel-caption {
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 10px;
+}
+
+/* ============================= */
+/* 🔹 Sección de Promoción */
+/* ============================= */
+.bg-black {
+    background-color: #000 !important;
+}
+
+/* ============================= */
+/* 🔹 Sección de Productos Destacados */
+/* ============================= */
+.card img {
+    height: 350px;
+    object-fit: cover;
+}
+
+.card-body {
+    font-size: 18px;
+}

@@ -1,0 +1,33 @@
+﻿<script>
+    // Evita cargar los scripts si jQuery ya está definido
+    if (typeof jQuery === "undefined") {
+        document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
+    }
+</script>
+
+<!-- Carga de jQuery Validation desde CDN con fallback local -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js" defer></script>
+<script>
+    if (typeof $.validator === "undefined") {
+        document.write('<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"><\/script>');
+    }
+</script>
+
+<!-- Carga de jQuery Validation Unobtrusive desde CDN con fallback local -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js" defer></script>
+<script>
+    if (typeof $.validator.unobtrusive === "undefined") {
+        document.write('<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"><\/script>');
+    }
+</script>
+
+<script>
+    $(document).ready(function () {
+        // Habilitar validación unobtrusive en formularios dinámicos
+        var $form = $("form");
+        if ($form.length) {
+            $form.removeData("validator").removeData("unobtrusiveValidation");
+            $.validator.unobtrusive.parse($form);
+        }
+    });
+</script>

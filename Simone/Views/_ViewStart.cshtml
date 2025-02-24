@@ -1,0 +1,14 @@
+﻿@{
+    // Usa el layout principal por defecto
+    Layout = "_Layout";
+
+    // Si la vista pertenece a "Cuenta" (Login, Registro), usa otro layout más simple
+    var path = Context.Request.Path.ToString().ToLower();
+
+    if (path.Contains("/cuenta/") || path.Contains("/auth/"))
+    {
+        Layout = "_LayoutCuenta";
+    }
+
+    // Si en el futuro necesitas más layouts para admin o tienda, puedes agregarlos aquí
+}

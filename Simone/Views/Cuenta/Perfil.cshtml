@@ -1,0 +1,24 @@
+﻿@model Simone.Models.Usuario
+<h2>Mi Perfil</h2>
+
+@if (TempData["MensajeExito"] != null)
+{
+    <div class="alert alert-success">@TempData["MensajeExito"]</div>
+}
+
+@if (TempData["MensajeError"] != null)
+{
+    <div class="alert alert-danger">@TempData["MensajeError"]</div>
+}
+
+<form asp-action="Perfil" method="post">
+    <div class="mb-3">
+        <label>Email</label>
+        <input asp-for="Email" class="form-control" readonly />
+    </div>
+    <div class="mb-3">
+        <label>Nombre Completo</label>
+        <input asp-for="NombreCompleto" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Actualizar</button>
+</form>
