@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
@@ -7,6 +8,8 @@ namespace Simone.Models
         public int ReseñaID { get; set; }  // Clave primaria
         public int ProductoID { get; set; }  // Clave foránea con Productos
         public int ClienteID { get; set; }  // Clave foránea con Clientes
+        [ForeignKey("ClienteID")]
+        public Cliente Cliente { get; set; }
         public int? Calificacion { get; set; }  // Calificación del producto (puede ser nulo)
         public string? Comentario { get; set; }  // Puede ser nulo
         public DateTime? FechaReseña { get; set; }  // Puede ser nulo

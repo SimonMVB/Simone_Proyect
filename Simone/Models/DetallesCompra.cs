@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 using Simone.Models;
 
 namespace Simone.Models
@@ -12,10 +13,10 @@ namespace Simone.Models
         public decimal PrecioUnitario { get; set; }  // Precio por unidad
         public decimal? Subtotal { get; set; }  // Puede ser nulo
 
-        // Relación con Compras
+        [ForeignKey("CompraID")]
         public Compras Compra { get; set; }
 
-        // Relación con Productos
+        [ForeignKey("ProductoID")]
         public Productos Producto { get; set; }
     }
 }

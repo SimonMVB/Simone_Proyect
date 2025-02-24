@@ -32,6 +32,10 @@ namespace Simone.Models
 
         // Relación con Pedidos (Un Cliente puede tener muchos Pedidos)
         public ICollection<Pedidos>? Pedidos { get; set; }
-        public object Reseñas { get; internal set; }
+        public ICollection<Reseñas> Reseñas { get; set; }
+
+
+
+
     }
 }

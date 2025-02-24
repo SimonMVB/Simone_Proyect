@@ -1,18 +1,26 @@
 ﻿using System;
-using Simone.Models;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class ClientesProgramas
     {
-        public int ClienteID { get; set; }  // Clave foránea con Clientes
+        [Key]
+        [Column(Order = 1)]
+        public int ClienteID { get; set; }  // Clave foránea con Cliente
+
+        [Key]
+        [Column(Order = 2)]
         public int ProgramaID { get; set; }  // Clave foránea con ProgramasFidelizacion
+
         public DateTime? FechaInicio { get; set; }  // Puede ser nulo
 
-        // Relación con Clientes
-        public Cliente Clientes { get; set; }
+        // Relaciones
+        [ForeignKey("ClienteID")]
+        public virtual Cliente Cliente { get; set; }
 
-        // Relación con ProgramasFidelizacion
-        public ProgramasFidelizacion Programa { get; set; }
+        [ForeignKey("ProgramaID")]
+        public virtual ProgramasFidelizacion Programa { get; set; }
     }
 }

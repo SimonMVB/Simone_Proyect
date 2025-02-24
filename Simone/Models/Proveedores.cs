@@ -14,5 +14,6 @@ namespace Simone.Models
 
         // Relación con Productos
         public ICollection<Productos> Productos { get; set; }
+        public object Compras { get; internal set; }
     }
 }

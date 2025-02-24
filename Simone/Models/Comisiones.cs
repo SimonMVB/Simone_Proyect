@@ -1,22 +1,26 @@
 using System;
-using Simone.Models;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class Comisiones
     {
-        public int ComisionID { get; set; }  // Clave primaria
-        public int VentaID { get; set; }  // Clave foránea con Ventas
-        public int EmpleadoID { get; set; }  // Clave foránea con Empleados
-        public decimal PorcentajeComision { get; set; }  // Porcentaje de comisión
-        public decimal MontoComision { get; set; }  // Monto total de la comisión
-        public DateTime FechaGeneracion { get; set; }  // Fecha en que se generó la comisión
-        public bool Pagada { get; set; }  // Indica si la comisión ha sido pagada
+        [Key] // Definir clave primaria
+        public int ComisionID { get; set; }
 
-        // Relación con Ventas
-        public Ventas Venta { get; set; }
+        public int VentaID { get; set; }
+        public int EmpleadoID { get; set; }
+        public decimal PorcentajeComision { get; set; }
+        public decimal MontoComision { get; set; }
+        public DateTime FechaGeneracion { get; set; }
+        public bool Pagada { get; set; }
 
-        // Relación con Empleados
-        public Empleados Empleado { get; set; }
+        // Relaciones
+        [ForeignKey("VentaID")]
+        public virtual Ventas Venta { get; set; }
+
+        [ForeignKey("EmpleadoID")]
+        public virtual Empleados Empleado { get; set; }
     }
 }

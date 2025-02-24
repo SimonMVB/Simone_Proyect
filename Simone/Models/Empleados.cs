@@ -16,8 +16,10 @@ namespace Simone.Models
 
         // Relación con Roles
         public Roles Rol { get; set; }
-        public object Comisiones { get; internal set; }
-        public object Gastos { get; internal set; }
+        public ICollection<Comisiones> Comisiones { get; set; } = new List<Comisiones>();
+
+        public ICollection<Gastos> Gastos { get; set; } = new List<Gastos>();
+
     }
 }
 

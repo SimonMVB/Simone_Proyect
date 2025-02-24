@@ -28,7 +28,11 @@ namespace Simone.Models
         public ICollection<DetallesPedido> DetallesPedido { get; set; }
         public ICollection<DetallesCompra> DetallesCompra { get; set; }
         public ICollection<Reseñas> Reseñas { get; set; }
-        public object FechaAgregado { get; internal set; }
-        public object CarritoDetalles { get; internal set; }
+        public DateTime FechaAgregado { get; set; } // Si es obligatorio
+                                                    
+        
+
+        public ICollection<CarritoDetalle> CarritoDetalles { get; set; } = new List<CarritoDetalle>();
+
     }
 }

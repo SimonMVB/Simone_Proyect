@@ -29,6 +29,6 @@ namespace Simone.Models
 
         // Relación con DetalleVentas
         public ICollection<DetalleVentas> DetallesVenta { get; set; }
-        public object DetalleVentas { get; internal set; }
+        public virtual ICollection<DetalleVentas> DetalleVentas { get; set; } = new List<DetalleVentas>();
     }
 }

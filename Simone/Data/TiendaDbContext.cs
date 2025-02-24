@@ -11,7 +11,7 @@ namespace Simone.Data
         }
 
         // ✅ Definición de todas las tablas de la base de datos
-        public DbSet<ClientesProgramas> AsistenciaEmpleados { get; set; }
+        public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
         public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
         public DbSet<Carrito> Carrito { get; set; }
         public DbSet<CarritoDetalle> CarritoDetalle { get; set; }
@@ -55,33 +55,35 @@ namespace Simone.Data
                 .HasForeignKey(cd => cd.CarritoID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            //modelBuilder.Entity<CarritoDetalle>()
-            //    .HasOne(cd => cd.Producto)
-            //    .WithMany(p => p.CarritoDetalles)
-            //    .HasForeignKey(cd => cd.ProductoID)
-            //    .OnDelete(DeleteBehavior.Cascade);
-
-            // ✅ Relación: DetalleVentas con Ventas y Producto
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Producto)
+                .WithMany(p => p.CarritoDetalles)
+                .HasForeignKey(cd => cd.ProductoID)
+                .OnDelete(DeleteBehavior.Cascade);
             modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Venta)
-                .WithMany(v => v.DetallesVenta)
-                .HasForeignKey(dv => dv.VentaID);
+            .HasOne(dv => dv.Venta)
+           .WithMany(v => v.DetalleVentas)
+           .HasForeignKey(dv => dv.VentaID)
+          .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Producto)
                 .WithMany(p => p.DetalleVentas)
-                .HasForeignKey(dv => dv.ProductoID);
+                .HasForeignKey(dv => dv.ProductoID)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            //// ✅ Relación: DetallesCompra con Compras y Producto
-            //modelBuilder.Entity<DetallesCompra>()
-            //    .HasOne(dc => dc.Compra)
-            //    .WithMany(c => c.DetallesCompra)
-            //    .HasForeignKey(dc => dc.CompraID);
+            // ✅ Relación: DetallesCompra con Compras y Producto
+            modelBuilder.Entity<DetallesCompra>()
+                .HasOne(dc => dc.Compra)
+                .WithMany(c => c.DetallesCompra)
+                .HasForeignKey(dc => dc.CompraID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<DetallesCompra>()
                 .HasOne(dc => dc.Producto)
                 .WithMany(p => p.DetallesCompra)
-                .HasForeignKey(dc => dc.ProductoID);
+                .HasForeignKey(dc => dc.ProductoID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // ✅ Relación: Pedidos con Clientes
             modelBuilder.Entity<Pedidos>()
@@ -100,11 +102,11 @@ namespace Simone.Data
                 .WithMany(s => s.Productos)
                 .HasForeignKey(p => p.SubcategoriaID);
 
-            //// ✅ Relación: Reseñas con Clientes y Productos
-            //modelBuilder.Entity<Reseñas>()
-            //    .HasOne(r => r.Clientes)
-            //    .WithMany(c => c.Reseñas)
-            //    .HasForeignKey(r => r.ClienteID);
+            // ✅ Relación: Reseñas con Clientes y Productos
+            modelBuilder.Entity<Reseñas>()
+                .HasOne(r => r.Clientes)
+                .WithMany(c => c.Reseñas)
+                .HasForeignKey(r => r.ClienteID);
 
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Producto)
@@ -117,23 +119,39 @@ namespace Simone.Data
                 .WithMany(r => r.Usuarios)
                 .HasForeignKey(u => u.RolID);
 
-            //// ✅ Relación: Comisiones con Empleados
-            //modelBuilder.Entity<Comisiones>()
-            //    .HasOne(c => c.Empleado)
-            //    .WithMany(e => e.Comisiones)
-            //    .HasForeignKey(c => c.EmpleadoID);
+modelBuilder.Entity<Comisiones>()
+    .HasKey(c => c.ComisionID); // ✅ Primero definir la clave primaria
 
-            //// ✅ Relación: Gastos con Empleados
-            //modelBuilder.Entity<Gastos>()
-            //    .HasOne(g => g.Empleado)
-            //    .WithMany(e => e.Gastos)
-            //    .HasForeignKey(g => g.EmpleadoID);
+modelBuilder.Entity<Comisiones>()
+    .HasOne(c => c.Empleado)
+    .WithMany(e => e.Comisiones)
+    .HasForeignKey(c => c.EmpleadoID)
+    .OnDelete(DeleteBehavior.Cascade);
+
+
+            modelBuilder.Entity<Gastos>()
+                .HasOne(g => g.Empleado)
+                .WithMany(e => e.Gastos)
+                .HasForeignKey(g => g.EmpleadoID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // ✅ Relación: MovimientosInventario con Productos
             modelBuilder.Entity<MovimientosInventario>()
                 .HasOne(mi => mi.Producto)
                 .WithMany(p => p.MovimientosInventario)
-                .HasForeignKey(mi => mi.ProductoID);
+                .HasForeignKey(mi => mi.ProductoID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            modelBuilder.Entity<ClientesProgramas>()
+             .HasKey(cp => new { cp.ClienteID, cp.ProgramaID });  // Definir clave compuesta
+
+        
+
+        // ✅ Corrección de método para obtener detalles de compra
+        private static List<DetallesCompra> GetDetallesCompra(Compras c)
+        {
+            return c.DetallesCompra?.ToList() ?? new List<DetallesCompra>();
         }
     }
 }
