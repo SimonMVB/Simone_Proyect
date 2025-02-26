@@ -34,7 +34,7 @@ namespace Simone.Models
         public ICollection<Pedidos>? Pedidos { get; set; }
         public ICollection<Reseñas> Reseñas { get; set; }
 
-
+        public ICollection<CuponesUsados> CuponesUsados { get; set; } = new List<CuponesUsados>();
 
 
     }

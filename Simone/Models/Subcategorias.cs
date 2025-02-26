@@ -1,18 +1,24 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;  // âœ… Agregar directiva para Key
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class Subcategorias
     {
-        public int SubcategoriaID { get; set; }  // Clave primaria
-        public int CategoriaID { get; set; }  // Clave foránea con Categorias
-        public string NombreSubcategoria { get; set; }  // Nombre de la subcategoría
+        [Key]  // âœ… Define la clave primaria correctamente
+        public int SubcategoriaID { get; set; }
 
-        // Relación con Categorías
+        public int CategoriaID { get; set; }  // Clave forÃ¡nea con Categorias
+
+        public string NombreSubcategoria { get; set; }  // Nombre de la subcategorÃ­a
+
+        // RelaciÃ³n con CategorÃ­as
+        [ForeignKey("CategoriaID")]
         public Categorias Categoria { get; set; }
 
-        // Relación con Productos
+        // RelaciÃ³n con Productos
         public ICollection<Productos> Productos { get; set; }
     }
 }

@@ -26,16 +26,6 @@ namespace Simone.Controllers
         {
             _logger.LogInformation("Cargando la página de inicio...");
 
-            // Obtener productos destacados (por ejemplo, los primeros 4 productos)
-            var productosDestacados = _context.Productos
-                .OrderByDescending(p => p.FechaAgregado)
-                .Take(4)
-                .ToList();
-
-            // Enviar datos a la vista
-            ViewData["Titulo"] = "Bienvenido a Simone";
-            ViewBag.Productos = productosDestacados;
-
             return View();
         }
 

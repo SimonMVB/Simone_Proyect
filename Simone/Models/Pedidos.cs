@@ -1,22 +1,25 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Simone.Models
 {
     public class Pedidos
     {
-        public int PedidoID { get; set; }  // Clave primaria
-        public int ClienteID { get; set; }  // Clave foránea con Clientes
+        [Key]  // âœ… Definir clave primaria
+        public int PedidoID { get; set; }
+
+        public int ClienteID { get; set; }  // Clave forÃ¡nea con Clientes
         public DateTime? FechaPedido { get; set; }  // Puede ser nulo
         public string EstadoPedido { get; set; }  // Estado del pedido
         public string? MetodoEnvio { get; set; }  // Puede ser nulo
         public string? DireccionEnvio { get; set; }  // Puede ser nulo
         public decimal? Total { get; set; }  // Puede ser nulo
 
-        // Relación con Clientes
+        // RelaciÃ³n con Clientes
         public Cliente Cliente { get; set; }
 
-        // Relación con DetallesPedido (Lista de productos en el pedido)
-        public ICollection<DetallesPedido> DetallesPedido { get; set; }
+        // RelaciÃ³n con DetallesPedido (Lista de productos en el pedido)
+        public ICollection<DetallesPedido> DetallesPedido { get; set; } = new List<DetallesPedido>();
     }
 }

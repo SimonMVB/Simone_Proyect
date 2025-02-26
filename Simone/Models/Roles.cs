@@ -1,14 +1,17 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Simone.Models
 {
     public class Roles
     {
-        public int RolID { get; set; }  // Clave primaria
-        public string NombreRol { get; set; }  // Nombre del rol
+        [Key] // ✅ Define la clave primaria correctamente
+        public int RolID { get; set; }
 
-        // Relaci�n con Usuarios
+        public string NombreRol { get; set; }
+
+        // Relación con Usuarios
         public ICollection<Usuario> Usuarios { get; set; }
     }
 }

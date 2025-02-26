@@ -1,9 +1,11 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Simone.Models;
 
 namespace Simone.Data
 {
-    public class TiendaDbContext : DbContext
+    public class TiendaDbContext : IdentityDbContext<Usuario, IdentityRole, string>
     {
         public TiendaDbContext(DbContextOptions<TiendaDbContext> options)
             : base(options)
@@ -18,6 +20,7 @@ namespace Simone.Data
         public DbSet<CatalogoEstados> CatalogoEstados { get; set; }
         public DbSet<Categorias> Categorias { get; set; }
         public DbSet<Cliente> Clientes { get; set; }
+        public DbSet<Promocion> Promociones { get; set; }
         public DbSet<ClientesProgramas> ClientesProgramas { get; set; }
         public DbSet<Comisiones> Comisiones { get; set; }
         public DbSet<Compras> Compras { get; set; }
@@ -36,82 +39,63 @@ namespace Simone.Data
         public DbSet<Pedidos> Pedidos { get; set; }
         public DbSet<Productos> Productos { get; set; }
         public DbSet<ProgramasFidelizacion> ProgramasFidelizacion { get; set; }
-        public DbSet<Promociones> Promociones { get; set; }
         public DbSet<Proveedores> Proveedores { get; set; }
         public DbSet<Reseñas> Reseñas { get; set; }
-        public DbSet<Roles> Roles { get; set; }
         public DbSet<Subcategorias> Subcategorias { get; set; }
-        public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
+        public DbSet<IdentityRole> IdentityRoles { get; set; } 
+        
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder);
+            base.OnModelCreating(modelBuilder); // Configura Identity
 
-            // ✅ Relación: CarritoDetalle con Carrito y Producto
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Carrito)
-                .WithMany(c => c.CarritoDetalles)
-                .HasForeignKey(cd => cd.CarritoID)
-                .OnDelete(DeleteBehavior.Cascade);
+            // ✅ Asegurar la creación de tablas de Identity
+            modelBuilder.Entity<IdentityRole>().HasKey(r => r.Id);
 
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Producto)
-                .WithMany(p => p.CarritoDetalles)
-                .HasForeignKey(cd => cd.ProductoID)
-                .OnDelete(DeleteBehavior.Cascade);
-            modelBuilder.Entity<DetalleVentas>()
-            .HasOne(dv => dv.Venta)
-           .WithMany(v => v.DetalleVentas)
-           .HasForeignKey(dv => dv.VentaID)
-          .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Producto)
-                .WithMany(p => p.DetalleVentas)
-                .HasForeignKey(dv => dv.ProductoID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // ✅ Relación: DetallesCompra con Compras y Producto
-            modelBuilder.Entity<DetallesCompra>()
-                .HasOne(dc => dc.Compra)
-                .WithMany(c => c.DetallesCompra)
-                .HasForeignKey(dc => dc.CompraID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<DetallesCompra>()
-                .HasOne(dc => dc.Producto)
-                .WithMany(p => p.DetallesCompra)
-                .HasForeignKey(dc => dc.ProductoID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // ✅ Relación: Pedidos con Clientes
-            modelBuilder.Entity<Pedidos>()
-                .HasOne(p => p.Cliente)
-                .WithMany(c => c.Pedidos)
-                .HasForeignKey(p => p.ClienteID);
+            // ✅ Definir claves primarias para entidades sin clave automática
+            modelBuilder.Entity<Compras>().HasKey(c => c.CompraID);
+            modelBuilder.Entity<Comisiones>().HasKey(c => c.ComisionID);
+            modelBuilder.Entity<ClientesProgramas>().HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
 
             // ✅ Relación: Productos con Proveedores y Subcategorías
             modelBuilder.Entity<Productos>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
-                .HasForeignKey(p => p.ProveedorID);
+                .HasForeignKey(p => p.ProveedorID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Productos>()
                 .HasOne(p => p.Subcategoria)
                 .WithMany(s => s.Productos)
-                .HasForeignKey(p => p.SubcategoriaID);
+                .HasForeignKey(p => p.SubcategoriaID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // ✅ Relación: Subcategorías con Categorías
+            modelBuilder.Entity<Subcategorias>()
+                .HasKey(s => s.SubcategoriaID);
+
+            modelBuilder.Entity<Subcategorias>()
+                .HasOne(s => s.Categoria)
+                .WithMany(c => c.Subcategoria)
+                .HasForeignKey(s => s.CategoriaID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // ✅ Relación: Reseñas con Clientes y Productos
             modelBuilder.Entity<Reseñas>()
-                .HasOne(r => r.Clientes)
+                .HasKey(r => r.ReseñaID);
+
+            modelBuilder.Entity<Reseñas>()
+                .HasOne(r => r.Cliente)
                 .WithMany(c => c.Reseñas)
-                .HasForeignKey(r => r.ClienteID);
+                .HasForeignKey(r => r.ClienteID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Producto)
                 .WithMany(p => p.Reseñas)
-                .HasForeignKey(r => r.ProductoID);
+                .HasForeignKey(r => r.ProductoID)
+                .OnDelete(DeleteBehavior.Cascade);
 
             // ✅ Relación: Usuarios con Roles
             modelBuilder.Entity<Usuario>()
@@ -119,39 +103,64 @@ namespace Simone.Data
                 .WithMany(r => r.Usuarios)
                 .HasForeignKey(u => u.RolID);
 
-modelBuilder.Entity<Comisiones>()
-    .HasKey(c => c.ComisionID); // ✅ Primero definir la clave primaria
+            // ✅ Relación: CuponesUsados con Clientes y Promociones
+            modelBuilder.Entity<CuponesUsados>()
+                .HasKey(cu => new { cu.ClienteID, cu.PromocionID });
 
-modelBuilder.Entity<Comisiones>()
-    .HasOne(c => c.Empleado)
-    .WithMany(e => e.Comisiones)
-    .HasForeignKey(c => c.EmpleadoID)
-    .OnDelete(DeleteBehavior.Cascade);
-
-
-            modelBuilder.Entity<Gastos>()
-                .HasOne(g => g.Empleado)
-                .WithMany(e => e.Gastos)
-                .HasForeignKey(g => g.EmpleadoID)
+            modelBuilder.Entity<CuponesUsados>()
+                .HasOne(cu => cu.Cliente)
+                .WithMany(c => c.CuponesUsados)
+                .HasForeignKey(cu => cu.ClienteID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ Relación: MovimientosInventario con Productos
-            modelBuilder.Entity<MovimientosInventario>()
-                .HasOne(mi => mi.Producto)
-                .WithMany(p => p.MovimientosInventario)
-                .HasForeignKey(mi => mi.ProductoID)
+            modelBuilder.Entity<CuponesUsados>()
+                .HasOne(cu => cu.Promocion)
+                .WithMany(p => p.CuponesUsados)
+                .HasForeignKey(cu => cu.PromocionID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // ✅ Relación: DetalleVentas con Ventas y Producto
+            modelBuilder.Entity<DetalleVentas>()
+                .HasOne(dv => dv.Venta)
+                .WithMany(v => v.DetalleVentas)
+                .HasForeignKey(dv => dv.VentaID)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<ClientesProgramas>()
-             .HasKey(cp => new { cp.ClienteID, cp.ProgramaID });  // Definir clave compuesta
+            modelBuilder.Entity<DetalleVentas>()
+                .HasOne(dv => dv.Producto)
+                .WithMany(p => p.DetalleVentas)
+                .HasForeignKey(dv => dv.ProductoID)
+                .OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<DetalleVentas>()
+                .Property(dv => dv.PrecioUnitario)
+                .HasColumnType("decimal(18,2)");
 
-        
+            modelBuilder.Entity<DetalleVentas>()
+                .Property(dv => dv.Subtotal)
+                .HasColumnType("decimal(18,2)");
 
-        // ✅ Corrección de método para obtener detalles de compra
-        private static List<DetallesCompra> GetDetallesCompra(Compras c)
-        {
-            return c.DetallesCompra?.ToList() ?? new List<DetallesCompra>();
+
+
+            modelBuilder.Entity<Comisiones>().Property(c => c.MontoComision).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Comisiones>().Property(c => c.PorcentajeComision).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Compras>().Property(c => c.Total).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetalleVentas>().Property(d => d.Descuento).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetalleVentas>().Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetalleVentas>().Property(d => d.Subtotal).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetallesCompra>().Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetallesCompra>().Property(d => d.Subtotal).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetallesPedido>().Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetallesPedido>().Property(d => d.Subtotal).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Empleados>().Property(e => e.Salario).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Gastos>().Property(g => g.Monto).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<HistorialPrecios>().Property(h => h.PrecioAnterior).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<HistorialPrecios>().Property(h => h.PrecioNuevo).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Pedidos>().Property(p => p.Total).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Productos>().Property(p => p.PrecioCompra).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Productos>().Property(p => p.PrecioVenta).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<ProgramasFidelizacion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Promocion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
+
         }
     }
 }

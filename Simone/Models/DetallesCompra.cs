@@ -1,21 +1,27 @@
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations.Schema;
-using Simone.Models;
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class DetallesCompra
     {
-        public int DetalleID { get; set; }  // Clave primaria
-        public int CompraID { get; set; }  // Clave for�nea con Compras
-        public int ProductoID { get; set; }  // Clave for�nea con Productos
-        public int Cantidad { get; set; }  // Cantidad comprada
-        public decimal PrecioUnitario { get; set; }  // Precio por unidad
-        public decimal? Subtotal { get; set; }  // Puede ser nulo
+        [Key] // ✅ Definir la clave primaria
+        public int DetalleCompraID { get; set; }
 
+        public int CompraID { get; set; }  // Clave foránea con Compras
+        public int ProductoID { get; set; }  // Clave foránea con Productos
+        public int Cantidad { get; set; }
+        public decimal PrecioUnitario { get; set; }
+        public decimal? Subtotal { get; set; }
+
+        // Relación con Compras
         [ForeignKey("CompraID")]
         public Compras Compra { get; set; }
 
+        // Relación con Productos
         [ForeignKey("ProductoID")]
         public Productos Producto { get; set; }
     }

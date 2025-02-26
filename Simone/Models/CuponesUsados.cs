@@ -1,18 +1,25 @@
 using System;
-using Simone.Models;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class CuponesUsados
     {
-        public int ClienteID { get; set; }  // Clave foránea con Clientes
-        public int PromocionID { get; set; }  // Clave foránea con Promociones
-        public DateTime? FechaUso { get; set; }  // Puede ser nulo
+        [Key, Column(Order = 1)]
+        public int ClienteID { get; set; }
+
+        [Key, Column(Order = 2)]
+        public int PromocionID { get; set; }
+
+        public DateTime? FechaUso { get; set; }
 
         // Relación con Clientes
-        public Cliente Clientes { get; set; }
+        [ForeignKey("ClienteID")]
+        public Cliente Cliente { get; set; }
 
         // Relación con Promociones
-        public Promociones Promocion { get; set; }
+        [ForeignKey("PromocionID")]
+        public Promocion Promocion { get; set; }
     }
 }

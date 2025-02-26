@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Simone.Data;
@@ -6,11 +6,19 @@ using Simone.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configurar la conexi�n a la base de datos
-builder.Services.AddDbContext<TiendaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TiendaDB")));
+// ✅ Agregar la configuración de la cadena de conexión desde appsettings.json
+var connectionString = builder.Configuration.GetConnectionString("TiendaDB");
 
-// Configurar Identity con roles y validaciones de contrase�a
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("La cadena de conexión a la base de datos no está configurada.");
+}
+
+// ✅ Configurar la conexión a la base de datos
+builder.Services.AddDbContext<TiendaDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+// ✅ Configurar Identity con Entity Framework (Evita múltiples registros)
 builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
@@ -22,6 +30,7 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();
 
+// ✅ Configurar la cookie de autenticación
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.LoginPath = "/Cuenta/Login";
@@ -42,17 +51,25 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// CREAR ROLES Y USUARIO ADMINISTRADOR AL INICIAR
+// ✅ Creación de Roles y Administrador Antes de `app.Run();`
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
-    await CrearRolesYAdmin(services, logger);
+
+    try
+    {
+        await CrearRolesYAdmin(services, logger);
+    }
+    catch (Exception ex)
+    {
+        logger.LogError($"Error al inicializar roles y administrador: {ex.Message}");
+    }
 }
 
 app.Run();
 
-// M�todo para crear roles y usuario administrador por defecto
+// ✅ Método para crear roles y usuario administrador
 async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
 {
     var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
@@ -72,7 +89,7 @@ async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
         }
     }
 
-    // Crear usuario administrador por defecto
+    // ✅ Crear usuario administrador por defecto
     string adminEmail = "admin@tienda.com";
     string adminPassword = "Admin123!";
 
@@ -92,7 +109,7 @@ async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Administrador");
-            logger.LogInformation("Administrador creado con �xito.");
+            logger.LogInformation("Administrador creado con éxito.");
         }
         else
         {

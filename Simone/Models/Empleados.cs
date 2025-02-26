@@ -1,25 +1,29 @@
-using System;
+ï»¿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class Empleados
     {
-        public int EmpleadoID { get; set; }  // Clave primaria
-        public string Nombre { get; set; }  // Nombre del empleado
-        public string Apellido { get; set; }  // Apellido del empleado
-        public string? Direccion { get; set; }  // Puede ser nulo
-        public string? Telefono { get; set; }  // Puede ser nulo
-        public string? Email { get; set; }  // Puede ser nulo
-        public int RolID { get; set; }  // Clave foránea con Roles
-        public DateTime? FechaContratacion { get; set; }  // Puede ser nulo
-        public decimal? Salario { get; set; }  // Puede ser nulo
+        [Key] // âœ… Definir clave primaria
+        public int EmpleadoID { get; set; }
 
-        // Relación con Roles
+        public string Nombre { get; set; }
+        public string Apellido { get; set; }
+        public string? Direccion { get; set; }
+        public string? Telefono { get; set; }
+        public string? Email { get; set; }
+        public int RolID { get; set; }
+        public DateTime? FechaContratacion { get; set; }
+        public decimal? Salario { get; set; }
+
+        // RelaciÃ³n con Roles
+        [ForeignKey("RolID")]
         public Roles Rol { get; set; }
+
         public ICollection<Comisiones> Comisiones { get; set; } = new List<Comisiones>();
-
         public ICollection<Gastos> Gastos { get; set; } = new List<Gastos>();
-
     }
 }
-

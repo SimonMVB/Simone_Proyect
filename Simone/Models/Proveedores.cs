@@ -1,19 +1,23 @@
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Simone.Models
 {
     public class Proveedores
     {
-        public int ProveedorID { get; set; }  // Clave primaria
-        public string NombreProveedor { get; set; }  // Nombre del proveedor
-        public string? Contacto { get; set; }  // Persona de contacto (puede ser nulo)
-        public string? Telefono { get; set; }  // Puede ser nulo
-        public string? Email { get; set; }  // Puede ser nulo
-        public string? Direccion { get; set; }  // Puede ser nulo
+        [Key]
+        public int ProveedorID { get; set; }
 
-        // Relaci�n con Productos
-        public ICollection<Productos> Productos { get; set; }
-        public object Compras { get; internal set; }
+        [Required]
+        public string NombreProveedor { get; set; }
+
+        public string Contacto { get; set; }
+        public string Telefono { get; set; }
+        public string Email { get; set; }
+        public string Direccion { get; set; }
+
+        // ✅ Relación con Compras - Asegurar que sea una lista y no un objeto
+        public ICollection<Compras> Compras { get; set; } = new List<Compras>();
+        public ICollection<Productos> Productos { get; set; } = new List<Productos>();
     }
 }

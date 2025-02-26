@@ -1,17 +1,20 @@
-using System;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace Simone.Models
 {
     public class MovimientosInventario
     {
-        public int MovimientoID { get; set; }  // Clave primaria
-        public int ProductoID { get; set; }  // Clave for�nea con Productos
+        [Key]  // ✅ Definir clave primaria
+        public int MovimientoID { get; set; }
+
+        public int ProductoID { get; set; }  // Clave foránea con Productos
         public int Cantidad { get; set; }  // Cantidad del movimiento
         public string TipoMovimiento { get; set; }  // Tipo de movimiento (Entrada/Salida)
         public DateTime? FechaMovimiento { get; set; }  // Puede ser nulo
         public string? Descripcion { get; set; }  // Puede ser nulo
 
-        // Relaci�n con Productos
+        // Relación con Productos
         public Productos Producto { get; set; }
     }
 }

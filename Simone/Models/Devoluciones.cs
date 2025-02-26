@@ -1,17 +1,22 @@
-using System;
+ï»¿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class Devoluciones
     {
-        public int DevolucionID { get; set; }  // Clave primaria
-        public int DetalleVentaID { get; set; }  // Clave foránea con DetalleVentas
-        public DateTime FechaDevolucion { get; set; }  // Fecha de devolución
-        public string Motivo { get; set; }  // Motivo de la devolución
-        public int CantidadDevuelta { get; set; }  // Cantidad de productos devueltos
-        public bool Aprobada { get; set; }  // Indica si la devolución fue aprobada
+        [Key] // âœ… Definir clave primaria
+        public int DevolucionID { get; set; }
 
-        // Relación con DetalleVentas
+        public int DetalleVentaID { get; set; }  // Clave forÃ¡nea con DetalleVentas
+        public DateTime FechaDevolucion { get; set; }  // Fecha de devoluciÃ³n
+        public string Motivo { get; set; }  // Motivo de la devoluciÃ³n
+        public int CantidadDevuelta { get; set; }  // Cantidad de productos devueltos
+        public bool Aprobada { get; set; }  // Indica si la devoluciÃ³n fue aprobada
+
+        // RelaciÃ³n con DetalleVentas
+        [ForeignKey("DetalleVentaID")]
         public DetalleVentas DetalleVenta { get; set; }
     }
 }

@@ -1,21 +1,24 @@
-using System;
+ï»¿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
-    public class Reseñas
+    public class ReseÃ±as
     {
-        public int ReseñaID { get; set; }  // Clave primaria
-        public int ProductoID { get; set; }  // Clave foránea con Productos
-        public int ClienteID { get; set; }  // Clave foránea con Clientes
-        [ForeignKey("ClienteID")]
-        public Cliente Cliente { get; set; }
-        public int? Calificacion { get; set; }  // Calificación del producto (puede ser nulo)
-        public string? Comentario { get; set; }  // Puede ser nulo
-        public DateTime? FechaReseña { get; set; }  // Puede ser nulo
+        [Key]
+        public int ReseÃ±aID { get; set; }
 
-        // Relaciones
-        public Productos Producto { get; set; }
-        public Cliente Clientes { get; set; }
+        public int ProductoID { get; set; }
+        public int ClienteID { get; set; }
+        public int? Calificacion { get; set; }
+        public string? Comentario { get; set; }
+        public DateTime? FechaReseÃ±a { get; set; }
+
+        [ForeignKey("ProductoID")]
+        public Productos Producto { get; set; }  // âœ… Asegurar que estÃ¡ bien definido
+
+        [ForeignKey("ClienteID")]
+        public Cliente Cliente { get; set; }  // âœ… Asegurar que no es un "object"
     }
 }

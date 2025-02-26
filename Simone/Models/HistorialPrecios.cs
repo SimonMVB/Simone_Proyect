@@ -1,17 +1,22 @@
-using System;
+ï»¿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class HistorialPrecios
     {
-        public int HistorialPrecioID { get; set; }  // Clave primaria
-        public int ProductoID { get; set; }  // Clave foránea con Productos
+        [Key]  // âœ… Definir clave primaria
+        public int HistorialPrecioID { get; set; }
+
+        public int ProductoID { get; set; }  // Clave forÃ¡nea con Productos
         public decimal PrecioAnterior { get; set; }  // Precio antes del cambio
-        public decimal PrecioNuevo { get; set; }  // Precio después del cambio
-        public DateTime FechaCambio { get; set; }  // Fecha en que se realizó el cambio
+        public decimal PrecioNuevo { get; set; }  // Precio despuÃ©s del cambio
+        public DateTime FechaCambio { get; set; }  // Fecha en que se realizÃ³ el cambio
         public string UsuarioModifico { get; set; }  // Usuario que hizo el cambio
 
-        // Relación con Productos
+        // RelaciÃ³n con Productos
+        [ForeignKey("ProductoID")]
         public Productos Producto { get; set; }
     }
 }

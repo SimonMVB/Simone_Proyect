@@ -1,20 +1,24 @@
-using System;
-using Simone.Models;
+ï»¿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class DireccionesCliente
     {
-        public int DireccionID { get; set; }  // Clave primaria
-        public int ClienteID { get; set; }  // Clave foránea con Clientes
-        public string Calle { get; set; }  // Nombre de la calle
-        public string Ciudad { get; set; }  // Ciudad
-        public string EstadoProvincia { get; set; }  // Estado o provincia
-        public string CodigoPostal { get; set; }  // Código postal
-        public string? TelefonoContacto { get; set; }  // Puede ser nulo
-        public DateTime FechaRegistro { get; set; }  // Fecha de registro
+        [Key] // âœ… Definir clave primaria
+        public int DireccionID { get; set; }
 
-        // Relación con Clientes
-        public Cliente Clientes { get; set; }
+        public int ClienteID { get; set; }  // Clave forÃ¡nea con Clientes
+        public string Calle { get; set; }
+        public string Ciudad { get; set; }
+        public string EstadoProvincia { get; set; }
+        public string CodigoPostal { get; set; }
+        public string? TelefonoContacto { get; set; }  // Puede ser nulo
+        public DateTime FechaRegistro { get; set; }
+
+        // RelaciÃ³n con Clientes
+        [ForeignKey("ClienteID")]
+        public Cliente Cliente { get; set; }
     }
 }
