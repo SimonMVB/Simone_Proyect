@@ -32,3 +32,24 @@ namespace Simone.Models
         public DateTime FechaAgregado { get; set; } = DateTime.Now; // Fecha de agregado
     }
 }
+
+//COMPARAR CON:
+//using System.ComponentModel.DataAnnotations;
+
+//namespace Simone.Models
+//{
+//    public class CarritoDetalle
+//    {
+//        [Key]
+//        public int CarritoDetalleID { get; set; }
+
+//        public int ProductoID { get; set; }
+//        public virtual Producto Producto { get; set; }
+
+//        public int Cantidad { get; set; }
+//        public decimal Precio { get; set; }
+
+//        // Total del producto (Precio * Cantidad)
+//        public decimal Total => Precio * Cantidad;
+//    }
+//}

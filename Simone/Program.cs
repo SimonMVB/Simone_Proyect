@@ -14,6 +14,13 @@ if (string.IsNullOrEmpty(connectionString))
     throw new InvalidOperationException("La cadena de conexión a la base de datos no está configurada.");
 }
 
+
+// En Program.cs (si usas ASP.NET Core 6+)
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+});
+
 // ✅ Configurar la conexión a la base de datos
 builder.Services.AddDbContext<TiendaDbContext>(options =>
     options.UseSqlServer(connectionString));
