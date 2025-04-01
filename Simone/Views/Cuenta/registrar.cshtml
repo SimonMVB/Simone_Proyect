@@ -1,11 +1,61 @@
 ﻿@model Simone.ViewModels.RegistroViewModel
-<h2>Registro</h2>
-<form asp-action="Registro">
-    <label>Nombre Completo</label>
-    <input asp-for="Nombre" class="form-control" />
-    <label>Email</label>
-    <input asp-for="Email" class="form-control" />
-    <label>Contraseña</label>
-    <input asp-for="Password" class="form-control" type="password" />
-    <button type="submit" class="btn btn-success">Registrar</button>
-</form>
+@{
+    ViewData["Title"] = "Registro";
+    Layout = "~/Views/Shared/_LayoutCuenta.cshtml";
+}
+
+<div class="card shadow-sm rounded-3">
+    <div class="card-header text-center bg-success text-white">
+        <h4><i class="fa-solid fa-user-plus me-2"></i>Crear una cuenta</h4>
+    </div>
+    <div class="card-body">
+
+        <!-- Validación general del modelo -->
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+        <form asp-action="Registro" method="post" novalidate>
+            <!-- Nombre -->
+            <div class="mb-3">
+                <label asp-for="Nombre" class="form-label">Nombre completo</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                    <input asp-for="Nombre" class="form-control" placeholder="Nombre completo" />
+                </div>
+                <span asp-validation-for="Nombre" class="text-danger small"></span>
+            </div>
+
+            <!-- Email -->
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Correo electrónico</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                    <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" />
+                </div>
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+
+            <!-- Contraseña -->
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label">Contraseña</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                    <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <!-- Botón -->
+            <button type="submit" class="btn btn-success w-100">
+                <i class="fa-solid fa-user-plus me-2"></i>Registrarme
+            </button>
+        </form>
+    </div>
+
+    <div class="card-footer text-center small">
+        ¿Ya tienes una cuenta? <a asp-controller="Cuenta" asp-action="Login">Inicia sesión aquí</a>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

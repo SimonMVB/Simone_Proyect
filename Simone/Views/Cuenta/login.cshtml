@@ -1,11 +1,55 @@
 ﻿@model Simone.ViewModels.LoginViewModel
-<h2>Iniciar Sesión</h2>
-<form asp-action="Login">
-    <label>Email</label>
-    <input asp-for="Email" class="form-control" />
-    <label>Contraseña</label>
-    <input asp-for="Password" class="form-control" type="password" />
-    <label>Recordarme</label>
-    <input asp-for="RememberMe" type="checkbox" />
-    <button type="submit" class="btn btn-primary">Ingresar</button>
-</form>
+
+@{
+    ViewData["Title"] = "Iniciar Sesión";
+    Layout = "~/Views/Shared/_LayoutCuenta.cshtml";
+}
+
+<div class="container mt-5" style="max-width: 400px;">
+    <div class="card shadow-sm rounded-3">
+        <div class="card-header text-center bg-dark text-white">
+            <h4><i class="fa-solid fa-right-to-bracket me-2"></i>Iniciar Sesión</h4>
+        </div>
+        <div class="card-body">
+
+            <!-- Mensajes de validación -->
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <form asp-action="Login" method="post">
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label">Correo electrónico</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                        <input asp-for="Email" class="form-control" placeholder="usuario@correo.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input asp-for="RememberMe" class="form-check-input" />
+                    <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
+                </div>
+
+                <button type="submit" class="btn btn-dark w-100">
+                    <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar
+                </button>
+            </form>
+        </div>
+        <div class="card-footer text-center small">
+            ¿No tienes una cuenta? <a asp-controller="Cuenta" asp-action="registrar">Regístrate aquí</a>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

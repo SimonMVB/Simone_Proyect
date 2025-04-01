@@ -1,52 +1,45 @@
-﻿@model List<Simone.Models.CarritoDetalle>
+﻿@model IEnumerable<Simone.Models.CarritoDetalle>
 
-@{
-    ViewData["Title"] = "Carrito de Compras";
-}
-
-<div class="container py-5">
-    <h2>Carrito de Compras</h2>
-
-    @if (Model.Count == 0)
-    {
-        <p>Tu carrito está vacío.</p>
-    }
-    else
-    {
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio</th>
-                    <th>Total</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td>@item.Producto.NombreProducto</td>
-                        <td>
-                            <form method="post" asp-action="ActualizarCarrito">
-                                <input type="number" name="cantidad" value="@item.Cantidad" min="1" class="form-control" style="width: 60px;" />
-                                <input type="hidden" name="productoId" value="@item.ProductoID" />
-                                <button type="submit" class="btn btn-sm btn-primary mt-2">Actualizar</button>
-                            </form>
-                        </td>
-                        <td>@item.Precio.ToString("C2")</td>
-                        <td>@item.Total.ToString("C2")</td>
-                        <td>
-                            <a href="@Url.Action("EliminarDelCarrito", "Carrito", new { productoId = item.ProductoID })" class="btn btn-sm btn-danger">Eliminar</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-
-        <div class="text-right">
-            <h4>Total: @Model.Sum(c => c.Total).ToString("C2")</h4>
-        </div>
-    }
-</div>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio Unitario</th>
+            <th>Total</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.Producto.NombreProducto</td>
+                <td>
+                    <form method="post" asp-action="ActualizarCarrito">
+                        <input type="hidden" name="productoId" value="@item.ProductoID" />
+                        <input type="number" name="cantidad" min="1" class="form-control" value="@item.Cantidad" />
+                        <button type="submit" class="btn btn-primary">Actualizar</button>
+                    </form>
+                </td>
+                <!-- Cambia 'Precio' a 'PrecioUnitario' -->
+                <td>@item.Precio.ToString("C2")</td>
+                <!-- Si tu modelo tiene la propiedad Total (Cantidad * PrecioUnitario) -->
+                <td>@item.Total.ToString("C2")</td>
+                <td>
+                    <a href="@Url.Action("EliminarDelCarrito", "Carrito", new { productoId = item.ProductoID })"
+                       class="btn btn-danger">Eliminar</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+    <tfoot>
+        <!-- Sumamos el total de todos los items -->
+        <tr>
+            <td colspan="4" class="text-end">
+                <strong>Total:</strong>
+                @Model.Sum(x => x.Total).ToString("C2")
+            </td>
+        </tr>
+    </tfoot>
+</table>

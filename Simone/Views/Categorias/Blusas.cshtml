@@ -1,1 +1,98 @@
-﻿
+﻿@model Simone.ViewModels.ProductoFiltroViewModel
+@{
+    ViewData["Title"] = "Blusas";
+}
+
+<div class="row">
+    <!-- Panel de Filtros -->
+    <div class="col-md-3">
+        <form asp-action="Blusas" method="get">
+            <h5>Filtrar por</h5>
+            <hr />
+
+            <!-- Filtro de Precio -->
+            <label class="form-label">Precio máximo:</label>
+            <input type="range" class="form-range" name="PrecioMax" min="0" max="500" step="5"
+                   value="@Model.PrecioMax" oninput="document.getElementById('precioOutput').innerText = this.value" />
+            <p>Hasta: $<span id="precioOutput">@Model.PrecioMax</span></p>
+
+            <!-- Filtro de Marca -->
+            <label class="form-label">Marca</label>
+            @foreach (var marca in Model.MarcasDisponibles)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="MarcasSeleccionadas" value="@marca"
+                    @(Model.MarcasSeleccionadas.Contains(marca) ? "checked" : "") />
+                    <label class="form-check-label">@marca</label>
+                </div>
+            }
+
+            <!-- Filtro de Color -->
+            <label class="form-label mt-3">Color</label>
+            @foreach (var color in Model.ColoresDisponibles)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="ColoresSeleccionados" value="@color"
+                    @(Model.ColoresSeleccionados.Contains(color) ? "checked" : "") />
+                    <label class="form-check-label">@color</label>
+                </div>
+            }
+
+            <!-- Filtro de Talla -->
+            <label class="form-label mt-3">Talla</label>
+            @foreach (var talla in Model.TallasDisponibles)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="TallasSeleccionadas" value="@talla"
+                    @(Model.TallasSeleccionadas.Contains(talla) ? "checked" : "") />
+                    <label class="form-check-label">@talla</label>
+                </div>
+            }
+
+            <!-- Filtro: Solo disponibles -->
+            <div class="form-check mt-3">
+                <input class="form-check-input" type="checkbox" name="SoloDisponibles" value="true" @(Model.SoloDisponibles ? "checked" : "") />
+                <label class="form-check-label">Solo productos disponibles</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3 w-100">Aplicar filtros</button>
+        </form>
+    </div>
+
+    <!-- Panel de Resultados -->
+    <div class="col-md-9">
+        <h3>Blusas</h3>
+        <hr />
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            @foreach (var producto in Model.Productos)
+            {
+                <div class="col">
+                    <div class="card h-100">
+                        <img src="~/images/productos/@(producto.ImagenesProductos.FirstOrDefault()?.RutaImagen ?? "default-product.png")"
+                             class="card-img-top" alt="@producto.NombreProducto" />
+                        <div class="card-body">
+                            <h5 class="card-title">@producto.NombreProducto</h5>
+                            <p class="card-text">@producto.Descripcion</p>
+                            <p class="fw-bold text-success">$@producto.PrecioVenta</p>
+                            <p class="text-muted">Stock: @producto.Stock</p>
+                        </div>
+                        <div class="card-footer text-center">
+                            <form asp-controller="Carrito" asp-action="AgregarAlCarrito" method="post">
+                                <input type="hidden" name="productoId" value="@producto.ProductoID" />
+                                <input type="hidden" name="cantidad" value="1" />
+                                <button type="submit" class="btn btn-outline-dark w-100">
+                                    <i class="fa-solid fa-cart-plus"></i> Agregar al carrito
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (!Model.Productos.Any())
+        {
+            <div class="alert alert-warning mt-4">No se encontraron blusas con los filtros aplicados.</div>
+        }
+    </div>
+</div>

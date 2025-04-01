@@ -2,15 +2,16 @@ using Microsoft.AspNetCore.Mvc;
 using Simone.Models;
 using Simone.Data;
 using Microsoft.EntityFrameworkCore;
+using Simone.Extensions;
 
 namespace Simone.Controllers
 {
-    public class CarritoController : Controller
+    public class SessionExtensions : Controller
     {
         private readonly TiendaDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public CarritoController(TiendaDbContext context, IHttpContextAccessor httpContextAccessor)
+        public SessionExtensions(TiendaDbContext context, IHttpContextAccessor httpContextAccessor)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;

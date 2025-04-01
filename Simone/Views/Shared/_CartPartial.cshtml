@@ -1,0 +1,53 @@
+﻿@model IEnumerable<Simone.Models.CarritoDetalle>
+
+<div class="cart-partial">
+    <h5 class="mb-3">Mis artículos</h5>
+    <hr />
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info" role="alert">
+            No tienes artículos en tu carrito.
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var item in Model)
+            {
+                <li class="list-group-item">
+                    <div class="row align-items-center">
+                        <!-- Columna para la imagen (si tienes la propiedad "Imagen") -->
+                        <div class="col-3">
+                            @* Ajusta según tu propiedad real (Imagen, Foto, etc.) *@
+                            <img src="@item.Producto.ImagenesProductos"
+                                 alt="@item.Producto.NombreProducto"
+                                 class="img-fluid"
+                                 onerror="this.src='/images/default-product.png';" />
+                        </div>
+                        <!-- Columna con detalles del producto -->
+                        <div class="col-6">
+                            <h6 class="mb-1">@item.Producto.NombreProducto</h6>
+                            <p class="mb-1"><small>Cantidad: @item.Cantidad</small></p>
+                            <p class="mb-1"><small>Precio: @item.Precio.ToString("C2")</small></p>
+                        </div>
+                        <!-- Columna con total y botón de acción -->
+                        <div class="col-3 text-end">
+                            <p class="mb-1 fw-bold">@item.Total.ToString("C2")</p>
+                            <button class="btn btn-sm btn-danger remove-item" data-id="@item.CarritoDetalleID" title="Eliminar artículo">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+
+        <!-- Total general del carrito -->
+        <div class="mt-3 text-end">
+            @{
+                decimal totalCompra = Model.Sum(x => x.Total);
+            }
+            <h5>Total: @totalCompra.ToString("C2")</h5>
+        </div>
+    }
+</div>

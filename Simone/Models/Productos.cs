@@ -8,7 +8,6 @@ namespace Simone.Models
     {
         [Key]  // ✅ Definir clave primaria
         public int ProductoID { get; set; }
-
         public string NombreProducto { get; set; }
         public DateTime FechaAgregado { get; set; }
         public string? Descripcion { get; set; }
@@ -20,12 +19,14 @@ namespace Simone.Models
         public int ProveedorID { get; set; }
         public int SubcategoriaID { get; set; }
         public int Stock { get; set; }
+        
+
 
         // Relaciones con otras tablas
         public Proveedores Proveedor { get; set; }
         public Subcategorias Subcategoria { get; set; }
 
-        public ICollection<ImagenesProductos> ImagenesProductos { get; set; } = new List<ImagenesProductos>();
+        public virtual ICollection<ImagenesProductos> ImagenesProductos { get; set; }
         public ICollection<MovimientosInventario> MovimientosInventario { get; set; } = new List<MovimientosInventario>();
         public ICollection<DetalleVentas> DetalleVentas { get; set; } = new List<DetalleVentas>();
         public ICollection<DetallesPedido> DetallesPedido { get; set; } = new List<DetallesPedido>();

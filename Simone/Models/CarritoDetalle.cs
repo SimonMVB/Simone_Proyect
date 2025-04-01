@@ -1,55 +1,75 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Simone.Models;
 
 namespace Simone.Models
 {
+    /// <summary>
+    /// Representa el detalle de un carrito, incluyendo el producto, la cantidad y el precio unitario.
+    /// </summary>
     public class CarritoDetalle
     {
+        /// <summary>
+        /// Identificador único del detalle del carrito.
+        /// </summary>
         [Key]
-        public int CarritoDetalleID { get; set; } // Clave primaria
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int CarritoDetalleID { get; set; }
 
-        // Relación con Carrito
-        [Required]
+        /// <summary>
+        /// Identificador del carrito al que pertenece este detalle.
+        /// </summary>
+        [Required(ErrorMessage = "El CarritoID es obligatorio.")]
+        [ForeignKey(nameof(Carrito))]
         public int CarritoID { get; set; }
-        public Carrito Carrito { get; set; }
 
-        // Relación con Producto
-        [Required]
+        /// <summary>
+        /// Carrito al que pertenece el detalle.
+        /// </summary>
+        public virtual Carrito Carrito { get; set; } = null!;
+
+        /// <summary>
+        /// Identificador del producto.
+        /// </summary>
+        [Required(ErrorMessage = "El ProductoID es obligatorio.")]
+        [ForeignKey(nameof(Producto))]
         public int ProductoID { get; set; }
-        public Productos Producto { get; set; }
 
-        [Required]
+        /// <summary>
+        /// Producto asociado al detalle.
+        /// </summary>
+        public virtual Productos Producto { get; set; } = null!;
+
+        /// <summary>
+        /// Cantidad de unidades del producto en el carrito.
+        /// </summary>
+        [Required(ErrorMessage = "La cantidad es obligatoria.")]
         [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser al menos 1.")]
-        public int Cantidad { get; set; } // Cantidad del producto en el carrito
+        public int Cantidad { get; set; }
 
-        [Required]
+        /// <summary>
+        /// Precio unitario del producto al momento de agregarlo al carrito.
+        /// El setter es interno para evitar asignaciones externas inesperadas.
+        /// </summary>
+        [Required(ErrorMessage = "El precio es obligatorio.")]
         [Column(TypeName = "decimal(18,2)")]
-        public decimal PrecioUnitario { get; set; } // Precio unitario al momento de agregar
+        [Range(typeof(decimal), "0.01", "9999999999999", ErrorMessage = "El precio debe ser mayor que cero.")]
+        [DataType(DataType.Currency)]
+        public decimal Precio { get; internal set; }
 
+        /// <summary>
+        /// Fecha y hora en la que se agregó el producto al carrito.
+        /// </summary>
         [Required]
-        public DateTime FechaAgregado { get; set; } = DateTime.Now; // Fecha de agregado
+        public DateTime FechaAgregado { get; set; } = DateTime.Now;
+
+        /// <summary>
+        /// Propiedad calculada que devuelve el total de este detalle (Cantidad * Precio).
+        /// No se mapea a la base de datos.
+        /// </summary>
+        [NotMapped]
+        public decimal Total => Cantidad * Precio;
+
+        
     }
 }
-
-//COMPARAR CON:
-//using System.ComponentModel.DataAnnotations;
-
-//namespace Simone.Models
-//{
-//    public class CarritoDetalle
-//    {
-//        [Key]
-//        public int CarritoDetalleID { get; set; }
-
-//        public int ProductoID { get; set; }
-//        public virtual Producto Producto { get; set; }
-
-//        public int Cantidad { get; set; }
-//        public decimal Precio { get; set; }
-
-//        // Total del producto (Precio * Cantidad)
-//        public decimal Total => Precio * Cantidad;
-//    }
-//}
