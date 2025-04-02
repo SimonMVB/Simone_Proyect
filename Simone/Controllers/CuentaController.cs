@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Simone.Models;
 using Simone.ViewModels;
+using Simone.Data;
+using System;
 using System.Threading.Tasks;
 
 namespace Simone.Controllers
@@ -15,12 +17,14 @@ namespace Simone.Controllers
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
         private readonly ILogger<CuentaController> _logger;
+        private readonly TiendaDbContext _context;
 
-        public CuentaController(UserManager<Usuario> userManager, SignInManager<Usuario> signInManager, ILogger<CuentaController> logger)
+        public CuentaController(UserManager<Usuario> userManager, SignInManager<Usuario> signInManager, ILogger<CuentaController> logger, TiendaDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
+            _context = context;
         }
 
         /// <summary>
@@ -45,25 +49,54 @@ namespace Simone.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // Intentar iniciar sesión usando el email y contraseña proporcionados
-            var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: false);
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            bool loginExitoso = false;
 
-            if (result.Succeeded)
+            if (user != null)
             {
-                _logger.LogInformation("El usuario {Email} inició sesión correctamente.", model.Email);
-                return RedirectToAction("Index", "Home");
-            }
-            else if (result.IsLockedOut)
-            {
-                _logger.LogWarning("La cuenta del usuario {Email} se encuentra bloqueada.", model.Email);
-                return View("Lockout");
+                var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
+
+                loginExitoso = result.Succeeded;
+
+                if (result.Succeeded)
+                {
+                    _logger.LogInformation("El usuario {Email} inició sesión correctamente.", model.Email);
+                    await RegistrarLog(model.Email, true);
+                    return RedirectToAction("Index", "Home");
+                }
+                else if (result.IsLockedOut)
+                {
+                    _logger.LogWarning("La cuenta del usuario {Email} se encuentra bloqueada.", model.Email);
+                    await RegistrarLog(model.Email, false);
+                    return View("Lockout");
+                }
+                else
+                {
+                    ModelState.AddModelError(string.Empty, "Inicio de sesión inválido.");
+                    _logger.LogWarning("Intento fallido de inicio de sesión para {Email}.", model.Email);
+                }
             }
             else
             {
-                ModelState.AddModelError(string.Empty, "Inicio de sesión inválido.");
-                _logger.LogWarning("Intento fallido de inicio de sesión para {Email}.", model.Email);
-                return View(model);
+                ModelState.AddModelError(string.Empty, "El usuario no existe.");
+                _logger.LogWarning("Intento de inicio con usuario inexistente: {Email}.", model.Email);
             }
+
+            await RegistrarLog(model.Email, loginExitoso);
+            return View(model);
+        }
+
+        private async Task RegistrarLog(string email, bool exitoso)
+        {
+            var log = new LogIniciosSesion
+            {
+                Usuario = email,
+                FechaInicio = DateTime.Now,
+                Exitoso = exitoso
+            };
+
+            _context.LogIniciosSesion.Add(log);
+            await _context.SaveChangesAsync();
         }
 
         /// <summary>
@@ -128,3 +161,4 @@ namespace Simone.Controllers
         }
     }
 }
+

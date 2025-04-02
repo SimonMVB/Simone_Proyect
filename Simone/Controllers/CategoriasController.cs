@@ -25,12 +25,6 @@ namespace Simone.Controllers
         /// <summary>
         /// Vista general con filtros para mostrar todos los productos.
         /// </summary>
-        /// <param name="MarcasSeleccionadas">Lista de marcas seleccionadas</param>
-        /// <param name="ColoresSeleccionados">Lista de colores seleccionados</param>
-        /// <param name="TallasSeleccionadas">Lista de tallas seleccionadas</param>
-        /// <param name="PrecioMax">Precio máximo permitido</param>
-        /// <param name="SoloDisponibles">Indica si se muestran solo productos disponibles</param>
-        /// <returns>Vista con el ViewModel de productos y filtros</returns>
         [HttpGet]
         public async Task<IActionResult> Ver_Todo(
             List<string> MarcasSeleccionadas,
@@ -39,19 +33,32 @@ namespace Simone.Controllers
             int PrecioMax = 500,
             bool SoloDisponibles = false)
         {
+            return await ObtenerVistaFiltrada(null, MarcasSeleccionadas, ColoresSeleccionados, TallasSeleccionadas, PrecioMax, SoloDisponibles);
+        }
+
+        /// <summary>
+        /// Muestra los productos filtrados por categoría específica.
+        /// </summary>
+        private async Task<IActionResult> ObtenerVistaFiltrada(string? categoria,
+            List<string>? MarcasSeleccionadas,
+            List<string>? ColoresSeleccionados,
+            List<string>? TallasSeleccionadas,
+            int PrecioMax,
+            bool SoloDisponibles)
+        {
             try
             {
-                // Asegurarse de que las listas de filtros no sean null.
                 MarcasSeleccionadas ??= new List<string>();
                 ColoresSeleccionados ??= new List<string>();
                 TallasSeleccionadas ??= new List<string>();
 
-                // Construir la consulta base de productos, incluyendo las imágenes.
                 var productosQuery = _context.Productos
                     .Include(p => p.ImagenesProductos)
                     .AsQueryable();
 
-                // Aplicar filtros dinámicos.
+                if (!string.IsNullOrEmpty(categoria))
+                    productosQuery = productosQuery.Where(p => p.Categoria.NombreCategoria.ToLower() == categoria.ToLower());
+
                 if (MarcasSeleccionadas.Any())
                     productosQuery = productosQuery.Where(p => MarcasSeleccionadas.Contains(p.Marca));
 
@@ -69,7 +76,6 @@ namespace Simone.Controllers
 
                 var productos = await productosQuery.ToListAsync();
 
-                // Obtener valores únicos para los filtros.
                 var marcasDisponibles = await _context.Productos
                     .Where(p => p.Marca != null)
                     .Select(p => p.Marca)
@@ -91,7 +97,6 @@ namespace Simone.Controllers
                     .OrderBy(t => t)
                     .ToListAsync();
 
-                // Preparar el ViewModel con los productos filtrados y los datos de los filtros.
                 var vm = new ProductoFiltroViewModel
                 {
                     Productos = productos,
@@ -105,13 +110,25 @@ namespace Simone.Controllers
                     TallasDisponibles = tallasDisponibles
                 };
 
-                return View(vm);
+                return View("Ver_Todo", vm); // Usa la misma vista para todo
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error en Ver_Todo");
-                return StatusCode(500, "Ocurrió un error interno. Por favor, intenta nuevamente más tarde.");
+                _logger.LogError(ex, "Error al cargar productos{Categoria}", categoria != null ? $" de la categoría {categoria}" : "");
+                return StatusCode(500, "Ocurrió un error al cargar los productos.");
             }
         }
+
+        // ✅ Métodos por categoría (pueden usar vistas específicas si las prefieres)
+        public async Task<IActionResult> Blusas() => await ObtenerVistaFiltrada("Blusas", null, null, null, 500, false);
+        public async Task<IActionResult> Tops() => await ObtenerVistaFiltrada("Tops", null, null, null, 500, false);
+        public async Task<IActionResult> Bodys() => await ObtenerVistaFiltrada("Bodys", null, null, null, 500, false);
+        public async Task<IActionResult> TrajeDeBaño() => await ObtenerVistaFiltrada("Traje de Baño", null, null, null, 500, false);
+        public async Task<IActionResult> Conjuntos() => await ObtenerVistaFiltrada("Conjuntos", null, null, null, 500, false);
+        public async Task<IActionResult> Vestidos() => await ObtenerVistaFiltrada("Vestidos", null, null, null, 500, false);
+        public async Task<IActionResult> Faldas() => await ObtenerVistaFiltrada("Faldas", null, null, null, 500, false);
+        public async Task<IActionResult> Pantalones() => await ObtenerVistaFiltrada("Pantalones", null, null, null, 500, false);
+        public async Task<IActionResult> Jeans() => await ObtenerVistaFiltrada("Jeans", null, null, null, 500, false);
+        public async Task<IActionResult> Bolsas() => await ObtenerVistaFiltrada("Bolsas", null, null, null, 500, false);
     }
 }

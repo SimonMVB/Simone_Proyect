@@ -12,7 +12,7 @@ namespace Simone.Data
         {
         }
 
-        // ✅ Definición de todas las tablas de la base de datos
+        // ✅ DbSet: Definición de tablas
         public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
         public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
         public DbSet<Carrito> Carrito { get; set; }
@@ -43,22 +43,19 @@ namespace Simone.Data
         public DbSet<Reseñas> Reseñas { get; set; }
         public DbSet<Subcategorias> Subcategorias { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
-        public DbSet<IdentityRole> IdentityRoles { get; set; } 
-        
+        public DbSet<IdentityRole> IdentityRoles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            base.OnModelCreating(modelBuilder); // Configura Identity
+            base.OnModelCreating(modelBuilder);
 
-            // ✅ Asegurar la creación de tablas de Identity
+            // ✅ Configuración de claves y relaciones
             modelBuilder.Entity<IdentityRole>().HasKey(r => r.Id);
 
-            // ✅ Definir claves primarias para entidades sin clave automática
             modelBuilder.Entity<Compras>().HasKey(c => c.CompraID);
             modelBuilder.Entity<Comisiones>().HasKey(c => c.ComisionID);
             modelBuilder.Entity<ClientesProgramas>().HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
 
-            // ✅ Relación: Productos con Proveedores y Subcategorías
             modelBuilder.Entity<Productos>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
@@ -71,7 +68,6 @@ namespace Simone.Data
                 .HasForeignKey(p => p.SubcategoriaID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ Relación: Subcategorías con Categorías
             modelBuilder.Entity<Subcategorias>()
                 .HasKey(s => s.SubcategoriaID);
 
@@ -81,7 +77,6 @@ namespace Simone.Data
                 .HasForeignKey(s => s.CategoriaID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ Relación: Reseñas con Clientes y Productos
             modelBuilder.Entity<Reseñas>()
                 .HasKey(r => r.ReseñaID);
 
@@ -97,13 +92,11 @@ namespace Simone.Data
                 .HasForeignKey(r => r.ProductoID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ Relación: Usuarios con Roles
             modelBuilder.Entity<Usuario>()
                 .HasOne(u => u.Rol)
                 .WithMany(r => r.Usuarios)
                 .HasForeignKey(u => u.RolID);
 
-            // ✅ Relación: CuponesUsados con Clientes y Promociones
             modelBuilder.Entity<CuponesUsados>()
                 .HasKey(cu => new { cu.ClienteID, cu.PromocionID });
 
@@ -119,7 +112,6 @@ namespace Simone.Data
                 .HasForeignKey(cu => cu.PromocionID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ Relación: DetalleVentas con Ventas y Producto
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Venta)
                 .WithMany(v => v.DetalleVentas)
@@ -131,16 +123,8 @@ namespace Simone.Data
                 .WithMany(p => p.DetalleVentas)
                 .HasForeignKey(dv => dv.ProductoID)
                 .OnDelete(DeleteBehavior.Cascade);
-            modelBuilder.Entity<DetalleVentas>()
-                .Property(dv => dv.PrecioUnitario)
-                .HasColumnType("decimal(18,2)");
 
-            modelBuilder.Entity<DetalleVentas>()
-                .Property(dv => dv.Subtotal)
-                .HasColumnType("decimal(18,2)");
-
-
-
+            // ✅ Tipos de datos financieros
             modelBuilder.Entity<Comisiones>().Property(c => c.MontoComision).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Comisiones>().Property(c => c.PorcentajeComision).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Compras>().Property(c => c.Total).HasColumnType("decimal(18,2)");
@@ -161,6 +145,18 @@ namespace Simone.Data
             modelBuilder.Entity<ProgramasFidelizacion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Promocion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
 
+            // ✅ Configuración para LogIniciosSesion
+            modelBuilder.Entity<LogIniciosSesion>(entity =>
+            {
+                entity.HasKey(l => l.LogID);
+                entity.Property(l => l.Usuario)
+                      .IsRequired()
+                      .HasMaxLength(150);
+                entity.Property(l => l.FechaInicio)
+                      .HasColumnType("datetime");
+                entity.Property(l => l.Exitoso)
+                      .IsRequired(false);
+            });
         }
     }
 }
