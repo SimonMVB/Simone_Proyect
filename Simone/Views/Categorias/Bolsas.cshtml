@@ -69,9 +69,9 @@
                 <div class="col">
                     <div class="card h-100">
                         <img src="~/images/productos/@(producto.ImagenesProductos.FirstOrDefault()?.RutaImagen ?? "default-product.png")"
-                             class="card-img-top" alt="@producto.NombreProducto" />
+                             class="card-img-top" alt="@producto.Nombre" />
                         <div class="card-body">
-                            <h5 class="card-title">@producto.NombreProducto</h5>
+                            <h5 class="card-title">@producto.Nombre</h5>
                             <p class="card-text">@producto.Descripcion</p>
                             <p class="fw-bold text-success">$@producto.PrecioVenta</p>
                             <p class="text-muted">Stock: @producto.Stock</p>

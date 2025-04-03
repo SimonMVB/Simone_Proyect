@@ -12,6 +12,7 @@ namespace Simone.Models
         // Relación con Empleados (opcional)
         public int? EmpleadoID { get; set; }
         public Empleados Empleado { get; set; }
+        public string Estado { get; set; }
 
         // Relación con Clientes (opcional)
         public int? ClienteID { get; set; }

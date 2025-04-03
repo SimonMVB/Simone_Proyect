@@ -16,7 +16,7 @@ namespace Simone.Models
         public DateTime? FechaReseña { get; set; }
 
         [ForeignKey("ProductoID")]
-        public Productos Producto { get; set; }  // ✅ Asegurar que está bien definido
+        public Producto Producto { get; set; }  // ✅ Asegurar que está bien definido
 
         [ForeignKey("ClienteID")]
         public Cliente Cliente { get; set; }  // ✅ Asegurar que no es un "object"

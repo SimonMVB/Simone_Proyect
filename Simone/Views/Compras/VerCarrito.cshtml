@@ -1,45 +1,83 @@
 ﻿@model IEnumerable<Simone.Models.CarritoDetalle>
+@{
+    ViewData["Title"] = "Carrito de Compras";
+}
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Precio Unitario</th>
-            <th>Total</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Producto.NombreProducto</td>
-                <td>
-                    <form method="post" asp-action="ActualizarCarrito">
-                        <input type="hidden" name="productoId" value="@item.ProductoID" />
-                        <input type="number" name="cantidad" min="1" class="form-control" value="@item.Cantidad" />
-                        <button type="submit" class="btn btn-primary">Actualizar</button>
-                    </form>
-                </td>
-                <!-- Cambia 'Precio' a 'PrecioUnitario' -->
-                <td>@item.Precio.ToString("C2")</td>
-                <!-- Si tu modelo tiene la propiedad Total (Cantidad * PrecioUnitario) -->
-                <td>@item.Total.ToString("C2")</td>
-                <td>
-                    <a href="@Url.Action("EliminarDelCarrito", "Carrito", new { productoId = item.ProductoID })"
-                       class="btn btn-danger">Eliminar</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-    <tfoot>
-        <!-- Sumamos el total de todos los items -->
-        <tr>
-            <td colspan="4" class="text-end">
-                <strong>Total:</strong>
-                @Model.Sum(x => x.Total).ToString("C2")
-            </td>
-        </tr>
-    </tfoot>
-</table>
+<div class="ui container mt-5">
+    <h2 class="ui header">
+        <i class="shopping cart icon"></i>
+        <div class="content">
+            Carrito de Compras
+            <div class="sub header">Revisa, modifica o elimina productos antes de confirmar tu compra</div>
+        </div>
+    </h2>
+
+    <div class="ui divider"></div>
+
+    @if (Model.Any())
+    {
+        <table class="ui celled striped table">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th style="width: 160px;">Cantidad</th>
+                    <th>Precio Unitario</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Producto.Nombre</td>
+                        <td>
+                            <form method="post" asp-action="ActualizarCarrito" class="ui form">
+                                <div class="ui action input">
+                                    <input type="hidden" name="productoId" value="@item.ProductoID" />
+                                    <input type="number" name="cantidad" min="1" value="@item.Cantidad" style="width:80px" />
+                                    <button type="submit" class="ui icon blue button" title="Actualizar">
+                                        <i class="sync alternate icon"></i>
+                                    </button>
+                                </div>
+                            </form>
+                        </td>
+                        <td>$@item.Precio.ToString("F2")</td>
+                        <td>$@item.Total.ToString("F2")</td>
+                        <td>
+                            <a href="@Url.Action("EliminarDelCarrito", "Carrito", new { productoId = item.ProductoID })" class="ui red icon button" title="Eliminar">
+                                <i class="trash icon"></i>
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th colspan="3" class="right aligned">Total:</th>
+                    <th colspan="2">$@Model.Sum(x => x.Total).ToString("F2")</th>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="ui divider"></div>
+
+        <div class="ui right aligned segment">
+            <form asp-action="ConfirmarCompra" method="post">
+                <button class="ui green huge button">
+                    <i class="check icon"></i> Confirmar Compra
+                </button>
+            </form>
+        </div>
+    }
+    else
+    {
+        <div class="ui icon warning message">
+            <i class="shopping basket icon"></i>
+            <div class="content">
+                <div class="header">Tu carrito está vacío</div>
+                <p>Agrega productos desde el catálogo para comenzar tu compra.</p>
+            </div>
+        </div>
+    }
+</div>

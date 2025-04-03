@@ -15,6 +15,6 @@ namespace Simone.Models
         public string? Descripcion { get; set; }  // Puede ser nulo
 
         // Relación con Productos
-        public Productos Producto { get; set; }
+        public Producto Producto { get; set; }
     }
 }

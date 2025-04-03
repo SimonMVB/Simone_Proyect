@@ -5,13 +5,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
-    public class Productos
+    public class Producto
     {
         [Key]
         public int ProductoID { get; set; }
 
         [Required]
-        public string NombreProducto { get; set; }
+        public string Nombre { get; set; }
 
         [Required]
         public DateTime FechaAgregado { get; set; }

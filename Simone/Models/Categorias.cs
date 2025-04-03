@@ -10,12 +10,12 @@ namespace Simone.Models
 
         [Required(ErrorMessage = "El nombre de la categoría es obligatorio.")]
         [StringLength(100, ErrorMessage = "El nombre de la categoría no puede exceder los 100 caracteres.")]
-        public string NombreCategoria { get; set; }
+        public string Nombre { get; set; }
 
         // ✅ Relación con Subcategorías
         public virtual ICollection<Subcategorias> Subcategoria { get; set; } = new List<Subcategorias>();
 
         // ✅ Relación con Productos
-        public virtual ICollection<Productos> Productos { get; set; } = new List<Productos>();
+        public virtual ICollection<Producto> Productos { get; set; } = new List<Producto>();
     }
 }

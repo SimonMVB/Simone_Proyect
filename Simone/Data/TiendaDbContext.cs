@@ -36,8 +36,8 @@ namespace Simone.Data
         public DbSet<ImagenesProductos> ImagenesProductos { get; set; }
         public DbSet<LogIniciosSesion> LogIniciosSesion { get; set; }
         public DbSet<MovimientosInventario> MovimientosInventario { get; set; }
-        public DbSet<Pedidos> Pedidos { get; set; }
-        public DbSet<Productos> Productos { get; set; }
+        public DbSet<Pedido> Pedidos { get; set; }
+        public DbSet<Producto> Productos { get; set; }
         public DbSet<ProgramasFidelizacion> ProgramasFidelizacion { get; set; }
         public DbSet<Proveedores> Proveedores { get; set; }
         public DbSet<Reseñas> Reseñas { get; set; }
@@ -56,13 +56,13 @@ namespace Simone.Data
             modelBuilder.Entity<Comisiones>().HasKey(c => c.ComisionID);
             modelBuilder.Entity<ClientesProgramas>().HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
 
-            modelBuilder.Entity<Productos>()
+            modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
                 .HasForeignKey(p => p.ProveedorID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Productos>()
+            modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Subcategoria)
                 .WithMany(s => s.Productos)
                 .HasForeignKey(p => p.SubcategoriaID)
@@ -139,9 +139,9 @@ namespace Simone.Data
             modelBuilder.Entity<Gastos>().Property(g => g.Monto).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<HistorialPrecios>().Property(h => h.PrecioAnterior).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<HistorialPrecios>().Property(h => h.PrecioNuevo).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Pedidos>().Property(p => p.Total).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Productos>().Property(p => p.PrecioCompra).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Productos>().Property(p => p.PrecioVenta).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Pedido>().Property(p => p.Total).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Producto>().Property(p => p.PrecioCompra).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<Producto>().Property(p => p.PrecioVenta).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<ProgramasFidelizacion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
             modelBuilder.Entity<Promocion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
 

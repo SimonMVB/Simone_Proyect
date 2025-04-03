@@ -18,6 +18,6 @@ namespace Simone.Models
 
         // ✅ Relación con Compras - Asegurar que sea una lista y no un objeto
         public ICollection<Compras> Compras { get; set; } = new List<Compras>();
-        public ICollection<Productos> Productos { get; set; } = new List<Productos>();
+        public ICollection<Producto> Productos { get; set; } = new List<Producto>();
     }
 }

@@ -34,7 +34,7 @@ builder.Services.AddHttpContextAccessor();
 
 // 2.3. Configurar el contexto de la base de datos usando SQL Server
 builder.Services.AddDbContext<TiendaDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("TiendaDB")));
 
 // 2.4. Configurar Identity con Entity Framework y opciones de seguridad para contraseñas
 builder.Services.AddIdentity<Usuario, IdentityRole>(options =>

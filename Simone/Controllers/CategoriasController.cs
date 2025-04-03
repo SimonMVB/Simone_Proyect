@@ -57,7 +57,7 @@ namespace Simone.Controllers
                     .AsQueryable();
 
                 if (!string.IsNullOrEmpty(categoria))
-                    productosQuery = productosQuery.Where(p => p.Categoria.NombreCategoria.ToLower() == categoria.ToLower());
+                    productosQuery = productosQuery.Where(p => p.Categoria.Nombre.ToLower() == categoria.ToLower());
 
                 if (MarcasSeleccionadas.Any())
                     productosQuery = productosQuery.Where(p => MarcasSeleccionadas.Contains(p.Marca));
@@ -72,7 +72,7 @@ namespace Simone.Controllers
                     productosQuery = productosQuery.Where(p => p.Stock > 0);
 
                 productosQuery = productosQuery.Where(p => p.PrecioVenta <= PrecioMax)
-                                               .OrderBy(p => p.NombreProducto);
+                                               .OrderBy(p => p.Nombre);
 
                 var productos = await productosQuery.ToListAsync();
 

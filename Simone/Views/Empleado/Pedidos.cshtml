@@ -1,0 +1,65 @@
+﻿@model IEnumerable<Simone.Models.Pedido>
+@{
+    ViewData["Title"] = "Gestión de Pedidos";
+}
+
+<div class="ui container mt-5">
+    <div class="ui raised segment">
+        <h2 class="ui header">
+            <i class="truck icon"></i>
+            <div class="content">
+                Gestión de Pedidos
+                <div class="sub header">Consulta y seguimiento de los pedidos realizados</div>
+            </div>
+        </h2>
+
+        <div class="ui divider"></div>
+
+        @if (Model != null && Model.Any())
+        {
+            <table class="ui celled striped selectable table">
+                <thead class="full-width">
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Fecha del Pedido</th>
+                        <th>Estado</th>
+                        <th>Total</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var pedido in Model)
+                    {
+                        <tr>
+                            <td>@pedido.PedidoID</td>
+                            <td>@pedido.Cliente.Nombre</td> <!-- Corregí "Mombre" a "Nombre" -->
+                            <td>@pedido.FechaPedido.ToString("dd/MM/yyyy")</td> <!-- Correcto -->
+                            <td>
+                                <div class="ui @((pedido.EstadoPedido == "Entregado") ? "green" : (pedido.EstadoPedido == "En proceso") ? "yellow" : "red") label">
+                                    @pedido.EstadoPedido
+                                </div>
+                            </td>
+                            <td>$@pedido.Total.ToString("F2")</td>
+                            <td>
+                                <a class="ui icon blue button" title="Ver Detalle">
+                                    <i class="eye icon"></i>
+                                </a>
+                                <button class="ui icon basic grey button disabled" title="Editar (no disponible)">
+                                    <i class="edit outline icon"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="ui info message">
+                <div class="header">No hay pedidos registrados.</div>
+                <p>Cuando se registren pedidos, los verás aquí.</p>
+            </div>
+        }
+    </div>
+</div>

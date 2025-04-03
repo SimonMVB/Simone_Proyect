@@ -12,7 +12,7 @@ namespace Simone.Models
 
         // Relación con Productos (Opcional)
         public int? ProductoID { get; set; }
-        public Productos Producto { get; set; }
+        public Producto Producto { get; set; }
 
         [Required]
         [StringLength(500)]

@@ -31,7 +31,7 @@ namespace Simone.Models
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
 
         // Relación con Pedidos (Un Cliente puede tener muchos Pedidos)
-        public ICollection<Pedidos>? Pedidos { get; set; }
+        public ICollection<Pedido>? Pedidos { get; set; }
         public ICollection<Reseñas> Reseñas { get; set; }
 
         public ICollection<CuponesUsados> CuponesUsados { get; set; } = new List<CuponesUsados>();

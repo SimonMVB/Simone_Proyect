@@ -6,6 +6,7 @@ using Simone.ViewModels;
 using Simone.Data;
 using System;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Simone.Controllers
 {
@@ -16,32 +17,25 @@ namespace Simone.Controllers
     {
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
 
-        public CuentaController(UserManager<Usuario> userManager, SignInManager<Usuario> signInManager, ILogger<CuentaController> logger, TiendaDbContext context)
+        public CuentaController(UserManager<Usuario> userManager, SignInManager<Usuario> signInManager, RoleManager<IdentityRole> roleManager, ILogger<CuentaController> logger, TiendaDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
+            _roleManager = roleManager;
             _logger = logger;
             _context = context;
         }
 
-        /// <summary>
-        /// Muestra la vista de inicio de sesión.
-        /// </summary>
-        /// <returns>Vista de Login</returns>
         [HttpGet]
         public IActionResult Login()
         {
             return View();
         }
 
-        /// <summary>
-        /// Procesa el inicio de sesión.
-        /// </summary>
-        /// <param name="model">Modelo de Login</param>
-        /// <returns>Redirige a la página principal o muestra errores</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -62,7 +56,14 @@ namespace Simone.Controllers
                 {
                     _logger.LogInformation("El usuario {Email} inició sesión correctamente.", model.Email);
                     await RegistrarLog(model.Email, true);
-                    return RedirectToAction("Index", "Home");
+
+                    var roles = await _userManager.GetRolesAsync(user);
+                    if (roles.Contains("Administrador"))
+                        return RedirectToAction("Panel", "Admin");
+                    else if (roles.Contains("Empleado"))
+                        return RedirectToAction("Dashboard", "Empleado");
+                    else
+                        return RedirectToAction("Index", "Home");
                 }
                 else if (result.IsLockedOut)
                 {
@@ -99,21 +100,12 @@ namespace Simone.Controllers
             await _context.SaveChangesAsync();
         }
 
-        /// <summary>
-        /// Muestra la vista de registro de usuario.
-        /// </summary>
-        /// <returns>Vista de Registro</returns>
         [HttpGet]
         public IActionResult Registrar()
         {
             return View();
         }
 
-        /// <summary>
-        /// Procesa el registro de un nuevo usuario.
-        /// </summary>
-        /// <param name="model">Modelo de Registro</param>
-        /// <returns>Redirige a la página principal o muestra errores</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Registro(RegistroViewModel model)
@@ -133,6 +125,17 @@ namespace Simone.Controllers
 
             if (result.Succeeded)
             {
+                // Crear roles si no existen
+                if (!await _roleManager.RoleExistsAsync("Administrador"))
+                    await _roleManager.CreateAsync(new IdentityRole("Administrador"));
+                if (!await _roleManager.RoleExistsAsync("Empleado"))
+                    await _roleManager.CreateAsync(new IdentityRole("Empleado"));
+                if (!await _roleManager.RoleExistsAsync("Comprador"))
+                    await _roleManager.CreateAsync(new IdentityRole("Comprador"));
+
+                // Asignar rol de Comprador por defecto
+                await _userManager.AddToRoleAsync(usuario, "Comprador");
+
                 _logger.LogInformation("El usuario {Email} se registró correctamente.", model.Email);
                 await _signInManager.SignInAsync(usuario, isPersistent: false);
                 return RedirectToAction("Index", "Home");
@@ -147,10 +150,6 @@ namespace Simone.Controllers
             return View(model);
         }
 
-        /// <summary>
-        /// Procesa el cierre de sesión del usuario.
-        /// </summary>
-        /// <returns>Redirige a la página principal</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -161,4 +160,3 @@ namespace Simone.Controllers
         }
     }
 }
-

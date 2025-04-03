@@ -20,13 +20,13 @@
                         <div class="col-3">
                             @* Ajusta según tu propiedad real (Imagen, Foto, etc.) *@
                             <img src="@item.Producto.ImagenesProductos"
-                                 alt="@item.Producto.NombreProducto"
+                                 alt="@item.Producto.Nombre"
                                  class="img-fluid"
                                  onerror="this.src='/images/default-product.png';" />
                         </div>
                         <!-- Columna con detalles del producto -->
                         <div class="col-6">
-                            <h6 class="mb-1">@item.Producto.NombreProducto</h6>
+                            <h6 class="mb-1">@item.Producto.Nombre</h6>
                             <p class="mb-1"><small>Cantidad: @item.Cantidad</small></p>
                             <p class="mb-1"><small>Precio: @item.Precio.ToString("C2")</small></p>
                         </div>

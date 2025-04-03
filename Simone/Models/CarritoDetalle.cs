@@ -38,7 +38,7 @@ namespace Simone.Models
         /// <summary>
         /// Producto asociado al detalle.
         /// </summary>
-        public virtual Productos Producto { get; set; } = null!;
+        public virtual Producto Producto { get; set; } = null!;
 
         /// <summary>
         /// Cantidad de unidades del producto en el carrito.

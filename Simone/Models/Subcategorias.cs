@@ -19,6 +19,6 @@ namespace Simone.Models
         public Categorias Categoria { get; set; }
 
         // Relación con Productos
-        public ICollection<Productos> Productos { get; set; }
+        public ICollection<Producto> Productos { get; set; }
     }
 }

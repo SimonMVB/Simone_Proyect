@@ -17,10 +17,10 @@ namespace Simone.Models
 
         // Relación con Pedidos
         [ForeignKey("PedidoID")]
-        public Pedidos Pedido { get; set; }
+        public Pedido Pedido { get; set; }
 
         // Relación con Productos
         [ForeignKey("ProductoID")]
-        public Productos Producto { get; set; }
+        public Producto Producto { get; set; }
     }
 }

@@ -1,0 +1,42 @@
+﻿@model Simone.Models.Usuario
+@{
+    ViewData["Title"] = "Editar Rol de Usuario";
+    var rolesDisponibles = ViewBag.RolesDisponibles as List<string>;
+    var rolesAsignados = ViewBag.RolesAsignados as IList<string>;
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="exchange icon"></i>
+            <div class="content">Editar Rol de @Model.Email</div>
+        </h2>
+
+        <form class="ui form" asp-action="EditarRol" asp-controller="Admin" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+
+            <div class="field">
+                <label>Rol actual:</label>
+                <div class="ui label">
+                    @(rolesAsignados != null && rolesAsignados.Count > 0 ? rolesAsignados[0] : "Sin rol")
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Nuevo rol:</label>
+                <select class="ui dropdown" name="nuevoRol" required>
+                    <option value="">Seleccione un rol</option>
+                    @foreach (var rol in rolesDisponibles)
+                    {
+                        <option value="@rol">@rol</option>
+                    }
+                </select>
+            </div>
+
+            <button type="submit" class="ui primary button">
+                <i class="save icon"></i> Guardar Cambios
+            </button>
+            <a asp-action="Usuarios" class="ui button">Cancelar</a>
+        </form>
+    </div>
+</div>

@@ -17,6 +17,6 @@ namespace Simone.Models
 
         // Relación con Productos
         [ForeignKey("ProductoID")]
-        public Productos Producto { get; set; }
+        public Producto Producto { get; set; }
     }
 }

@@ -1,0 +1,55 @@
+﻿@{
+    ViewData["Title"] = "Panel del Empleado";
+}
+
+<div class="ui container mt-5">
+    <div class="ui raised very padded text container segment">
+        <h2 class="ui header">
+            <i class="cogs icon"></i>
+            <div class="content">
+                Panel del Empleado
+                <div class="sub header">Bienvenido al panel de gestión interna</div>
+            </div>
+        </h2>
+
+        <div class="ui divider"></div>
+
+        <div class="ui three stackable cards">
+            <div class="card">
+                <div class="content">
+                    <div class="header">Gestión de Pedidos</div>
+                    <div class="description">Consulta y administra los pedidos registrados.</div>
+                </div>
+                <div class="extra content">
+                    <a class="ui primary button" asp-controller="Empleado" asp-action="Pedidos">
+                        <i class="truck icon"></i> Ver Pedidos
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="content">
+                    <div class="header">Inventario</div>
+                    <div class="description">Visualiza y gestiona el inventario disponible.</div>
+                </div>
+                <div class="extra content">
+                    <a class="ui teal button" asp-controller="Empleado" asp-action="Inventario">
+                        <i class="boxes icon"></i> Ver Inventario
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="content">
+                    <div class="header">Ventas</div>
+                    <div class="description">Consulta el historial de ventas realizadas.</div>
+                </div>
+                <div class="extra content">
+                    <a class="ui green button" asp-controller="Empleado" asp-action="Ventas">
+                        <i class="chart line icon"></i> Ver Ventas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,58 @@
+﻿@model IEnumerable<Simone.Models.Producto>
+@{
+    ViewData["Title"] = "Inventario de Productos";
+}
+
+<div class="ui container mt-5">
+    <div class="ui raised segment">
+        <h2 class="ui header">
+            <i class="boxes icon"></i>
+            <div class="content">
+                Inventario
+                <div class="sub header">Control y disponibilidad de productos en stock</div>
+            </div>
+        </h2>
+
+        <div class="ui divider"></div>
+
+        @if (Model != null && Model.Any())
+        {
+            <table class="ui celled table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Stock</th>
+                        <th>Precio</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var producto in Model)
+                    {
+                        <tr>
+                            <td>@producto.ProductoID</td>
+                            <td>@producto.Nombre</td>
+                            <td>@producto.Categoria?.Nombre</td>
+                            <td>@producto.Stock</td>
+                            <td>$@producto.PrecioVenta.ToString("F2")</td>
+                            <td>
+                                <div class="ui @((producto.Stock == 0) ? "red" : (producto.Stock < 10) ? "orange" : "green") label">
+                                    @(producto.Stock == 0 ? "Agotado" : producto.Stock < 10 ? "Bajo" : "Disponible")
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="ui warning message">
+                <div class="header">No hay productos disponibles.</div>
+                <p>Actualmente no hay datos en el inventario.</p>
+            </div>
+        }
+    </div>
+</div>

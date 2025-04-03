@@ -1,0 +1,52 @@
+﻿@model Simone.Models.CompraViewModel
+@{
+    ViewData["Title"] = "Confirmar Compra";
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="credit card icon"></i>
+            <div class="content">
+                Confirmar Compra
+                <div class="sub header">Verifica tu información antes de finalizar el pedido</div>
+            </div>
+        </h2>
+
+        <form asp-action="ProcesarCompra" method="post" class="ui form">
+            <div class="two fields">
+                <div class="field">
+                    <label>Nombre completo</label>
+                    <input asp-for="NombreCliente" placeholder="Nombre completo" required />
+                </div>
+                <div class="field">
+                    <label>Correo electrónico</label>
+                    <input asp-for="EmailCliente" type="email" placeholder="Correo" required />
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Dirección de entrega</label>
+                <input asp-for="Direccion" placeholder="Dirección completa" required />
+            </div>
+
+            <div class="field">
+                <label>Método de pago</label>
+                <select asp-for="MetodoPago" class="ui dropdown" required>
+                    <option value="">Seleccione...</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta de crédito/débito</option>
+                    <option value="Transferencia">Transferencia bancaria</option>
+                </select>
+            </div>
+
+            <div class="ui info message">
+                <p><strong>Total a pagar:</strong> $@Model.Total.ToString("F2")</p>
+            </div>
+
+            <button type="submit" class="ui green huge button">
+                <i class="check icon"></i> Finalizar Compra
+            </button>
+        </form>
+    </div>
+</div>

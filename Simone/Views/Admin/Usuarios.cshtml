@@ -1,0 +1,42 @@
+﻿@model IEnumerable<Simone.Models.Usuario>
+@{
+    ViewData["Title"] = "Gestión de Usuarios";
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="users icon"></i>
+            <div class="content">Gestión de Usuarios</div>
+        </h2>
+
+        <table class="ui celled striped table">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Nombre</th>
+                    <th>Opciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var usuario in Model)
+                {
+                    <tr>
+                        <td>@usuario.Email</td>
+                        <td>@usuario.NombreUsuario</td>
+                        <td>
+                            <a asp-controller="Admin" asp-action="EditarRol" asp-route-id="@usuario.Id" class="ui icon blue button" title="Editar Rol">
+                                <i class="edit icon"></i>
+                            </a>
+                            <form asp-controller="Admin" asp-action="EliminarUsuario" asp-route-id="@usuario.Id" method="post" style="display:inline">
+                                <button type="submit" class="ui icon red button" title="Eliminar Usuario" onclick="return confirm('¿Estás seguro de eliminar este usuario?');">
+                                    <i class="trash icon"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -12,7 +12,7 @@ namespace Simone.ViewModels
         /// <summary>
         /// Lista de productos filtrados que se mostrarán en la vista.
         /// </summary>
-        public List<Productos> Productos { get; set; } = new List<Productos>();
+        public List<Producto> Productos { get; set; } = new List<Producto>();
 
         /// <summary>
         /// Lista de marcas seleccionadas por el usuario para filtrar los productos.

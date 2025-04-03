@@ -1,0 +1,58 @@
+﻿@model IEnumerable<Simone.Models.Ventas>
+@{
+    ViewData["Title"] = "Historial de Ventas";
+}
+
+<div class="ui container mt-5">
+    <div class="ui raised segment">
+        <h2 class="ui header">
+            <i class="chart line icon"></i>
+            <div class="content">
+                Historial de Ventas
+                <div class="sub header">Consulta y seguimiento de las ventas realizadas</div>
+            </div>
+        </h2>
+
+        <div class="ui divider"></div>
+
+        @if (Model != null && Model.Any())
+        {
+            <table class="ui celled table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Cliente</th>
+                        <th>Empleado</th>
+                        <th>Fecha</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var venta in Model)
+                    {
+                        <tr>
+                            <td>@venta.VentaID</td>
+                            <td>@venta.Clientes?.Nombre</td>
+                            <td>@venta.Empleado?.Nombre</td>
+                            <td>@venta.FechaVenta.ToString("dd/MM/yyyy")</td>
+                            <td>$@venta.Total.ToString("F2")</td>
+                            <td>
+                                <div class="ui @((venta.Estado == "Finalizada") ? "green" : "orange") label">
+                                    @venta.Estado
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="ui info message">
+                <div class="header">No hay ventas registradas.</div>
+                <p>Se mostrarán aquí cuando se registren ventas.</p>
+            </div>
+        }
+    </div>
+</div>
