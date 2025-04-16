@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+Ôªøusing Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Simone.Models;
@@ -10,9 +10,6 @@ using System.Linq;
 
 namespace Simone.Controllers
 {
-    /// <summary>
-    /// Controlador para gestionar la autenticaciÛn y registro de usuarios.
-    /// </summary>
     public class CuentaController : Controller
     {
         private readonly UserManager<Usuario> _userManager;
@@ -21,7 +18,11 @@ namespace Simone.Controllers
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
 
-        public CuentaController(UserManager<Usuario> userManager, SignInManager<Usuario> signInManager, RoleManager<IdentityRole> roleManager, ILogger<CuentaController> logger, TiendaDbContext context)
+        public CuentaController(UserManager<Usuario> userManager,
+                                SignInManager<Usuario> signInManager,
+                                RoleManager<IdentityRole> roleManager,
+                                ILogger<CuentaController> logger,
+                                TiendaDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -30,12 +31,14 @@ namespace Simone.Controllers
             _context = context;
         }
 
+        // GET: /Cuenta/Login
         [HttpGet]
         public IActionResult Login()
         {
             return View();
         }
 
+        // POST: /Cuenta/Login
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -46,41 +49,41 @@ namespace Simone.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             bool loginExitoso = false;
 
-            if (user != null)
+            if (user != null && user.Activo)
             {
-                var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
-
+                var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
                 loginExitoso = result.Succeeded;
 
                 if (result.Succeeded)
                 {
-                    _logger.LogInformation("El usuario {Email} iniciÛ sesiÛn correctamente.", model.Email);
+                    _logger.LogInformation("Usuario autenticado: {Email}", model.Email);
                     await RegistrarLog(model.Email, true);
 
                     var roles = await _userManager.GetRolesAsync(user);
+
                     if (roles.Contains("Administrador"))
                         return RedirectToAction("Panel", "Admin");
-                    else if (roles.Contains("Empleado"))
+
+                    if (roles.Contains("Empleado"))
                         return RedirectToAction("Dashboard", "Empleado");
-                    else
-                        return RedirectToAction("Index", "Home");
+
+                    return RedirectToAction("Index", "Home");
                 }
-                else if (result.IsLockedOut)
+
+                if (result.IsLockedOut)
                 {
-                    _logger.LogWarning("La cuenta del usuario {Email} se encuentra bloqueada.", model.Email);
+                    _logger.LogWarning("Cuenta bloqueada: {Email}", model.Email);
                     await RegistrarLog(model.Email, false);
                     return View("Lockout");
                 }
-                else
-                {
-                    ModelState.AddModelError(string.Empty, "Inicio de sesiÛn inv·lido.");
-                    _logger.LogWarning("Intento fallido de inicio de sesiÛn para {Email}.", model.Email);
-                }
+
+                _logger.LogWarning("Credenciales incorrectas: {Email}", model.Email);
+                ModelState.AddModelError(string.Empty, "Email o contrase√±a incorrectos.");
             }
             else
             {
-                ModelState.AddModelError(string.Empty, "El usuario no existe.");
-                _logger.LogWarning("Intento de inicio con usuario inexistente: {Email}.", model.Email);
+                _logger.LogWarning("Intento de login con usuario inexistente o inactivo: {Email}", model.Email);
+                ModelState.AddModelError(string.Empty, "El usuario no existe o est√° inactivo.");
             }
 
             await RegistrarLog(model.Email, loginExitoso);
@@ -100,15 +103,17 @@ namespace Simone.Controllers
             await _context.SaveChangesAsync();
         }
 
+        // GET: /Cuenta/Registrar
         [HttpGet]
         public IActionResult Registrar()
         {
             return View();
         }
 
+        // POST: /Cuenta/Registrar
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Registro(RegistroViewModel model)
+        public async Task<IActionResult> Registrar(RegistroViewModel model)
         {
             if (!ModelState.IsValid)
                 return View(model);
@@ -116,9 +121,12 @@ namespace Simone.Controllers
             var usuario = new Usuario
             {
                 NombreUsuario = model.Nombre,
+                NombreCompleto = model.Nombre,
                 Email = model.Email,
                 UserName = model.Email,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                FechaRegistro = DateTime.Now,
+                Activo = true
             };
 
             var result = await _userManager.CreateAsync(usuario, model.Password);
@@ -126,17 +134,16 @@ namespace Simone.Controllers
             if (result.Succeeded)
             {
                 // Crear roles si no existen
-                if (!await _roleManager.RoleExistsAsync("Administrador"))
-                    await _roleManager.CreateAsync(new IdentityRole("Administrador"));
-                if (!await _roleManager.RoleExistsAsync("Empleado"))
-                    await _roleManager.CreateAsync(new IdentityRole("Empleado"));
-                if (!await _roleManager.RoleExistsAsync("Comprador"))
-                    await _roleManager.CreateAsync(new IdentityRole("Comprador"));
+                foreach (var rol in new[] { "Administrador", "Empleado", "Comprador" })
+                {
+                    if (!await _roleManager.RoleExistsAsync(rol))
+                        await _roleManager.CreateAsync(new IdentityRole(rol));
+                }
 
-                // Asignar rol de Comprador por defecto
+                // Asignar rol por defecto
                 await _userManager.AddToRoleAsync(usuario, "Comprador");
 
-                _logger.LogInformation("El usuario {Email} se registrÛ correctamente.", model.Email);
+                _logger.LogInformation("Usuario registrado: {Email}", model.Email);
                 await _signInManager.SignInAsync(usuario, isPersistent: false);
                 return RedirectToAction("Index", "Home");
             }
@@ -144,19 +151,118 @@ namespace Simone.Controllers
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
-                _logger.LogError("Error al registrar el usuario {Email}: {Error}", model.Email, error.Description);
+                _logger.LogError("Error al registrar {Email}: {Error}", model.Email, error.Description);
             }
 
             return View(model);
         }
 
+        // POST: /Cuenta/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            _logger.LogInformation("El usuario cerrÛ sesiÛn.");
-            return RedirectToAction("Index", "Home");
+            _logger.LogInformation("Sesi√≥n cerrada.");
+            return RedirectToAction("Login", "Cuenta");
         }
+
+        // GET: /Cuenta/AccesoDenegado
+        [HttpGet]
+        public IActionResult AccesoDenegado()
+        {
+            return View();
+        }
+        // GET: /Cuenta/Perfil
+        [HttpGet]
+        public async Task<IActionResult> Perfil()
+        {
+            var usuario = await _userManager.GetUserAsync(User);
+            if (usuario == null)
+            {
+                TempData["MensajeError"] = "No se encontr√≥ al usuario.";
+                return RedirectToAction("Login");
+            }
+
+            var roles = await _userManager.GetRolesAsync(usuario);
+            ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
+
+            return View(usuario);
+        }
+
+        // POST: /Cuenta/Perfil
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Perfil(Usuario model)
+        {
+            if (!ModelState.IsValid)
+            {
+                TempData["MensajeError"] = "Corrige los errores antes de guardar.";
+                return View(model);
+            }
+
+            var usuario = await _userManager.GetUserAsync(User);
+            if (usuario == null)
+            {
+                TempData["MensajeError"] = "No se encontr√≥ el usuario.";
+                return RedirectToAction("Login");
+            }
+
+            // Solo se puede editar NombreCompleto por seguridad
+            usuario.NombreCompleto = model.NombreCompleto;
+
+            var result = await _userManager.UpdateAsync(usuario);
+
+            if (result.Succeeded)
+            {
+                TempData["MensajeExito"] = "Tu perfil ha sido actualizado correctamente.";
+            }
+            else
+            {
+                TempData["MensajeError"] = "Ocurri√≥ un error al guardar los cambios.";
+            }
+
+            var roles = await _userManager.GetRolesAsync(usuario);
+            ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
+
+            return View(usuario);
+        }
+        [HttpGet]
+        public IActionResult OlvidePassword()
+        {
+            return View();
+        }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> OlvidePassword(ForgotPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View(model);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
+            {
+                TempData["MensajeExito"] = "Si el correo existe, se ha enviado un enlace de recuperaci√≥n.";
+                return RedirectToAction("Login");
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var callbackUrl = Url.Action("ResetPassword", "Cuenta", new { email = user.Email, token = token }, protocol: HttpContext.Request.Scheme);
+
+            // üîß Aqu√≠ deber√≠as enviar un correo real
+            _logger.LogWarning("Token de recuperaci√≥n para {Email}: {Link}", user.Email, callbackUrl);
+
+            TempData["MensajeExito"] = "Te hemos enviado un enlace de recuperaci√≥n (o revisa la consola).";
+            return RedirectToAction("Login");
+        }
+
+
+
+
+
+
     }
+
 }
+
+

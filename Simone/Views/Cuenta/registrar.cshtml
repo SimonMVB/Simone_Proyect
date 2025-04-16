@@ -1,61 +1,86 @@
 ﻿@model Simone.ViewModels.RegistroViewModel
+
 @{
     ViewData["Title"] = "Registro";
     Layout = "~/Views/Shared/_LayoutCuenta.cshtml";
 }
 
-<div class="card shadow-sm rounded-3">
-    <div class="card-header text-center bg-success text-white">
-        <h4><i class="fa-solid fa-user-plus me-2"></i>Crear una cuenta</h4>
-    </div>
-    <div class="card-body">
+<div class="container mt-5" style="max-width: 500px;">
+    <div class="card shadow-sm rounded-3">
+        <div class="card-header text-center bg-success text-white">
+            <h4><i class="fa-solid fa-user-plus me-2"></i>Crear una cuenta</h4>
+        </div>
 
-        <!-- Validación general del modelo -->
-        <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+        <div class="card-body">
 
-        <form asp-action="Registro" method="post" novalidate>
-            <!-- Nombre -->
-            <div class="mb-3">
-                <label asp-for="Nombre" class="form-label">Nombre completo</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                    <input asp-for="Nombre" class="form-control" placeholder="Nombre completo" />
+            <!-- Mensajes del sistema -->
+            @if (TempData["MensajeError"] != null)
+            {
+                <div class="alert alert-danger">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["MensajeError"]
                 </div>
-                <span asp-validation-for="Nombre" class="text-danger small"></span>
-            </div>
-
-            <!-- Email -->
-            <div class="mb-3">
-                <label asp-for="Email" class="form-label">Correo electrónico</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                    <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" />
+            }
+            @if (TempData["MensajeExito"] != null)
+            {
+                <div class="alert alert-success">
+                    <i class="fa-solid fa-circle-check me-2"></i> @TempData["MensajeExito"]
                 </div>
-                <span asp-validation-for="Email" class="text-danger small"></span>
-            </div>
+            }
 
-            <!-- Contraseña -->
-            <div class="mb-3">
-                <label asp-for="Password" class="form-label">Contraseña</label>
-                <div class="input-group">
-                    <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                    <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+            <!-- Errores del modelo -->
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+
+            <form asp-action="Registrar" method="post" id="formRegistro" novalidate>
+                <!-- Nombre -->
+                <div class="mb-3">
+                    <label asp-for="Nombre" class="form-label">Nombre completo</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
+                        <input asp-for="Nombre" class="form-control" placeholder="Nombre completo" />
+                    </div>
+                    <span asp-validation-for="Nombre" class="text-danger small"></span>
                 </div>
-                <span asp-validation-for="Password" class="text-danger small"></span>
-            </div>
 
-            <!-- Botón -->
-            <button type="submit" class="btn btn-success w-100">
-                <i class="fa-solid fa-user-plus me-2"></i>Registrarme
-            </button>
-        </form>
-    </div>
+                <!-- Email -->
+                <div class="mb-3">
+                    <label asp-for="Email" class="form-label">Correo electrónico</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                        <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" />
+                    </div>
+                    <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
 
-    <div class="card-footer text-center small">
-        ¿Ya tienes una cuenta? <a asp-controller="Cuenta" asp-action="Login">Inicia sesión aquí</a>
+                <!-- Contraseña -->
+                <div class="mb-3">
+                    <label asp-for="Password" class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+                    </div>
+                    <span asp-validation-for="Password" class="text-danger small"></span>
+                </div>
+
+                <!-- Botón registrar -->
+                <button type="submit" class="btn btn-success w-100" id="btnRegistrar">
+                    <i class="fa-solid fa-user-plus me-2"></i>Registrarme
+                </button>
+            </form>
+        </div>
+
+        <div class="card-footer text-center small">
+            ¿Ya tienes una cuenta? <a asp-controller="Cuenta" asp-action="Login">Inicia sesión aquí</a>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById("formRegistro").addEventListener("submit", function () {
+            const btn = document.getElementById("btnRegistrar");
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+        });
+    </script>
 }

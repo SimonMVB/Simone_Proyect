@@ -1,24 +1,73 @@
 ﻿@model Simone.Models.Usuario
-<h2>Mi Perfil</h2>
 
-@if (TempData["MensajeExito"] != null)
-{
-    <div class="alert alert-success">@TempData["MensajeExito"]</div>
+@{
+    ViewData["Title"] = "Mi Perfil";
+    Layout = "~/Views/Shared/_Layout.cshtml"; // ajusta si usas otro layout
 }
 
-@if (TempData["MensajeError"] != null)
-{
-    <div class="alert alert-danger">@TempData["MensajeError"]</div>
-}
+<div class="container mt-5" style="max-width: 600px;">
+    <div class="card shadow-sm rounded-3">
+        <div class="card-header bg-primary text-white text-center">
+            <h4><i class="fa-solid fa-user-circle me-2"></i>Mi Perfil</h4>
+        </div>
 
-<form asp-action="Perfil" method="post">
-    <div class="mb-3">
-        <label>Email</label>
-        <input asp-for="Email" class="form-control" readonly />
+        <div class="card-body">
+            @if (TempData["MensajeExito"] != null)
+            {
+                <div class="alert alert-success">
+                    <i class="fa-solid fa-circle-check me-2"></i> @TempData["MensajeExito"]
+                </div>
+            }
+
+            @if (TempData["MensajeError"] != null)
+            {
+                <div class="alert alert-danger">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["MensajeError"]
+                </div>
+            }
+
+            <form asp-action="Perfil" method="post" id="formPerfil">
+                <div class="mb-3">
+                    <label class="form-label">Correo electrónico</label>
+                    <input asp-for="Email" class="form-control" readonly />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Nombre completo</label>
+                    <input asp-for="NombreCompleto" class="form-control" />
+                    <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Rol actual</label>
+                    <input value="@ViewBag.RolUsuario" class="form-control" readonly />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Fecha de registro</label>
+                    <input value="@Model.FechaRegistro.ToShortDateString()" class="form-control" readonly />
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label">Estado</label>
+                    <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" id="btnPerfil">
+                    <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios
+                </button>
+            </form>
+        </div>
     </div>
-    <div class="mb-3">
-        <label>Nombre Completo</label>
-        <input asp-for="NombreCompleto" class="form-control" />
-    </div>
-    <button type="submit" class="btn btn-primary">Actualizar</button>
-</form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById("formPerfil").addEventListener("submit", function () {
+            const btn = document.getElementById("btnPerfil");
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+        });
+    </script>
+}

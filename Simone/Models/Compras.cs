@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Simone.Models;
 
@@ -6,6 +7,7 @@ namespace Simone.Models
 {
     public class Compras
     {
+        [Key]
         public int CompraID { get; set; }  // Clave primaria
         public int ProveedorID { get; set; }  // Clave foránea con Proveedores
         public DateTime? FechaCompra { get; set; }  // Puede ser nulo

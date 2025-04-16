@@ -14,11 +14,11 @@ namespace Simone.Controllers
     public class AdminController : Controller
     {
         private readonly UserManager<Usuario> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly RoleManager<Roles> _roleManager;
         private readonly ILogger<AdminController> _logger;
         private readonly TiendaDbContext _context;
 
-        public AdminController(UserManager<Usuario> userManager, RoleManager<IdentityRole> roleManager, ILogger<AdminController> logger, TiendaDbContext context)
+        public AdminController(UserManager<Usuario> userManager, RoleManager<Roles> roleManager, ILogger<AdminController> logger, TiendaDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;

@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Simone.Data;
 using Simone.Models;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Simone.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     public class ClientesController : Controller
     {
         private readonly TiendaDbContext _context;

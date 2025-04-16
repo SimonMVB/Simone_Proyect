@@ -8,7 +8,7 @@ using System.Linq;
 var builder = WebApplication.CreateBuilder(args);
 
 // 1. Configuración de la cadena de conexión desde appsettings.json
-var connectionString = builder.Configuration.GetConnectionString("TiendaDB");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("La cadena de conexión a la base de datos no está configurada.");
@@ -34,7 +34,7 @@ builder.Services.AddHttpContextAccessor();
 
 // 2.3. Configurar el contexto de la base de datos usando SQL Server
 builder.Services.AddDbContext<TiendaDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TiendaDB")));
+    options.UseSqlServer(connectionString));
 
 // 2.4. Configurar Identity con Entity Framework y opciones de seguridad para contraseñas
 builder.Services.AddIdentity<Usuario, IdentityRole>(options =>

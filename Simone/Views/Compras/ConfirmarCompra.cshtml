@@ -4,49 +4,60 @@
 }
 
 <div class="ui container mt-5">
-    <div class="ui segment">
-        <h2 class="ui header">
+    <div class="ui raised segment">
+        <h2 class="ui teal header">
             <i class="credit card icon"></i>
             <div class="content">
                 Confirmar Compra
-                <div class="sub header">Verifica tu información antes de finalizar el pedido</div>
+                <div class="sub header">Verifica tus datos antes de finalizar el pedido</div>
             </div>
         </h2>
 
         <form asp-action="ProcesarCompra" method="post" class="ui form">
             <div class="two fields">
-                <div class="field">
+                <div class="required field">
                     <label>Nombre completo</label>
-                    <input asp-for="NombreCliente" placeholder="Nombre completo" required />
+                    <input asp-for="NombreCliente" placeholder="Ej. María López" />
+                    <span asp-validation-for="NombreCliente" class="ui red text"></span>
                 </div>
-                <div class="field">
+                <div class="required field">
                     <label>Correo electrónico</label>
-                    <input asp-for="EmailCliente" type="email" placeholder="Correo" required />
+                    <input asp-for="EmailCliente" type="email" placeholder="ejemplo@correo.com" />
+                    <span asp-validation-for="EmailCliente" class="ui red text"></span>
                 </div>
             </div>
 
-            <div class="field">
+            <div class="required field">
                 <label>Dirección de entrega</label>
-                <input asp-for="Direccion" placeholder="Dirección completa" required />
+                <textarea asp-for="Direccion" rows="2" placeholder="Calle, número, ciudad, referencia..."></textarea>
+                <span asp-validation-for="Direccion" class="ui red text"></span>
             </div>
 
-            <div class="field">
+            <div class="required field">
                 <label>Método de pago</label>
-                <select asp-for="MetodoPago" class="ui dropdown" required>
-                    <option value="">Seleccione...</option>
+                <select asp-for="MetodoPago" class="ui fluid dropdown">
+                    <option value="">Seleccione un método...</option>
                     <option value="Efectivo">Efectivo</option>
-                    <option value="Tarjeta">Tarjeta de crédito/débito</option>
+                    <option value="Tarjeta">Tarjeta de crédito o débito</option>
                     <option value="Transferencia">Transferencia bancaria</option>
                 </select>
+                <span asp-validation-for="MetodoPago" class="ui red text"></span>
             </div>
 
             <div class="ui info message">
-                <p><strong>Total a pagar:</strong> $@Model.Total.ToString("F2")</p>
+                <i class="info icon"></i>
+                <strong>Total a pagar:</strong> $@Model.Total.ToString("F2")
             </div>
 
-            <button type="submit" class="ui green huge button">
-                <i class="check icon"></i> Finalizar Compra
-            </button>
+            <div class="ui right aligned segment">
+                <button type="submit" class="ui green huge button">
+                    <i class="check icon"></i> Finalizar Compra
+                </button>
+            </div>
         </form>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

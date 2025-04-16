@@ -4,6 +4,9 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
+    /// <summary>
+    /// Representa el uso de un cupón por parte de un cliente.
+    /// </summary>
     public class CuponesUsados
     {
         [Key, Column(Order = 1)]
@@ -12,14 +15,21 @@ namespace Simone.Models
         [Key, Column(Order = 2)]
         public int PromocionID { get; set; }
 
-        public DateTime? FechaUso { get; set; }
+        /// <summary>
+        /// Fecha en la que el cupón fue usado.
+        /// </summary>
+        public DateTime? FechaUso { get; set; } = DateTime.Now;
 
-        // Relación con Clientes
-        [ForeignKey("ClienteID")]
-        public Cliente Cliente { get; set; }
+        /// <summary>
+        /// Cliente que utilizó el cupón.
+        /// </summary>
+        [ForeignKey(nameof(ClienteID))]
+        public virtual Cliente Cliente { get; set; } = null!;
 
-        // Relación con Promociones
-        [ForeignKey("PromocionID")]
-        public Promocion Promocion { get; set; }
+        /// <summary>
+        /// Promoción aplicada.
+        /// </summary>
+        [ForeignKey(nameof(PromocionID))]
+        public virtual Promocion Promocion { get; set; } = null!;
     }
 }

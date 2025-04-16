@@ -10,12 +10,27 @@
         <div class="card-header text-center bg-dark text-white">
             <h4><i class="fa-solid fa-right-to-bracket me-2"></i>Iniciar Sesión</h4>
         </div>
+
         <div class="card-body">
+            <!-- Mensajes de TempData -->
+            @if (TempData["MensajeError"] != null)
+            {
+                <div class="alert alert-danger">
+                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["MensajeError"]
+                </div>
+            }
+            @if (TempData["MensajeExito"] != null)
+            {
+                <div class="alert alert-success">
+                    <i class="fa-solid fa-circle-check me-2"></i> @TempData["MensajeExito"]
+                </div>
+            }
 
-            <!-- Mensajes de validación -->
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <!-- Errores del modelo -->
+            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
-            <form asp-action="Login" method="post">
+            <form asp-action="Login" method="post" id="formLogin">
+                @Html.AntiForgeryToken()
                 <div class="mb-3">
                     <label asp-for="Email" class="form-label">Correo electrónico</label>
                     <div class="input-group">
@@ -39,17 +54,25 @@
                     <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
                 </div>
 
-                <button type="submit" class="btn btn-dark w-100">
+                <button type="submit" class="btn btn-dark w-100" id="btnLogin">
                     <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar
                 </button>
             </form>
         </div>
+
         <div class="card-footer text-center small">
-            ¿No tienes una cuenta? <a asp-controller="Cuenta" asp-action="registrar">Regístrate aquí</a>
+            ¿No tienes una cuenta? <a asp-controller="Cuenta" asp-action="Registrar">Regístrate aquí</a>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById("formLogin").addEventListener("submit", function () {
+            const btn = document.getElementById("btnLogin");
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
+        });
+    </script>
 }

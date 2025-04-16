@@ -12,7 +12,10 @@ namespace Simone.Data
         {
         }
 
-        // ✅ DbSet: Definición de tablas
+        // ✅ Tablas del sistema
+        public DbSet<Usuario> Usuarios { get; set; }
+
+        // ✅ Tablas del dominio
         public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
         public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
         public DbSet<Carrito> Carrito { get; set; }
@@ -43,19 +46,16 @@ namespace Simone.Data
         public DbSet<Reseñas> Reseñas { get; set; }
         public DbSet<Subcategorias> Subcategorias { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
-        public DbSet<IdentityRole> IdentityRoles { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // ✅ Configuración de claves y relaciones
-            modelBuilder.Entity<IdentityRole>().HasKey(r => r.Id);
-
-            modelBuilder.Entity<Compras>().HasKey(c => c.CompraID);
-            modelBuilder.Entity<Comisiones>().HasKey(c => c.ComisionID);
+            // Claves primarias compuestas
             modelBuilder.Entity<ClientesProgramas>().HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
+            modelBuilder.Entity<CuponesUsados>().HasKey(cu => new { cu.ClienteID, cu.PromocionID });
 
+            // Relaciones de Producto
             modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
@@ -68,18 +68,14 @@ namespace Simone.Data
                 .HasForeignKey(p => p.SubcategoriaID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Subcategorias>()
-                .HasKey(s => s.SubcategoriaID);
-
+            // Subcategoría con categoría
             modelBuilder.Entity<Subcategorias>()
                 .HasOne(s => s.Categoria)
                 .WithMany(c => c.Subcategoria)
                 .HasForeignKey(s => s.CategoriaID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Reseñas>()
-                .HasKey(r => r.ReseñaID);
-
+            // Reseñas con cliente y producto
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Cliente)
                 .WithMany(c => c.Reseñas)
@@ -92,14 +88,13 @@ namespace Simone.Data
                 .HasForeignKey(r => r.ProductoID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Relación Usuario → Rol (solo si tienes clase Rol)
             modelBuilder.Entity<Usuario>()
                 .HasOne(u => u.Rol)
                 .WithMany(r => r.Usuarios)
                 .HasForeignKey(u => u.RolID);
 
-            modelBuilder.Entity<CuponesUsados>()
-                .HasKey(cu => new { cu.ClienteID, cu.PromocionID });
-
+            // Cupones usados
             modelBuilder.Entity<CuponesUsados>()
                 .HasOne(cu => cu.Cliente)
                 .WithMany(c => c.CuponesUsados)
@@ -112,6 +107,7 @@ namespace Simone.Data
                 .HasForeignKey(cu => cu.PromocionID)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // DetalleVentas
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Venta)
                 .WithMany(v => v.DetalleVentas)
@@ -124,38 +120,38 @@ namespace Simone.Data
                 .HasForeignKey(dv => dv.ProductoID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ✅ Tipos de datos financieros
-            modelBuilder.Entity<Comisiones>().Property(c => c.MontoComision).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Comisiones>().Property(c => c.PorcentajeComision).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Compras>().Property(c => c.Total).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetalleVentas>().Property(d => d.Descuento).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetalleVentas>().Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetalleVentas>().Property(d => d.Subtotal).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetallesCompra>().Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetallesCompra>().Property(d => d.Subtotal).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetallesPedido>().Property(d => d.PrecioUnitario).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<DetallesPedido>().Property(d => d.Subtotal).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Empleados>().Property(e => e.Salario).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Gastos>().Property(g => g.Monto).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<HistorialPrecios>().Property(h => h.PrecioAnterior).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<HistorialPrecios>().Property(h => h.PrecioNuevo).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Pedido>().Property(p => p.Total).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Producto>().Property(p => p.PrecioCompra).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Producto>().Property(p => p.PrecioVenta).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<ProgramasFidelizacion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
-            modelBuilder.Entity<Promocion>().Property(p => p.Descuento).HasColumnType("decimal(18,2)");
+            // Tipos DECIMAL para campos financieros
+            var decimalProps = new (Type entity, string[] props)[]
+            {
+                (typeof(Comisiones), new[] { "MontoComision", "PorcentajeComision" }),
+                (typeof(Compras), new[] { "Total" }),
+                (typeof(DetalleVentas), new[] { "Descuento", "PrecioUnitario", "Subtotal" }),
+                (typeof(DetallesCompra), new[] { "PrecioUnitario", "Subtotal" }),
+                (typeof(DetallesPedido), new[] { "PrecioUnitario", "Subtotal" }),
+                (typeof(Empleados), new[] { "Salario" }),
+                (typeof(Gastos), new[] { "Monto" }),
+                (typeof(HistorialPrecios), new[] { "PrecioAnterior", "PrecioNuevo" }),
+                (typeof(Pedido), new[] { "Total" }),
+                (typeof(Producto), new[] { "PrecioCompra", "PrecioVenta" }),
+                (typeof(ProgramasFidelizacion), new[] { "Descuento" }),
+                (typeof(Promocion), new[] { "Descuento" }),
+            };
 
-            // ✅ Configuración para LogIniciosSesion
+            foreach (var (entity, props) in decimalProps)
+            {
+                foreach (var prop in props)
+                {
+                    modelBuilder.Entity(entity).Property(prop).HasColumnType("decimal(18,2)");
+                }
+            }
+
+            // Configuración especial: LogIniciosSesion
             modelBuilder.Entity<LogIniciosSesion>(entity =>
             {
                 entity.HasKey(l => l.LogID);
-                entity.Property(l => l.Usuario)
-                      .IsRequired()
-                      .HasMaxLength(150);
-                entity.Property(l => l.FechaInicio)
-                      .HasColumnType("datetime");
-                entity.Property(l => l.Exitoso)
-                      .IsRequired(false);
+                entity.Property(l => l.Usuario).IsRequired().HasMaxLength(150);
+                entity.Property(l => l.FechaInicio).HasColumnType("datetime");
+                entity.Property(l => l.Exitoso).IsRequired(false);
             });
         }
     }

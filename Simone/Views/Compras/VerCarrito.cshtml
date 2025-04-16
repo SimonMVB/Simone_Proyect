@@ -1,6 +1,10 @@
 ﻿@model IEnumerable<Simone.Models.CarritoDetalle>
 @{
     ViewData["Title"] = "Carrito de Compras";
+    var totalCarrito = Model.Sum(x => x.Total);
+    decimal descuento = ViewBag.Descuento ?? 0;
+    string codigoCupon = ViewBag.CodigoCupon ?? "";
+    var totalConDescuento = totalCarrito - descuento;
 }
 
 <div class="ui container mt-5">
@@ -54,20 +58,72 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="3" class="right aligned">Total:</th>
-                    <th colspan="2">$@Model.Sum(x => x.Total).ToString("F2")</th>
+                    <th colspan="3" class="right aligned">Subtotal:</th>
+                    <th colspan="2">$@totalCarrito.ToString("F2")</th>
+                </tr>
+
+                @if (descuento > 0)
+                {
+                    <tr class="warning">
+                        <th colspan="3" class="right aligned">
+                            Cupón aplicado (@codigoCupon):
+                        </th>
+                        <th colspan="2" class="negative">- $@descuento.ToString("F2")</th>
+                    </tr>
+                    <tr>
+                        <th colspan="5" class="right aligned">
+                            <form method="post" asp-action="QuitarCupon" style="display:inline;">
+                                <button class="ui tiny button red">
+                                    <i class="close icon"></i> Quitar Cupón
+                                </button>
+                            </form>
+                        </th>
+                    </tr>
+                }
+
+                <tr>
+                    <th colspan="3" class="right aligned">Total a Pagar:</th>
+                    <th colspan="2"><strong>$@totalConDescuento.ToString("F2")</strong></th>
                 </tr>
             </tfoot>
         </table>
 
         <div class="ui divider"></div>
 
-        <div class="ui right aligned segment">
-            <form asp-action="ConfirmarCompra" method="post">
-                <button class="ui green huge button">
-                    <i class="check icon"></i> Confirmar Compra
-                </button>
-            </form>
+        <div class="ui two column stackable grid">
+            <div class="column">
+                <form method="post" asp-action="AplicarCupon" class="ui form">
+                    <div class="field">
+                        <label>¿Tienes un código de cupón?</label>
+                        <div class="ui action input">
+                            <input type="text" name="codigoCupon" placeholder="Ingresa tu cupón..." />
+                            <button type="submit" class="ui teal button">Aplicar</button>
+                        </div>
+                    </div>
+                </form>
+
+                @if (TempData["CuponAplicado"] != null)
+                {
+                    <div class="ui green message">
+                        <i class="check icon"></i> @TempData["CuponAplicado"]
+                    </div>
+                }
+
+                @if (TempData["CuponError"] != null)
+                {
+                    <div class="ui red message">
+                        <i class="times icon"></i> @TempData["CuponError"]
+                    </div>
+                }
+            </div>
+
+            <div class="right aligned column">
+                <form asp-action="ConfirmarCompra" method="post">
+                    <button class="ui green huge button">
+                        <i class="check icon"></i> Confirmar Compra
+                    </button>
+                </form>
+            </div>
         </div>
     }
     else

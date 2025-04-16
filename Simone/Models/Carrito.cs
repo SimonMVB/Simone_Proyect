@@ -25,6 +25,7 @@ namespace Simone.Models
         /// <summary>
         /// Cliente asociado al carrito.
         /// </summary>
+        [ForeignKey("ClienteID")]
         public virtual Cliente Cliente { get; set; } = null!;
 
         /// <summary>
