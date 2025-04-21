@@ -35,10 +35,27 @@ namespace Simone.Controllers
         [HttpGet]
         public IActionResult Login()
         {
+            bool sesionIniciada = User.Identity.IsAuthenticated;
+            // Si ya hay sesion iniciada
+            if (sesionIniciada)
+            {
+                // Envia el usuario al index.
+                return RedirectToAction("Index", "Home");
+            }
+
+            var requestId = Guid.NewGuid().ToString();
+            ViewData["RequestID"] = requestId;
+
             return View();
         }
 
         // POST: /Cuenta/Login
+        /// <summary>
+        /// Maneja el inicio de sesion de un usuario.
+        /// Este metodo revisa las credenciales del usuario y si son validas lo redirije de acuerdo a su rol.
+        /// </summary>
+        /// <param name="model">El model que contiene los parametros de correo y contrasena del usuario</param>
+        /// <returns>Redirecciona a distintas vistas de acuerdo a el rol del usuario.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -54,7 +71,7 @@ namespace Simone.Controllers
                 var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
                 loginExitoso = result.Succeeded;
 
-                if (result.Succeeded)
+                if (loginExitoso)
                 {
                     _logger.LogInformation("Usuario autenticado: {Email}", model.Email);
                     await RegistrarLog(model.Email, true);
@@ -107,6 +124,13 @@ namespace Simone.Controllers
         [HttpGet]
         public IActionResult Registrar()
         {
+            bool sesionIniciada = User.Identity.IsAuthenticated;
+            // Si ya hay sesion iniciada
+            if (sesionIniciada)
+            {
+                // Envia el usuario al index.
+                return RedirectToAction("Index", "Home");
+            }
             return View();
         }
 
@@ -182,12 +206,15 @@ namespace Simone.Controllers
             {
                 TempData["MensajeError"] = "No se encontró al usuario.";
                 return RedirectToAction("Login");
+            } else {
+                TempData["MensajeExito"] = "Usuario encontrado exitosamente.";
             }
 
             var roles = await _userManager.GetRolesAsync(usuario);
             ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
+            ViewData["Usuario"] = usuario;
 
-            return View(usuario);
+            return View();
         }
 
         // POST: /Cuenta/Perfil
@@ -224,8 +251,9 @@ namespace Simone.Controllers
 
             var roles = await _userManager.GetRolesAsync(usuario);
             ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
+            ViewData["Usuario"] = usuario;
 
-            return View(usuario);
+            return View();
         }
         [HttpGet]
         public IActionResult OlvidePassword()
