@@ -88,11 +88,11 @@ namespace Simone.Data
                 .HasForeignKey(r => r.ProductoID)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Relación Usuario → Rol (solo si tienes clase Rol)
-            modelBuilder.Entity<Usuario>()
-                .HasOne(u => u.Rol)
-                .WithMany(r => r.Usuarios)
-                .HasForeignKey(u => u.RolID);
+            // // Relación Usuario → Rol (solo si tienes clase Rol)
+            // modelBuilder.Entity<Usuario>()
+            //     .HasOne(u => u.Rol)
+            //     .WithMany(r => r.Usuarios)
+            //     .HasForeignKey(u => u.RolID);
 
             // Cupones usados
             modelBuilder.Entity<CuponesUsados>()

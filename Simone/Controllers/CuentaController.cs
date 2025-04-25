@@ -14,13 +14,13 @@ namespace Simone.Controllers
     {
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly RoleManager<Roles> _roleManager;
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
 
         public CuentaController(UserManager<Usuario> userManager,
                                 SignInManager<Usuario> signInManager,
-                                RoleManager<IdentityRole> roleManager,
+                                RoleManager<Roles> roleManager,
                                 ILogger<CuentaController> logger,
                                 TiendaDbContext context)
         {
@@ -52,7 +52,7 @@ namespace Simone.Controllers
         // POST: /Cuenta/Login
         /// <summary>
         /// Maneja el inicio de sesion de un usuario.
-        /// Este metodo revisa las credenciales del usuario y si son validas lo redirije de acuerdo a su rol.
+        /// Este metodo revisa las credenciales del usuario y si son validas lo redirige de acuerdo a su rol.
         /// </summary>
         /// <param name="model">El model que contiene los parametros de correo y contrasena del usuario</param>
         /// <returns>Redirecciona a distintas vistas de acuerdo a el rol del usuario.</returns>
@@ -142,30 +142,25 @@ namespace Simone.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            var rol = await _roleManager.FindByNameAsync("Cliente");
+
             var usuario = new Usuario
             {
-                NombreUsuario = model.Nombre,
                 NombreCompleto = model.Nombre,
                 Email = model.Email,
                 UserName = model.Email,
                 EmailConfirmed = true,
                 FechaRegistro = DateTime.Now,
-                Activo = true
+                Activo = true,
+                RolID = rol.Id,
             };
 
             var result = await _userManager.CreateAsync(usuario, model.Password);
 
             if (result.Succeeded)
             {
-                // Crear roles si no existen
-                foreach (var rol in new[] { "Administrador", "Empleado", "Comprador" })
-                {
-                    if (!await _roleManager.RoleExistsAsync(rol))
-                        await _roleManager.CreateAsync(new IdentityRole(rol));
-                }
-
                 // Asignar rol por defecto
-                await _userManager.AddToRoleAsync(usuario, "Comprador");
+                await _userManager.AddToRoleAsync(usuario, "Cliente");
 
                 _logger.LogInformation("Usuario registrado: {Email}", model.Email);
                 await _signInManager.SignInAsync(usuario, isPersistent: false);

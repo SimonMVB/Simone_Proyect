@@ -37,7 +37,7 @@ builder.Services.AddDbContext<TiendaDbContext>(options =>
     options.UseSqlServer(connectionString));
 
 // 2.4. Configurar Identity con Entity Framework y opciones de seguridad para contraseñas
-builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
+builder.Services.AddIdentity<Usuario, Roles>(options =>
 {
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
@@ -47,6 +47,9 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 })
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();
+
+// Registrar RoleManager si es requerido
+builder.Services.AddScoped<RoleManager<Roles>>();
 
 // 2.5. Configurar la cookie de autenticación para definir las rutas de Login y Acceso Denegado
 builder.Services.ConfigureApplicationCookie(options =>
@@ -113,22 +116,27 @@ app.Run();
 // 6. Método asíncrono para crear roles y el usuario administrador por defecto
 async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
 {
-    var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+    var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
     var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();
 
     // Definir los roles que se deben crear
     string[] roles = { "Administrador", "Vendedor", "Cliente" };
+    string[] descripcion = { "Administrador del sistema", "Vendedor del sistema", "Cliente del sistema" };
 
-    foreach (var role in roles)
+    for (var i = 0; i < roles.Length ; i++)
     {
-        if (!await roleManager.RoleExistsAsync(role))
+        bool doRoleExist = await roleManager.RoleExistsAsync(roles[i]);
+        if (!doRoleExist)
         {
-            var result = await roleManager.CreateAsync(new IdentityRole(role));
+            var role = new Roles(roles[i], descripcion[i]);
+            var result = await roleManager.CreateAsync(role);
             if (!result.Succeeded)
             {
                 // Usar LINQ para obtener las descripciones de los errores
                 var errores = string.Join(", ", result.Errors.Select(e => e.Description));
-                logger.LogError($"Error al crear el rol {role}: {errores}");
+                logger.LogError($"Error al crear el rol {roles[i]}: {errores}");
+            } else {
+                logger.LogInformation($"Rol {roles[i]} creado con éxito.");
             }
         }
     }
@@ -136,7 +144,8 @@ async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
     // Crear un usuario administrador por defecto si no existe
     string adminEmail = "admin@tienda.com";
     string adminPassword = "Admin123!";
-
+    var adminRol = await roleManager.FindByNameAsync("Administrador");
+    var adminRolID = adminRol?.Id;
     var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
     if (existingAdmin == null)
     {
@@ -145,7 +154,8 @@ async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
             UserName = adminEmail,
             Email = adminEmail,
             NombreCompleto = "Administrador General",
-            EmailConfirmed = true
+            EmailConfirmed = true,
+            RolID = adminRolID
         };
 
         var result = await userManager.CreateAsync(adminUser, adminPassword);

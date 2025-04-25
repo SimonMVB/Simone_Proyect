@@ -7,8 +7,6 @@ namespace Simone.Models
 {
     public class Usuario : IdentityUser
     {
-        [Required, StringLength(50)]
-        public string NombreUsuario { get; set; } = string.Empty;
 
         [Required, StringLength(100)]
         public string NombreCompleto { get; set; } = string.Empty;
@@ -17,10 +15,9 @@ namespace Simone.Models
 
         public bool Activo { get; set; } = true;
 
-        // Relación opcional con Roles personalizados
+        // Relación Roles
+        [Required]
         public string? RolID { get; set; }
 
-        [ForeignKey("RolID")]
-        public Roles? Rol { get; set; }
     }
 }

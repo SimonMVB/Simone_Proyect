@@ -1,0 +1,57 @@
+@using Microsoft.AspNetCore.Identity
+@model Usuario
+@{
+    ViewData["Title"] = "Panel de Administración";
+}
+
+<div class="ui container mt-5">
+    <div class="ui raised very padded text container segment">
+        <h2 class="ui header">Panel de Administración</h2>
+
+        <div class="ui divider"></div>
+
+        <div class="ui three stackable cards">
+            <div class="card">
+                <div class="content">
+                    <div class="header">Usuarios</div>
+                    <div class="description">
+                        Gestiona todos los usuarios registrados, cambia sus roles o elimínalos.
+                    </div>
+                </div>
+                <div class="extra content">
+                    <a class="ui primary button" asp-controller="Admin" asp-action="Usuarios">
+                        <i class="users icon"></i> Ver Usuarios
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="content">
+                    <div class="header">Registros</div>
+                    <div class="description">
+                        Revisa los logs de inicio de sesión y actividad en el sistema.
+                    </div>
+                </div>
+                <div class="extra content">
+                    <a class="ui teal button disabled">
+                        <i class="clipboard list icon"></i> Ver Logs (próximamente)
+                    </a>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="content">
+                    <div class="header">Reportes</div>
+                    <div class="description">
+                        Accede a reportes generales del sistema: ventas, inventario, usuarios, etc.
+                    </div>
+                </div>
+                <div class="extra content">
+                    <a class="ui green button disabled">
+                        <i class="chart bar icon"></i> Ver Reportes (próximamente)
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

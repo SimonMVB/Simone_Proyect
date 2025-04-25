@@ -9,10 +9,16 @@ namespace Simone.Models
     /// </summary>
     public class Roles : IdentityRole
     {
-        [Required, StringLength(50)]
-        public string NombreRol { get; set; } = string.Empty;
+        // Constructores
+        public Roles() : base() { }
 
-        // Relación con Usuarios
-        public ICollection<Usuario> Usuarios { get; set; } = new List<Usuario>();
+        public Roles(string roleName, string descripcion) : base(roleName)
+        {
+            Descripcion = descripcion;
+        }
+
+        // Variables adicionales
+        [Required, StringLength(100)]
+        public string Descripcion { get; set; } = string.Empty;
     }
 }
