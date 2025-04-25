@@ -1,5 +1,4 @@
-﻿@model IEnumerable<Simone.Models.Usuario>
-@{
+﻿@{
     ViewData["Title"] = "Gestión de Usuarios";
 }
 
@@ -15,21 +14,60 @@
                 <tr>
                     <th>Email</th>
                     <th>Nombre</th>
+                    <th>Rol</th>
                     <th>Opciones</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var usuario in Model)
+                @foreach (var usuario in ViewBag.Usuarios)
                 {
                     <tr>
                         <td>@usuario.Email</td>
-                        <td>@usuario.NombreUsuario</td>
+                        <td>@usuario.NombreCompleto</td>
                         <td>
-                            <a asp-controller="Admin" asp-action="EditarRol" asp-route-id="@usuario.Id" class="ui icon blue button" title="Editar Rol">
-                                <i class="edit icon"></i>
-                            </a>
-                            <form asp-controller="Admin" asp-action="EliminarUsuario" asp-route-id="@usuario.Id" method="post" style="display:inline">
-                                <button type="submit" class="ui icon red button" title="Eliminar Usuario" onclick="return confirm('¿Estás seguro de eliminar este usuario?');">
+                            <form method="post" style="display:inline" asp-controller="Admin" asp-action="EditarRol">
+                                @Html.AntiForgeryToken()
+
+                                <!-- Input partial el userId -->
+                                <input type="hidden" name="usuarioID" value="@usuario.Id" />
+
+                                <!-- Dropdown de Selecciona de rol -->
+                                <select name="nuevoRolID" 
+                                        class="ui dropdown" 
+                                        id="roleNameDropdown_@usuario.Id" 
+                                        onChange="this.form.submit();">
+                                    <option value="" disabled selected>Seleccione un Rol</option>
+                                    @foreach (var role in ViewBag.Roles)
+                                    {
+                                        <option value="@role.Id" data-role-id="@role.Id">
+                                            @role.Name
+                                        </option>
+                                    }
+                                </select>
+
+                                <script>
+                                    document.addEventListener('DOMContentLoaded', function () {
+                                        var selectedRoleId = '@usuario.RolID';
+                                        var dropdown = document.getElementById("roleNameDropdown_@usuario.Id");
+                                        var options = dropdown.querySelectorAll('option');
+
+                                        options.forEach(function (option) {
+                                            if (option.getAttribute('data-role-id') === selectedRoleId) {
+                                                option.selected = true; // Selecciona el rol asignado
+                                            }
+                                        });
+                                    });
+                                </script>
+                            </form>
+
+                        </td>
+                        <td>
+                            <!-- Borrar Usuario -->
+                            <form method="post" style="display:inline" asp-controller="Admin" asp-action="EliminarUsuario"
+                                asp-route-id="@usuario.Id"
+                                onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="ui icon red button" title="Eliminar Usuario">
                                     <i class="trash icon"></i>
                                 </button>
                             </form>
@@ -40,3 +78,7 @@
         </table>
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

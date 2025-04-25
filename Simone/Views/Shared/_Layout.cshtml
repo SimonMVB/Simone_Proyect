@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,9 +20,9 @@
             background-color: #000;
         }
 
-            .navbar-custom a {
-                color: #fff;
-            }
+        .navbar-custom a {
+            color: #fff;
+        }
 
         .sidebar {
             width: 250px;
@@ -30,9 +31,10 @@
             transition: left 0.3s ease;
         }
 
-            .sidebar.show {
-                left: 0;
-            }
+        .sidebar.show {
+            left: 0;
+        }
+
         /* Panel del carrito */
         #cartPanel {
             width: 300px;
@@ -43,6 +45,7 @@
         }
     </style>
 </head>
+
 <body class="bg-light">
     <!-- Navbar Superior -->
     <header>
@@ -73,7 +76,8 @@
                 <!-- Sección derecha: Enviar a, búsqueda, favoritos, carrito y usuario -->
                 <div class="d-flex align-items-center">
                     <!-- Enviar a: Link interactivo para cambiar la dirección -->
-                    <a class="text-white mx-2" asp-controller="Cuenta" asp-action="CambiarDireccion" title="Cambiar mi dirección">
+                    <a class="text-white mx-2" asp-controller="Cuenta" asp-action="CambiarDireccion"
+                        title="Cambiar mi dirección">
                         <i class="fa-solid fa-location-dot"></i> Enviar a:
                         <span class="fw-bold">
                             @if (User.Identity.IsAuthenticated)
@@ -95,34 +99,57 @@
                         <i class="fa-solid fa-heart fa-lg"></i>
                     </a>
                     <!-- Botón de carrito: Se actualizará dinámicamente -->
-                    <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart" aria-label="Ver carrito">
+                    <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart"
+                        aria-label="Ver carrito">
                         <i class="fa-solid fa-cart-shopping fa-lg"></i>
-                        <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        <span id="cart-count"
+                            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                             @(ViewBag.CartCount ?? 0)
                         </span>
                     </a>
                     <!-- Botón de usuario: Muestra opciones según autenticación -->
                     @if (User.Identity.IsAuthenticated)
                     {
-                    <div class="dropdown">
-                        <a class="text-white mx-2 dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fa-solid fa-user fa-lg"></i>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <!-- Perfil -->
-                            <li>
-                                <a class="dropdown-item" style="color: #333;" asp-controller="Cuenta" asp-action="Perfil">Perfil</a>
-                            </li>
-                            
-                            <!-- Logout -->
-                            <li>
-                                <form asp-controller="Cuenta" asp-action="Logout" method="post" style="display:inline;">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="dropdown-item" style="color: #333;">Cerrar sesión</button>
-                                </form>
-                            </li>
-                        </ul>
-                    </div>
+                        <div class="dropdown">
+                            <a class="text-white mx-2 dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                <i class="fa-solid fa-user fa-lg"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <!-- Perfil -->
+                                <li>
+                                    <a class="dropdown-item" style="color: #333;" asp-controller="Cuenta"
+                                        asp-action="Perfil">Perfil</a>
+                                </li>
+
+                                <!-- Panel de acuerdo al Rol -->
+                                @if (User.IsInRole("Administrador"))
+                                {
+                                    <li>
+                                        <a class="dropdown-item" style="color: #333;" asp-controller="Admin"
+                                            asp-action="Panel">Rol Panel</a>
+                                    </li>
+                                }
+                                else if (User.IsInRole("Vendedor"))
+                                {
+                                    <li>
+                                        <a class="dropdown-item" style="color: #333;" asp-controller="Vendedor"
+                                            asp-action="Panel">Rol Panel</a>
+                                    </li>
+                                }
+
+
+                                <!-- Logout -->
+                                <li>
+                                    <form asp-controller="Cuenta" asp-action="Logout" method="post" style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="dropdown-item" style="color: #333;">Cerrar
+                                            sesión</button>
+                                    </form>
+                                </li>
+
+                            </ul>
+                        </div>
                     }
                     else
                     {
@@ -189,13 +216,13 @@
         const sidebar = document.getElementById("sidebar");
 
         openSidebarBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          sidebar.classList.add("show");
+            e.stopPropagation();
+            sidebar.classList.add("show");
         });
 
         closeSidebarBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          sidebar.classList.remove("show");
+            e.stopPropagation();
+            sidebar.classList.remove("show");
         });
 
         // Panel del carrito
@@ -204,26 +231,27 @@
         const cartPanel = document.getElementById("cartPanel");
 
         openCartBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          cartPanel.style.right = "0";
+            e.stopPropagation();
+            cartPanel.style.right = "0";
         });
 
         closeCartBtn.addEventListener("click", (e) => {
-          e.stopPropagation();
-          cartPanel.style.right = "-300px";
+            e.stopPropagation();
+            cartPanel.style.right = "-300px";
         });
 
         // Cerrar paneles si se hace clic fuera de ellos
         document.addEventListener("click", (e) => {
-          if (!sidebar.contains(e.target) && !openSidebarBtn.contains(e.target)) {
-            sidebar.classList.remove("show");
-          }
-          if (!cartPanel.contains(e.target) && !openCartBtn.contains(e.target)) {
-            cartPanel.style.right = "-300px";
-          }
+            if (!sidebar.contains(e.target) && !openSidebarBtn.contains(e.target)) {
+                sidebar.classList.remove("show");
+            }
+            if (!cartPanel.contains(e.target) && !openCartBtn.contains(e.target)) {
+                cartPanel.style.right = "-300px";
+            }
         });
     </script>
 
     @RenderSection("Scripts", required: false)
 </body>
+
 </html>
