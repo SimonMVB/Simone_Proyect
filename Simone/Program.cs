@@ -97,7 +97,8 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        await CrearRolesYAdmin(services, logger);
+        Task.Run(async () => await CrearRolesYAdmin(services, logger)).Wait();
+        logger.LogInformation("Iniciado en puerto 7074");
     }
     catch (Exception ex)
     {

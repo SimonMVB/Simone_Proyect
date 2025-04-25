@@ -54,6 +54,9 @@
                     <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
                 </div>
 
+                <!-- Input escondido para el RequestID -->
+                <input type="hidden" name="RequestID" value="@ViewData["RequestID"]" />
+
                 <button type="submit" class="btn btn-dark w-100" id="btnLogin">
                     <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar
                 </button>

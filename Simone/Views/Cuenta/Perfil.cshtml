@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Mi Perfil";
     Layout = "~/Views/Shared/_Layout.cshtml"; // ajusta si usas otro layout
+    var usuario = ViewData["Usuario"] as Simone.Models.Usuario;
 }
 
 <div class="container mt-5" style="max-width: 600px;">
@@ -12,17 +13,14 @@
         </div>
 
         <div class="card-body">
-            @if (TempData["MensajeExito"] != null)
+            @if (TempData["MensajeExito"] != null || TempData["MensajeError"] != null)
             {
-                <div class="alert alert-success">
-                    <i class="fa-solid fa-circle-check me-2"></i> @TempData["MensajeExito"]
-                </div>
-            }
-
-            @if (TempData["MensajeError"] != null)
-            {
-                <div class="alert alert-danger">
-                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["MensajeError"]
+                var message = TempData["MensajeExito"] ?? TempData["MensajeError"];
+                var alertClass = TempData["MensajeExito"] != null ? "alert-success" : "alert-danger";
+                var iconClass = TempData["MensajeExito"] != null ? "fa-circle-check" : "fa-circle-exclamation";
+                
+                <div class="alert @alertClass">
+                    <i class="fa-solid @iconClass me-2"></i> @message
                 </div>
             }
 
@@ -45,13 +43,20 @@
 
                 <div class="mb-3">
                     <label class="form-label">Fecha de registro</label>
-                    <input value="@Model.FechaRegistro.ToShortDateString()" class="form-control" readonly />
+                    <input value="@(usuario?.FechaRegistro.ToShortDateString() ?? "No disponible") " class="form-control" readonly />
                 </div>
 
+                @if (usuario != null) {
                 <div class="mb-4">
                     <label class="form-label">Estado</label>
-                    <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
+                    <input value="@(usuario.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
                 </div>
+                } else {
+                                    <div class="mb-4">
+                    <label class="form-label">Estado</label>
+                    <input value="No disponible" class="form-control text-success" readonly />
+                </div>
+                }
 
                 <button type="submit" class="btn btn-primary w-100" id="btnPerfil">
                     <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios

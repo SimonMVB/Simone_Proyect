@@ -61,8 +61,18 @@
                     <span asp-validation-for="Password" class="text-danger small"></span>
                 </div>
 
+                <!-- Confirmar Contraseña -->
+                <div class="mb-3">
+                    <label asp-for="ConfirmPassword" class="form-label">Confirmar Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
+                        <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="••••••••" />
+                    </div>
+                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                </div>
+
                 <!-- Botón registrar -->
-                <button type="submit" class="btn btn-success w-100" id="btnRegistrar">
+                <button type="submit" class="btn btn-success w-100" id="btnRegistrar" disabled>
                     <i class="fa-solid fa-user-plus me-2"></i>Registrarme
                 </button>
             </form>
@@ -77,10 +87,28 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById("formRegistro").addEventListener("submit", function () {
-            const btn = document.getElementById("btnRegistrar");
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+
+        var $form = $("form");
+        var $submitButton = $("#btnRegistrar");
+
+        /// Prevenimos que el usuario envie una solicitud de registro sin llenar apropiadamente
+        /// todos los campos requeridos y de la forma requerida.
+        $(document).ready(function(){
+            $form.on('input change', function () {
+                if ($form.valid()) {
+                    $submitButton.prop("disabled", false);
+                } else {
+                    $submitButton.prop("disabled", true);
+                }
+            });
+            $.validator.unobtrusive.parse($form);
+        })
+
+        /// Una vez clickeado el boton de registrar,#btnRegistrar se bloquea para prevenir el envio de multiples
+        /// peticiones por parte del usuario
+        $form.addEventListener("submit", function () {
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
         });
     </script>
 }
