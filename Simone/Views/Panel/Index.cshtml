@@ -1,0 +1,89 @@
+@model Usuario
+@{
+    ViewData["Title"] = "Panel de Control";
+}
+
+<div class="ui container mt-5">
+    <div class="ui raised very padded text container segment">
+        <h2 class="ui header">@ViewData["Title"]</h2>
+
+        <div class="ui divider"></div>
+
+        <div class="ui three stackable cards">
+            @if (User.IsInRole("Administrador"))
+            {
+                <div class="card">
+                    <div class="content">
+                        <div class="header">Usuarios</div>
+                        <div class="description">
+                            Gestiona todos los usuarios registrados, cambia sus roles o elimínalos.
+                        </div>
+                    </div>
+                    <div class="extra content">
+                        <a class="ui primary button" asp-controller="Panel" asp-action="Usuarios">
+                            <i class="users icon"></i> Ver Usuarios
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="content">
+                        <div class="header">Categorias</div>
+                        <div class="description">
+                            Gestiona las Categorias existentes para los productos a registrar, cambialos o elimínalos.
+                        </div>
+                    </div>
+                    <div class="extra content">
+                        <a class="ui primary button" asp-controller="Panel" asp-action="Categorias">
+                            <i class="users icon"></i> Ver Categorias
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="content">
+                        <div class="header">Registros</div>
+                        <div class="description">
+                            Revisa los logs de inicio de sesión y actividad en el sistema.
+                        </div>
+                    </div>
+                    <div class="extra content">
+                        <a class="ui teal button disabled">
+                            <i class="clipboard list icon"></i> Ver Logs (próximamente)
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="content">
+                        <div class="header">Reportes</div>
+                        <div class="description">
+                            Accede a reportes generales del sistema: ventas, inventario, usuarios, etc.
+                        </div>
+                    </div>
+                    <div class="extra content">
+                        <a class="ui green button disabled">
+                            <i class="chart bar icon"></i> Ver Reportes (próximamente)
+                        </a>
+                    </div>
+                </div>
+            }
+            else if (User.IsInRole("Vendedor"))
+            {
+                <div class="card">
+                    <div class="content">
+                        <div class="header">Productos</div>
+                        <div class="description">
+                            Gestiona todos los productos registrados, edítalos o elimínalos.
+                        </div>
+                    </div>
+                    <div class="extra content">
+                        <a class="ui primary button" asp-controller="Vendedor" asp-action="Productos">
+                            <i class="users icon"></i> Ver Productos
+                        </a>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>

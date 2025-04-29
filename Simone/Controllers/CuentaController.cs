@@ -18,6 +18,7 @@ namespace Simone.Controllers
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
 
+        // Constructor que inyecta las dependencias necesarias
         public CuentaController(UserManager<Usuario> userManager,
                                 SignInManager<Usuario> signInManager,
                                 RoleManager<Roles> roleManager,
@@ -31,31 +32,35 @@ namespace Simone.Controllers
             _context = context;
         }
 
-        // GET: /Cuenta/Login
+        /// <summary>
+        /// Acción GET para mostrar la vista de inicio de sesión.
+        /// Redirige al Home si el usuario ya está autenticado.
+        /// </summary>
+        /// <returns>Vista de inicio de sesión o redirección a Home.</returns>
         [HttpGet]
         public IActionResult Login()
         {
             bool sesionIniciada = User.Identity.IsAuthenticated;
-            // Si ya hay sesion iniciada
+
+            // Si el usuario ya está autenticado, redirige al índice.
             if (sesionIniciada)
             {
-                // Envia el usuario al index.
                 return RedirectToAction("Index", "Home");
             }
 
+            // Genera un ID único para la solicitud de inicio de sesión
             var requestId = Guid.NewGuid().ToString();
             ViewData["RequestID"] = requestId;
 
             return View();
         }
 
-        // POST: /Cuenta/Login
         /// <summary>
-        /// Maneja el inicio de sesion de un usuario.
-        /// Este metodo revisa las credenciales del usuario y si son validas lo redirige de acuerdo a su rol.
+        /// Acción POST que maneja el inicio de sesión de un usuario.
+        /// Verifica las credenciales y redirige según el rol del usuario.
         /// </summary>
-        /// <param name="model">El model que contiene los parametros de correo y contrasena del usuario</param>
-        /// <returns>Redirecciona a distintas vistas de acuerdo a el rol del usuario.</returns>
+        /// <param name="model">Modelo de inicio de sesión que contiene el correo y la contraseña del usuario.</param>
+        /// <returns>Redirige a distintas vistas según el rol del usuario o muestra un error.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
@@ -76,17 +81,10 @@ namespace Simone.Controllers
                     _logger.LogInformation("Usuario autenticado: {Email}", model.Email);
                     await RegistrarLog(model.Email, true);
 
-                    var roles = await _userManager.GetRolesAsync(user);
-
-                    if (roles.Contains("Administrador"))
-                        return RedirectToAction("Panel", "Admin");
-
-                    if (roles.Contains("Empleado"))
-                        return RedirectToAction("Dashboard", "Empleado");
-
                     return RedirectToAction("Index", "Home");
                 }
 
+                // Si la cuenta está bloqueada
                 if (result.IsLockedOut)
                 {
                     _logger.LogWarning("Cuenta bloqueada: {Email}", model.Email);
@@ -103,10 +101,17 @@ namespace Simone.Controllers
                 ModelState.AddModelError(string.Empty, "El usuario no existe o está inactivo.");
             }
 
+            // Registrar el intento de login
             await RegistrarLog(model.Email, loginExitoso);
             return View(model);
         }
 
+        /// <summary>
+        /// Registra los intentos de inicio de sesión en la base de datos.
+        /// </summary>
+        /// <param name="email">El correo del usuario que intentó iniciar sesión.</param>
+        /// <param name="exitoso">Indica si el inicio de sesión fue exitoso.</param>
+        /// <returns>Un task que completa la operación de guardar el log en la base de datos.</returns>
         private async Task RegistrarLog(string email, bool exitoso)
         {
             var log = new LogIniciosSesion
@@ -120,21 +125,29 @@ namespace Simone.Controllers
             await _context.SaveChangesAsync();
         }
 
-        // GET: /Cuenta/Registrar
+        /// <summary>
+        /// Acción GET para mostrar la vista de registro de un nuevo usuario.
+        /// Redirige al Home si el usuario ya está autenticado.
+        /// </summary>
+        /// <returns>Vista de registro o redirección a Home.</returns>
         [HttpGet]
         public IActionResult Registrar()
         {
             bool sesionIniciada = User.Identity.IsAuthenticated;
-            // Si ya hay sesion iniciada
+            
+            // Si el usuario ya está autenticado, redirige al índice.
             if (sesionIniciada)
             {
-                // Envia el usuario al index.
                 return RedirectToAction("Index", "Home");
             }
             return View();
         }
 
-        // POST: /Cuenta/Registrar
+        /// <summary>
+        /// Acción POST para registrar un nuevo usuario en el sistema.
+        /// </summary>
+        /// <param name="model">Modelo de registro que contiene la información del usuario.</param>
+        /// <returns>Redirige al Home si el registro es exitoso, o muestra los errores de registro.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Registrar(RegistroViewModel model)
@@ -142,6 +155,7 @@ namespace Simone.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
+            // Verifica si el rol "Cliente" existe
             var rol = await _roleManager.FindByNameAsync("Cliente");
 
             var usuario = new Usuario
@@ -159,7 +173,7 @@ namespace Simone.Controllers
 
             if (result.Succeeded)
             {
-                // Asignar rol por defecto
+                // Asigna el rol "Cliente" por defecto
                 await _userManager.AddToRoleAsync(usuario, "Cliente");
 
                 _logger.LogInformation("Usuario registrado: {Email}", model.Email);
@@ -167,6 +181,7 @@ namespace Simone.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
+            // Registrar cualquier error durante el registro
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
@@ -176,7 +191,10 @@ namespace Simone.Controllers
             return View(model);
         }
 
-        // POST: /Cuenta/Logout
+        /// <summary>
+        /// Acción POST para cerrar la sesión de un usuario.
+        /// </summary>
+        /// <returns>Redirige al login después de cerrar la sesión.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -186,13 +204,20 @@ namespace Simone.Controllers
             return RedirectToAction("Login", "Cuenta");
         }
 
-        // GET: /Cuenta/AccesoDenegado
+        /// <summary>
+        /// Acción GET que muestra la vista de acceso denegado.
+        /// </summary>
+        /// <returns>Vista de acceso denegado.</returns>
         [HttpGet]
         public IActionResult AccesoDenegado()
         {
             return View();
         }
-        // GET: /Cuenta/Perfil
+
+        /// <summary>
+        /// Acción GET que muestra la vista del perfil del usuario.
+        /// </summary>
+        /// <returns>Vista con la información del perfil del usuario.</returns>
         [HttpGet]
         public async Task<IActionResult> Perfil()
         {
@@ -212,7 +237,11 @@ namespace Simone.Controllers
             return View();
         }
 
-        // POST: /Cuenta/Perfil
+        /// <summary>
+        /// Acción POST que maneja la actualización del perfil del usuario.
+        /// </summary>
+        /// <param name="model">Modelo con la nueva información del usuario.</param>
+        /// <returns>Redirige al perfil después de la actualización o muestra un error si la operación falla.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Perfil(Usuario model)
@@ -230,7 +259,7 @@ namespace Simone.Controllers
                 return RedirectToAction("Login");
             }
 
-            // Solo se puede editar NombreCompleto por seguridad
+            // Solo se permite editar el NombreCompleto por seguridad
             usuario.NombreCompleto = model.NombreCompleto;
 
             var result = await _userManager.UpdateAsync(usuario);
@@ -250,11 +279,22 @@ namespace Simone.Controllers
 
             return View();
         }
+
+        /// <summary>
+        /// Acción GET que muestra la vista de olvidé mi contraseña.
+        /// </summary>
+        /// <returns>Vista para recuperar la contraseña.</returns>
         [HttpGet]
         public IActionResult OlvidePassword()
         {
             return View();
         }
+
+        /// <summary>
+        /// Acción POST que maneja la recuperación de la contraseña.
+        /// </summary>
+        /// <param name="model">Modelo que contiene el correo del usuario.</param>
+        /// <returns>Redirige al login después de enviar el enlace de recuperación.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> OlvidePassword(ForgotPasswordViewModel model)
@@ -278,14 +318,5 @@ namespace Simone.Controllers
             TempData["MensajeExito"] = "Te hemos enviado un enlace de recuperación (o revisa la consola).";
             return RedirectToAction("Login");
         }
-
-
-
-
-
-
     }
-
 }
-
-

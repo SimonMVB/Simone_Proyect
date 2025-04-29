@@ -122,22 +122,14 @@
                                         asp-action="Perfil">Perfil</a>
                                 </li>
 
-                                <!-- Panel de acuerdo al Rol -->
-                                @if (User.IsInRole("Administrador"))
+                                <!-- Condicional temporal para habilitar el paneles de roles (TEMPORAL!) -->
+                                @if (!User.IsInRole("Cliente"))
                                 {
                                     <li>
-                                        <a class="dropdown-item" style="color: #333;" asp-controller="Admin"
-                                            asp-action="Panel">Rol Panel</a>
+                                        <a class="dropdown-item" style="color: #333;" asp-controller="Panel"
+                                            asp-action="Index">Rol Panel</a>
                                     </li>
                                 }
-                                else if (User.IsInRole("Vendedor"))
-                                {
-                                    <li>
-                                        <a class="dropdown-item" style="color: #333;" asp-controller="Vendedor"
-                                            asp-action="Panel">Rol Panel</a>
-                                    </li>
-                                }
-
 
                                 <!-- Logout -->
                                 <li>
