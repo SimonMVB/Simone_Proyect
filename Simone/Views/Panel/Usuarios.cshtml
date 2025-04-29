@@ -1,12 +1,13 @@
 ﻿@{
-    ViewData["Title"] = "Gestión de Usuarios";
+    ViewData["Type"] = "Usuario";
+    ViewData["Title"] = "Gestión de " + ViewData["Type"];
 }
 
 <div class="ui container mt-5">
     <div class="ui segment">
         <h2 class="ui header">
             <i class="users icon"></i>
-            <div class="content">Gestión de Usuarios</div>
+            <div class="content">@ViewData["Title"]</div>
         </h2>
 
         <table class="ui celled striped table">
@@ -25,7 +26,7 @@
                         <td>@usuario.Email</td>
                         <td>@usuario.NombreCompleto</td>
                         <td>
-                            <form method="post" style="display:inline" asp-controller="Admin" asp-action="EditarRol">
+                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EditarRol">
                                 @Html.AntiForgeryToken()
 
                                 <!-- Input partial el userId -->
@@ -63,11 +64,11 @@
                         </td>
                         <td>
                             <!-- Borrar Usuario -->
-                            <form method="post" style="display:inline" asp-controller="Admin" asp-action="EliminarUsuario"
+                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarUsuario"
                                 asp-route-id="@usuario.Id"
                                 onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="ui icon red button" title="Eliminar Usuario">
+                                <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
                                     <i class="trash icon"></i>
                                 </button>
                             </form>

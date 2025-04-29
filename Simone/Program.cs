@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Simone.Data;
+using Simone.Services;
 using Simone.Models;
 using System.Linq;
 
@@ -48,8 +49,10 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();
 
-// Registrar RoleManager si es requerido
+// Registrar los servicios requeridos
 builder.Services.AddScoped<RoleManager<Roles>>();
+builder.Services.AddScoped<CategoriasService>();
+
 
 // 2.5. Configurar la cookie de autenticación para definir las rutas de Login y Acceso Denegado
 builder.Services.ConfigureApplicationCookie(options =>

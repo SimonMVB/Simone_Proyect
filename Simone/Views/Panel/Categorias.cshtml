@@ -1,0 +1,151 @@
+@{
+    ViewData["Type"] = "Categoria";
+    ViewData["Title"] = "Gestión de " + ViewData["Type"];
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="tags icon"></i>
+            <div class="content">@ViewData["Title"]</div>
+        </h2>
+
+        <!-- Button to open the floating card -->
+        <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;">
+            <button id="openCardButton" class="ui green button">Añadir una @ViewData["Type"]</button>
+        </div>
+
+        <!-- Table displaying categories -->
+        @if (ViewBag.Categorias.Count > 0)
+        {
+            <table class="ui celled striped table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Opciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var categoria in ViewBag.Categorias)
+                    {
+                        <tr>
+                            <td>@categoria.Nombre</td>
+                            <td>
+                                <!-- Edit Category -->
+                                <button type="button" class="ui icon blue button" title="Editar @ViewData["Type"]"
+                                    id="editCategoryCardButton" data-category-id="@categoria.CategoriaID"
+                                    data-category-name="@categoria.Nombre">
+                                    <i class="edit icon"></i>
+                                </button>
+                                <!-- Delete Category -->
+                                <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarCategoria"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
+                                    <input type="hidden" name="categoriaID" value="@categoria.CategoriaID" />
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
+                                        <i class="trash icon"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No hay categorías disponibles.</p>
+        }
+
+    </div>
+</div>
+
+<!-- Floating Card for Adding and Editing a Category -->
+<div id="addCategoryCard" class="ui raised card"
+    style="position: fixed; right: -350px; top: 10%; width: 350px; transition: right 0.3s ease;">
+    <div class="content">
+        <div class="header" id="cardHeader">Añadir Nueva @ViewData["Type"]</div>
+        <form id="categoryForm" method="post">
+            @Html.AntiForgeryToken()
+            <div class="field">
+                <label for="nombreCategoria">Nombre de la Categoría</label>
+                <input type="text" name="nombreCategoria" id="nombreCategoria" placeholder="Nombre de la categoría" required />
+                <input type="hidden" name="categoriaID" id="categoriaID"/>
+            </div>
+            <div class="actions">
+                <button type="submit" class="ui green button" id="submitButton">Añadir</button>
+                <button type="button" class="ui button" id="closeCardButton">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const newCategoryCardButton = document.getElementById("openCardButton");
+            const closeCardButton = document.getElementById("closeCardButton");
+            const addCategoryCard = document.getElementById("addCategoryCard");
+            const categoryForm = document.getElementById("categoryForm");
+            const cardHeader = document.getElementById("cardHeader");
+            const submitButton = document.getElementById("submitButton");
+
+            // Function to open the card (Add or Edit)
+            function openCategoryCard(isEdit, categoryId, categoryName) {
+                addCategoryCard.style.right = "0"; // Slide in the card
+
+                if (isEdit) {
+                    cardHeader.textContent = "Editar Categoria";
+                    submitButton.textContent = "Editar";
+                    submitButton.classList.remove("green");
+                    submitButton.classList.add("blue");
+                    categoryForm.setAttribute("action", "/Panel/EditarCategoria"); // Use the "EditarCategoria" action
+                    document.getElementById("nombreCategoria").value = categoryName; // Pre-fill the input with the category name
+                    document.getElementById("categoriaID").value = categoryId; // Set the category ID for editing
+                    categoryForm.setAttribute("data-category-id", categoryId); // Set the category ID for editing
+                } else {
+                    cardHeader.textContent = "Añadir Nueva Categoria";
+                    submitButton.textContent = "Añadir";
+                    submitButton.classList.remove("blue");
+                    submitButton.classList.add("green");
+                    categoryForm.setAttribute("action", "/Panel/AnadirCategoria"); // Use the "EditarCategoria" action
+                    document.getElementById("categoriaID").value = categoryId; // Set the category ID for editing
+                    document.getElementById("nombreCategoria").value = ""; // Clear the input for a new category
+                }
+            }
+
+            // Open the card for editing an existing category
+            document.querySelectorAll("#editCategoryCardButton").forEach(button => {
+                button.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    const categoryId = button.getAttribute("data-category-id");
+                    const categoryName = button.getAttribute("data-category-name");
+                    openCategoryCard(true, categoryId, categoryName); // Edit mode
+                });
+            });
+
+            // Open the card for adding a new category (same button or function can be reused)
+            newCategoryCardButton.addEventListener("click", function (e) {
+                e.stopPropagation();
+                openCategoryCard(false); // Add mode
+            });
+
+            // Close the card when the cancel button is clicked
+            closeCardButton.addEventListener("click", function (e) {
+                e.stopPropagation();
+                addCategoryCard.style.right = "-350px"; // Slide out the card
+            });
+
+            // Close the card if clicked outside of the card
+            document.addEventListener("click", function (e) {
+                if (!addCategoryCard.contains(e.target) && !newCategoryCardButton.contains(e.target)) {
+                    addCategoryCard.style.right = "-350px"; // Slide out the card
+                }
+            });
+        });
+    </script>
+
+    <partial name="_ValidationScriptsPartial" />
+}

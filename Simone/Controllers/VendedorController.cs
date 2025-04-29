@@ -27,10 +27,14 @@ namespace Simone.Controllers
             _context = context;
         }
 
-        public IActionResult Panel()
+        public IActionResult Productos()
         {
             return View();
         }
 
+        public IActionResult AnadirProducto()
+        {
+            return View();
+        }
     }
 }

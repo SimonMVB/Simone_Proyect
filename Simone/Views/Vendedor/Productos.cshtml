@@ -1,0 +1,82 @@
+@{
+    ViewData["Title"] = "Gestión de Productos";
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="users icon"></i>
+            <div class="content">@ViewData["Title"]</div>
+        </h2>
+
+        <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;">
+            <a asp-controller="Panel" asp-action="AnadirProducto" class="ui green button">Añadir un producto</a>
+        </div>
+
+        @if (ViewBag.Productos != null)
+        {
+            <table class="ui celled striped table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Foto</th>
+                        <th>Unidades Vendidas</th>
+                        <th>Unidades Disponible</th>
+                        <th>Opciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var producto in ViewBag.Productos)
+                    {
+                        <tr>
+                            <td>@producto.Email</td>
+                            <td>@producto.NombreCompleto</td>
+                            <td>
+                                <form method="post" style="display:inline" asp-controller="Vendedor" asp-action="EditarRol">
+                                    @Html.AntiForgeryToken()
+
+                                    <!-- Input partial el userId -->
+                                    <input type="hidden" name="usuarioID" value="@producto.Id" />
+
+                                    <!-- Dropdown de Selecciona de rol -->
+                                    <select name="nuevoRolID" class="ui dropdown" id="roleNameDropdown_@producto.Id"
+                                        onChange="this.form.submit();">
+                                        <option value="" disabled selected>Seleccione un Rol</option>
+                                        @foreach (var role in ViewBag.Roles)
+                                        {
+                                            <option value="@role.Id" data-role-id="@role.Id">
+                                                @role.Name
+                                            </option>
+                                        }
+                                    </select>
+                                </form>
+
+                            </td>
+                            <td>
+                                <!-- Borrar Usuario -->
+                                <form method="post" style="display:inline" asp-controller="Admin" asp-action="EliminarUsuario"
+                                    asp-route-id="@producto.Id"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="ui icon red button" title="Eliminar Usuario">
+                                        <i class="trash icon"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <tr>
+                Wow such an empty
+            </tr>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
