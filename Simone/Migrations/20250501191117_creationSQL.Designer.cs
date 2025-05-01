@@ -12,8 +12,8 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20250501190419_InitialMigration")]
-    partial class InitialMigration
+    [Migration("20250501191117_creationSQL")]
+    partial class creationSQL
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1329,13 +1329,13 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Cliente", "Cliente")
                         .WithMany("CuponesUsados")
                         .HasForeignKey("ClienteID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Promocion", "Promocion")
                         .WithMany("CuponesUsados")
                         .HasForeignKey("PromocionID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Cliente");
@@ -1348,13 +1348,13 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Producto", "Producto")
                         .WithMany("DetalleVentas")
                         .HasForeignKey("ProductoID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Ventas", "Venta")
                         .WithMany("DetalleVentas")
                         .HasForeignKey("VentaID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Ventas", null)
@@ -1501,13 +1501,13 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Proveedores", "Proveedor")
                         .WithMany("Productos")
                         .HasForeignKey("ProveedorID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Subcategorias", "Subcategoria")
                         .WithMany("Productos")
                         .HasForeignKey("SubcategoriaID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Categoria");
@@ -1522,13 +1522,13 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Cliente", "Cliente")
                         .WithMany("Reseñas")
                         .HasForeignKey("ClienteID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Producto", "Producto")
                         .WithMany("Reseñas")
                         .HasForeignKey("ProductoID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Cliente");
@@ -1541,7 +1541,7 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Categorias", "Categoria")
                         .WithMany("Subcategoria")
                         .HasForeignKey("CategoriaID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Categoria");

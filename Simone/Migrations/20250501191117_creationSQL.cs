@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class creationSQL : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -311,7 +311,7 @@ namespace Simone.Migrations
                         column: x => x.CategoriaID,
                         principalTable: "Categorias",
                         principalColumn: "CategoriaID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -425,13 +425,13 @@ namespace Simone.Migrations
                         column: x => x.ClienteID,
                         principalTable: "Clientes",
                         principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_CuponesUsados_Promociones_PromocionID",
                         column: x => x.PromocionID,
                         principalTable: "Promociones",
                         principalColumn: "PromocionID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -561,13 +561,13 @@ namespace Simone.Migrations
                         column: x => x.ProveedorID,
                         principalTable: "Proveedores",
                         principalColumn: "ProveedorID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Productos_Subcategorias_SubcategoriaID",
                         column: x => x.SubcategoriaID,
                         principalTable: "Subcategorias",
                         principalColumn: "SubcategoriaID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -731,13 +731,13 @@ namespace Simone.Migrations
                         column: x => x.ProductoID,
                         principalTable: "Productos",
                         principalColumn: "ProductoID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_DetalleVentas_Ventas_VentaID",
                         column: x => x.VentaID,
                         principalTable: "Ventas",
                         principalColumn: "VentaID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_DetalleVentas_Ventas_VentasVentaID",
                         column: x => x.VentasVentaID,
@@ -831,13 +831,13 @@ namespace Simone.Migrations
                         column: x => x.ClienteID,
                         principalTable: "Clientes",
                         principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Reseñas_Productos_ProductoID",
                         column: x => x.ProductoID,
                         principalTable: "Productos",
                         principalColumn: "ProductoID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
