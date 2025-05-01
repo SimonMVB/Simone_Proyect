@@ -1,29 +1,22 @@
-﻿<script>
-    // Evita cargar los scripts si jQuery ya está definido
-    if (typeof jQuery === "undefined") {
-        document.write('<script src="https://code.jquery.com/jquery-3.6.0.min.js"><\/script>');
-    }
-</script>
+﻿<!-- jQuery (needed for Semantic UI) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Carga de jQuery Validation desde CDN con fallback local -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js" defer></script>
-<script>
-    if (typeof $.validator === "undefined") {
-        document.write('<script src="~/lib/jquery-validation/dist/jquery.validate.min.js"><\/script>');
-    }
-</script>
+<!-- Semantic UI CSS -->
+<link href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.1/dist/semantic.min.css" rel="stylesheet">
 
-<!-- Carga de jQuery Validation Unobtrusive desde CDN con fallback local -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js" defer></script>
-<script>
-    if (typeof $.validator.unobtrusive === "undefined") {
-        document.write('<script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"><\/script>');
-    }
-</script>
+<!-- Semantic UI JS -->
+<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.1/dist/semantic.min.js"></script>
 
+<!-- jQuery Validation (for form validation) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+
+<!-- jQuery Unobtrusive Validation (integrates validation with ASP.NET) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+
+<!-- jQuery Validation Initialization -->
 <script>
     $(document).ready(function () {
-        // Habilitar validación unobtrusive en formularios dinámicos
+        // Enable unobtrusive validation for dynamic forms
         var $form = $("form");
         if ($form.length) {
             $form.removeData("validator").removeData("unobtrusiveValidation");

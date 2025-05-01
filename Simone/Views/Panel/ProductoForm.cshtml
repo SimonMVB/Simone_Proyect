@@ -1,0 +1,193 @@
+<div class="ui container mt-5">
+    <div class="ui segment">
+
+
+        @if (ViewBag.Producto != null)
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Editar Producto</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto">
+                <!-- Nombre -->
+                <div class="field">
+                    <label for="Nombre">Nombre</label>
+                    <input type="text" name="nombreProducto" id="Nombre" placeholder="Nombre del producto" required />
+                </div>
+
+                <!-- Descripcion -->
+                <div class="field">
+                    <label for="Descripcion">Descripción</label>
+                    <textarea name="Descripcion" id="Descripcion" placeholder="Descripción del producto" rows="3"
+                    required></textarea>
+                </div>
+
+                <!-- Talla -->
+                <div class="field">
+                    <label for="Talla">Talla</label>
+                    <input type="text" name="Talla" id="Talla" placeholder="Tamaño del producto" required />
+                </div>
+
+                <!-- Color -->
+                <div class="field">
+                    <label for="Color">Color</label>
+                    <input type="text" name="Color" id="Color" placeholder="Color del producto" required />
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label for="Marca">Marca</label>
+                    <input type="text" name="Marca" id="Marca" placeholder="Marca del producto" required />
+                </div>
+
+                <!-- PrecioCompra -->
+                <div class="field">
+                    <label for="PrecioCompra">Precio de Compra</label>
+                    <input type="number" name="PrecioCompra" id="PrecioCompra" placeholder="Precio de compra" step="0.01"
+                        required />
+                </div>
+
+                <!-- PrecioVenta -->
+                <div class="field">
+                    <label for="PrecioVenta">Precio de Venta</label>
+                    <input type="number" name="PrecioVenta" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
+                        required />
+                </div>
+
+                <!-- Categoria -->
+                <div class="field">
+                    @if (ViewBag.Categorias.Count > 0)
+                    {
+                        <label for="Categoria">Categoría</label>
+                        <select name="Categoria" id="Categoria" class="ui dropdown" required>
+                            <option value="">Seleccione una categoría</option>
+                            @foreach (var categoria in ViewBag.Categorias)
+                            {
+                                <option value="">@categoria.Nombre</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select name="Categoria" id="Categoria" class="ui dropdown" disabled required>
+                            <option value="">No hay categorias disponibles</option>
+                        </select>
+                    }
+                </div>
+
+                <!-- Stock -->
+                <div class="field">
+                    <label for="Stock">Stock</label>
+                    <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required />
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button">Añadir Producto</button>
+            </form>
+        }
+        else
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Añadir Producto</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto">
+                <!-- Nombre -->
+                <div class="field">
+                    <label for="Nombre">Nombre</label>
+                    <input type="text" name="nombreProducto" id="Nombre" placeholder="Nombre del producto" required />
+                </div>
+
+                <!-- Descripcion -->
+                <div class="field">
+                    <label for="Descripcion">Descripción</label>
+                    <textarea name="descripcion" id="Descripcion" placeholder="Descripción del producto" rows="3"
+                    required></textarea>
+                </div>
+
+                <!-- Talla -->
+                <div class="field">
+                    <label for="Talla">Talla</label>
+                    <input type="text" name="talla" id="Talla" placeholder="Tamaño del producto" required />
+                </div>
+
+                <!-- Color -->
+                <div class="field">
+                    <label for="Color">Color</label>
+                    <input type="text" name="color" id="Color" placeholder="Color del producto" required />
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label for="Marca">Marca</label>
+                    <input type="text" name="marca" id="Marca" placeholder="Marca del producto" required />
+                </div>
+
+                <!-- PrecioCompra -->
+                <div class="field">
+                    <label for="PrecioCompra">Precio de Compra</label>
+                    <input type="number" name="precioCompra" id="PrecioCompra" placeholder="Precio de compra" step="0.01"
+                        required />
+                </div>
+
+                <!-- PrecioVenta -->
+                <div class="field">
+                    <label for="PrecioVenta">Precio de Venta</label>
+                    <input type="number" name="precioVenta" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
+                        required />
+                </div>
+
+                <!-- Categoria -->
+                <div class="field">
+                    @if (ViewBag.Categorias.Count > 0)
+                    {
+                        <label for="Categoria">Categoría</label>
+                        <select name="categoriaID" id="Categoria" class="ui dropdown" required>
+                            <option value="">Seleccione una categoría</option>
+                            @foreach (var categoria in ViewBag.Categorias)
+                            {
+                                <option value="@categoria.CategoriaID">@categoria.Nombre</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select name="categoriaID" id="Categoria" class="ui dropdown" disabled required>
+                            <option value="">No hay categorias disponibles</option>
+                        </select>
+                    }
+                </div>
+
+                <!-- Proveedor -->
+                <div class="field">
+                    @if (ViewBag.Proveedores.Count > 0)
+                    {
+                        <label for="Proveedor">Proveedor</label>
+                        <select name="proveedorID" id="Proveedor" class="ui dropdown" required>
+                            <option value="">Seleccione un proveedor</option>
+                            @foreach (var proveedor in ViewBag.Proveedores)
+                            {
+                                <option value="@proveedor.ProveedorID">@proveedor.NombreProveedor</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select name="proveedorID" id="Proveedor" class="ui dropdown" disabled required>
+                            <option value="">No hay proveedores disponibles</option>
+                        </select>
+                    }
+                </div>
+
+                <!-- Stock -->
+                <div class="field">
+                    <label for="Stock">Stock</label>
+                    <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required />
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button">Añadir Producto</button>
+            </form>
+        }
+    </div>
+</div>

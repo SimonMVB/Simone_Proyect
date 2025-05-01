@@ -1,0 +1,72 @@
+@{
+    ViewData["Type"] = "Productos";
+    ViewData["Title"] = "Gestión de " + ViewData["Type"];
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="users icon"></i>
+            <div class="content">@ViewData["Title"]</div>
+        </h2>
+
+        <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;"></div>
+        <a asp-controller="Panel" asp-action="AnadirProducto" class="ui green button">Añadir un producto</a>
+    </div>
+    <!-- Table displaying categories -->
+    @if (ViewBag.Productos.Count > 0)
+    {
+        <table class="ui celled striped table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Imagen</th>
+                    <th>Descripcion</th>
+                    <th>Stock</th>
+                    <th>Opciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var producto in ViewBag.Productos)
+                {
+                    <tr>
+                        <td>@producto.Nombre</td>
+                        <!--  <td> va la foto !!!!!!!!!!</td> -->
+                        <td>Foto</td>
+                        <td>@producto.Descripcion</td>
+                        <td>@producto.Stock</td>
+                        <td>
+                            <!-- Edit Category -->
+                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EditarProducto">
+                                @Html.AntiForgeryToken()
+                                <button type="button" class="ui icon blue button" title="Editar @ViewData["Type"]"
+                                    id="editCategoryCardButton" data-category-id="@producto.CategoriaID"
+                                    data-category-name="@producto.Nombre">
+                                    <i class="edit icon"></i>
+                                </button>
+                            </form>
+                            <!-- Delete Category -->
+                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarProducto"
+                                onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
+                                <input type="hidden" name="categoriaID" value="@producto.CategoriaID" />
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
+                                    <i class="trash icon"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p>No hay productos disponibles.</p>
+    }
+</div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

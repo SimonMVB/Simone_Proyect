@@ -27,12 +27,12 @@
             <form asp-action="Perfil" method="post" id="formPerfil">
                 <div class="mb-3">
                     <label class="form-label">Correo electrónico</label>
-                    <input asp-for="Email" class="form-control" readonly />
+                    <input asp-for="Email" class="form-control" value="@ViewBag.Usuario.Email" readonly />
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Nombre completo</label>
-                    <input asp-for="NombreCompleto" class="form-control" />
+                    <input asp-for="NombreCompleto" value="@ViewBag.Usuario.NombreCompleto" class="form-control" />
                     <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
                 </div>
 
@@ -43,13 +43,13 @@
 
                 <div class="mb-3">
                     <label class="form-label">Fecha de registro</label>
-                    <input value="@(usuario?.FechaRegistro.ToShortDateString() ?? "No disponible") " class="form-control" readonly />
+                    <input value="@(ViewBag.Usuario?.FechaRegistro.ToShortDateString() ?? "No disponible") " class="form-control" readonly />
                 </div>
 
-                @if (usuario != null) {
+                @if (ViewBag.Usuario != null) {
                 <div class="mb-4">
                     <label class="form-label">Estado</label>
-                    <input value="@(usuario.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
+                    <input value="@(ViewBag.Usuario.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
                 </div>
                 } else {
                                     <div class="mb-4">

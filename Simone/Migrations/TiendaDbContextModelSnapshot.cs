@@ -22,6 +22,42 @@ namespace Simone.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Discriminator")
+                        .IsRequired()
+                        .HasMaxLength(13)
+                        .HasColumnType("nvarchar(13)");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+
+                    b.HasDiscriminator().HasValue("IdentityRole");
+
+                    b.UseTphMappingStrategy();
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -983,43 +1019,6 @@ namespace Simone.Migrations
                     b.ToTable("Reseñas");
                 });
 
-            modelBuilder.Entity("Simone.Models.Roles", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NombreRol")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("RolID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.HasIndex("RolID");
-
-                    b.ToTable("AspNetRoles", (string)null);
-                });
-
             modelBuilder.Entity("Simone.Models.Subcategorias", b =>
                 {
                     b.Property<int>("SubcategoriaID")
@@ -1078,11 +1077,6 @@ namespace Simone.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("NombreUsuario")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("NormalizedEmail")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -1101,7 +1095,8 @@ namespace Simone.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("RolID")
-                        .HasColumnType("nvarchar(450)");
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -1122,8 +1117,6 @@ namespace Simone.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
-
-                    b.HasIndex("RolID");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -1166,9 +1159,21 @@ namespace Simone.Migrations
                     b.ToTable("Ventas");
                 });
 
+            modelBuilder.Entity("Simone.Models.Roles", b =>
+                {
+                    b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasDiscriminator().HasValue("Roles");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Simone.Models.Roles", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1195,7 +1200,7 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Simone.Models.Roles", null)
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1528,17 +1533,6 @@ namespace Simone.Migrations
                     b.Navigation("Producto");
                 });
 
-            modelBuilder.Entity("Simone.Models.Roles", b =>
-                {
-                    b.HasOne("Simone.Models.Roles", "Rol")
-                        .WithMany()
-                        .HasForeignKey("RolID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Rol");
-                });
-
             modelBuilder.Entity("Simone.Models.Subcategorias", b =>
                 {
                     b.HasOne("Simone.Models.Categorias", "Categoria")
@@ -1548,15 +1542,6 @@ namespace Simone.Migrations
                         .IsRequired();
 
                     b.Navigation("Categoria");
-                });
-
-            modelBuilder.Entity("Simone.Models.Usuario", b =>
-                {
-                    b.HasOne("Simone.Models.Roles", "Rol")
-                        .WithMany("Usuarios")
-                        .HasForeignKey("RolID");
-
-                    b.Navigation("Rol");
                 });
 
             modelBuilder.Entity("Simone.Models.Ventas", b =>
@@ -1644,11 +1629,6 @@ namespace Simone.Migrations
                     b.Navigation("Compras");
 
                     b.Navigation("Productos");
-                });
-
-            modelBuilder.Entity("Simone.Models.Roles", b =>
-                {
-                    b.Navigation("Usuarios");
                 });
 
             modelBuilder.Entity("Simone.Models.Subcategorias", b =>

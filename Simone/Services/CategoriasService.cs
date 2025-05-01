@@ -17,7 +17,7 @@ namespace Simone.Services
         }
 
         // Agregar una nueva categoría de manera asíncrona
-        public async Task<bool> AddCategoriaAsync(Categorias categoria)
+        public async Task<bool> AddAsync(Categorias categoria)
         {
             try
             {
@@ -32,19 +32,19 @@ namespace Simone.Services
         }
 
         // Obtener todas las categorías de manera asíncrona
-        public async Task<List<Categorias>> GetAllCategoriasAsync()
+        public async Task<List<Categorias>> GetAllAsync()
         {
             return await _context.Categorias.ToListAsync(); // Usamos ToListAsync
         }
 
         // Obtener una categoría por su ID de manera asíncrona
-        public async Task<Categorias> GetCategoriaByIdAsync(int id)
+        public async Task<Categorias> GetByIdAsync(int id)
         {
             return await _context.Categorias.FindAsync(id); // Usamos FindAsync
         }
 
         // Actualizar una categoría de manera asíncrona
-        public async Task<bool> UpdateCategoriaAsync(Categorias categoria)
+        public async Task<bool> UpdateAsync(Categorias categoria)
         {
             try
             {
@@ -59,7 +59,7 @@ namespace Simone.Services
         }
 
         // Eliminar una categoría de manera asíncrona
-        public async Task<bool> DeleteCategoriaAsync(int id)
+        public async Task<bool> DeleteAsync(int id)
         {
             try
             {

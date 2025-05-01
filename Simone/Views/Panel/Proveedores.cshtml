@@ -1,0 +1,78 @@
+@{
+    ViewData["Type"] = "Proveedores";
+    ViewData["Title"] = "Gestión de " + ViewData["Type"];
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="tags icon"></i>
+            <div class="content">@ViewData["Title"]</div>
+        </h2>
+
+        <a style="display:inline" asp-controller="Panel" asp-action="AnadirProveedor">
+            <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;">
+                <button class="ui green button">Añadir @ViewData["Type"]</button>
+            </div>
+        </a>
+
+        <!-- Table displaying categories -->
+        @if (ViewBag.Proveedores.Count > 0)
+        {
+            <table class="ui celled striped table">
+                <thead>
+                    <tr>
+                        <th>Nombre Proveedor</th>
+                        <th>Contacto</th>
+                        <th>Telefono</th>
+                        <th>Email</th>
+                        <th>Direccion</th>
+                        <th>Opciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var proveedor in ViewBag.Proveedores)
+                    {
+                        <tr>
+                            <td>@proveedor.NombreProveedor</td>
+                            <td>@proveedor.Contacto</td>
+                            <td>@proveedor.Telefono</td>
+                            <td>@proveedor.Email</td>
+                            <td>@proveedor.Direccion</td>
+                            <td>
+
+                                <!-- Edit Proveedor -->
+                                <form method="get" style="display:inline" asp-controller="Panel" asp-action="EditarProveedor">
+                                    <input type="hidden" name="proveedorID" value="@proveedor.ProveedorID" />
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="ui icon blue button" title="Editar @ViewData["Type"]">
+                                        <i class="edit icon"></i>
+                                    </button>
+                                </form>
+                                <!-- Delete Proveedor -->
+                                <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarCategoria"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
+                                    <input type="hidden" name="proveedorID" value="@proveedor.ProveedorID" />
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
+                                        <i class="trash icon"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No hay categorías disponibles.</p>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

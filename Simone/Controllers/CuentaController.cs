@@ -232,7 +232,7 @@ namespace Simone.Controllers
 
             var roles = await _userManager.GetRolesAsync(usuario);
             ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
-            ViewData["Usuario"] = usuario;
+            ViewBag.Usuario = usuario;
 
             return View();
         }

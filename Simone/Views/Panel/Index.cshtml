@@ -42,6 +42,20 @@
 
                 <div class="card">
                     <div class="content">
+                        <div class="header">Proveedores</div>
+                        <div class="description">
+                            Gestiona los Proveedores existentes, agrega, cambialos o elimínalos.
+                        </div>
+                    </div>
+                    <div class="extra content">
+                        <a class="ui primary button" asp-controller="Panel" asp-action="Proveedores">
+                            <i class="users icon"></i> Ver Proveedores
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="content">
                         <div class="header">Registros</div>
                         <div class="description">
                             Revisa los logs de inicio de sesión y actividad en el sistema.
@@ -78,7 +92,7 @@
                         </div>
                     </div>
                     <div class="extra content">
-                        <a class="ui primary button" asp-controller="Vendedor" asp-action="Productos">
+                        <a class="ui primary button" asp-controller="Panel" asp-action="Productos">
                             <i class="users icon"></i> Ver Productos
                         </a>
                     </div>

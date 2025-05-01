@@ -75,21 +75,28 @@
 
                 <!-- Sección derecha: Enviar a, búsqueda, favoritos, carrito y usuario -->
                 <div class="d-flex align-items-center">
-                    <!-- Enviar a: Link interactivo para cambiar la dirección -->
-                    <a class="text-white mx-2" asp-controller="Cuenta" asp-action="CambiarDireccion"
-                        title="Cambiar mi dirección">
-                        <i class="fa-solid fa-location-dot"></i> Enviar a:
-                        <span class="fw-bold">
-                            @if (User.Identity.IsAuthenticated)
-                            {
+                    @if (User.Identity.IsAuthenticated)
+                    {
+                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="CambiarDireccion"
+                            title="Cambiar mi dirección">
+                            <i class="fa-solid fa-location-dot"></i> Enviar a:
+                            <span class="fw-bold">
                                 @(ViewBag.UserDireccion ?? "Tu dirección")
-                            }
-                            else
-                            {
-                                @:Inicia sesión
-                            }
-                        </span>
-                    </a>
+                            </span>
+                        </a>
+                    }
+                    else
+                    {
+                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="Login"
+                            title="Cambiar mi dirección">
+                            <i class="fa-solid fa-location-dot"></i> Enviar a:
+                            <span class="fw-bold">
+                                Iniciar Sesión
+                            </span>
+                        </a>
+                    }
+                    <!-- Enviar a: Link interactivo para cambiar la dirección -->
+
                     <!-- Botón de búsqueda -->
                     <a href="#" class="text-white mx-2" aria-label="Buscar">
                         <i class="fa-solid fa-magnifying-glass fa-lg"></i>
