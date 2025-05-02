@@ -60,65 +60,65 @@ namespace Simone.Data
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
                 .HasForeignKey(p => p.ProveedorID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Subcategoria)
                 .WithMany(s => s.Productos)
                 .HasForeignKey(p => p.SubcategoriaID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Subcategoría con categoría
             modelBuilder.Entity<Subcategorias>()
                 .HasOne(s => s.Categoria)
                 .WithMany(c => c.Subcategoria)
                 .HasForeignKey(s => s.CategoriaID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Reseñas con cliente y producto
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Cliente)
                 .WithMany(c => c.Reseñas)
                 .HasForeignKey(r => r.ClienteID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Producto)
                 .WithMany(p => p.Reseñas)
                 .HasForeignKey(r => r.ProductoID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // // Relación Usuario → Rol (solo si tienes clase Rol)
-            // modelBuilder.Entity<Usuario>()
-            //     .HasOne(u => u.Rol)
-            //     .WithMany(r => r.Usuarios)
-            //     .HasForeignKey(u => u.RolID);
+            //Relación Usuario → Rol(solo si tienes clase Rol)
+            //  modelBuilder.Entity<Usuario>()
+            //      .HasOne(u => u.Rol)
+            //      .WithMany(r => r.Usuarios)
+            //      .HasForeignKey(u => u.RolID);
 
             // Cupones usados
             modelBuilder.Entity<CuponesUsados>()
                 .HasOne(cu => cu.Cliente)
                 .WithMany(c => c.CuponesUsados)
                 .HasForeignKey(cu => cu.ClienteID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CuponesUsados>()
                 .HasOne(cu => cu.Promocion)
                 .WithMany(p => p.CuponesUsados)
                 .HasForeignKey(cu => cu.PromocionID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // DetalleVentas
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Venta)
                 .WithMany(v => v.DetalleVentas)
                 .HasForeignKey(dv => dv.VentaID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Producto)
                 .WithMany(p => p.DetalleVentas)
                 .HasForeignKey(dv => dv.ProductoID)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Tipos DECIMAL para campos financieros
             var decimalProps = new (Type entity, string[] props)[]

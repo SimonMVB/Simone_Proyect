@@ -1,0 +1,95 @@
+<div class="ui container mt-5">
+    <div class="ui segment">
+        @if (ViewBag.Proveedor != null)
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Editar Proveedor</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="EditarProveedor">
+
+                <!-- Proveedor id escondido -->
+                <input type="hidden" name="proveedorID" value="@ViewBag.Proveedor.ProveedorID" />
+
+                <!-- Nombre -->
+                <div class="field">
+                    <label for="NombreProveedor">Nombre Proveedor</label>
+                    <input type="text" name="nombreProveedor" id="NombreProveedor" placeholder="Nombre del proveedor"
+                        required value="@ViewBag.Proveedor.NombreProveedor" />
+                </div>
+
+                <!-- Descripcion -->
+                <div class="field">
+                    <label for="Contacto">Contacto</label>
+                    <input name="contacto" id="Contacto" placeholder="Contacto del proveedor" required
+                        value="@ViewBag.Proveedor.Contacto" />
+                </div>
+
+                <!-- Talla -->
+                <div class="field">
+                    <label for="Telefono">Telefono</label>
+                    <input type="text" name="telefono" id="Telefono" placeholder="Telefono del contacto" required
+                        value="@ViewBag.Proveedor.Telefono" />
+                </div>
+
+                <!-- Color -->
+                <div class="field">
+                    <label for="Email">Email</label>
+                    <input type="text" name="email" id="Email" placeholder="Email del proveedor" required
+                        value="@ViewBag.Proveedor.Email" />
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label for="Direccion">Direccion</label>
+                    <input type="text" name="direccion" id="Direccion" placeholder="Direccion del proveedor" required
+                        value="@ViewBag.Proveedor.Direccion" />
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button">Editar Proveedor</button>
+            </form>
+        }
+        else
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Añadir Proveedor</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProveedor">
+                <!-- Nombre -->
+                <div class="field">
+                    <label for="NombreProveedor">Nombre Proveedor</label>
+                    <input type="text" name="nombreProveedor" id="NombreProveedor" placeholder="Nombre del proveedor"
+                        required />
+                </div>
+                <!-- Descripcion -->
+                <div class="field">
+                    <label for="Contacto">Contacto</label>
+                    <input name="contacto" id="Contacto" placeholder="Contacto del proveedor" required></input>
+                </div>
+
+                <!-- Talla -->
+                <div class="field">
+                    <label for="Telefono">Telefono</label>
+                    <input type="text" name="telefono" id="Telefono" placeholder="Telefono del contacto" required />
+                </div>
+
+                <!-- Color -->
+                <div class="field">
+                    <label for="Email">Email</label>
+                    <input type="text" name="email" id="Color" placeholder="Email del proveedor" required />
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label for="Direccion">Direccion</label>
+                    <input type="text" name="direccion" id="Direccion" placeholder="Marca del producto" required />
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button">Añadir Proveedor</button>
+            </form>
+        }
+    </div>
+</div>
