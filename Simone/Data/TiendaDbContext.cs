@@ -46,6 +46,8 @@ namespace Simone.Data
         public DbSet<Reseñas> Reseñas { get; set; }
         public DbSet<Subcategorias> Subcategorias { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
+        public DbSet<Favorito> Favoritos { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -119,6 +121,11 @@ namespace Simone.Data
                 .WithMany(p => p.DetalleVentas)
                 .HasForeignKey(dv => dv.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Favorito>()
+            .HasOne(f => f.Producto)
+            .WithMany()
+            .HasForeignKey(f => f.ProductoId);
 
             // Tipos DECIMAL para campos financieros
             var decimalProps = new (Type entity, string[] props)[]

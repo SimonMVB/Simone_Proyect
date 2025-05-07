@@ -47,6 +47,9 @@
 
   <ItemGroup>
     <Folder Include="Microsoft\AspNetCore\Identity\UI\" />
+    <Folder Include="wwwroot\images\Home\" />
+    <Folder Include="wwwroot\images\Categorias_slider\" />
+    <Folder Include="wwwroot\images\panel\" />
   </ItemGroup>
 
 </Project>

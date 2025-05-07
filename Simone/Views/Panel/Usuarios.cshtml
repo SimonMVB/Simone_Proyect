@@ -13,8 +13,11 @@
         <table class="ui celled striped table">
             <thead>
                 <tr>
-                    <th>Email</th>
                     <th>Nombre</th>
+                    <th>Email</th>
+                    <th>Teléfono</th>
+                    <th>Dirección</th>
+                    <th>Fecha de Registro</th>
                     <th>Rol</th>
                     <th>Opciones</th>
                 </tr>
@@ -23,21 +26,17 @@
                 @foreach (var usuario in ViewBag.Usuarios)
                 {
                     <tr>
-                        <td>@usuario.Email</td>
                         <td>@usuario.NombreCompleto</td>
+                        <td>@usuario.Email</td>
+                        <td>@usuario.Telefono ?? "No registrado"</td>
+                        <td>@usuario.Direccion ?? "No registrada"</td>
+                        <td>@(usuario.FechaRegistro?.ToString("dd/MM/yyyy") ?? "-")</td>
                         <td>
                             <form method="post" style="display:inline" asp-controller="Panel" asp-action="EditarRol">
                                 @Html.AntiForgeryToken()
-
-                                <!-- Input partial el userId -->
                                 <input type="hidden" name="usuarioID" value="@usuario.Id" />
-
-                                <!-- Dropdown de Selecciona de rol -->
-                                <select name="nuevoRolID" 
-                                        class="ui dropdown" 
-                                        id="roleNameDropdown_@usuario.Id" 
-                                        onChange="this.form.submit();">
-                                    <option value="" disabled selected>Seleccione un Rol</option>
+                                <select name="nuevoRolID" class="ui dropdown" id="roleNameDropdown_@usuario.Id" onChange="this.form.submit();">
+                                    <option value="" disabled>Seleccione un Rol</option>
                                     @foreach (var role in ViewBag.Roles)
                                     {
                                         <option value="@role.Id" data-role-id="@role.Id">
@@ -54,19 +53,15 @@
 
                                         options.forEach(function (option) {
                                             if (option.getAttribute('data-role-id') === selectedRoleId) {
-                                                option.selected = true; // Selecciona el rol asignado
+                                                option.selected = true;
                                             }
                                         });
                                     });
                                 </script>
                             </form>
-
                         </td>
                         <td>
-                            <!-- Borrar Usuario -->
-                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarUsuario"
-                                asp-route-id="@usuario.Id"
-                                onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarUsuario" asp-route-id="@usuario.Id" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
                                 @Html.AntiForgeryToken()
                                 <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
                                     <i class="trash icon"></i>

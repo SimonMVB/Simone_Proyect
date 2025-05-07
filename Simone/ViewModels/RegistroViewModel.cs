@@ -13,6 +13,17 @@ namespace Simone.ViewModels
         public string Email { get; set; }
 
         [Required]
+        [Phone]
+        public string Telefono { get; set; }
+
+        [Required]
+        [StringLength(200)]
+        public string Direccion { get; set; }
+
+        [StringLength(300)]
+        public string Referencia { get; set; }
+
+        [Required]
         [DataType(DataType.Password)]
         public string Password { get; set; }
 
@@ -22,3 +33,4 @@ namespace Simone.ViewModels
         public string ConfirmPassword { get; set; }
     }
 }
+

@@ -1,0 +1,109 @@
+@model List<Simone.Models.Producto>
+
+@{
+    ViewData["Title"] = "Ofertas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Swiper CSS -->
+<link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+
+<style>
+    .trending-slider {
+        padding: 40px 0;
+    }
+
+    .swiper {
+        width: 100%;
+        max-width: 1100px;
+        margin: auto;
+        padding-bottom: 50px;
+    }
+
+    .swiper-slide {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
+
+        .swiper-slide:hover {
+            transform: scale(1.03);
+        }
+
+    .card-img-top {
+        height: 220px;
+        object-fit: cover;
+    }
+
+    .swiper-button-next,
+    .swiper-button-prev {
+        color: #258cfb;
+    }
+
+    .swiper-pagination-bullet-active {
+        background-color: #258cfb;
+    }
+</style>
+
+<div class="ui container mt-5 fade-in">
+    <h2 class="ui header text-center">
+        <i class="star icon yellow"></i>
+        <div class="content">
+            Ofertas destacadas
+            <div class="sub header">Productos con descuentos especiales</div>
+        </div>
+    </h2>
+
+    <div class="swiper trending-slider">
+        <div class="swiper-wrapper">
+            @foreach (var producto in Model)
+            {
+                <div class="swiper-slide">
+                    <div class="card shadow-sm">
+                        <img src="@producto.ImagenesProductos.FirstOrDefault()?.RutaImagen" class="card-img-top" alt="@producto.Nombre" />
+                        <div class="card-body text-center">
+                            <h5 class="card-title">@producto.Nombre</h5>
+                            <p class="card-text text-danger">
+                                <s class="text-muted">$@producto.PrecioCompra.ToString("F2")</s>
+                                <span class="ms-2 fw-bold text-success">$@producto.PrecioVenta.ToString("F2")</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Paginación y navegación -->
+        <div class="swiper-pagination"></div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+    </div>
+</div>
+
+<!-- Swiper JS -->
+<script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+<script>
+    var TrandingSlider = new Swiper('.trending-slider', {
+        effect: 'coverflow',
+        grabCursor: true,
+        centeredSlides: true,
+        loop: true,
+        slidesPerView: 'auto',
+        coverflowEffect: {
+            rotate: 0,
+            stretch: 0,
+            depth: 100,
+            modifier: 2.5,
+        },
+        pagination: {
+            el: '.swiper-pagination',
+            clickable: true,
+        },
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        },
+    });
+</script>

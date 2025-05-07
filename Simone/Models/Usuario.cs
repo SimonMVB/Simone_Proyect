@@ -7,9 +7,21 @@ namespace Simone.Models
 {
     public class Usuario : IdentityUser
     {
-
         [Required, StringLength(100)]
         public string NombreCompleto { get; set; } = string.Empty;
+
+        [Phone]
+        public string Telefono { get; set; } = string.Empty;
+
+        [StringLength(200)]
+        public string Direccion { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(200)]
+        public string Referencia { get; set; } = string.Empty;
+
+        public string FotoPerfil { get; set; }
+
 
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
 
@@ -17,7 +29,6 @@ namespace Simone.Models
 
         // Relación Roles
         [Required]
-        public string? RolID { get; set; }
-
+        public string RolID { get; set; }
     }
 }

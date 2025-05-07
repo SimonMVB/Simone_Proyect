@@ -13,7 +13,6 @@
 
         <div class="card-body">
 
-            <!-- Mensajes del sistema -->
             @if (TempData["MensajeError"] != null)
             {
                 <div class="alert alert-danger">
@@ -27,7 +26,6 @@
                 </div>
             }
 
-            <!-- Errores del modelo -->
             <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
             <form asp-action="Registrar" method="post" id="formRegistro" novalidate>
@@ -49,6 +47,36 @@
                         <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" />
                     </div>
                     <span asp-validation-for="Email" class="text-danger small"></span>
+                </div>
+
+                <!-- Teléfono -->
+                <div class="mb-3">
+                    <label asp-for="Telefono" class="form-label">Número de celular</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
+                        <input asp-for="Telefono" class="form-control" placeholder="0999999999" />
+                    </div>
+                    <span asp-validation-for="Telefono" class="text-danger small"></span>
+                </div>
+
+                <!-- Dirección -->
+                <div class="mb-3">
+                    <label asp-for="Direccion" class="form-label">Dirección</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-location-dot"></i></span>
+                        <input asp-for="Direccion" class="form-control" placeholder="Ej. Calle principal y 2da" />
+                    </div>
+                    <span asp-validation-for="Direccion" class="text-danger small"></span>
+                </div>
+
+                <!-- Referencia -->
+                <div class="mb-3">
+                    <label asp-for="Referencia" class="form-label">Referencia (opcional)</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-map-pin"></i></span>
+                        <input asp-for="Referencia" class="form-control" placeholder="Ej. Casa blanca con portón azul" />
+                    </div>
+                    <span asp-validation-for="Referencia" class="text-danger small"></span>
                 </div>
 
                 <!-- Contraseña -->
@@ -87,28 +115,76 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-
-        var $form = $("form");
+        var $form = $("#formRegistro");
         var $submitButton = $("#btnRegistrar");
 
-        /// Prevenimos que el usuario envie una solicitud de registro sin llenar apropiadamente
-        /// todos los campos requeridos y de la forma requerida.
-        $(document).ready(function(){
+        $(document).ready(function () {
             $form.on('input change', function () {
-                if ($form.valid()) {
-                    $submitButton.prop("disabled", false);
-                } else {
-                    $submitButton.prop("disabled", true);
-                }
+                $submitButton.prop("disabled", !$form.valid());
             });
             $.validator.unobtrusive.parse($form);
-        })
+        });
 
-        /// Una vez clickeado el boton de registrar,#btnRegistrar se bloquea para prevenir el envio de multiples
-        /// peticiones por parte del usuario
-        $form.addEventListener("submit", function () {
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Registrando...';
+        $form.on("submit", function () {
+            $submitButton.prop("disabled", true).html('<span class="spinner-border spinner-border-sm me-2"></span>Registrando...');
         });
     </script>
 }
+<style>
+/* Estilo general para la tarjeta */
+.card {
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Cabecera */
+.card-header {
+    font-size: 1.25rem;
+    font-weight: bold;
+    padding: 1rem;
+}
+
+/* Input con icono */
+.input-group-text {
+    background-color: #f0f0f0;
+    border: none;
+}
+
+/* Inputs */
+.form-control {
+    border-radius: 0.5rem;
+    border: 1px solid #ced4da;
+    transition: box-shadow 0.3s ease;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Botón de registro */
+#btnRegistrar {
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+#btnRegistrar:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Mensajes */
+.alert {
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* Footer */
+.card-footer a {
+    font-weight: bold;
+    color: #198754;
+}
+.card-footer a:hover {
+    text-decoration: underline;
+}
+</style>

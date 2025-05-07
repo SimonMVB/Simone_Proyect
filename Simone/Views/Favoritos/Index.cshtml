@@ -1,0 +1,63 @@
+﻿@model List<Simone.Models.Producto>
+@{
+    ViewData["Title"] = "Mis Favoritos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="ui container mt-4">
+    <h2 class="ui header">
+        <i class="heart icon red"></i>
+        <div class="content">
+            Mis Productos Favoritos
+            <div class="sub header">Aquí están tus artículos preferidos</div>
+        </div>
+    </h2>
+
+    @if (!Model.Any())
+    {
+        <div class="ui icon warning message">
+            <i class="info circle icon"></i>
+            <div class="content">
+                <div class="header">Sin productos favoritos</div>
+                <p>Añade productos haciendo clic en el icono <i class="heart outline icon red"></i> en el catálogo.</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="ui stackable three column grid">
+            @foreach (var p in Model)
+            {
+                <div class="column">
+                    <div class="ui fluid card">
+                        <div class="image" style="height: 180px; overflow: hidden;">
+                            <img src="@p.ImagenesProductos.FirstOrDefault()?.RutaImagen ?? " /img/sin-imagen.png""
+                                 alt="@p.Nombre" style="object-fit: cover; width: 100%; height: 100%;" />
+
+                        </div>
+                        <div class="content">
+                            <a class="header">@p.Nombre</a>
+                            <div class="meta">
+                                <span class="price"><strong>$@p.PrecioVenta.ToString("F2")</strong></span>
+                            </div>
+                            <div class="description">
+                                @if (!string.IsNullOrWhiteSpace(p.Descripcion))
+                                {
+                                    <p>@(p.Descripcion.Length > 80 ? p.Descripcion.Substring(0, 80) + "..." : p.Descripcion)</p>
+                                }
+                            </div>
+                        </div>
+                        <div class="extra content">
+                            <form asp-controller="Carrito" asp-action="Agregar" method="post" class="ui form d-inline">
+                                <input type="hidden" name="productoId" value="@p.ProductoID" />
+                                <button class="ui mini green button">
+                                    <i class="cart plus icon"></i> Añadir al carrito
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

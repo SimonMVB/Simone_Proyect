@@ -2,26 +2,34 @@
     ViewData["Title"] = "Inicio";
 }
 
-<!-- Banner Principal -->
+<!-- Banner Principal Mejorado -->
 <div class="container-fluid px-0">
     <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
         <div class="carousel-inner">
-            <div class="carousel-item active">
-                <img src="~/img/summer-collection.jpg" class="d-block w-100 banner-img" alt="Summer Collection">
-                <div class="carousel-caption">
-                    <h1 class="fw-bold">SUMMER COLLECTION</h1>
-                    <a href="#" class="btn btn-light">Compra ahora!!</a>
+            <div class="carousel-item active position-relative">
+                <img src="~/images/Home/vestidos_home.jpg" class="d-block w-100 banner-img" alt="Vestidos Elegantes">
+                <div class="carousel-caption d-flex flex-column justify-content-center align-items-center h-100">
+                    <h1 class="display-4 fw-bold text-white text-shadow mb-3 animate__animated animate__fadeInDown">
+                        Descubre Nuestra Colección de Vestidos
+                    </h1>
+                    <a href="/Categorias/Vestidos" class="btn btn-lg btn-light shadow animate__animated animate__fadeInUp">
+                        Compra ahora
+                    </a>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Promoción Destacada -->
-<div class="container-fluid bg-black text-white text-center py-5">
-    <h2 class="fw-bold">Body's</h2>
-    <p>A partir de la segunda body, el envío es gratis</p>
-    <a href="#" class="btn btn-light">Compra ahora!!</a>
+<!-- 🔥 Promoción destacada -->
+<div class="container-fluid text-white text-center py-5" style="background: linear-gradient(135deg, #000000, #1a1a1a); animation: fadeIn 1s ease-in;">
+    <div class="container py-4">
+        <h1 class="display-4 fw-bold mb-3">Body's irresistibles</h1>
+        <p class="lead mb-4">¡Llévate el segundo body con <span class="text-warning">envío gratis!</span></p>
+        <a href="/Categorias/Bodys" class="btn btn-warning btn-lg px-4 shadow-sm">
+            <i class="shopping bag icon"></i> Comprar ahora
+        </a>
+    </div>
 </div>
 
 <!-- Sección de Productos Destacados -->
@@ -66,3 +74,33 @@
         </div>
     </div>
 </div>
+
+
+<!-- Animación suave -->
+<style>
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    .banner-img {
+        height: 500px;
+        object-fit: cover;
+        filter: brightness(75%);
+    }
+
+    .text-shadow {
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
+    }
+
+</style>

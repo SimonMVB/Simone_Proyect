@@ -1,0 +1,64 @@
+﻿@{
+    ViewData["Title"] = "Cambiar Dirección";
+}
+
+<div class="container my-5">
+    <div class="card shadow-lg p-4 border-0" style="max-width: 800px; margin: 0 auto; border-radius: 15px;">
+        <h2 class="text-center mb-3 text-primary">
+            <i class="fa-solid fa-location-dot me-2"></i> Cambiar Dirección
+        </h2>
+        <p class="text-center text-muted mb-4">
+            Selecciona tu ubicación exacta en el mapa y escribe una referencia clara para que podamos encontrarte fácilmente.
+        </p>
+
+        <!-- Mapa interactivo -->
+        <div id="map" style="height: 400px; border-radius: 10px;" class="mb-4 shadow-sm"></div>
+
+        <!-- Formulario -->
+        <form method="post" asp-action="GuardarDireccion" asp-controller="Cuenta" class="needs-validation" novalidate>
+            <div class="mb-3">
+                <label for="direccion" class="form-label fw-semibold">Referencia de dirección</label>
+                <input type="text" class="form-control" id="direccion" name="direccionReferencia"
+                       placeholder="Ej: Calle Bolívar y 9 de Octubre, casa azul" required>
+                <div class="form-text">Escribe una descripción visual clara de tu casa o local.</div>
+            </div>
+
+            <!-- Campos ocultos para coordenadas -->
+            <input type="hidden" id="latitud" name="latitud" />
+            <input type="hidden" id="longitud" name="longitud" />
+
+            <div class="text-center">
+                <button type="submit" class="btn btn-success px-4">
+                    <i class="fa-solid fa-check me-2"></i> Guardar Dirección
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+    const map = L.map('map').setView([-2.1353, -79.5889], 15); // Milagro, Ecuador
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let marker = null;
+
+    map.on('click', function (e) {
+        const { lat, lng } = e.latlng;
+
+        if (marker) {
+            marker.setLatLng(e.latlng);
+        } else {
+            marker = L.marker(e.latlng).addTo(map);
+        }
+
+        document.getElementById('latitud').value = lat;
+        document.getElementById('longitud').value = lng;
+    });
+</script>

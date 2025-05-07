@@ -11,6 +11,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <!-- FontAwesome para íconos -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+
+
     <!-- Estilos personalizados -->
     <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
 
@@ -65,7 +70,7 @@
                             <a class="nav-link" asp-controller="Home" asp-action="Index">HOME</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Ofertas" asp-action="Index">OFERTAS</a>
+                            <a class="nav-link" asp-controller="Panel" asp-action="Ofertas">OFERTAS</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" asp-controller="Home" asp-action="Nosotros">NOSOTROS</a>
@@ -73,38 +78,47 @@
                     </ul>
                 </div>
 
-                <!-- Sección derecha: Enviar a, búsqueda, favoritos, carrito y usuario -->
+                <!-- Sección derecha: Dirección, búsqueda, favoritos, carrito y usuario -->
                 <div class="d-flex align-items-center">
                     @if (User.Identity.IsAuthenticated)
                     {
-                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="CambiarDireccion"
-                            title="Cambiar mi dirección">
-                            <i class="fa-solid fa-location-dot"></i> Enviar a:
-                            <span class="fw-bold">
-                                @(ViewBag.UserDireccion ?? "Tu dirección")
-                            </span>
-                        </a>
+                        <div class="dropdown mx-2">
+                            <a class="text-white dropdown-toggle d-flex align-items-center" href="#" role="button"
+                               id="direccionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                               title="Haz clic para cambiar tu dirección">
+                                <i class="fa-solid fa-location-dot me-1"></i> Enviar a:
+                                <span class="fw-bold ms-1 text-truncate" style="max-width: 150px;">
+                                    @(ViewBag.UserDireccion ?? "Tu dirección")
+                                </span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end animate__animated animate__fadeIn" aria-labelledby="direccionDropdown">
+                                <li>
+                                    <a class="dropdown-item" asp-controller="Cuenta" asp-action="CambiarDireccion">
+                                        <i class="fa-solid fa-map-marker-alt me-2 text-primary"></i> Cambiar Dirección
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     }
                     else
                     {
-                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="Login"
-                            title="Cambiar mi dirección">
-                            <i class="fa-solid fa-location-dot"></i> Enviar a:
-                            <span class="fw-bold">
-                                Iniciar Sesión
-                            </span>
+                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="Login" title="Inicia sesión para ingresar tu dirección">
+                            <i class="fa-solid fa-location-dot me-1"></i> Enviar a:
+                            <span class="fw-bold">Iniciar Sesión</span>
                         </a>
                     }
-                    <!-- Enviar a: Link interactivo para cambiar la dirección -->
+                </div>
+
 
                     <!-- Botón de búsqueda -->
                     <a href="#" class="text-white mx-2" aria-label="Buscar">
                         <i class="fa-solid fa-magnifying-glass fa-lg"></i>
                     </a>
                     <!-- Botón de favoritos -->
-                    <a href="#" class="text-white mx-2" aria-label="Favoritos">
-                        <i class="fa-solid fa-heart fa-lg"></i>
+                    <a href="/Favoritos/Index" id="heart-link">
+                        <i id="icon" class="far fa-heart" style="font-size: 20px; color: crimson; cursor: pointer;"></i>
                     </a>
+
                     <!-- Botón de carrito: Se actualizará dinámicamente -->
                     <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart"
                         aria-label="Ver carrito">
@@ -114,73 +128,146 @@
                             @(ViewBag.CartCount ?? 0)
                         </span>
                     </a>
-                    <!-- Botón de usuario: Muestra opciones según autenticación -->
-                    @if (User.Identity.IsAuthenticated)
-                    {
-                        <div class="dropdown">
-                            <a class="text-white mx-2 dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown"
-                                aria-expanded="false">
-                                <i class="fa-solid fa-user fa-lg"></i>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                                <!-- Perfil -->
-                                <li>
-                                    <a class="dropdown-item" style="color: #333;" asp-controller="Cuenta"
-                                        asp-action="Perfil">Perfil</a>
-                                </li>
+                @inject UserManager<Usuario> UserManager
+                @inject SignInManager<Usuario> SignInManager
 
-                                <!-- Condicional temporal para habilitar el paneles de roles (TEMPORAL!) -->
-                                @if (!User.IsInRole("Cliente"))
-                                {
-                                    <li>
-                                        <a class="dropdown-item" style="color: #333;" asp-controller="Panel"
-                                            asp-action="Index">Rol Panel</a>
-                                    </li>
-                                }
+                <!-- Botón de usuario: Muestra opciones según autenticación -->
+                @if (SignInManager.IsSignedIn(User))
+                {
+                    var user = await UserManager.GetUserAsync(User);
 
-                                <!-- Logout -->
-                                <li>
-                                    <form asp-controller="Cuenta" asp-action="Logout" method="post" style="display:inline;">
-                                        @Html.AntiForgeryToken()
-                                        <button type="submit" class="dropdown-item" style="color: #333;">Cerrar
-                                            sesión</button>
-                                    </form>
-                                </li>
+                    <div class="dropdown">
+                        <a class="mx-2 dropdown-toggle d-flex align-items-center" id="userDropdown" data-bs-toggle="dropdown"
+                           aria-expanded="false" role="button" style="text-decoration: none;">
 
-                            </ul>
-                        </div>
-                    }
-                    else
-                    {
-                        <a href="@Url.Action("Login", "Cuenta")" class="text-white mx-2" aria-label="Iniciar sesión">
-                            <i class="fa-solid fa-user fa-lg"></i>
+                            @if (!string.IsNullOrEmpty(user.FotoPerfil))
+                            {
+                                <img src="@user.FotoPerfil" class="rounded-circle border border-light shadow-sm"
+                                     style="width: 38px; height: 38px; object-fit: cover;" alt="Avatar" />
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-user fa-lg text-white"></i>
+                            }
                         </a>
-                    }
+
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                            <li>
+                                <a class="dropdown-item" style="color: #333;" asp-controller="Cuenta" asp-action="Perfil">
+                                    <i class="fa-solid fa-user-circle me-2"></i>Perfil
+                                </a>
+                            </li>
+
+                            @if (!User.IsInRole("Cliente"))
+                            {
+                                <li>
+                                    <a class="dropdown-item" style="color: #333;" asp-controller="Panel" asp-action="Index">
+                                        <i class="fa-solid fa-gauge me-2"></i>Rol Panel
+                                    </a>
+                                </li>
+                            }
+
+                            <li>
+                                <form asp-controller="Cuenta" asp-action="Logout" method="post" style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="dropdown-item" style="color: #333;">
+                                        <i class="fa-solid fa-right-from-bracket me-2"></i>Cerrar sesión
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <a href="@Url.Action("Login", "Cuenta")" class="text-white mx-2" aria-label="Iniciar sesión">
+                        <i class="fa-solid fa-user fa-lg"></i>
+                    </a>
+                }
                 </div>
             </div>
         </nav>
     </header>
 
-    <!-- Sidebar de Categorías -->
-    <aside id="sidebar" class="bg-black text-white position-fixed vh-100 p-3 sidebar">
-        <button class="btn text-white border-0 mb-3" id="close-sidebar" aria-label="Cerrar menú de categorías">
-            <i class="fa-solid fa-times"></i> Cerrar
+    <!-- Sidebar de Categorías Mejorado -->
+    <aside id="sidebar" class="sidebar-custom position-fixed vh-100 p-4 text-white shadow" style="transform: translateX(-100%);">
+        <button class="btn text-white border-0 mb-3" id="close-sidebar">
+            
         </button>
-        <h5>Categorías</h5>
-        <ul class="list-unstyled">
-            <li><a asp-controller="Categorias" asp-action="Ver_Todo" class="text-white">Ver todo</a></li>
-            <li><a asp-controller="Categorias" asp-action="Blusas" class="text-white">Blusas</a></li>
-            <li><a asp-controller="Categorias" asp-action="Tops" class="text-white">Tops</a></li>
-            <li><a asp-controller="Categorias" asp-action="Bodys" class="text-white">Body's</a></li>
-            <li><a asp-controller="Categorias" asp-action="TrajeDeBaño" class="text-white">Trajes de Baño</a></li>
-            <li><a asp-controller="Categorias" asp-action="Conjuntos" class="text-white">Conjuntos</a></li>
-            <li><a asp-controller="Categorias" asp-action="Vestidos" class="text-white">Vestidos</a></li>
-            <li><a asp-controller="Categorias" asp-action="Faldas" class="text-white">Faldas</a></li>
-            <li><a asp-controller="Categorias" asp-action="Pantalones" class="text-white">Pantalones</a></li>
-            <li><a asp-controller="Categorias" asp-action="Jeans" class="text-white">Jeans</a></li>
-            <li><a asp-controller="Categorias" asp-action="Bolsas" class="text-white">Bolsas</a></li>
+
+        <h5 class="fw-bold mb-4"><i class="fa-solid fa-bars-staggered me-2"></i>Categorías</h5>
+
+        <ul class="list-unstyled sidebar-list">
+            <li>
+                <a asp-controller="Categorias" asp-action="Ver_Todo">
+                    <img src="~/images/Categorias_slider/ver_todo.png" class="me-2 sidebar-icon" alt="Ver todo" />
+                    Ver todo
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Blusas">
+                    <img src="~/images/Categorias_slider/blusas.png" class="me-2 sidebar-icon" alt="Blusas" />
+                    Blusas
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Tops">
+                    <img src="~/images/Categorias_slider/tops.png" class="me-2 sidebar-icon" alt="Tops" />
+                    Tops
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Bodys">
+                    <img src="~/images/Categorias_slider/bodys.png" class="me-2 sidebar-icon" alt="Bodys" />
+                    Body's
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="TrajeDeBaño">
+                    <img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon" alt="Trajes de baño" />
+                    Trajes de Baño
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Conjuntos">
+                    <img src="~/images/Categorias_slider/conjuntos.png" class="me-2 sidebar-icon" alt="Conjuntos" />
+                    Conjuntos
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Vestidos">
+                    <img src="~/images/Categorias_slider/vestidos.png" class="me-2 sidebar-icon" alt="Vestidos" />
+                    Vestidos
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Faldas">
+                    <img src="~/images/Categorias_slider/faldas.png" class="me-2 sidebar-icon" alt="Faldas" />
+                    Faldas
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Pantalones">
+                    <img src="~/images/Categorias_slider/pantalones.png" class="me-2 sidebar-icon" alt="Pantalones" />
+                    Pantalones
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Jeans">
+                    <img src="~/images/Categorias_slider/jeans.png" class="me-2 sidebar-icon" alt="Jeans" />
+                    Jeans
+                </a>
+            </li>
+            <li>
+                <a asp-controller="Categorias" asp-action="Bolsas">
+                    <img src="~/images/Categorias_slider/bolsas.png" class="me-2 sidebar-icon" alt="Bolsas" />
+                    Bolsas
+                </a>
+            </li>
         </ul>
+
     </aside>
+
 
     <!-- Panel del Carrito (Sidebar derecho) -->
     <aside id="cartPanel" class="bg-white position-fixed vh-100 p-3" style="right: -300px;">
@@ -208,6 +295,9 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Swiper JS -->
+    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+
     <script>
         // Panel de categorías
         const openSidebarBtn = document.getElementById("open-sidebar");
@@ -248,9 +338,28 @@
                 cartPanel.style.right = "-300px";
             }
         });
+
+
+
+            document.addEventListener("DOMContentLoaded", function () {
+            const sidebar = document.getElementById("sidebar");
+            const toggleSidebarBtn = document.getElementById("toggle-sidebar");
+            const openSidebarBtn = document.getElementById("open-sidebar");
+
+            function toggleSidebar() {
+                const isVisible = sidebar.style.transform === "translateX(0px)";
+                sidebar.style.transform = isVisible ? "translateX(-100%)" : "translateX(0)";
+            }
+
+
+            toggleSidebarBtn?.addEventListener("click", toggleSidebar);
+            openSidebarBtn?.addEventListener("click", toggleSidebar);
+        });
+
     </script>
 
     @RenderSection("Scripts", required: false)
+
 </body>
 
 </html>

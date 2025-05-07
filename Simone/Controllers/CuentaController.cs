@@ -237,6 +237,45 @@ namespace Simone.Controllers
             return View();
         }
 
+
+
+        [HttpPost]
+        public async Task<IActionResult> Perfil(Usuario usuario, IFormFile ImagenPerfil)
+        {
+            var usuarioDb = await _context.Usuarios.FindAsync(usuario.Id);
+
+            if (usuarioDb == null) return NotFound();
+
+            if (ImagenPerfil != null && ImagenPerfil.Length > 0)
+            {
+                var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/img/perfiles");
+                Directory.CreateDirectory(rutaCarpeta);
+
+                var nombreArchivo = Guid.NewGuid().ToString() + Path.GetExtension(ImagenPerfil.FileName);
+                var rutaCompleta = Path.Combine(rutaCarpeta, nombreArchivo);
+
+                using (var stream = new FileStream(rutaCompleta, FileMode.Create))
+                {
+                    await ImagenPerfil.CopyToAsync(stream);
+                }
+
+                usuarioDb.FotoPerfil = "/img/perfiles/" + nombreArchivo;
+            }
+
+            // Actualiza otros campos del usuario
+            usuarioDb.NombreCompleto = usuario.NombreCompleto;
+            usuarioDb.PhoneNumber = usuario.PhoneNumber;
+            usuarioDb.Direccion = usuario.Direccion;
+            usuarioDb.Referencia = usuario.Referencia;
+
+            _context.Update(usuarioDb);
+            await _context.SaveChangesAsync();
+
+            TempData["MensajeExito"] = "Perfil actualizado correctamente.";
+            return RedirectToAction("Perfil");
+        }
+
+
         /// <summary>
         /// Acción POST que maneja la actualización del perfil del usuario.
         /// </summary>
@@ -288,6 +327,26 @@ namespace Simone.Controllers
         public IActionResult OlvidePassword()
         {
             return View();
+        }
+
+
+
+        [HttpGet]
+        public IActionResult CambiarDireccion()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult GuardarDireccion(string direccionReferencia, string latitud, string longitud)
+        {
+            // Simulación de guardado (en ViewBag o base de datos real)
+            ViewBag.UserDireccion = direccionReferencia;
+
+            TempData["MensajeExito"] = "Dirección guardada correctamente.";
+
+            // Redirecciona a Home u otra vista
+            return RedirectToAction("Index", "Home");
         }
 
         /// <summary>

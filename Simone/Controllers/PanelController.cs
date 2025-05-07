@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Simone.Controllers
 {
@@ -359,6 +360,17 @@ namespace Simone.Controllers
             await _context.SaveChangesAsync();
             return RedirectToAction("Productos");
         }
+
+        public IActionResult Ofertas()
+        {
+            var productosEnOferta = _context.Productos
+                .Where(p => p.PrecioVenta < p.PrecioCompra) // o cualquier lógica de oferta
+                .Include(p => p.ImagenesProductos)
+                .ToList();
+
+            return View(productosEnOferta);
+        }
+
 
         [HttpGet]
         public async Task<IActionResult> EditarProducto(int productoID)

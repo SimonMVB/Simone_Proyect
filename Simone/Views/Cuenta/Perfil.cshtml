@@ -2,13 +2,13 @@
 
 @{
     ViewData["Title"] = "Mi Perfil";
-    Layout = "~/Views/Shared/_Layout.cshtml"; // ajusta si usas otro layout
+    Layout = "~/Views/Shared/_Layout.cshtml";
     var usuario = ViewData["Usuario"] as Simone.Models.Usuario;
 }
 
 <div class="container mt-5" style="max-width: 600px;">
-    <div class="card shadow-sm rounded-3">
-        <div class="card-header bg-primary text-white text-center">
+    <div class="card shadow-lg rounded-4 border-0">
+        <div class="card-header bg-gradient text-white text-center" style="background: linear-gradient(90deg, #007bff 0%, #00c6ff 100%);">
             <h4><i class="fa-solid fa-user-circle me-2"></i>Mi Perfil</h4>
         </div>
 
@@ -18,16 +18,28 @@
                 var message = TempData["MensajeExito"] ?? TempData["MensajeError"];
                 var alertClass = TempData["MensajeExito"] != null ? "alert-success" : "alert-danger";
                 var iconClass = TempData["MensajeExito"] != null ? "fa-circle-check" : "fa-circle-exclamation";
-                
+
                 <div class="alert @alertClass">
                     <i class="fa-solid @iconClass me-2"></i> @message
                 </div>
             }
 
-            <form asp-action="Perfil" method="post" id="formPerfil">
-                <div class="mb-3">
-                    <label class="form-label">Correo electrónico</label>
-                    <input asp-for="Email" class="form-control" value="@ViewBag.Usuario.Email" readonly />
+            <form asp-action="Perfil" method="post" enctype="multipart/form-data" id="formPerfil">
+                <div class="text-center mb-4">
+                    @if (!string.IsNullOrEmpty(ViewBag.Usuario.FotoPerfil))
+                    {
+                        <img src="@ViewBag.Usuario.FotoPerfil" class="rounded-circle shadow" style="width: 120px; height: 120px; object-fit: cover;" />
+                    }
+                    else
+                    {
+                        <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center text-white" style="width: 120px; height: 120px; font-size: 40px;">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                    }
+                    <div class="mt-2">
+                        <label for="ImagenPerfil" class="form-label">Cambiar foto de perfil</label>
+                        <input type="file" class="form-control" name="ImagenPerfil" id="ImagenPerfil" accept="image/*" />
+                    </div>
                 </div>
 
                 <div class="mb-3">
@@ -37,26 +49,37 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label">Teléfono</label>
+                    <input asp-for="PhoneNumber" value="@ViewBag.Usuario.PhoneNumber" class="form-control" placeholder="09xxxxxxxx" />
+                    <span asp-validation-for="PhoneNumber" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Dirección</label>
+                    <input asp-for="Direccion" value="@ViewBag.Usuario.Direccion" class="form-control" />
+                    <span asp-validation-for="Direccion" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Referencia</label>
+                    <input asp-for="Referencia" value="@ViewBag.Usuario.Referencia" class="form-control" />
+                    <span asp-validation-for="Referencia" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label">Rol actual</label>
                     <input value="@ViewBag.RolUsuario" class="form-control" readonly />
                 </div>
 
                 <div class="mb-3">
                     <label class="form-label">Fecha de registro</label>
-                    <input value="@(ViewBag.Usuario?.FechaRegistro.ToShortDateString() ?? "No disponible") " class="form-control" readonly />
+                    <input value="@(ViewBag.Usuario?.FechaRegistro.ToShortDateString() ?? "No disponible")" class="form-control" readonly />
                 </div>
 
-                @if (ViewBag.Usuario != null) {
                 <div class="mb-4">
                     <label class="form-label">Estado</label>
-                    <input value="@(ViewBag.Usuario.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
+                    <input value="@(ViewBag.Usuario?.Activo == true ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
                 </div>
-                } else {
-                                    <div class="mb-4">
-                    <label class="form-label">Estado</label>
-                    <input value="No disponible" class="form-control text-success" readonly />
-                </div>
-                }
 
                 <button type="submit" class="btn btn-primary w-100" id="btnPerfil">
                     <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios
@@ -76,3 +99,63 @@
         });
     </script>
 }
+
+<style>
+    .perfil-container {
+        max-width: 650px;
+        margin: 3rem auto;
+        animation: fadeIn 0.6s ease-in-out;
+    }
+
+    .perfil-card {
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+        .perfil-card .card-header {
+            background: linear-gradient(135deg, #1e90ff, #007bff);
+            color: white;
+            text-align: center;
+            padding: 1.5rem;
+        }
+
+        .perfil-card .card-body {
+            padding: 2rem;
+            background-color: #fafafa;
+        }
+
+        .perfil-card .form-label {
+            font-weight: 600;
+        }
+
+        .perfil-card .form-control:read-only {
+            background-color: #e9ecef;
+            font-style: italic;
+        }
+
+        .perfil-card .btn-primary {
+            background-color: #007bff;
+            border: none;
+            font-weight: 600;
+        }
+
+            .perfil-card .btn-primary:hover {
+                background-color: #0056b3;
+            }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+</style>

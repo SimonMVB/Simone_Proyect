@@ -3,99 +3,140 @@
     ViewData["Title"] = "Panel de Control";
 }
 
-<div class="ui container mt-5">
-    <div class="ui raised very padded text container segment">
-        <h2 class="ui header">@ViewData["Title"]</h2>
+<style>
+    .dashboard-card {
+        transition: all 0.3s ease;
+        border-radius: 15px;
+        background: #fff;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .dashboard-card img {
+            height: 80px;
+            width: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .dashboard-card .header {
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .dashboard-card .meta {
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        .dashboard-card .description {
+            font-size: 1em;
+            color: #444;
+        }
+
+        .dashboard-card .extra {
+            margin-top: 10px;
+        }
+</style>
+
+<div class="ui container mt-5 fade-in">
+    <div class="ui raised very padded text container segment" style="border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+        <h2 class="ui header">
+            <i class="settings icon teal"></i>
+            <div class="content">
+                @ViewData["Title"]
+                <div class="sub header">Gestión central del sistema y módulos disponibles</div>
+            </div>
+        </h2>
 
         <div class="ui divider"></div>
 
-        <div class="ui three stackable cards">
+        <div class="ui relaxed divided list">
             @if (User.IsInRole("Administrador"))
             {
-                <div class="card">
-                    <div class="content">
-                        <div class="header">Usuarios</div>
-                        <div class="description">
-                            Gestiona todos los usuarios registrados, cambia sus roles o elimínalos.
-                        </div>
-                    </div>
-                    <div class="extra content">
-                        <a class="ui primary button" asp-controller="Panel" asp-action="Usuarios">
-                            <i class="users icon"></i> Ver Usuarios
+                <!-- Tarjeta: Usuarios -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Usuarios</h4>
+                        <p class="text-muted mb-1">Gestión de cuentas</p>
+                        <p>Administra usuarios registrados, roles y acceso.</p>
+                        <a class="btn btn-sm btn-primary mt-2" asp-controller="Panel" asp-action="Usuarios">
+                            <i class="eye icon me-1"></i> Ver Usuarios
                         </a>
                     </div>
+                    <img src="~/images/panel/usuarios.jpg" alt="Usuarios" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
 
-                <div class="card">
-                    <div class="content">
-                        <div class="header">Categorias</div>
-                        <div class="description">
-                            Gestiona las Categorias existentes para los productos a registrar, cambialos o elimínalos.
-                        </div>
-                    </div>
-                    <div class="extra content">
-                        <a class="ui primary button" asp-controller="Panel" asp-action="Categorias">
-                            <i class="users icon"></i> Ver Categorias
+                <!-- Tarjeta: Categorías -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Categorías</h4>
+                        <p class="text-muted mb-1">Gestión de productos</p>
+                        <p>Crea y organiza las categorías del inventario.</p>
+                        <a class="btn btn-sm btn-success mt-2" asp-controller="Panel" asp-action="Categorias">
+                            <i class="folder icon me-1"></i> Ver Categorías
                         </a>
                     </div>
+                    <img src="~/images/panel/categorias.jpeg" alt="Categorías" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
 
-                <div class="card">
-                    <div class="content">
-                        <div class="header">Proveedores</div>
-                        <div class="description">
-                            Gestiona los Proveedores existentes, agrega, cambialos o elimínalos.
-                        </div>
-                    </div>
-                    <div class="extra content">
-                        <a class="ui primary button" asp-controller="Panel" asp-action="Proveedores">
-                            <i class="users icon"></i> Ver Proveedores
+                <!-- Tarjeta: Proveedores -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Proveedores</h4>
+                        <p class="text-muted mb-1">Abastecimiento</p>
+                        <p>Gestiona empresas proveedoras y contactos.</p>
+                        <a class="btn btn-sm btn-warning mt-2" asp-controller="Panel" asp-action="Proveedores">
+                            <i class="truck icon me-1"></i> Ver Proveedores
                         </a>
                     </div>
+                    <img src="~/images/panel/proveedor.jpg" alt="Proveedores" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
 
-                <div class="card">
-                    <div class="content">
-                        <div class="header">Registros</div>
-                        <div class="description">
-                            Revisa los logs de inicio de sesión y actividad en el sistema.
-                        </div>
+                <!-- Tarjeta: Logs -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Registros</h4>
+                        <p class="text-muted mb-1">Auditoría</p>
+                        <p>Revisa los logs de actividad. (Próximamente)</p>
+                        <button class="btn btn-sm btn-secondary mt-2" disabled>
+                            <i class="clock icon me-1"></i> Ver Logs
+                        </button>
                     </div>
-                    <div class="extra content">
-                        <a class="ui teal button disabled">
-                            <i class="clipboard list icon"></i> Ver Logs (próximamente)
-                        </a>
-                    </div>
+                    <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="Logs" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
 
-                <div class="card">
-                    <div class="content">
-                        <div class="header">Reportes</div>
-                        <div class="description">
-                            Accede a reportes generales del sistema: ventas, inventario, usuarios, etc.
-                        </div>
+                <!-- Tarjeta: Reportes -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Reportes</h4>
+                        <p class="text-muted mb-1">Estadísticas</p>
+                        <p>Consulta ventas, inventario y más. (Próximamente)</p>
+                        <button class="btn btn-sm btn-success mt-2" disabled>
+                            <i class="chart bar icon me-1"></i> Ver Reportes
+                        </button>
                     </div>
-                    <div class="extra content">
-                        <a class="ui green button disabled">
-                            <i class="chart bar icon"></i> Ver Reportes (próximamente)
-                        </a>
-                    </div>
+                    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Reportes" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
             }
             else if (User.IsInRole("Vendedor"))
             {
-                <div class="card">
-                    <div class="content">
-                        <div class="header">Productos</div>
-                        <div class="description">
-                            Gestiona todos los productos registrados, edítalos o elimínalos.
-                        </div>
-                    </div>
-                    <div class="extra content">
-                        <a class="ui primary button" asp-controller="Panel" asp-action="Productos">
-                            <i class="users icon"></i> Ver Productos
+                <!-- Tarjeta: Productos -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Productos</h4>
+                        <p class="text-muted mb-1">Inventario</p>
+                        <p>Administra el catálogo de productos, modifica stock o edita detalles.</p>
+                        <a class="btn btn-sm btn-violet mt-2" asp-controller="Panel" asp-action="Productos">
+                            <i class="boxes icon me-1"></i> Ver Productos
                         </a>
                     </div>
+                    <img src="~/images/panel/productos.jpg" alt="Productos" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
             }
         </div>
