@@ -26,6 +26,7 @@ namespace Simone.Controllers
         private readonly UserManager<Usuario> _userManager;
         private readonly RoleManager<Roles> _roleManager;
         private readonly CategoriasService _categoriasManager;
+        private readonly SubcategoriasService _subcategoriasManager;
         private readonly ProductosService _productosManager;
         private readonly ProveedorService _proveedoresManager;
 
@@ -40,6 +41,7 @@ namespace Simone.Controllers
             UserManager<Usuario> user,
             RoleManager<Roles> rol,
             CategoriasService categorias,
+            SubcategoriasService subcategorias,
             ProductosService productos,
             ProveedorService proveedores)
         {
@@ -48,6 +50,7 @@ namespace Simone.Controllers
             _userManager = user;
             _roleManager = rol;
             _categoriasManager = categorias;
+            _subcategoriasManager = subcategorias;
             _productosManager = productos;
             _proveedoresManager = proveedores;
         }
@@ -56,60 +59,6 @@ namespace Simone.Controllers
         public IActionResult Index()
         {
             return View();
-        }
-
-        [HttpGet]
-        public async Task<IActionResult> Categorias()
-        {
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
-            return View();
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AnadirCategoria(string nombreCategoria)
-        {
-            Categorias categoria = new Categorias
-            {
-                Nombre = nombreCategoria,
-            };
-            bool success = await _categoriasManager.AddAsync(categoria);
-            if (success)
-            {
-                return RedirectToAction("Categorias");
-            }
-            return RedirectToAction("Categorias");
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditarCategoria(int categoriaID, string nombreCategoria)
-        {
-            if (ModelState.IsValid)
-            {
-                var categoria = await _context.Categorias.FindAsync(categoriaID);
-                if (categoria == null)
-                {
-                    return NotFound();
-                }
-
-                categoria.Nombre = nombreCategoria;
-                _context.Categorias.Update(categoria);
-                await _context.SaveChangesAsync();
-
-                return RedirectToAction("Categorias");
-            }
-
-            return RedirectToAction("Categorias");
-        }
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarCategoria(int categoriaID)
-        {
-            bool success = await _categoriasManager.DeleteAsync(categoriaID);
-            return RedirectToAction("Categorias");
         }
 
         [HttpGet]
@@ -123,6 +72,8 @@ namespace Simone.Controllers
                                    {
                                        user.Id,
                                        user.Email,
+                                       user.Telefono,
+                                       user.Direccion,
                                        user.NombreCompleto,
                                        roleId = role.Id,
                                        roleName = role.Name
@@ -136,6 +87,8 @@ namespace Simone.Controllers
             {
                 Id = u.Id,
                 Email = u.Email,
+                Telefono = u.Telefono,
+                Direccion = u.Direccion,
                 NombreCompleto = u.NombreCompleto,
                 RolID = u.roleId,  // Rol ID
             }).ToList();
@@ -145,6 +98,27 @@ namespace Simone.Controllers
             ViewBag.Roles = _roleManager.Roles.ToList(); // Obtener todos los roles para rellenar el dropdown
 
             return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarUsuario(string id)
+        {
+            var usuario = await _userManager.FindByIdAsync(id);
+            if (usuario == null)
+                return NotFound();
+
+            var resultado = await _userManager.DeleteAsync(usuario);
+            if (resultado.Succeeded)
+            {
+                _logger.LogInformation("Administrador eliminó al usuario {Email}.", usuario.Email);
+                return RedirectToAction("Usuarios");
+            }
+            else
+            {
+                ModelState.AddModelError("", "Error al eliminar usuario.");
+                return View("Usuarios", _userManager.Users.ToList());
+            }
         }
 
         [HttpPost]
@@ -194,6 +168,136 @@ namespace Simone.Controllers
             // Actualizar la pagina
             TempData["MensajeExito"] = $"El rol del usuario {usuario.Email} fue actualizado a {nuevoRol.Name}.";
             return RedirectToAction("Usuarios");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Categorias()
+        {
+            var categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Categorias = categorias;
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AnadirCategoria(string nombreCategoria)
+        {
+            Categorias categoria = new Categorias
+            {
+                Nombre = nombreCategoria,
+            };
+            bool success = await _categoriasManager.AddAsync(categoria);
+            if (success)
+            {
+                return RedirectToAction("Categorias");
+            }
+            return RedirectToAction("Categorias");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarCategoria(int categoriaID, string nombreCategoria)
+        {
+            if (ModelState.IsValid)
+            {
+                var categoria = await _categoriasManager.GetByIdAsync(categoriaID);
+                if (categoria == null)
+                {
+                    return NotFound();
+                }
+
+                categoria.Nombre = nombreCategoria;
+                await _categoriasManager.UpdateAsync(categoria);
+
+                return RedirectToAction("Categorias");
+            }
+
+            return RedirectToAction("Categorias");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarCategoria(int categoriaID)
+        {
+            bool success = await _categoriasManager.DeleteAsync(categoriaID);
+            return RedirectToAction("Categorias");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Subcategorias()
+        {
+            // Load Subcategorias with the related Categoria name
+            var subcategorias = await _subcategoriasManager.GetAllSubcategoriasWithCategoriaAsync();
+
+            // Send Subcategorias to ViewBag
+            ViewBag.Subcategorias = subcategorias;
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AnadirSubcategoria()
+        {
+            var categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Categorias = categorias;
+            return View("SubcategoriaForm");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AnadirSubcategoria(int categoriaID, string nombresubCategoria)
+        {
+            Subcategorias subcategoria = new Subcategorias
+            {
+                CategoriaID = categoriaID,
+                NombreSubcategoria = nombresubCategoria
+            };
+            bool success = await _subcategoriasManager.AddAsync(subcategoria);
+            if (success)
+            {
+                return RedirectToAction("Subcategorias");
+            }
+            return RedirectToAction("Subcategorias");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditarSubcategoria(int subcategoriaID)
+        {
+            var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+            ViewBag.Subcategoria = subcategoria;
+            var categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Categorias = categorias;
+            return View("SubcategoriaForm");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarSubcategoria(int subcategoriaID, int categoriaID, string nombresubCategoria)
+        {
+            if (ModelState.IsValid)
+            {
+                var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+                if (subcategoria == null)
+                {
+                    return NotFound();
+                }
+
+                subcategoria.NombreSubcategoria = nombresubCategoria;
+                subcategoria.CategoriaID = categoriaID;
+
+                await _subcategoriasManager.UpdateAsync(subcategoria);
+
+                return RedirectToAction("Subcategorias");
+            }
+
+            return RedirectToAction("Subcategorias");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarSubcategoria(int categoriaID)
+        {
+            bool success = await _subcategoriasManager.DeleteAsync(categoriaID);
+            return RedirectToAction("Subcategorias");
         }
 
         [HttpGet]
@@ -257,7 +361,7 @@ namespace Simone.Controllers
         {
             if (ModelState.IsValid)
             {
-                var proveedor = await _context.Proveedores.FindAsync(proveedorID);
+                var proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
                 if (proveedor == null)
                 {
                     return NotFound();
@@ -269,8 +373,7 @@ namespace Simone.Controllers
                 proveedor.Email = email;
                 proveedor.Direccion = direccion;
 
-                _context.Proveedores.Update(proveedor);
-                await _context.SaveChangesAsync();
+                await _proveedoresManager.UpdateAsync(proveedor);
 
                 return RedirectToAction("Proveedores");
             }
@@ -286,27 +389,6 @@ namespace Simone.Controllers
             return RedirectToAction("Categorias");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarUsuario(string id)
-        {
-            var usuario = await _userManager.FindByIdAsync(id);
-            if (usuario == null)
-                return NotFound();
-
-            var resultado = await _userManager.DeleteAsync(usuario);
-            if (resultado.Succeeded)
-            {
-                _logger.LogInformation("Administrador eliminó al usuario {Email}.", usuario.Email);
-                return RedirectToAction("Usuarios");
-            }
-            else
-            {
-                ModelState.AddModelError("", "Error al eliminar usuario.");
-                return View("Usuarios", _userManager.Users.ToList());
-            }
-        }
-
         [HttpGet]
         public async Task<IActionResult> Productos()
         {
@@ -320,6 +402,8 @@ namespace Simone.Controllers
         {
             var categorias = await _categoriasManager.GetAllAsync();
             ViewBag.Categorias = categorias;
+            var subcategorias = await _subcategoriasManager.GetAllAsync();
+            ViewBag.subcategorias = subcategorias;
             var proveedores = await _proveedoresManager.GetAllAsync();
             ViewBag.Proveedores = proveedores;
             return View("ProductoForm");
@@ -337,9 +421,21 @@ namespace Simone.Controllers
             decimal precioVenta,
             int proveedorID,
             int categoriaID,
-            int stock
+            int subcategoriaID,
+            int stock,
+            IFormFile imagen
             )
         {
+
+            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
+
+            // Save the image to the server
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await imagen.CopyToAsync(stream);
+            }
+
             var producto = new Producto
             {
                 Nombre = nombreProducto,
@@ -353,11 +449,87 @@ namespace Simone.Controllers
                 Stock = stock,
                 ProveedorID = proveedorID,
                 CategoriaID = categoriaID,
-                SubcategoriaID = 4,
-                // ImagenesProductos = ,
+                SubcategoriaID = subcategoriaID,
+                ImagenPath = "/images/Productos/" + uniqueFileName
             };
             await _productosManager.AddAsync(producto);
-            await _context.SaveChangesAsync();
+
+            return RedirectToAction("Productos");
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> EditarProducto(int productoID)
+        {
+            var producto = await _productosManager.GetByIdAsync(productoID);
+            var categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Categorias = categorias;
+            var proveedores = await _proveedoresManager.GetAllAsync();
+            ViewBag.Proveedores = proveedores;
+            var subcategorias = await _subcategoriasManager.GetAllAsync();
+            ViewBag.Subcategorias = subcategorias;
+            ViewBag.Producto = producto;
+            return View("ProductoForm");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarProducto(
+            int productoID,
+            String nombreProducto,
+            String descripcion,
+            String talla,
+            String color,
+            String marca,
+            String existingImagenPath,
+            decimal precioCompra,
+            decimal precioVenta,
+            int proveedorID,
+            int categoriaID,
+            int subcategoriaID,
+            int stock,
+            IFormFile imagen
+            )
+        {
+                var producto = await _productosManager.GetByIdAsync(productoID);
+                if (producto == null)
+                {
+                    return NotFound();
+                }
+
+                producto.Nombre = nombreProducto;
+                producto.Descripcion = descripcion;
+                producto.Talla = talla;
+                producto.Color = color;
+                producto.Marca = marca;
+                producto.PrecioCompra = precioCompra;
+                producto.PrecioVenta = precioVenta;
+                producto.ProveedorID = proveedorID;
+                producto.CategoriaID = categoriaID;
+                producto.SubcategoriaID = subcategoriaID;
+                producto.Stock = stock;
+
+                if (imagen != null)
+                {
+                    var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
+                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
+
+                    // Save the image to the server
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await imagen.CopyToAsync(stream);
+                    }
+
+                    producto.ImagenPath = "/images/Productos/" + uniqueFileName;
+                }
+                else
+                {
+                    producto.ImagenPath = existingImagenPath;
+                }
+
+                await _productosManager.UpdateAsync(producto);
+
+                return RedirectToAction("Productos");
+
             return RedirectToAction("Productos");
         }
 
@@ -371,51 +543,12 @@ namespace Simone.Controllers
             return View(productosEnOferta);
         }
 
-
-        [HttpGet]
-        public async Task<IActionResult> EditarProducto(int productoID)
-        {
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
-            var proveedores = await _proveedoresManager.GetAllAsync();
-            ViewBag.Proveedores = proveedores;
-            var producto = await _productosManager.GetByIdAsync(productoID);
-            ViewBag.Producto = producto;
-            return View("ProductoForm");
-        }
-
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditarProducto(
-            int proveedorID,
-            string nombreProveedor,
-            string contacto,
-            string telefono,
-            string email,
-            string direccion
-            )
+        public async Task<IActionResult> EliminarProducto(int productoID)
         {
-            if (ModelState.IsValid)
-            {
-                var proveedor = await _context.Proveedores.FindAsync(proveedorID);
-                if (proveedor == null)
-                {
-                    return NotFound();
-                }
-
-                proveedor.NombreProveedor = nombreProveedor;
-                proveedor.Contacto = contacto;
-                proveedor.Telefono = telefono;
-                proveedor.Email = email;
-                proveedor.Direccion = direccion;
-
-                _context.Proveedores.Update(proveedor);
-                await _context.SaveChangesAsync();
-
-                return RedirectToAction("Proveedores");
-            }
-
-            return RedirectToAction("Proveedores");
+            bool success = await _productosManager.DeleteAsync(productoID);
+            return RedirectToAction("Productos");
         }
 
     }

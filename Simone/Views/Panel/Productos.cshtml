@@ -31,25 +31,32 @@
                 {
                     <tr>
                         <td>@producto.Nombre</td>
-                        <!--  <td> va la foto !!!!!!!!!!</td> -->
-                        <td>Foto</td>
+                        <td>
+                            @if (!string.IsNullOrEmpty(producto.ImagenPath))
+                            {
+                                <img src="@producto.ImagenPath" alt="Foto de @producto.Nombre" style="max-height: 100px;" />
+                            }
+                            else
+                            {
+                                <span>No imagen disponible</span>
+                            }
+                        </td>
                         <td>@producto.Descripcion</td>
                         <td>@producto.Stock</td>
                         <td>
                             <!-- Edit Category -->
-                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EditarProducto">
+                            <form method="get" style="display:inline" asp-controller="Panel" asp-action="EditarProducto">
                                 @Html.AntiForgeryToken()
-                                <button type="button" class="ui icon blue button" title="Editar @ViewData["Type"]"
-                                    id="editCategoryCardButton" data-category-id="@producto.CategoriaID"
-                                    data-category-name="@producto.Nombre">
+                                <input type="hidden" name="productoID" value="@producto.ProductoID" />
+                                <button type="submit" class="ui icon blue button" title="Editar @ViewData["Type"]">
                                     <i class="edit icon"></i>
                                 </button>
                             </form>
                             <!-- Delete Category -->
                             <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarProducto"
-                                onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
-                                <input type="hidden" name="categoriaID" value="@producto.CategoriaID" />
+                                onsubmit="return confirm('¿Estás seguro de eliminar este producto?');">
                                 @Html.AntiForgeryToken()
+                                <input type="hidden" name="productoID" value="@producto.ProductoID" />
                                 <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
                                     <i class="trash icon"></i>
                                 </button>

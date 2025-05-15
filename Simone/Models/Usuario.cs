@@ -14,14 +14,12 @@ namespace Simone.Models
         public string Telefono { get; set; } = string.Empty;
 
         [StringLength(200)]
-        public string Direccion { get; set; } = string.Empty;
+        public string? Direccion { get; set; }
 
-        [Required]
         [StringLength(200)]
-        public string Referencia { get; set; } = string.Empty;
+        public string? Referencia { get; set; }
 
-        public string FotoPerfil { get; set; }
-
+        public string? FotoPerfil { get; set; }
 
         public DateTime FechaRegistro { get; set; } = DateTime.Now;
 

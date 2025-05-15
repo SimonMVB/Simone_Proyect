@@ -12,8 +12,8 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20250504202108_AgregarCampoFotoPerfil")]
-    partial class AgregarCampoFotoPerfil
+    [Migration("20250515162830_MigrationTest")]
+    partial class MigrationTest
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -888,6 +888,9 @@ namespace Simone.Migrations
                     b.Property<DateTime>("FechaAgregado")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ImagenPath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Marca")
                         .HasColumnType("nvarchar(max)");
 
@@ -1097,6 +1100,7 @@ namespace Simone.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FotoPerfil")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LockoutEnabled")

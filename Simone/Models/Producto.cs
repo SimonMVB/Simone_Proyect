@@ -20,6 +20,7 @@ namespace Simone.Models
         public string? Talla { get; set; }
         public string? Color { get; set; }
         public string? Marca { get; set; }
+        public string? ImagenPath { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]

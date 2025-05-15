@@ -34,7 +34,14 @@ namespace Simone.Services
         // Obtener todas las categorías de manera asíncrona
         public async Task<List<Categorias>> GetAllAsync()
         {
-            return await _context.Categorias.ToListAsync(); // Usamos ToListAsync
+            return await _context.Categorias
+            .Select(c => new Categorias
+            {
+                CategoriaID = c.CategoriaID,
+                Nombre = c.Nombre
+            }
+            )
+            .ToListAsync(); // Usamos ToListAsync
         }
 
         // Obtener una categoría por su ID de manera asíncrona
