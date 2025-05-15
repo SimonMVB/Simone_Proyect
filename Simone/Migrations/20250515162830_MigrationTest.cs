@@ -5,26 +5,24 @@
 namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class AgregarCamposDireccionYTelefono : Migration
+    public partial class MigrationTest : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "Referencia",
-                table: "AspNetUsers",
-                type: "nvarchar(200)",
-                maxLength: 200,
-                nullable: true,
-                defaultValue: "");
+                name: "ImagenPath",
+                table: "Productos",
+                type: "nvarchar(max)",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Referencia",
-                table: "AspNetUsers");
+                name: "ImagenPath",
+                table: "Productos");
         }
     }
 }

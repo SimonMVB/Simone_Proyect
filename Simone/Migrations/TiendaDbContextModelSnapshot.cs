@@ -885,6 +885,9 @@ namespace Simone.Migrations
                     b.Property<DateTime>("FechaAgregado")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ImagenPath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Marca")
                         .HasColumnType("nvarchar(max)");
 

@@ -12,40 +12,41 @@
         overflow: hidden;
     }
 
-        .dashboard-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
-        }
+    .dashboard-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+    }
 
-        .dashboard-card img {
-            height: 80px;
-            width: 80px;
-            object-fit: cover;
-            border-radius: 10px;
-        }
+    .dashboard-card img {
+        height: 80px;
+        width: 80px;
+        object-fit: cover;
+        border-radius: 10px;
+    }
 
-        .dashboard-card .header {
-            font-size: 1.3em;
-            font-weight: bold;
-        }
+    .dashboard-card .header {
+        font-size: 1.3em;
+        font-weight: bold;
+    }
 
-        .dashboard-card .meta {
-            font-size: 0.9em;
-            color: #888;
-        }
+    .dashboard-card .meta {
+        font-size: 0.9em;
+        color: #888;
+    }
 
-        .dashboard-card .description {
-            font-size: 1em;
-            color: #444;
-        }
+    .dashboard-card .description {
+        font-size: 1em;
+        color: #444;
+    }
 
-        .dashboard-card .extra {
-            margin-top: 10px;
-        }
+    .dashboard-card .extra {
+        margin-top: 10px;
+    }
 </style>
 
 <div class="ui container mt-5 fade-in">
-    <div class="ui raised very padded text container segment" style="border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+    <div class="ui raised very padded text container segment"
+        style="border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
         <h2 class="ui header">
             <i class="settings icon teal"></i>
             <div class="content">
@@ -60,7 +61,8 @@
             @if (User.IsInRole("Administrador"))
             {
                 <!-- Tarjeta: Usuarios -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
                     <div class="flex-grow-1">
                         <h4 class="fw-bold mb-1">Usuarios</h4>
                         <p class="text-muted mb-1">Gestión de cuentas</p>
@@ -69,11 +71,13 @@
                             <i class="eye icon me-1"></i> Ver Usuarios
                         </a>
                     </div>
-                    <img src="~/images/panel/usuarios.jpg" alt="Usuarios" class="img-fluid" style="width: 90px; border-radius: 12px;">
+                    <img src="~/images/panel/usuarios.jpg" alt="Usuarios" class="img-fluid"
+                        style="width: 90px; border-radius: 12px;">
                 </div>
 
                 <!-- Tarjeta: Categorías -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
                     <div class="flex-grow-1">
                         <h4 class="fw-bold mb-1">Categorías</h4>
                         <p class="text-muted mb-1">Gestión de productos</p>
@@ -82,11 +86,26 @@
                             <i class="folder icon me-1"></i> Ver Categorías
                         </a>
                     </div>
-                    <img src="~/images/panel/categorias.jpeg" alt="Categorías" class="img-fluid" style="width: 90px; border-radius: 12px;">
+                    <img src="~/images/panel/categorias.jpeg" alt="Categorías" class="img-fluid"
+                        style="width: 90px; border-radius: 12px;">
+                </div>
+
+                <!-- Tarjeta: Subcategorias -->
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
+                    <div class="flex-grow-1">
+                        <h4 class="fw-bold mb-1">Subcategorias</h4>
+                        <p class="text-muted mb-1">subcategorias</p>
+                        <p>Crea y organiza las subcategorias inventario.</p>
+                        <a class="btn btn-sm btn-warning mt-2" asp-controller="Panel" asp-action="Subcategorias">
+                            <i class="truck icon me-1"></i> Ver Subcategorias
+                        </a>
+                    </div>
                 </div>
 
                 <!-- Tarjeta: Proveedores -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
                     <div class="flex-grow-1">
                         <h4 class="fw-bold mb-1">Proveedores</h4>
                         <p class="text-muted mb-1">Abastecimiento</p>
@@ -95,11 +114,11 @@
                             <i class="truck icon me-1"></i> Ver Proveedores
                         </a>
                     </div>
-                    <img src="~/images/panel/proveedor.jpg" alt="Proveedores" class="img-fluid" style="width: 90px; border-radius: 12px;">
                 </div>
 
                 <!-- Tarjeta: Logs -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
                     <div class="flex-grow-1">
                         <h4 class="fw-bold mb-1">Registros</h4>
                         <p class="text-muted mb-1">Auditoría</p>
@@ -108,11 +127,13 @@
                             <i class="clock icon me-1"></i> Ver Logs
                         </button>
                     </div>
-                    <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="Logs" class="img-fluid" style="width: 90px; border-radius: 12px;">
+                    <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="Logs" class="img-fluid"
+                        style="width: 90px; border-radius: 12px;">
                 </div>
 
                 <!-- Tarjeta: Reportes -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
                     <div class="flex-grow-1">
                         <h4 class="fw-bold mb-1">Reportes</h4>
                         <p class="text-muted mb-1">Estadísticas</p>
@@ -121,13 +142,15 @@
                             <i class="chart bar icon me-1"></i> Ver Reportes
                         </button>
                     </div>
-                    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Reportes" class="img-fluid" style="width: 90px; border-radius: 12px;">
+                    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Reportes" class="img-fluid"
+                        style="width: 90px; border-radius: 12px;">
                 </div>
             }
             else if (User.IsInRole("Vendedor"))
             {
                 <!-- Tarjeta: Productos -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded" style="gap: 2rem;">
+                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
+                    style="gap: 2rem;">
                     <div class="flex-grow-1">
                         <h4 class="fw-bold mb-1">Productos</h4>
                         <p class="text-muted mb-1">Inventario</p>
@@ -136,7 +159,8 @@
                             <i class="boxes icon me-1"></i> Ver Productos
                         </a>
                     </div>
-                    <img src="~/images/panel/productos.jpg" alt="Productos" class="img-fluid" style="width: 90px; border-radius: 12px;">
+                    <img src="~/images/panel/productos.jpg" alt="Productos" class="img-fluid"
+                        style="width: 90px; border-radius: 12px;">
                 </div>
             }
         </div>

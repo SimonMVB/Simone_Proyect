@@ -167,6 +167,9 @@ namespace Simone.Controllers
                 FechaRegistro = DateTime.Now,
                 Activo = true,
                 RolID = rol.Id,
+                Direccion = model.Direccion,
+                Telefono = model.Telefono,
+                Referencia = model.Referencia,
             };
 
             var result = await _userManager.CreateAsync(usuario, model.Password);
@@ -238,9 +241,8 @@ namespace Simone.Controllers
         }
 
 
-
         [HttpPost]
-        public async Task<IActionResult> Perfil(Usuario usuario, IFormFile ImagenPerfil)
+        public async Task<IActionResult> ActualizarPerfil(Usuario usuario, IFormFile ImagenPerfil)
         {
             var usuarioDb = await _context.Usuarios.FindAsync(usuario.Id);
 
@@ -248,7 +250,7 @@ namespace Simone.Controllers
 
             if (ImagenPerfil != null && ImagenPerfil.Length > 0)
             {
-                var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/img/perfiles");
+                var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Perfiles");
                 Directory.CreateDirectory(rutaCarpeta);
 
                 var nombreArchivo = Guid.NewGuid().ToString() + Path.GetExtension(ImagenPerfil.FileName);
@@ -259,7 +261,7 @@ namespace Simone.Controllers
                     await ImagenPerfil.CopyToAsync(stream);
                 }
 
-                usuarioDb.FotoPerfil = "/img/perfiles/" + nombreArchivo;
+                usuarioDb.FotoPerfil = "/images/Perfiles/" + nombreArchivo;
             }
 
             // Actualiza otros campos del usuario

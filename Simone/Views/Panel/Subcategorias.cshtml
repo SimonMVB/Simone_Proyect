@@ -1,0 +1,73 @@
+@{
+    ViewData["Type"] = "Subcategoria";
+    ViewData["Title"] = "Gestionar " + ViewData["Type"];
+}
+
+<div class="ui container mt-5">
+    <div class="ui segment">
+        <h2 class="ui header">
+            <i class="tags icon"></i>
+            <div class="content">@ViewData["Title"]</div>
+        </h2>
+
+        <a style="display:inline" asp-controller="Panel" asp-action="AnadirSubcategoria">
+            <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;">
+                @Html.AntiForgeryToken()
+                <button class="ui green button">Añadir @ViewData["Type"]</button>
+            </div>
+        </a>
+
+        <!-- Table displaying categories -->
+        @if (ViewBag.Subcategorias.Count > 0)
+        {
+            <table class="ui celled striped table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Categoria</th>
+                        <th>Opciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var subcategoria in ViewBag.Subcategorias)
+                    {
+                        <tr>
+                            <td>@subcategoria.NombreSubcategoria</td>
+                            <td>@subcategoria.Categoria.Nombre</td>
+                            <td>
+                                <!-- Edit Subcategory -->
+                                <form method="get" style="display:inline" asp-controller="Panel"
+                                    asp-action="EditarSubcategoria">
+                                    <input type="hidden" name="subcategoriaID" value="@subcategoria.SubcategoriaID" />
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="ui icon blue button" title="Editar @ViewData["Type"]">
+                                        <i class="edit icon"></i>
+                                    </button>
+                                </form>
+                                <!-- Delete Category -->
+                                <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarCategoria"
+                                    onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
+                                    <input type="hidden" name="categoriaID" value="@subcategoria.CategoriaID" />
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
+                                        <i class="trash icon"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p>No hay subcategorías disponibles.</p>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

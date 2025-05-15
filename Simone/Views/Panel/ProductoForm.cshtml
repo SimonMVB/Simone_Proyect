@@ -1,57 +1,65 @@
 <div class="ui container mt-5">
     <div class="ui segment">
-
-
         @if (ViewBag.Producto != null)
         {
             <h2 class="ui header">
                 <i class="box icon"></i>
                 <div class="content">Editar Producto</div>
             </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto">
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="EditarProducto"
+                enctype="multipart/form-data">
+
+                <!-- ID -->
+                <input type="hidden" name="productoID" value="@ViewBag.Producto.ProductoID" />
+
                 <!-- Nombre -->
                 <div class="field">
                     <label for="Nombre">Nombre</label>
-                    <input type="text" name="nombreProducto" id="Nombre" placeholder="Nombre del producto" required />
+                    <input type="text" name="nombreProducto" id="Nombre" placeholder="Nombre del producto" required
+                        value="@ViewBag.Producto.Nombre" />
                 </div>
 
                 <!-- Descripcion -->
                 <div class="field">
                     <label for="Descripcion">Descripción</label>
-                    <textarea name="Descripcion" id="Descripcion" placeholder="Descripción del producto" rows="3"
-                    required></textarea>
+                    <textarea name="descripcion" id="Descripcion" placeholder="Descripción del producto" rows="3" required>
+                    @ViewBag.Producto.Descripcion
+                    </textarea>
                 </div>
 
                 <!-- Talla -->
                 <div class="field">
                     <label for="Talla">Talla</label>
-                    <input type="text" name="Talla" id="Talla" placeholder="Tamaño del producto" required />
+                    <input type="text" name="talla" id="Talla" placeholder="Tamaño del producto" required
+                        value="@ViewBag.Producto.Talla" />
                 </div>
 
                 <!-- Color -->
                 <div class="field">
                     <label for="Color">Color</label>
-                    <input type="text" name="Color" id="Color" placeholder="Color del producto" required />
+                    <input type="text" name="color" id="Color" placeholder="Color del producto" required
+                        value="@ViewBag.Producto.Color" />
                 </div>
 
                 <!-- Marca -->
                 <div class="field">
                     <label for="Marca">Marca</label>
-                    <input type="text" name="Marca" id="Marca" placeholder="Marca del producto" required />
+                    <input type="text" name="marca" id="Marca" placeholder="Marca del producto" required
+                        value="@ViewBag.Producto.Marca" />
                 </div>
 
                 <!-- PrecioCompra -->
                 <div class="field">
                     <label for="PrecioCompra">Precio de Compra</label>
-                    <input type="number" name="PrecioCompra" id="PrecioCompra" placeholder="Precio de compra" step="0.01"
-                        required />
+                    <input type="text" name="precioCompra" id="PrecioCompra" placeholder="Precio de compra"
+                        value="@ViewBag.Producto.PrecioCompra" step="0.01" required />
                 </div>
 
                 <!-- PrecioVenta -->
                 <div class="field">
                     <label for="PrecioVenta">Precio de Venta</label>
-                    <input type="number" name="PrecioVenta" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
-                        required />
+                    <input type="text" name="precioVenta" id="PrecioVenta" placeholder="Precio de venta" required
+                        value="@ViewBag.Producto.PrecioVenta" step="0.01" />
                 </div>
 
                 <!-- Categoria -->
@@ -59,30 +67,146 @@
                     @if (ViewBag.Categorias.Count > 0)
                     {
                         <label for="Categoria">Categoría</label>
-                        <select name="Categoria" id="Categoria" class="ui dropdown" required>
+                        <select name="categoriaID" id="Categoria" class="ui dropdown" required>
                             <option value="">Seleccione una categoría</option>
                             @foreach (var categoria in ViewBag.Categorias)
                             {
-                                <option value="">@categoria.Nombre</option>
+                                <option value="@categoria.CategoriaID">@categoria.Nombre</option>
                             }
                         </select>
                     }
                     else
                     {
-                        <select name="Categoria" id="Categoria" class="ui dropdown" disabled required>
+                        <select name="categoria" id="Categoria" class="ui dropdown" disabled required>
                             <option value="">No hay categorias disponibles</option>
                         </select>
                     }
                 </div>
 
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var selectedCategoryID = '@ViewBag.Producto.CategoriaID';
+                        var dropdown = document.getElementById("Categoria");
+                        var options = dropdown.querySelectorAll('option');
+                        options.forEach(function (option) {
+                            if (option.getAttribute('value') === selectedCategoryID) {
+                                option.selected = true;
+                            }
+                        });
+                    });
+                </script>
+
+                <!-- Subcategoria -->
+                <div class="field">
+                    <label for="Subcategoria">Subcategoría</label>
+                    <select name="subcategoriaID" id="Subcategoria" class="ui dropdown" required>
+                        <option value="">Seleccione una subcategoria</option>
+                        @foreach (var subcategoria in ViewBag.Subcategorias)
+                        {
+                            if (subcategoria.CategoriaID == ViewBag.Producto.CategoriaID)
+                            {
+                                <option value="@subcategoria.SubcategoriaID">@subcategoria.NombreSubcategoria</option>
+                            }
+
+                        }
+                    </select>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var selectedSubCategoryID = '@ViewBag.Producto.SubcategoriaID';
+                        var dropdown = document.getElementById("Subcategoria");
+                        var options = dropdown.querySelectorAll('option');
+                        options.forEach(function (option) {
+                            if (option.getAttribute('value') === selectedSubCategoryID) {
+                                option.selected = true;
+                            }
+                        });
+                    });
+                </script>
+
+                <!-- Proveedor -->
+                <div class="field">
+                    @if (ViewBag.Proveedores.Count > 0)
+                    {
+                        <label for="Proveedor">Proveedor</label>
+                        <select name="proveedorID" id="Proveedor" class="ui dropdown" required>
+                            <option value="">Seleccione un proveedor</option>
+                            @foreach (var proveedor in ViewBag.Proveedores)
+                            {
+                                <option value="@proveedor.ProveedorID">@proveedor.NombreProveedor</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select name="proveedorID" id="Proveedor" class="ui dropdown" disabled required>
+                            <option value="">No hay proveedores disponibles</option>
+                        </select>
+                    }
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        var selectedProveedorID = '@ViewBag.Producto.ProveedorID';
+                        var dropdown = document.getElementById("Proveedor");
+                        var options = dropdown.querySelectorAll('option');
+                        options.forEach(function (option) {
+                            if (option.getAttribute('value') === selectedProveedorID) {
+                                option.selected = true;
+                            }
+                        });
+                    });
+                </script>
+
                 <!-- Stock -->
                 <div class="field">
                     <label for="Stock">Stock</label>
-                    <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required />
+                    <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required
+                        value="@ViewBag.Producto.Stock" />
                 </div>
 
+                <div class="field">
+                    <label for="Imagen">Imagen del Producto</label>
+
+                    <!-- Show existing image preview -->
+                    @if (!string.IsNullOrEmpty(ViewBag.Producto?.ImagenPath))
+                    {
+                        <div>
+                            <img src="@ViewBag.Producto.ImagenPath" alt="Imagen actual"
+                                style="max-height: 150px; display: block; margin-bottom: 10px;" />
+                        </div>
+                    }
+
+                    <input type="file" name="imagen" id="Imagen" accept="image/*" />
+                    <small id="error-msg" style="color: red; display: none;">
+                        El archivo debe ser menor o igual a 2MB.
+                    </small>
+
+                    <!-- Hidden input to hold current image path -->
+                    <input type="hidden" name="existingImagenPath" value="@ViewBag.Producto?.ImagenPath" />
+                </div>
+
+                <script>
+                    const inputFile = document.getElementById('Imagen');
+                    const errorMsg = document.getElementById('error-msg');
+                    const maxSizeMB = 2;
+                    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+                    inputFile.addEventListener('change', () => {
+                        errorMsg.style.display = 'none';
+                        const file = inputFile.files[0];
+                        if (file && file.size > maxSizeBytes) {
+                            errorMsg.style.display = 'inline';
+                            inputFile.value = ''; // Reset the input
+                            alert(`El archivo es demasiado grande. El tamaño máximo permitido es ${maxSizeMB}MB.`);
+                        }
+                    });
+                </script>
+
+
                 <!-- Submit Button -->
-                <button type="submit" class="ui green button">Añadir Producto</button>
+                <button type="submit" class="ui blue button">Editar Producto</button>
             </form>
         }
         else
@@ -91,7 +215,8 @@
                 <i class="box icon"></i>
                 <div class="content">Añadir Producto</div>
             </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto">
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto"
+                enctype="multipart/form-data">
                 <!-- Nombre -->
                 <div class="field">
                     <label for="Nombre">Nombre</label>
@@ -126,14 +251,14 @@
                 <!-- PrecioCompra -->
                 <div class="field">
                     <label for="PrecioCompra">Precio de Compra</label>
-                    <input type="number" name="precioCompra" id="PrecioCompra" placeholder="Precio de compra" step="0.01"
+                    <input type="text" name="precioCompra" id="PrecioCompra" placeholder="Precio de compra" step="0.01"
                         required />
                 </div>
 
                 <!-- PrecioVenta -->
                 <div class="field">
                     <label for="PrecioVenta">Precio de Venta</label>
-                    <input type="number" name="precioVenta" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
+                    <input type="text" name="precioVentaString" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
                         required />
                 </div>
 
@@ -153,9 +278,17 @@
                     else
                     {
                         <select name="categoriaID" id="Categoria" class="ui dropdown" disabled required>
-                            <option value="">No hay categorias disponibles</option>
+                            <option value="">No hay categorías disponibles</option>
                         </select>
                     }
+                </div>
+
+                <!-- Subcategoria -->
+                <div class="field">
+                    <label for="Subcategoria">Subcategoría</label>
+                    <select name="subcategoriaID" id="Subcategoria" class="ui dropdown" required>
+                        <option value="">Seleccione una subcategoria</option>
+                    </select>
                 </div>
 
                 <!-- Proveedor -->
@@ -185,9 +318,111 @@
                     <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required />
                 </div>
 
+                <!-- Image Upload Field -->
+                <div class="field">
+                    <label for="Imagen">Imagen del Producto</label>
+                    <input type="file" name="imagen" id="Imagen" accept="image/*" />
+                    <small id="error-msg" style="color: red; display: none;">El archivo debe ser menor o igual a
+                        2MB.</small>
+                </div>
+
+                <script>
+                    const inputFile = document.getElementById('Imagen');
+                    const errorMsg = document.getElementById('error-msg');
+                    const maxSizeMB = 2;
+                    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+                    inputFile.addEventListener('change', () => {
+                        errorMsg.style.display = 'none';
+                        const file = inputFile.files[0];
+                        if (file && file.size > maxSizeBytes) {
+                            errorMsg.style.display = 'inline';
+                            inputFile.value = ''; // Reset the input
+                            alert(`El archivo es demasiado grande. El tamaño máximo permitido es ${maxSizeMB}MB.`);
+                        }
+                    });
+                </script>
+
                 <!-- Submit Button -->
                 <button type="submit" class="ui green button">Añadir Producto</button>
+
+
             </form>
         }
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Ensure subcategorias is always an array, even if ViewBag.Subcategorias is null or empty
+            const subcategorias = @Json.Serialize(ViewBag.Subcategorias); // Correct way to embed subcategorias as a JS object
+
+            const categoriaDropdown = document.getElementById("Categoria");
+            const subcategoriaDropdown = document.getElementById("Subcategoria");
+
+            // Function to filter subcategories based on the selected category
+            function filterSubcategoriasByCategoria(categoriaID) {
+                // Filter subcategories by CategoriaID
+                const filteredSubcategorias = subcategorias.filter(subcategoria => subcategoria.categoriaID == Number(categoriaID));
+
+                // Clear the current options in Subcategoria dropdown
+                subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
+
+                // Add filtered subcategories to Subcategoria dropdown
+                filteredSubcategorias.forEach(subcategoria => {
+                    const option = document.createElement("option");
+                    option.value = subcategoria.subcategoriaID;
+                    option.textContent = subcategoria.nombreSubcategoria;
+                    subcategoriaDropdown.appendChild(option);
+                });
+
+                // Enable the Subcategoria dropdown if there are options, or disable it if no options are available
+                subcategoriaDropdown.disabled = filteredSubcategorias.length === 0;
+            }
+
+            // When Categoria changes, filter the subcategories
+            if (categoriaDropdown && subcategoriaDropdown) {
+                categoriaDropdown.addEventListener("change", function () {
+                    const selectedCategoriaID = this.value;
+
+                    // Only filter if a valid category is selected
+                    if (selectedCategoriaID) {
+                        filterSubcategoriasByCategoria(selectedCategoriaID);
+                    } else {
+                        // Reset the subcategory dropdown when no category is selected
+                        subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
+                        subcategoriaDropdown.disabled = true;
+                    }
+                });
+            }
+        });
+
+        document.getElementById("PrecioCompra").addEventListener("input", function (event) {
+            var precioCompraInput = document.getElementById("PrecioCompra");
+
+            // Check if the input value is a valid number with decimal
+            var validNumberPattern = /^\d+(\.\d+)?$/; // Validates numbers like "40.50" or "1000"
+
+            if (!validNumberPattern.test(precioCompraInput.value)) {
+                event.preventDefault(); // Prevent form submission if the value is invalid
+                alert("Por favor, ingrese un número válido para el precio de compra.");
+            }
+        });
+
+        document.getElementById("PrecioVenta").addEventListener("change", function (event) {
+            var precioVentaInput = document.getElementById("PrecioVenta");
+
+            // Check if the input value is a valid number with decimal
+            var validNumberPattern = /^\d+(\.\d+)?$/; // Validates numbers like "40.50" or "1000"
+
+            if (!validNumberPattern.test(precioVentaInput.value)) {
+                event.preventDefault(); // Prevent form submission if the value is invalid
+                alert("Por favor, ingrese un número válido para el precio de compra.");
+            }
+        });
+
+    </script>
+
+}

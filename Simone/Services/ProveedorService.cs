@@ -16,14 +16,14 @@ namespace Simone.Services
             _context = context;
         }
 
-        // Agregar una nueva producto de manera asíncrona
+        // Agregar una nueva proveedor de manera asíncrona
         public async Task<bool> AddAsync(Proveedores proveedor)
         {
             try
             {
                 await _context.Proveedores.AddAsync(proveedor); // Usamos AddAsync
                 await _context.SaveChangesAsync(); // Guardar los cambios de manera asíncrona
-                return true; // Retorna true si la producto se ha agregado correctamente
+                return true; // Retorna true si el proveedor se ha agregado correctamente
             }
             catch
             {
@@ -31,26 +31,26 @@ namespace Simone.Services
             }
         }
 
-        // Obtener todas las productos de manera asíncrona
+        // Obtener todos los proveedores de manera asíncrona
         public async Task<List<Proveedores>> GetAllAsync()
         {
             return await _context.Proveedores.ToListAsync(); // Usamos ToListAsync
         }
 
-        // Obtener una producto por su ID de manera asíncrona
+        // Obtener una proveedor por su ID de manera asíncrona
         public async Task<Proveedores> GetByIdAsync(int id)
         {
             return await _context.Proveedores.FindAsync(id); // Usamos FindAsync
         }
 
-        // Actualizar una producto de manera asíncrona
-        public async Task<bool> UpdateAsync(Proveedores producto)
+        // Actualizar una proveedor de manera asíncrona
+        public async Task<bool> UpdateAsync(Proveedores proveedores)
         {
             try
             {
-                _context.Proveedores.Update(producto); // Actualizar producto
+                _context.Proveedores.Update(proveedores); // Actualizar proveedor
                 await _context.SaveChangesAsync(); // Guardar los cambios de manera asíncrona
-                return true; // Retorna true si la producto se actualiza correctamente
+                return true; // Retorna true si el proveedor se actualiza correctamente
             }
             catch
             {
@@ -58,19 +58,19 @@ namespace Simone.Services
             }
         }
 
-        // Eliminar un producto de manera asíncrona
+        // Eliminar un proveedor de manera asíncrona
         public async Task<bool> DeleteAsync(int id)
         {
             try
             {
-                var producto = await _context.Proveedores.FindAsync(id); // Buscar la producto de manera asíncrona
-                if (producto != null)
+                var proveedor = await _context.Proveedores.FindAsync(id); // Buscar el proveedor de manera asíncrona
+                if (proveedor != null)
                 {
-                    _context.Proveedores.Remove(producto); // Eliminar producto
+                    _context.Proveedores.Remove(proveedor); // Eliminar proveedor
                     await _context.SaveChangesAsync(); // Guardar cambios de manera asíncrona
-                    return true; // Retorna true si el producto se elimina correctamente
+                    return true; // Retorna true si el proveedor se elimina correctamente
                 }
-                return false; // Retorna false si no se encuentra el producto
+                return false; // Retorna false si no se encuentra el proveedor
             }
             catch
             {

@@ -14,7 +14,7 @@ namespace Simone.Migrations
                 name: "FotoPerfil",
                 table: "AspNetUsers",
                 type: "nvarchar(max)",
-                nullable: false,
+                nullable: true,
                 defaultValue: "");
         }
 

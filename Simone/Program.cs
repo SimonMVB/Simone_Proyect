@@ -52,6 +52,7 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 // Registrar los servicios requeridos
 builder.Services.AddScoped<RoleManager<Roles>>();
 builder.Services.AddScoped<CategoriasService>();
+builder.Services.AddScoped<SubcategoriasService>();
 builder.Services.AddScoped<ProveedorService>();
 builder.Services.AddScoped<ProductosService>();
 
@@ -159,7 +160,10 @@ async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
             Email = adminEmail,
             NombreCompleto = "Administrador General",
             EmailConfirmed = true,
-            RolID = adminRolID
+            RolID = adminRolID,
+            Direccion = "NAN",
+            Telefono = "NAN",
+            Referencia = "NAN",
         };
 
         var result = await userManager.CreateAsync(adminUser, adminPassword);

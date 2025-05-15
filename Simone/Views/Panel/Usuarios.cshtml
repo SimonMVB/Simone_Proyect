@@ -28,8 +28,8 @@
                     <tr>
                         <td>@usuario.NombreCompleto</td>
                         <td>@usuario.Email</td>
-                        <td>@usuario.Telefono ?? "No registrado"</td>
-                        <td>@usuario.Direccion ?? "No registrada"</td>
+                        <td>@usuario.Telefono</td>
+                        <td>@usuario.Direccion</td>
                         <td>@(usuario.FechaRegistro?.ToString("dd/MM/yyyy") ?? "-")</td>
                         <td>
                             <form method="post" style="display:inline" asp-controller="Panel" asp-action="EditarRol">

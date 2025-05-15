@@ -1,0 +1,101 @@
+<div class="ui container mt-5">
+    <div class="ui segment">
+
+        @if (ViewBag.Subcategoria != null)
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Editar Subcategoria</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="EditarSubcategoria">
+                <!-- Nombre Subcategoria-->
+                <div class="field">
+                    <label for="Nombre">Nombre Subcategoria</label>
+                    <input type="text" name="nombresubCategoria" id="Nombre" placeholder="Nombre de la subcategoria"
+                        required value="@ViewBag.Subcategoria.NombreSubcategoria"/>
+                </div>
+
+                <!-- Proveedor id escondido -->
+                <input type="hidden" name="subcategoriaID" value="@ViewBag.Subcategoria.SubcategoriaID" />
+
+                <!-- Categoria -->
+                <div class="field">
+                    @if (ViewBag.Categorias.Count > 0)
+                    {
+                        <label for="Categoria">Categoría</label>
+                        <select name="categoriaID" id="CategoriaID" class="ui dropdown" required>
+                            <option value="">Seleccione una categoría</option>
+                            @foreach (var categoria in ViewBag.Categorias)
+                            {
+                                <option
+                                data-categoria-id = "@categoria.CategoriaID" 
+                                value="@categoria.CategoriaID">@categoria.Nombre</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select name="categoriaID" id="CategoriaID" class="ui dropdown" disabled required>
+                            <option value="">No hay categorias disponibles</option>
+                        </select>
+                    }
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            var selectedCategoryID = '@ViewBag.Subcategoria.CategoriaID';
+                            var dropdown = document.getElementById("CategoriaID");
+                            var options = dropdown.querySelectorAll('option');
+                            options.forEach(function (option) {
+                                if (option.getAttribute('data-categoria-id') === selectedCategoryID) {
+                                    option.selected = true;
+                                }
+                            });
+                        });
+                    </script>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button">Editar Subcategoria</button>
+            </form>
+        }
+        else
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Añadir Subcategoria</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirSubcategoria">
+
+                <!-- Nombre Subcategoria -->
+                <div class="field">
+                    <label for="Nombre">Nombre Subcategoria</label>
+                    <input type="text" name="nombresubCategoria" id="Nombre" placeholder="Nombre de la subcategoria"
+                        required />
+                </div>
+
+                <!-- Categoria -->
+                <div class="field">
+                    @if (ViewBag.Categorias.Count > 0)
+                    {
+                        <label for="Categoria">Categoría</label>
+                        <select name="categoriaID" id="Categoria" class="ui dropdown" required>
+                            <option value="">Seleccione una categoría</option>
+                            @foreach (var categoria in ViewBag.Categorias)
+                            {
+                                <option value="@categoria.CategoriaID">@categoria.Nombre</option>
+                            }
+                        </select>
+                    }
+                    else
+                    {
+                        <select name="categoriaID" id="Categoria" class="ui dropdown" disabled required>
+                            <option value="">No hay categorias disponibles</option>
+                        </select>
+                    }
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button">Añadir Categoria</button>
+            </form>
+        }
+    </div>
+</div>
