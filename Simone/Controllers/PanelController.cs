@@ -392,8 +392,20 @@ namespace Simone.Controllers
         [HttpGet]
         public async Task<IActionResult> Productos()
         {
-            var productos = await _productosManager.GetAllAsync();
-            ViewBag.Productos = productos;
+            var user = await _userManager.GetUserAsync(User);
+            var adminRol = await _roleManager.FindByNameAsync("Administrador");
+
+            if (user.RolID == adminRol.Id)
+            {
+                var productos = await _productosManager.GetAllAsync();
+                ViewBag.Productos = productos;
+            }
+            else
+            {
+                var productos = await _productosManager.GetByVendedorID(user.Id);
+                ViewBag.Productos = productos;
+            }
+            
             return View();
         }
 
@@ -427,15 +439,6 @@ namespace Simone.Controllers
             )
         {
 
-            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
-            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
-
-            // Save the image to the server
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await imagen.CopyToAsync(stream);
-            }
-
             var producto = new Producto
             {
                 Nombre = nombreProducto,
@@ -450,8 +453,23 @@ namespace Simone.Controllers
                 ProveedorID = proveedorID,
                 CategoriaID = categoriaID,
                 SubcategoriaID = subcategoriaID,
-                ImagenPath = "/images/Productos/" + uniqueFileName
+                VendedorID = _userManager.GetUserId(User),
             };
+
+            if (imagen != null)
+            {
+                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
+
+                // Save the image to the server
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imagen.CopyToAsync(stream);
+                }
+
+                producto.ImagenPath = "/images/Productos/" + uniqueFileName;
+            }
+
             await _productosManager.AddAsync(producto);
 
             return RedirectToAction("Productos");
@@ -490,45 +508,45 @@ namespace Simone.Controllers
             IFormFile imagen
             )
         {
-                var producto = await _productosManager.GetByIdAsync(productoID);
-                if (producto == null)
+            var producto = await _productosManager.GetByIdAsync(productoID);
+            if (producto == null)
+            {
+                return NotFound();
+            }
+
+            producto.Nombre = nombreProducto;
+            producto.Descripcion = descripcion;
+            producto.Talla = talla;
+            producto.Color = color;
+            producto.Marca = marca;
+            producto.PrecioCompra = precioCompra;
+            producto.PrecioVenta = precioVenta;
+            producto.ProveedorID = proveedorID;
+            producto.CategoriaID = categoriaID;
+            producto.SubcategoriaID = subcategoriaID;
+            producto.Stock = stock;
+
+            if (imagen != null)
+            {
+                var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
+                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
+
+                // Save the image to the server
+                using (var stream = new FileStream(filePath, FileMode.Create))
                 {
-                    return NotFound();
+                    await imagen.CopyToAsync(stream);
                 }
 
-                producto.Nombre = nombreProducto;
-                producto.Descripcion = descripcion;
-                producto.Talla = talla;
-                producto.Color = color;
-                producto.Marca = marca;
-                producto.PrecioCompra = precioCompra;
-                producto.PrecioVenta = precioVenta;
-                producto.ProveedorID = proveedorID;
-                producto.CategoriaID = categoriaID;
-                producto.SubcategoriaID = subcategoriaID;
-                producto.Stock = stock;
+                producto.ImagenPath = "/images/Productos/" + uniqueFileName;
+            }
+            else
+            {
+                producto.ImagenPath = existingImagenPath;
+            }
 
-                if (imagen != null)
-                {
-                    var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
-                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
+            await _productosManager.UpdateAsync(producto);
 
-                    // Save the image to the server
-                    using (var stream = new FileStream(filePath, FileMode.Create))
-                    {
-                        await imagen.CopyToAsync(stream);
-                    }
-
-                    producto.ImagenPath = "/images/Productos/" + uniqueFileName;
-                }
-                else
-                {
-                    producto.ImagenPath = existingImagenPath;
-                }
-
-                await _productosManager.UpdateAsync(producto);
-
-                return RedirectToAction("Productos");
+            return RedirectToAction("Productos");
 
             return RedirectToAction("Productos");
         }

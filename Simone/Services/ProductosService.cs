@@ -38,10 +38,10 @@ namespace Simone.Services
         }
 
         // Obtener varios productos de manera asíncrona
-        public async Task<List<Producto>> GetFirstAsync()
+        public async Task<List<Producto>> GetFirstAsync(int n)
         {
             return await _context.Productos.
-            Take(50).
+            Take(n).
             ToListAsync(); // Usamos ToListAsync
         }
 
@@ -84,6 +84,20 @@ namespace Simone.Services
             {
                 return false; // Retorna false si hubo algún error
             }
+        }
+
+        public async Task<List<Producto>> GetByCategoryID(int categoriaID)
+        {
+            return await _context.Productos
+                                 .Where(p => p.CategoriaID == categoriaID)
+                                 .ToListAsync();
+        }
+
+        public async Task<List<Producto>> GetByVendedorID(string vendedorID)
+        {
+            return await _context.Productos
+                                 .Where(p => p.VendedorID == vendedorID)
+                                 .ToListAsync();
         }
     }
 }

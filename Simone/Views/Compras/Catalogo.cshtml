@@ -1,0 +1,122 @@
+@model CatalogoViewModel
+
+@{
+    // Helper to build query strings for filters + pagination
+    string BuildUrl(int? categoriaID, List<int> subcategoriaIDs, int pageNumber, int pageSize)
+    {
+        var query = new List<string>();
+
+        if (categoriaID.HasValue)
+            query.Add($"categoriaID={categoriaID.Value}");
+
+        if (subcategoriaIDs != null && subcategoriaIDs.Any())
+            query.AddRange(subcategoriaIDs.Select(id => $"subcategoriaIDs={id}"));
+
+        query.Add($"pageNumber={pageNumber}");
+        query.Add($"pageSize={pageSize}");
+
+        return Url.Action("Catalogo") + "?" + string.Join("&", query);
+    }
+}
+
+<table border="0" width="100%" cellspacing="10" cellpadding="5">
+    <tr>
+        <td width="25%" valign="top" style="border: 1px solid #ccc;">
+            <form method="get" asp-action="Catalogo">
+                <table border="1" width="100%" cellspacing="5" cellpadding="5">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <label>
+                                    <input type="radio" name="categoriaID" value="" @(Model.SelectedCategoriaID == null
+                                                                                                                            ? "checked" : "") onchange="this.form.submit()" />
+                                    Todo
+                                </label>
+                            </td>
+                        </tr>
+                        @foreach (var cat in Model.Categorias)
+                        {
+                            <tr>
+                                <td>
+                                    <label>
+                                        <input type="radio" name="categoriaID" value="@cat.CategoriaID" @(cat.CategoriaID ==
+                                                                                                                                       Model.SelectedCategoriaID ? "checked" : "") onchange="this.form.submit()" />
+                                    @cat.Nombre
+                                </label>
+                            </td>
+                        </tr>
+                                                }
+                    </tbody>
+                </table>
+            </form>
+
+            @if (Model.SelectedCategoriaID.HasValue)
+            {
+                <form method="get" asp-action="Catalogo" id="subcatForm">
+                    <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
+                    <table border="1" width="100%" cellspacing="5" cellpadding="5" style="margin-top: 20px;">
+                        <thead>
+                            <tr>
+                                <th>Subcategorías</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var subcat in Model.Subcategorias)
+                            {
+                                <tr>
+                                    <td>
+                                        <label>
+                                            <input type="checkbox" name="subcategoriaIDs" value="@subcat.SubcategoriaID"
+                                                @(Model.SelectedSubcategoriaIDs.Contains(subcat.SubcategoriaID) ? "checked" : "")
+                                                onchange="document.getElementById('subcatForm').submit()" />
+                                            @subcat.NombreSubcategoria
+                                        </label>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </form>
+            }
+        </td>
+
+        <td width="75%" valign="top" style="border: 1px solid #ccc;">
+            <table border="1" width="100%" cellspacing="10" cellpadding="10" style="table-layout: fixed;">
+                <tbody>
+                    @{
+                        int cols = 4;
+                        int rows = (int)Math.Ceiling(Model.Productos.Count / (double)cols);
+                        for (int r = 0; r < rows; r++)
+                        {
+                            <tr>
+                                @for (int c = 0; c < cols; c++)
+                                {
+                                    int index = r * cols + c;
+                                    if (index < Model.Productos.Count)
+                                    {
+                                        var p = Model.Productos[index];
+                                        <td>
+                                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID">
+                                                <img src="@p.ImagenPath" alt="@p.Nombre" width="100%" />
+                                                <div><strong>@p.Nombre</strong></div>
+                                                <div style="color: #B12704; font-weight: bold;">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+                                            </a>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td></td>
+                                    }
+                                }
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+
+            <div style="margin

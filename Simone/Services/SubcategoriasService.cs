@@ -103,5 +103,12 @@ namespace Simone.Services
                                 .ToListAsync(); // Asynchronously get the list
         }
 
+        public async Task<List<Subcategorias>> GetByCategoriaIdAsync(int categoriaID)
+        {
+            return await _context.Subcategorias
+                                 .Where(s => s.CategoriaID == categoriaID)
+                                 .ToListAsync();
+        }
+
     }
 }
