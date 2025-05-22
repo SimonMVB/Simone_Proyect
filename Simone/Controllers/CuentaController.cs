@@ -229,16 +229,14 @@ namespace Simone.Controllers
             {
                 TempData["MensajeError"] = "No se encontró al usuario.";
                 return RedirectToAction("Login");
-            } else {
-                TempData["MensajeExito"] = "Usuario encontrado exitosamente.";
             }
 
             var roles = await _userManager.GetRolesAsync(usuario);
             ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
-            ViewBag.Usuario = usuario;
 
-            return View();
+            return View(usuario); 
         }
+
 
 
         [HttpPost]

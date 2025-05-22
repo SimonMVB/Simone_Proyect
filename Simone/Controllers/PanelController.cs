@@ -533,15 +533,17 @@ namespace Simone.Controllers
             return RedirectToAction("Productos");
         }
 
+        [AllowAnonymous]
         public IActionResult Ofertas()
         {
             var productosEnOferta = _context.Productos
-                .Where(p => p.PrecioVenta < p.PrecioCompra) // o cualquier lógica de oferta
+                .Where(p => p.PrecioVenta < p.PrecioCompra)
                 .Include(p => p.ImagenesProductos)
                 .ToList();
 
             return View(productosEnOferta);
         }
+
 
         [HttpPost]
         [ValidateAntiForgeryToken]

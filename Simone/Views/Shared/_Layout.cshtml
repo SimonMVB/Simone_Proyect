@@ -14,6 +14,8 @@
     <!-- Swiper CSS -->
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" integrity="sha512-..." crossorigin="anonymous" referrerpolicy="no-referrer" />
+
 
 
     <!-- Estilos personalizados -->
@@ -48,32 +50,446 @@
             transition: right 0.3s ease;
             z-index: 1050;
         }
+
+        .navbar-dark .navbar-nav .nav-link,
+        .navbar-dark .navbar-brand {
+            color: white !important;
+        }
+        /* From Uiverse.io by Creatlydev */
+        .button {
+            line-height: 1;
+            text-decoration: none;
+            display: inline-flex;
+            border: none;
+            cursor: pointer;
+            align-items: center;
+            gap: 0.75rem;
+            background-color: var(--clr);
+            color: #fff;
+            border-radius: 10rem;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            padding-left: 20px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: background-color 0.3s;
+        }
+
+        .button__icon-wrapper {
+            flex-shrink: 0;
+            width: 25px;
+            height: 25px;
+            position: relative;
+            color: var(--clr);
+            background-color: #fff;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            overflow: hidden;
+        }
+
+        .button:hover {
+            background-color: #000;
+        }
+
+            .button:hover .button__icon-wrapper {
+                color: #000;
+            }
+
+        .button__icon-svg--copy {
+            position: absolute;
+            transform: translate(-150%, 150%);
+        }
+
+        .button:hover .button__icon-svg:first-child {
+            transition: transform 0.3s ease-in-out;
+            transform: translate(150%, -150%);
+        }
+
+        .button:hover .button__icon-svg--copy {
+            transition: transform 0.3s ease-in-out 0.1s;
+            transform: translate(0);
+        }
+
+        <!-- //////////////////////////////////////////////////////// -->
+        .nav-snowglitter {
+            position: relative;
+            overflow: hidden;
+            background-color: #000;
+        }
+
+            /* Contenedor de partículas */
+            .nav-snowglitter::before {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+                background-image: radial-gradient(circle, rgba(255, 182, 193, 0.5) 2px, transparent 2px), radial-gradient(circle, rgba(255, 182, 193, 0.3) 1.5px, transparent 1.5px), radial-gradient(circle, rgba(255, 182, 193, 0.6) 1px, transparent 1px);
+                background-size: 100px 100px, 80px 80px, 60px 60px;
+                background-repeat: repeat;
+                animation: glitterFall 15s linear infinite;
+                z-index: 0;
+                opacity: 0.6;
+            }
+
+        /* Animación de caída */
+        @@keyframes glitterFall {
+            0%
+
+        {
+            background-position: 0 0, 0 0, 0 0;
+        }
+
+        100% {
+            background-position: 0 1000px, 0 800px, 0 600px;
+        }
+
+        }
+
+        /* El contenido del navbar siempre por encima */
+        .nav-snowglitter > * {
+            position: relative;
+            z-index: 1;
+        }
+        /* El contenido del footer */
+        .wrapper {
+            display: inline-flex;
+            list-style: none;
+            padding-top: 20px;
+            font-family: "Poppins", sans-serif;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+            .wrapper .icon {
+                position: relative;
+                background: #fff;
+                border-radius: 50%;
+                margin: 10px;
+                width: 50px;
+                height: 50px;
+                font-size: 20px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                box-shadow: 0 10px 10px rgba(0, 0, 0, 0.1);
+                cursor: pointer;
+                transition: all 0.3s ease;
+                color: #000;
+            }
+
+            .wrapper .tooltip {
+                position: absolute;
+                top: 0;
+                font-size: 14px;
+                background: #fff;
+                color: #fff;
+                padding: 5px 8px;
+                border-radius: 5px;
+                box-shadow: 0 10px 10px rgba(0, 0, 0, 0.1);
+                opacity: 0;
+                pointer-events: none;
+                transition: 0.3s ease;
+            }
+
+                .wrapper .tooltip::before {
+                    position: absolute;
+                    content: "";
+                    height: 8px;
+                    width: 8px;
+                    background: #fff;
+                    bottom: -3px;
+                    left: 50%;
+                    transform: translateX(-50%) rotate(45deg);
+                }
+
+            .wrapper .icon:hover .tooltip {
+                top: -35px;
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            .wrapper .facebook:hover,
+            .wrapper .facebook:hover .tooltip,
+            .wrapper .facebook:hover .tooltip::before {
+                background: #1877f2;
+                color: #fff;
+            }
+
+            .wrapper .twitter:hover,
+            .wrapper .twitter:hover .tooltip,
+            .wrapper .twitter:hover .tooltip::before {
+                background: #1da1f2;
+                color: #fff;
+            }
+
+            .wrapper .instagram:hover,
+            .wrapper .instagram:hover .tooltip,
+            .wrapper .instagram:hover .tooltip::before {
+                background: #e4405f;
+                color: #fff;
+            }
+
+            .wrapper .tiktok:hover,
+            .wrapper .tiktok:hover .tooltip,
+            .wrapper .tiktok:hover .tooltip::before {
+                background: #000000;
+                color: #fff;
+            }
+    
+.back-to-top-btn {
+  position: fixed;
+  bottom: 30px;
+            left: 30px;
+            background: transparent;
+  border: none;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  z-index: 1000;
+  gap: 5px;
+  font-size: 1rem;
+  transition: transform 0.3s ease;
+}
+
+.back-to-top-btn:hover {
+  transform: scale(1.05);
+}
+
+.back-to-top-btn .text,
+.back-to-top-btn .clone {
+  display: flex;
+  gap: 2px;
+}
+
+.back-to-top-btn svg {
+  stroke: white;
+}
+
+
+
+
+        /* El contenido de boton para arriba */
+        .back-to-top {
+            width: 140px;
+            height: 56px;
+            overflow: hidden;
+            border: none;
+            color: #fff;
+            background: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding-bottom: 2em;
+            cursor: pointer;
+            z-index: 9999;
+        }
+
+            .back-to-top > div,
+            .back-to-top > svg {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                display: flex;
+            }
+
+            .back-to-top:before {
+                content: "";
+                position: absolute;
+                height: 2px;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                transform: scaleX(0);
+                transform-origin: bottom right;
+                background: currentColor;
+                transition: transform 0.25s ease-out;
+            }
+
+            .back-to-top:hover:before {
+                transform: scaleX(1);
+                transform-origin: bottom left;
+            }
+
+            .back-to-top .clone > *,
+            .back-to-top .text > * {
+                opacity: 1;
+                font-size: 1.3rem;
+                transition: 0.2s;
+                margin-left: 4px;
+            }
+
+            .back-to-top .clone > * {
+                transform: translateY(60px);
+            }
+
+            .back-to-top:hover .clone > * {
+                opacity: 1;
+                transform: translateY(0px);
+                transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1) 0s;
+            }
+
+            .back-to-top:hover .text > * {
+                opacity: 1;
+                transform: translateY(-60px);
+                transition: all 0.2s cubic-bezier(0.215, 0.61, 0.355, 1) 0s;
+            }
+
+            .back-to-top:hover .clone > :nth-child(1) {
+                transition-delay: 0.15s;
+            }
+
+            .back-to-top:hover .clone > :nth-child(2) {
+                transition-delay: 0.2s;
+            }
+
+            .back-to-top:hover .clone > :nth-child(3) {
+                transition-delay: 0.25s;
+            }
+
+            .back-to-top svg {
+                width: 20px;
+                right: 0;
+                top: 50%;
+                transform: translateY(-50%) rotate(-50deg);
+                transition: 0.2s ease-out;
+            }
+
+            .back-to-top:hover svg {
+                transform: translateY(-50%) rotate(-90deg);
+            }
+
     </style>
 </head>
 
 <body class="bg-light">
     <!-- Navbar Superior -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark navbar-custom shadow-sm">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark nav-snowglitter">
+
+
             <div class="container">
                 <!-- Botón para abrir menú lateral de categorías -->
                 <button class="btn text-white me-2" id="open-sidebar" aria-label="Abrir menú de categorías">
                     <i class="fa-solid fa-bars"></i>
                 </button>
                 <!-- Logo -->
-                <a class="navbar-brand fw-bold" asp-controller="Home" asp-action="Index">SIMONE</a>
+                <a class="navbar-brand fw-bold text-white" asp-controller="Home" asp-action="Index">SIMONE</a>
 
                 <!-- Enlaces centrales -->
                 <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Index">HOME</a>
+                            <a class="nav-link text-white" asp-controller="Home" asp-action="Index">HOME</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Panel" asp-action="Ofertas">OFERTAS</a>
+                            <form asp-controller="Panel" asp-action="Ofertas" method="get" class="d-inline">
+                                <button type="submit" class="btn btn-ofertas">
+                                    Ofertas
+                                    <div class="star-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             xml:space="preserve"
+                                             version="1.1"
+                                             style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+                                             viewBox="0 0 784.11 815.53"
+                                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <defs></defs>
+                                        <g id="Layer_x0020_1">
+                                        <metadata id="CorelCorpID_0Corel-Layer"></metadata>
+                                        <path class="fil0"
+                                              d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z"></path>
+      </g>
+    </svg>
+                                    </div>
+                                    <div class="star-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             xml:space="preserve"
+                                             version="1.1"
+                                             style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+                                             viewBox="0 0 784.11 815.53"
+                                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <defs></defs>
+                                        <g id="Layer_x0020_1">
+                                        <metadata id="CorelCorpID_0Corel-Layer"></metadata>
+                                        <path class="fil0"
+                                              d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z"></path>
+      </g>
+    </svg>
+                                    </div>
+                                    <div class="star-3">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             xml:space="preserve"
+                                             version="1.1"
+                                             style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+                                             viewBox="0 0 784.11 815.53"
+                                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <defs></defs>
+                                        <g id="Layer_x0020_1">
+                                        <metadata id="CorelCorpID_0Corel-Layer"></metadata>
+                                        <path class="fil0"
+                                              d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z"></path>
+      </g>
+    </svg>
+                                    </div>
+                                    <div class="star-4">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             xml:space="preserve"
+                                             version="1.1"
+                                             style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+                                             viewBox="0 0 784.11 815.53"
+                                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <defs></defs>
+                                        <g id="Layer_x0020_1">
+                                        <metadata id="CorelCorpID_0Corel-Layer"></metadata>
+                                        <path class="fil0"
+                                              d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z"></path>
+      </g>
+    </svg>
+                                    </div>
+                                    <div class="star-5">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             xml:space="preserve"
+                                             version="1.1"
+                                             style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+                                             viewBox="0 0 784.11 815.53"
+                                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <defs></defs>
+                                        <g id="Layer_x0020_1">
+                                        <metadata id="CorelCorpID_0Corel-Layer"></metadata>
+                                        <path class="fil0"
+                                              d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z"></path>
+      </g>
+    </svg>
+                                    </div>
+                                    <div class="star-6">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                             xml:space="preserve"
+                                             version="1.1"
+                                             style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+                                             viewBox="0 0 784.11 815.53"
+                                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                                        <defs></defs>
+                                        <g id="Layer_x0020_1">
+                                        <metadata id="CorelCorpID_0Corel-Layer"></metadata>
+                                        <path class="fil0"
+                                              d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z"></path>
+      </g>
+    </svg>
+                                    </div>
+                                </button>
+                            </form>
                         </li>
+
+
                         <li class="nav-item">
-                            <a class="nav-link" asp-controller="Home" asp-action="Nosotros">NOSOTROS</a>
+                            <a class="nav-link text-white" asp-controller="Home" asp-action="Nosotros">NOSOTROS</a>
                         </li>
                     </ul>
                 </div>
@@ -199,11 +615,30 @@
 
         <ul class="list-unstyled sidebar-list">
             <li>
-                <a asp-controller="Categorias" asp-action="Ver_Todo">
-                    <img src="~/images/Categorias_slider/ver_todo.png" class="me-2 sidebar-icon" alt="Ver todo" />
+                <a asp-controller="Categorias" asp-action="Ver_Todo" class="button" style="--clr: #7808d0">
+                    <span class="button__icon-wrapper">
+                        <svg viewBox="0 0 14 15"
+                             fill="none"
+                             xmlns="http://www.w3.org/2000/svg"
+                             class="button__icon-svg"
+                             width="10">
+                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z"
+                                  fill="currentColor"></path>
+                        </svg>
+
+                        <svg viewBox="0 0 14 15"
+                             fill="none"
+                             width="10"
+                             xmlns="http://www.w3.org/2000/svg"
+                             class="button__icon-svg button__icon-svg--copy">
+                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z"
+                                  fill="currentColor"></path>
+                        </svg>
+                    </span>
                     Ver todo
                 </a>
             </li>
+
             <li>
                 <a asp-controller="Categorias" asp-action="Blusas">
                     <img src="~/images/Categorias_slider/blusas.png" class="me-2 sidebar-icon" alt="Blusas" />
@@ -286,12 +721,52 @@
         @RenderBody()
     </main>
 
-    <!-- Footer -->
-    <footer class="bg-dark text-light text-center py-3 mt-4">
-        <div class="container">
-            <small>&copy; 2025 Simone - Todos los derechos reservados.</small>
+    <!-- Footer estilo HubSpot + Uiverse.io animation -->
+    <footer class="bg-dark text-light pt-4 pb-4 mt-5">
+        <div class="container text-center">
+
+            <!-- Línea decorativa superior -->
+            <hr class="mb-4" style="border-top: 1px solid #5c6f7f; width: 90%; margin: 0 auto;">
+
+            <!-- Animación de redes sociales -->
+            <ul class="wrapper justify-content-center">
+                <li class="icon facebook">
+                    <span class="tooltip">Facebook</span>
+                    <i class="fab fa-facebook-f"></i>
+                </li>
+                <li class="icon instagram">
+                    <span class="tooltip">Instagram</span>
+                    <i class="fab fa-instagram"></i>
+                </li>
+                <li class="icon tiktok">
+                    <span class="tooltip">TikTok</span>
+                    <i class="fab fa-tiktok"></i>
+                </li>
+                <li class="icon twitter">
+                    <span class="tooltip">X</span>
+                    <i class="fab fa-x-twitter"></i>
+                </li>
+            </ul>
+
+            <!-- Marca y derechos -->
+            <div class="mb-2 mt-4">
+                <strong>Simone</strong><br />
+                <small>&copy; 2025 Simone - Todos los derechos reservados.</small>
+            </div>
+
+            <!-- Enlaces legales -->
+            <div>
+                <a href="@Url.Action("AvisoLegal", "Legal")" class="text-light text-decoration-underline mx-2">Aviso Legal</a>
+                <a href="@Url.Action("PoliticaPrivacidad", "Legal")" class="text-light text-decoration-underline mx-2">Política de Privacidad</a>
+                <a href="@Url.Action("TerminosCondiciones", "Legal")" class="text-light text-decoration-underline mx-2">Términos y Condiciones</a>
+                <a href="@Url.Action("PoliticaCookies", "Legal")" class="text-light text-decoration-underline mx-2">Política de Cookies</a>
+            </div>
+
         </div>
     </footer>
+
+
+
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -355,10 +830,33 @@
             toggleSidebarBtn?.addEventListener("click", toggleSidebar);
             openSidebarBtn?.addEventListener("click", toggleSidebar);
         });
-
+             function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
     </script>
+    <!-- Botón flotante Back to Top -->
+    <button class="back-to-top" onclick="scrollToTop()">
+        <div class="text">
+            <span>Back</span>
+            <span>to</span>
+            <span>top</span>
+        </div>
+        <div class="clone">
+            <span>Back</span>
+            <span>to</span>
+            <span>top</span>
+        </div>
+        <svg stroke-width="2" stroke="currentColor" viewBox="0 0 24 24" fill="none"
+             xmlns="http://www.w3.org/2000/svg" width="20px">
+            <path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linejoin="round" stroke-linecap="round" />
+        </svg>
+    </button>
 
     @RenderSection("Scripts", required: false)
+    
 
 </body>
 

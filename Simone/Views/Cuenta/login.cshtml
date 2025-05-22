@@ -7,9 +7,10 @@
 
 <div class="container mt-5" style="max-width: 400px;">
     <div class="card shadow-sm rounded-3">
-        <div class="card-header text-center bg-dark text-white">
-            <h4><i class="fa-solid fa-right-to-bracket me-2"></i>Iniciar Sesión</h4>
+        <div class="card-header login-header text-center">
+            <h4 class="mb-0"><i class="fa-solid fa-right-to-bracket me-2"></i>Iniciar Sesión</h4>
         </div>
+
 
         <div class="card-body">
             <!-- Mensajes de TempData -->
@@ -57,14 +58,20 @@
                 <!-- Input escondido para el RequestID -->
                 <input type="hidden" name="RequestID" value="@ViewData["RequestID"]" />
 
-                <button type="submit" class="btn btn-dark w-100" id="btnLogin">
-                    <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Ingresar
+                <!-- Botón personalizado -->
+                <button type="submit" class="login-button w-100" id="btnLogin">
+                    <div class="login-text">
+                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
+                    </div>
                 </button>
             </form>
         </div>
 
         <div class="card-footer text-center small">
-            ¿No tienes una cuenta? <a asp-controller="Cuenta" asp-action="Registrar">Regístrate aquí</a>
+            ¿No tienes una cuenta?
+            <a asp-controller="Cuenta" asp-action="Registrar" style="color:#f4a7c1; font-weight:600;">
+                Regístrate aquí
+            </a>
         </div>
     </div>
 </div>
@@ -75,7 +82,64 @@
         document.getElementById("formLogin").addEventListener("submit", function () {
             const btn = document.getElementById("btnLogin");
             btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Ingresando...';
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm text-light-pink me-2" style="border-color: #f4a7c1; border-right-color: transparent;"></span>Ingresando...';
         });
     </script>
 }
+
+<style>
+    .login-header {
+        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
+        color: white;
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+        padding: 1rem;
+        box-shadow: inset 0 -2px 4px rgba(0,0,0,0.1);
+        font-weight: 600;
+    }
+
+    
+    .login-button {
+        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
+        border: none;
+        border-radius: 30px;
+        padding: 0.75em 1.5em;
+        color: #fff;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 8px 20px rgba(244, 167, 193, 0.4);
+    }
+
+        .login-button:hover {
+            background: linear-gradient(135deg, #f4a7c1, #f9d5ec);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(244, 167, 193, 0.6);
+        }
+
+        .login-button:active {
+            transform: scale(0.97);
+            box-shadow: 0 5px 15px rgba(244, 167, 193, 0.5);
+        }
+
+    .login-text {
+        font-weight: 600;
+        font-size: 16px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        transition: transform 0.2s ease-in-out;
+    }
+
+    .login-button:hover .login-text {
+        transform: scale(0.97);
+    }
+
+    .text-light-pink {
+        color: #f4a7c1 !important;
+    }
+</style>
