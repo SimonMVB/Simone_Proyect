@@ -500,14 +500,15 @@
                     {
                         <div class="dropdown mx-2">
                             <a class="text-white dropdown-toggle d-flex align-items-center" href="#" role="button"
-                               id="direccionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                               title="Haz clic para cambiar tu dirección">
+                                id="direccionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                                title="Haz clic para cambiar tu dirección">
                                 <i class="fa-solid fa-location-dot me-1"></i> Enviar a:
                                 <span class="fw-bold ms-1 text-truncate" style="max-width: 150px;">
                                     @(ViewBag.UserDireccion ?? "Tu dirección")
                                 </span>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end animate__animated animate__fadeIn" aria-labelledby="direccionDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end animate__animated animate__fadeIn"
+                                aria-labelledby="direccionDropdown">
                                 <li>
                                     <a class="dropdown-item" asp-controller="Cuenta" asp-action="CambiarDireccion">
                                         <i class="fa-solid fa-map-marker-alt me-2 text-primary"></i> Cambiar Dirección
@@ -518,32 +519,32 @@
                     }
                     else
                     {
-                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="Login" title="Inicia sesión para ingresar tu dirección">
+                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="Login"
+                            title="Inicia sesión para ingresar tu dirección">
                             <i class="fa-solid fa-location-dot me-1"></i> Enviar a:
                             <span class="fw-bold">Iniciar Sesión</span>
                         </a>
                     }
                 </div>
 
+                <!-- Botón de búsqueda -->
+                <a asp-controller="Compras" asp-action="Catalogo" class="text-white mx-2" aria-label="Buscar">
+                    <i class="fa-solid fa-magnifying-glass fa-lg"></i>
+                </a>
+                <!-- Botón de favoritos -->
+                <a href="/Favoritos/Index" id="heart-link">
+                    <i id="icon" class="far fa-heart" style="font-size: 20px; color: crimson; cursor: pointer;"></i>
+                </a>
 
-                    <!-- Botón de búsqueda -->
-                    <a href="#" class="text-white mx-2" aria-label="Buscar">
-                        <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-                    </a>
-                    <!-- Botón de favoritos -->
-                    <a href="/Favoritos/Index" id="heart-link">
-                        <i id="icon" class="far fa-heart" style="font-size: 20px; color: crimson; cursor: pointer;"></i>
-                    </a>
-
-                    <!-- Botón de carrito: Se actualizará dinámicamente -->
-                    <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart"
-                        aria-label="Ver carrito">
-                        <i class="fa-solid fa-cart-shopping fa-lg"></i>
-                        <span id="cart-count"
-                            class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            @(ViewBag.CartCount ?? 0)
-                        </span>
-                    </a>
+                <!-- Botón de carrito: Se actualizará dinámicamente -->
+                <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart"
+                    aria-label="Ver carrito">
+                    <i class="fa-solid fa-cart-shopping fa-lg"></i>
+                    <span id="cart-count"
+                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                        @(ViewBag.CartCount ?? 0)
+                    </span>
+                </a>
                 @inject UserManager<Usuario> UserManager
                 @inject SignInManager<Usuario> SignInManager
 
@@ -553,13 +554,13 @@
                     var user = await UserManager.GetUserAsync(User);
 
                     <div class="dropdown">
-                        <a class="mx-2 dropdown-toggle d-flex align-items-center" id="userDropdown" data-bs-toggle="dropdown"
-                           aria-expanded="false" role="button" style="text-decoration: none;">
+                        <a class="mx-2 dropdown-toggle d-flex align-items-center" id="userDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false" role="button" style="text-decoration: none;">
 
                             @if (!string.IsNullOrEmpty(user.FotoPerfil))
                             {
                                 <img src="@user.FotoPerfil" class="rounded-circle border border-light shadow-sm"
-                                     style="width: 38px; height: 38px; object-fit: cover;" alt="Avatar" />
+                                    style="width: 38px; height: 38px; object-fit: cover;" alt="Avatar" />
                             }
                             else
                             {
@@ -600,15 +601,16 @@
                         <i class="fa-solid fa-user fa-lg"></i>
                     </a>
                 }
-                </div>
+            </div>
             </div>
         </nav>
     </header>
 
     <!-- Sidebar de Categorías Mejorado -->
-    <aside id="sidebar" class="sidebar-custom position-fixed vh-100 p-4 text-white shadow" style="transform: translateX(-100%);">
+    <aside id="sidebar" class="sidebar-custom position-fixed vh-100 p-4 text-white shadow"
+        style="transform: translateX(-100%);">
         <button class="btn text-white border-0 mb-3" id="close-sidebar">
-            
+
         </button>
 
         <h5 class="fw-bold mb-4"><i class="fa-solid fa-bars-staggered me-2"></i>Categorías</h5>
@@ -659,7 +661,8 @@
             </li>
             <li>
                 <a asp-controller="Categorias" asp-action="TrajeDeBaño">
-                    <img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon" alt="Trajes de baño" />
+                    <img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon"
+                        alt="Trajes de baño" />
                     Trajes de Baño
                 </a>
             </li>
@@ -816,7 +819,7 @@
 
 
 
-            document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", function () {
             const sidebar = document.getElementById("sidebar");
             const toggleSidebarBtn = document.getElementById("toggle-sidebar");
             const openSidebarBtn = document.getElementById("open-sidebar");

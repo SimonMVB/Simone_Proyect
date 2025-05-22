@@ -37,6 +37,7 @@ namespace Simone.Models
         public int ProveedorID { get; set; }
         public int SubcategoriaID { get; set; }
         public int CategoriaID { get; set; }  // ✅ Clave foránea hacia Categoría
+        public string VendedorID { get; set; }
 
         // 🔄 Propiedades de navegación
         [ForeignKey("CategoriaID")]
@@ -47,6 +48,9 @@ namespace Simone.Models
 
         [ForeignKey("SubcategoriaID")]
         public virtual Subcategorias Subcategoria { get; set; }
+
+        [ForeignKey("VendedorID")]
+        public virtual Usuario Usuario { get; set; }
 
         public virtual ICollection<ImagenesProductos> ImagenesProductos { get; set; } = new List<ImagenesProductos>();
         public virtual ICollection<MovimientosInventario> MovimientosInventario { get; set; } = new List<MovimientosInventario>();

@@ -217,6 +217,7 @@
             </h2>
             <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto"
                 enctype="multipart/form-data">
+
                 <!-- Nombre -->
                 <div class="field">
                     <label for="Nombre">Nombre</label>
@@ -258,7 +259,7 @@
                 <!-- PrecioVenta -->
                 <div class="field">
                     <label for="PrecioVenta">Precio de Venta</label>
-                    <input type="text" name="precioVentaString" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
+                    <input type="text" name="precioVenta" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
                         required />
                 </div>
 
@@ -399,29 +400,21 @@
             }
         });
 
-        document.getElementById("PrecioCompra").addEventListener("input", function (event) {
-            var precioCompraInput = document.getElementById("PrecioCompra");
+        function validatePriceInput(event) {
+            const input = event.target;
 
-            // Check if the input value is a valid number with decimal
-            var validNumberPattern = /^\d+(\.\d+)?$/; // Validates numbers like "40.50" or "1000"
+            const validNumberPattern = /^\d+(,\d+)?$/;
 
-            if (!validNumberPattern.test(precioCompraInput.value)) {
-                event.preventDefault(); // Prevent form submission if the value is invalid
-                alert("Por favor, ingrese un número válido para el precio de compra.");
+            if (!validNumberPattern.test(input.value)) {
+                event.preventDefault();
+                alert(`Por favor, ingrese un número válido para el precio.`);
+                input.value = "";
             }
-        });
+        }
 
-        document.getElementById("PrecioVenta").addEventListener("change", function (event) {
-            var precioVentaInput = document.getElementById("PrecioVenta");
+        document.getElementById("PrecioCompra").addEventListener("change", validatePriceInput);
+        document.getElementById("PrecioVenta").addEventListener("change", validatePriceInput);
 
-            // Check if the input value is a valid number with decimal
-            var validNumberPattern = /^\d+(\.\d+)?$/; // Validates numbers like "40.50" or "1000"
-
-            if (!validNumberPattern.test(precioVentaInput.value)) {
-                event.preventDefault(); // Prevent form submission if the value is invalid
-                alert("Por favor, ingrese un número válido para el precio de compra.");
-            }
-        });
 
     </script>
 
