@@ -7,8 +7,8 @@
 
 <div class="container mt-5" style="max-width: 500px;">
     <div class="card shadow-sm rounded-3">
-        <div class="card-header text-center bg-success text-white">
-            <h4><i class="fa-solid fa-user-plus me-2"></i>Crear una cuenta</h4>
+        <div class="card-header login-header text-center">
+            <h4 class="mb-0"><i class="fa-solid fa-user-plus me-2"></i>Crear una cuenta</h4>
         </div>
 
         <div class="card-body">
@@ -99,15 +99,20 @@
                     <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                 </div>
 
-                <!-- Botón registrar -->
-                <button type="submit" class="btn btn-success w-100" id="btnRegistrar" disabled>
-                    <i class="fa-solid fa-user-plus me-2"></i>Registrarme
+                <!-- Botón personalizado -->
+                <button type="submit" class="login-button w-100" id="btnRegistrar" disabled>
+                    <div class="login-text">
+                        <i class="fa-solid fa-user-plus me-2"></i>Registrarme
+                    </div>
                 </button>
             </form>
         </div>
 
         <div class="card-footer text-center small">
-            ¿Ya tienes una cuenta? <a asp-controller="Cuenta" asp-action="Login">Inicia sesión aquí</a>
+            ¿Ya tienes una cuenta?
+            <a asp-controller="Cuenta" asp-action="Login" style="color:#f4a7c1; font-weight:600;">
+                Inicia sesión aquí
+            </a>
         </div>
     </div>
 </div>
@@ -115,76 +120,75 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        var $form = $("#formRegistro");
-        var $submitButton = $("#btnRegistrar");
+        const form = document.getElementById("formRegistro");
+        const btn = document.getElementById("btnRegistrar");
 
         $(document).ready(function () {
-            $form.on('input change', function () {
-                $submitButton.prop("disabled", !$form.valid());
+            $(form).on('input change', function () {
+                btn.disabled = !$(form).valid();
             });
-            $.validator.unobtrusive.parse($form);
+            $.validator.unobtrusive.parse(form);
         });
 
-        $form.on("submit", function () {
-            $submitButton.prop("disabled", true).html('<span class="spinner-border spinner-border-sm me-2"></span>Registrando...');
+        form.addEventListener("submit", function () {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm text-light-pink me-2" style="border-color: #f4a7c1; border-right-color: transparent;"></span>Registrando...';
         });
     </script>
 }
+
 <style>
-/* Estilo general para la tarjeta */
-.card {
-    border-radius: 15px;
-    border: none;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-}
+    .login-header {
+        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
+        color: white;
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+        padding: 1rem;
+        box-shadow: inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+        font-weight: 600;
+    }
 
-/* Cabecera */
-.card-header {
-    font-size: 1.25rem;
-    font-weight: bold;
-    padding: 1rem;
-}
+    .login-button {
+        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
+        border: none;
+        border-radius: 30px;
+        padding: 0.75em 1.5em;
+        color: #fff;
+        font-weight: 600;
+        font-size: 16px;
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 8px 20px rgba(244, 167, 193, 0.4);
+    }
 
-/* Input con icono */
-.input-group-text {
-    background-color: #f0f0f0;
-    border: none;
-}
+        .login-button:hover {
+            background: linear-gradient(135deg, #f4a7c1, #f9d5ec);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(244, 167, 193, 0.6);
+        }
 
-/* Inputs */
-.form-control {
-    border-radius: 0.5rem;
-    border: 1px solid #ced4da;
-    transition: box-shadow 0.3s ease;
-}
+        .login-button:active {
+            transform: scale(0.97);
+            box-shadow: 0 5px 15px rgba(244, 167, 193, 0.5);
+        }
 
-.form-control:focus {
-    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
-}
+    .login-text {
+        font-weight: 600;
+        font-size: 16px;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        transition: transform 0.2s ease-in-out;
+    }
 
-/* Botón de registro */
-#btnRegistrar {
-    font-weight: bold;
-    transition: all 0.3s ease;
-}
+    .login-button:hover .login-text {
+        transform: scale(0.97);
+    }
 
-#btnRegistrar:disabled {
-    background-color: #6c757d;
-    cursor: not-allowed;
-}
-
-/* Mensajes */
-.alert {
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-}
-
-/* Footer */
-.card-footer a {
-    font-weight: bold;
-    color: #198754;
-}
-.card-footer a:hover {
-    text-decoration: underline;
-}
+    .text-light-pink {
+        color: #f4a7c1 !important;
+    }
 </style>

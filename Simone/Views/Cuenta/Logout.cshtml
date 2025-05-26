@@ -1,5 +1,137 @@
 ﻿@{
     Layout = null;
 }
-<h2>Cerrando sesión...</h2>
-<meta http-equiv="refresh" content="2;url=/Home/Index">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cierre de sesión - Simone</title>
+    <meta name="description" content="Estamos cerrando tu sesión de forma segura">
+
+    <!-- Preconexión para mejor performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Fuente de Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
+    <!-- Estilos inline para carga inmediata -->
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .logout-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @@keyframes spin {
+            0%
+
+        {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+
+        p {
+            color: #7f8c8d;
+            margin-top: 0.5rem;
+        }
+    </style>
+
+    <!-- Redirección segura con fallback -->
+    <meta http-equiv="refresh" content="3;url=/Home/Index">
+    <noscript>
+        <meta http-equiv="refresh" content="0;url=/Home/Index">
+    </noscript>
+</head>
+<body>
+    <div class="logout-container">
+        <h1>Cerrando sesión...</h1>
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Estamos terminando tu sesión de forma segura</p>
+        <p class="small">Serás redirigido automáticamente a la página de inicio</p>
+
+        <!-- Fallback para JS deshabilitado -->
+        <noscript>
+            <div class="alert alert-warning">
+                <p>JavaScript está deshabilitado. Serás redirigido inmediatamente.</p>
+                <a href="/Home/Index" class="btn btn-primary">Ir a la página de inicio</a>
+            </div>
+        </noscript>
+    </div>
+
+    <!-- Script para limpieza de sesión -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Limpiar localStorage/sessionStorage si es necesario
+            ['sessionStorage', 'localStorage'].forEach(function(storage) {
+                try {
+                    window[storage].clear();
+                } catch(e) {
+                    console.error('Error al limpiar ' + storage, e);
+                }
+            });
+
+            // Forzar solicitud de logout al servidor
+            fetch('/Cuenta/Logout', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]')?.value || ''
+                }
+            }).catch(e => console.error('Error en logout:', e));
+
+            // Mostrar tiempo restante
+            let seconds = 3;
+            const timerElement = document.createElement('p');
+            timerElement.className = 'text-muted small mt-2';
+            document.querySelector('.logout-container').appendChild(timerElement);
+
+            const timer = setInterval(() => {
+                seconds--;
+                timerElement.textContent = `Redireccionando en ${seconds} segundo${seconds !== 1 ? 's' : ''}...`;
+                if (seconds <= 0) clearInterval(timer);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

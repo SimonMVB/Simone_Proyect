@@ -3,179 +3,458 @@
     ViewData["Title"] = "Panel de Control";
 }
 
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 <style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .dashboard-header {
+        background: linear-gradient(135deg, var(--accent-purple), #2E0854);
+        color: var(--primary-light);
+        padding: 2rem;
+        border-radius: 12px 12px 0 0;
+        margin-bottom: 0;
+    }
+
+    .dashboard-title {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+    }
+
+    .dashboard-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+
+    .dashboard-content {
+        background-color: var(--primary-light);
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.5rem;
+    }
+
     .dashboard-card {
-        transition: all 0.3s ease;
-        border-radius: 15px;
-        background: #fff;
+        background-color: var(--primary-light);
+        border-radius: 12px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--accent-purple);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
 
-    .dashboard-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-left: 4px solid var(--accent-gold);
+        }
+
+    .card-header {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1rem;
     }
 
-    .dashboard-card img {
-        height: 80px;
+    .card-icon {
+        font-size: 1.5rem;
+        color: var(--accent-purple);
+        margin-right: 1rem;
+        flex-shrink: 0;
+    }
+
+    .card-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: var(--dark-gray);
+    }
+
+    .card-subtitle {
+        font-size: 0.9rem;
+        color: var(--text-light);
+        margin-bottom: 0;
+    }
+
+    .card-body {
+        flex-grow: 1;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-description {
+        font-size: 0.95rem;
+        color: var(--text-color);
+        line-height: 1.5;
+    }
+
+    .card-footer {
+        margin-top: auto;
+    }
+
+    .card-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1.25rem;
+        border-radius: 30px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+        .card-btn i {
+            margin-right: 0.5rem;
+        }
+
+    .btn-primary {
+        background-color: var(--accent-purple);
+        color: var(--primary-light);
+    }
+
+        .btn-primary:hover {
+            background-color: #5E2D8C;
+            color: var(--primary-light);
+        }
+
+    .btn-success {
+        background-color: var(--success-color);
+        color: var(--primary-light);
+    }
+
+        .btn-success:hover {
+            background-color: #218838;
+            color: var(--primary-light);
+        }
+
+    .btn-warning {
+        background-color: var(--warning-color);
+        color: var(--primary-dark);
+    }
+
+        .btn-warning:hover {
+            background-color: #e0a800;
+            color: var(--primary-dark);
+        }
+
+    .btn-info {
+        background-color: var(--info-color);
+        color: var(--primary-light);
+    }
+
+        .btn-info:hover {
+            background-color: #138496;
+            color: var(--primary-light);
+        }
+
+    .btn-secondary {
+        background-color: var(--medium-gray);
+        color: var(--text-color);
+    }
+
+        .btn-secondary:hover {
+            background-color: #d6d8db;
+            color: var(--text-color);
+        }
+
+    .disabled-card {
+        opacity: 0.7;
+        filter: grayscale(30%);
+    }
+
+        .disabled-card:hover {
+            transform: none;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid var(--accent-purple);
+            cursor: not-allowed;
+        }
+
+    .card-image {
         width: 80px;
+        height: 80px;
         object-fit: cover;
-        border-radius: 10px;
+        border-radius: 8px;
+        margin-left: auto;
+        align-self: center;
     }
 
-    .dashboard-card .header {
-        font-size: 1.3em;
-        font-weight: bold;
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
-    .dashboard-card .meta {
-        font-size: 0.9em;
-        color: #888;
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
     }
 
-    .dashboard-card .description {
-        font-size: 1em;
-        color: #444;
+    /* Responsive adjustments */
+    @@media (max-width: 992px) {
+        .dashboard-grid {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
     }
 
-    .dashboard-card .extra {
-        margin-top: 10px;
+    @@media (max-width: 768px) {
+        .dashboard-header {
+            padding: 1.5rem;
+        }
+
+        .dashboard-content {
+            padding: 1.5rem;
+        }
+
+        .dashboard-title {
+            font-size: 1.75rem;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-title {
+            font-size: 1.5rem;
+        }
+
+        .dashboard-subtitle {
+            font-size: 0.9rem;
+        }
     }
 </style>
 
-<div class="ui container mt-5 fade-in">
-    <div class="ui raised very padded text container segment"
-        style="border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
-        <h2 class="ui header">
-            <i class="settings icon teal"></i>
-            <div class="content">
-                @ViewData["Title"]
-                <div class="sub header">Gestión central del sistema y módulos disponibles</div>
-            </div>
-        </h2>
+<div class="dashboard-container fade-in">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-cog me-3"></i> @ViewData["Title"]
+        </h1>
+        <p class="dashboard-subtitle">Gestión central del sistema y módulos disponibles</p>
+    </div>
 
-        <div class="ui divider"></div>
-
-        <div class="ui relaxed divided list">
+    <div class="dashboard-content">
+        <div class="dashboard-grid">
             @if (User.IsInRole("Administrador"))
             {
                 <!-- Tarjeta: Usuarios -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Usuarios</h4>
-                        <p class="text-muted mb-1">Gestión de cuentas</p>
-                        <p>Administra usuarios registrados, roles y acceso.</p>
-                        <a class="btn btn-sm btn-primary mt-2" asp-controller="Panel" asp-action="Usuarios">
-                            <i class="eye icon me-1"></i> Ver Usuarios
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Usuarios</h3>
+                            <p class="card-subtitle">Gestión de cuentas</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Administra usuarios registrados, roles y acceso al sistema.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-primary" asp-controller="Panel" asp-action="Usuarios">
+                            <i class="fas fa-eye me-2"></i> Ver Usuarios
                         </a>
                     </div>
-                    <img src="~/images/panel/usuarios.jpg" alt="Usuarios" class="img-fluid"
-                        style="width: 90px; border-radius: 12px;">
                 </div>
 
                 <!-- Tarjeta: Productos -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Productos</h4>
-                        <p class="text-muted mb-1">Inventario</p>
-                        <p>Administra el catálogo de productos, modifica stock o edita detalles.</p>
-                        <a class="btn btn-sm btn-violet mt-2" asp-controller="Panel" asp-action="Productos">
-                            <i class="boxes icon me-1"></i> Ver Productos
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Productos</h3>
+                            <p class="card-subtitle">Inventario</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Administra el catálogo de productos, modifica stock o edita detalles.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-info" asp-controller="Panel" asp-action="Productos">
+                            <i class="fas fa-boxes me-2"></i> Ver Productos
                         </a>
                     </div>
-                    <img src="~/images/panel/productos.jpg" alt="Productos" class="img-fluid"
-                        style="width: 90px; border-radius: 12px;">
                 </div>
 
                 <!-- Tarjeta: Categorías -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Categorías</h4>
-                        <p class="text-muted mb-1">Gestión de productos</p>
-                        <p>Crea y organiza las categorías del inventario.</p>
-                        <a class="btn btn-sm btn-success mt-2" asp-controller="Panel" asp-action="Categorias">
-                            <i class="folder icon me-1"></i> Ver Categorías
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-folder"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Categorías</h3>
+                            <p class="card-subtitle">Gestión de productos</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Crea y organiza las categorías del inventario de productos.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-success" asp-controller="Panel" asp-action="Categorias">
+                            <i class="fas fa-folder me-2"></i> Ver Categorías
                         </a>
                     </div>
-                    <img src="~/images/panel/categorias.jpeg" alt="Categorías" class="img-fluid"
-                        style="width: 90px; border-radius: 12px;">
                 </div>
 
-                <!-- Tarjeta: Subcategorias -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Subcategorias</h4>
-                        <p class="text-muted mb-1">subcategorias</p>
-                        <p>Crea y organiza las subcategorias inventario.</p>
-                        <a class="btn btn-sm btn-warning mt-2" asp-controller="Panel" asp-action="Subcategorias">
-                            <i class="truck icon me-1"></i> Ver Subcategorias
+                <!-- Tarjeta: Subcategorías -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Subcategorías</h3>
+                            <p class="card-subtitle">Organización detallada</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Administra las subcategorías para una mejor organización del inventario.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-warning" asp-controller="Panel" asp-action="Subcategorias">
+                            <i class="fas fa-tags me-2"></i> Ver Subcategorías
                         </a>
                     </div>
                 </div>
 
                 <!-- Tarjeta: Proveedores -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Proveedores</h4>
-                        <p class="text-muted mb-1">Abastecimiento</p>
-                        <p>Gestiona empresas proveedoras y contactos.</p>
-                        <a class="btn btn-sm btn-warning mt-2" asp-controller="Panel" asp-action="Proveedores">
-                            <i class="truck icon me-1"></i> Ver Proveedores
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Proveedores</h3>
+                            <p class="card-subtitle">Abastecimiento</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Gestiona empresas proveedoras y contactos comerciales.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-warning" asp-controller="Panel" asp-action="Proveedores">
+                            <i class="fas fa-truck me-2"></i> Ver Proveedores
                         </a>
                     </div>
                 </div>
 
                 <!-- Tarjeta: Logs -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Registros</h4>
-                        <p class="text-muted mb-1">Auditoría</p>
-                        <p>Revisa los logs de actividad. (Próximamente)</p>
-                        <button class="btn btn-sm btn-secondary mt-2" disabled>
-                            <i class="clock icon me-1"></i> Ver Logs
+                <div class="dashboard-card disabled-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Registros</h3>
+                            <p class="card-subtitle">Auditoría</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Revisa los logs de actividad del sistema. (Próximamente)</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="card-btn btn-secondary" disabled>
+                            <i class="fas fa-clock me-2"></i> Ver Logs
                         </button>
                     </div>
-                    <img src="https://cdn-icons-png.flaticon.com/512/992/992700.png" alt="Logs" class="img-fluid"
-                        style="width: 90px; border-radius: 12px;">
                 </div>
 
                 <!-- Tarjeta: Reportes -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Reportes</h4>
-                        <p class="text-muted mb-1">Estadísticas</p>
-                        <p>Consulta ventas, inventario y más. (Próximamente)</p>
-                        <button class="btn btn-sm btn-success mt-2" disabled>
-                            <i class="chart bar icon me-1"></i> Ver Reportes
+                <div class="dashboard-card disabled-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Reportes</h3>
+                            <p class="card-subtitle">Estadísticas</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Consulta reportes de ventas, inventario y métricas. (Próximamente)</p>
+                    </div>
+                    <div class="card-footer">
+                        <button class="card-btn btn-success" disabled>
+                            <i class="fas fa-chart-bar me-2"></i> Ver Reportes
                         </button>
                     </div>
-                    <img src="https://cdn-icons-png.flaticon.com/512/1828/1828884.png" alt="Reportes" class="img-fluid"
-                        style="width: 90px; border-radius: 12px;">
                 </div>
             }
             else if (User.IsInRole("Vendedor"))
             {
-                <!-- Tarjeta: Productos -->
-                <div class="item d-flex align-items-center justify-content-between p-4 mb-3 bg-white shadow-sm rounded"
-                    style="gap: 2rem;">
-                    <div class="flex-grow-1">
-                        <h4 class="fw-bold mb-1">Productos</h4>
-                        <p class="text-muted mb-1">Inventario</p>
-                        <p>Administra el catálogo de productos, modifica stock o edita detalles.</p>
-                        <a class="btn btn-sm btn-violet mt-2" asp-controller="Panel" asp-action="Productos">
-                            <i class="boxes icon me-1"></i> Ver Productos
+                <!-- Tarjeta: Productos para Vendedor -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div>
+                            <h3 class="card-title">Productos</h3>
+                            <p class="card-subtitle">Inventario</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Consulta y gestiona el catálogo de productos disponibles.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-info" asp-controller="Panel" asp-action="Productos">
+                            <i class="fas fa-boxes me-2"></i> Ver Productos
                         </a>
                     </div>
-                    <img src="~/images/panel/productos.jpg" alt="Productos" class="img-fluid"
-                        style="width: 90px; border-radius: 12px;">
                 </div>
             }
         </div>

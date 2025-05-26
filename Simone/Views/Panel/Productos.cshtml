@@ -3,62 +3,344 @@
     ViewData["Title"] = "Gestión de " + ViewData["Type"];
 }
 
-<div class="ui container mt-5">
-    <div class="ui segment">
-        <h2 class="ui header">
-            <i class="users icon"></i>
-            <div class="content">@ViewData["Title"]</div>
-        </h2>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;"></div>
-        <a asp-controller="Panel" asp-action="AnadirProducto" class="ui green button">Añadir un producto</a>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .management-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .management-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .management-title {
+        font-size: 1.8rem;
+        color: var(--accent-purple);
+        display: flex;
+        align-items: center;
+        margin: 0;
+    }
+
+    .management-title i {
+        margin-right: 1rem;
+        color: var(--accent-purple);
+    }
+
+    .add-btn {
+        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+
+    .add-btn:hover {
+        background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
+    }
+
+    .add-btn i {
+        margin-right: 0.5rem;
+    }
+
+    .management-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .management-table th {
+        background-color: var(--accent-purple);
+        color: white;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 500;
+        position: sticky;
+        top: 0;
+    }
+
+    .management-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--medium-gray);
+        vertical-align: middle;
+    }
+
+    .management-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .management-table tr:hover td {
+        background-color: rgba(75, 0, 130, 0.03);
+    }
+
+    .product-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid var(--medium-gray);
+    }
+
+    .no-image {
+        display: inline-block;
+        width: 80px;
+        height: 80px;
+        background-color: var(--light-gray);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        font-size: 0.8rem;
+        text-align: center;
+    }
+
+    .action-btn {
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .edit-btn {
+        background-color: rgba(23, 162, 184, 0.1);
+        color: var(--info-color);
+    }
+
+    .edit-btn:hover {
+        background-color: var(--info-color);
+        color: white;
+    }
+
+    .delete-btn {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .delete-btn:hover {
+        background-color: var(--danger-color);
+        color: white;
+    }
+
+    .stock-indicator {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .stock-high {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: var(--success-color);
+    }
+
+    .stock-low {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: var(--warning-color);
+    }
+
+    .stock-out {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    .empty-state {
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        color: var(--medium-gray);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state p {
+        color: var(--text-light);
+        font-size: 1.1rem;
+    }
+
+    .description-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 300px;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 1200px) {
+        .management-container {
+            overflow-x: auto;
+        }
+        
+        .management-table {
+            min-width: 1000px;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .management-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .add-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+
+<div class="management-container fade-in">
+    <div class="management-header">
+        <h2 class="management-title">
+            <i class="fas fa-box-open"></i> @ViewData["Title"]
+        </h2>
+        <a asp-controller="Panel" asp-action="AnadirProducto" class="add-btn">
+            <i class="fas fa-plus"></i> Añadir Producto
+        </a>
     </div>
-    <!-- Table displaying categories -->
+
     @if (ViewBag.Productos.Count > 0)
     {
-        <table class="ui celled striped table">
+        <table class="management-table">
             <thead>
                 <tr>
                     <th>Nombre</th>
                     <th>Imagen</th>
-                    <th>Descripcion</th>
+                    <th>Descripción</th>
                     <th>Stock</th>
-                    <th>Opciones</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var producto in ViewBag.Productos)
                 {
                     <tr>
-                        <td>@producto.Nombre</td>
+                        <td>
+                            <strong>@producto.Nombre</strong>
+                        </td>
                         <td>
                             @if (!string.IsNullOrEmpty(producto.ImagenPath))
                             {
-                                <img src="@producto.ImagenPath" alt="Foto de @producto.Nombre" style="max-height: 100px;" />
+                                <img src="@producto.ImagenPath" alt="@producto.Nombre" class="product-image" />
                             }
                             else
                             {
-                                <span>No imagen disponible</span>
+                                <div class="no-image">
+                                    Sin imagen
+                                </div>
                             }
                         </td>
-                        <td>@producto.Descripcion</td>
-                        <td>@producto.Stock</td>
                         <td>
-                            <!-- Edit Category -->
-                            <form method="get" style="display:inline" asp-controller="Panel" asp-action="EditarProducto">
-                                @Html.AntiForgeryToken()
+                            <div class="description-text" title="@producto.Descripcion">
+                                @producto.Descripcion
+                            </div>
+                        </td>
+                        <td>
+                            @{
+                                var stockClass = "stock-high";
+                                if (producto.Stock <= 0) {
+                                    stockClass = "stock-out";
+                                } else if (producto.Stock < 10) {
+                                    stockClass = "stock-low";
+                                }
+                            }
+                            <span class="stock-indicator @stockClass">
+                                @producto.Stock unidades
+                            </span>
+                        </td>
+                        <td>
+                            <form method="get" asp-controller="Panel" asp-action="EditarProducto" style="display:inline">
                                 <input type="hidden" name="productoID" value="@producto.ProductoID" />
-                                <button type="submit" class="ui icon blue button" title="Editar @ViewData["Type"]">
-                                    <i class="edit icon"></i>
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="action-btn edit-btn" title="Editar">
+                                    <i class="fas fa-edit"></i>
                                 </button>
                             </form>
-                            <!-- Delete Category -->
-                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarProducto"
-                                onsubmit="return confirm('¿Estás seguro de eliminar este producto?');">
-                                @Html.AntiForgeryToken()
+                            
+                            <form method="post" asp-controller="Panel" asp-action="EliminarProducto" 
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este producto?');" style="display:inline">
                                 <input type="hidden" name="productoID" value="@producto.ProductoID" />
-                                <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
-                                    <i class="trash icon"></i>
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="action-btn delete-btn" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </form>
                         </td>
@@ -69,11 +351,25 @@
     }
     else
     {
-        <p>No hay productos disponibles.</p>
+        <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <p>No hay productos disponibles</p>
+        </div>
     }
-</div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add confirmation for deletions
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    if (!confirm('¿Estás seguro de eliminar este producto?')) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
 }

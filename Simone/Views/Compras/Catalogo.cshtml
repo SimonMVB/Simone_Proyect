@@ -1,7 +1,6 @@
 @model CatalogoViewModel
 
 @{
-    // Helper to build query strings for filters + pagination
     string BuildUrl(int? categoriaID, List<int> subcategoriaIDs, int pageNumber, int pageSize)
     {
         var query = new List<string>();
@@ -19,104 +18,590 @@
     }
 }
 
-<table border="0" width="100%" cellspacing="10" cellpadding="5">
-    <tr>
-        <td width="25%" valign="top" style="border: 1px solid #ccc;">
-            <form method="get" asp-action="Catalogo">
-                <table border="1" width="100%" cellspacing="5" cellpadding="5">
-                    <thead>
-                        <tr>
-                            <th>Categoría</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <label>
-                                    <input type="radio" name="categoriaID" value="" @(Model.SelectedCategoriaID == null
-                                                                                                                            ? "checked" : "") onchange="this.form.submit()" />
-                                    Todo
-                                </label>
-                            </td>
-                        </tr>
-                        @foreach (var cat in Model.Categorias)
-                        {
-                            <tr>
-                                <td>
-                                    <label>
-                                        <input type="radio" name="categoriaID" value="@cat.CategoriaID" @(cat.CategoriaID ==
-                                                                                                                                       Model.SelectedCategoriaID ? "checked" : "") onchange="this.form.submit()" />
-                                    @cat.Nombre
-                                </label>
-                            </td>
-                        </tr>
-                                                }
-                    </tbody>
-                </table>
-            </form>
-
-            @if (Model.SelectedCategoriaID.HasValue)
-            {
-                <form method="get" asp-action="Catalogo" id="subcatForm">
-                    <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                    <table border="1" width="100%" cellspacing="5" cellpadding="5" style="margin-top: 20px;">
-                        <thead>
-                            <tr>
-                                <th>Subcategorías</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var subcat in Model.Subcategorias)
-                            {
-                                <tr>
-                                    <td>
-                                        <label>
-                                            <input type="checkbox" name="subcategoriaIDs" value="@subcat.SubcategoriaID"
-                                                @(Model.SelectedSubcategoriaIDs.Contains(subcat.SubcategoriaID) ? "checked" : "")
-                                                onchange="document.getElementById('subcatForm').submit()" />
-                                            @subcat.NombreSubcategoria
-                                        </label>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </form>
-            }
-        </td>
-
-        <td width="75%" valign="top" style="border: 1px solid #ccc;">
-            <table border="1" width="100%" cellspacing="10" cellpadding="10" style="table-layout: fixed;">
-                <tbody>
-                    @{
-                        int cols = 4;
-                        int rows = (int)Math.Ceiling(Model.Productos.Count / (double)cols);
-                        for (int r = 0; r < rows; r++)
-                        {
-                            <tr>
-                                @for (int c = 0; c < cols; c++)
-                                {
-                                    int index = r * cols + c;
-                                    if (index < Model.Productos.Count)
-                                    {
-                                        var p = Model.Productos[index];
-                                        <td>
-                                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID">
-                                                <img src="@p.ImagenPath" alt="@p.Nombre" width="100%" />
-                                                <div><strong>@p.Nombre</strong></div>
-                                                <div style="color: #B12704; font-weight: bold;">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
-                                            </a>
-                                        </td>
-                                    }
-                                    else
-                                    {
-                                        <td></td>
-                                    }
-                                }
-                            </tr>
-                        }
+<div class="catalog-container">
+    <!-- Sidebar Categorias y Subcategorias -->
+    <div class="catalog-sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-header">
+                <i class="fas fa-list"></i> Categorías
+            </div>
+            <div class="sidebar-body">
+                <form method="get" asp-action="Catalogo" class="category-form">
+                    <div class="form-option">
+                        <input class="form-check-input" type="radio" name="categoriaID" value="" id="all-categories"
+                               onchange="this.form.submit()" @(Model.SelectedCategoriaID == null ? "checked" : "")>
+                        <label class="form-check-label" for="all-categories">
+                            <span class="checkmark"></span>
+                            <span class="option-text">Todas las categorías</span>
+                        </label>
+                    </div>
+                    @foreach (var cat in Model.Categorias)
+                    {
+                        <div class="form-option">
+                            <input class="form-check-input" type="radio" name="categoriaID" value="@cat.CategoriaID"
+                                   id="cat-@cat.CategoriaID" onchange="this.form.submit()"
+                            @(cat.CategoriaID == Model.SelectedCategoriaID ? "checked" : "")>
+                            <label class="form-check-label" for="cat-@cat.CategoriaID">
+                                <span class="checkmark"></span>
+                                <span class="option-text">@cat.Nombre</span>
+                            </label>
+                        </div>
                     }
-                </tbody>
-            </table>
+                </form>
+            </div>
+        </div>
 
-            <div style="margin
+        @if (Model.SelectedCategoriaID.HasValue)
+        {
+            <div class="sidebar-section">
+                <div class="sidebar-header">
+                    <i class="fas fa-tags"></i> Subcategorías
+                </div>
+                <div class="sidebar-body">
+                    <form method="get" asp-action="Catalogo" id="subcatForm" class="subcategory-form">
+                        <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
+                        @foreach (var subcat in Model.Subcategorias)
+                        {
+                            <div class="form-option">
+                                <input class="form-check-input" type="checkbox" name="subcategoriaIDs"
+                                       value="@subcat.SubcategoriaID" id="subcat-@subcat.SubcategoriaID"
+                                       onchange="document.getElementById('subcatForm').submit()"
+                                @(Model.SelectedSubcategoriaIDs.Contains(subcat.SubcategoriaID) ? "checked" : "")>
+                                <label class="form-check-label" for="subcat-@subcat.SubcategoriaID">
+                                    <span class="checkmark"></span>
+                                    <span class="option-text">@subcat.NombreSubcategoria</span>
+                                </label>
+                            </div>
+                        }
+                    </form>
+                </div>
+            </div>
+        }
+
+        <div class="sidebar-promo">
+            <div class="promo-content">
+                <span class="promo-text">Nueva Colección</span>
+                <span class="promo-highlight">Otoño 2023</span>
+                <button class="promo-btn">Ver más</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos -->
+    <div class="catalog-products">
+        <div class="products-header">
+            <h2>@(Model.SelectedCategoriaID.HasValue ? Model.Categorias.First(c => c.CategoriaID == Model.SelectedCategoriaID).Nombre : "Todos los productos")</h2>
+            <div class="sort-options">
+                <select class="form-select">
+                    <option>Ordenar por</option>
+                    <option>Precio: Menor a mayor</option>
+                    <option>Precio: Mayor a menor</option>
+                    <option>Novedades</option>
+                    <option>Más vendidos</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="products-grid">
+            @foreach (var p in Model.Productos)
+            {
+                <div class="product-card">
+                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
+                        <div class="product-image-container">
+                            <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
+                            <div class="product-badge">Nuevo</div>
+                            <button class="wishlist-btn" title="Añadir a favoritos">
+                                <i class="far fa-heart"></i>
+                            </button>
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-title">@p.Nombre</h3>
+                            <div class="product-price">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+                            <div class="product-colors">
+                                <span class="color-option" style="background-color: #000;"></span>
+                                <span class="color-option" style="background-color: #6A0DAD;"></span>
+                                <span class="color-option" style="background-color: #D4AF37;"></span>
+                            </div>
+                        </div>
+                    </a>
+                    <button class="add-to-cart-btn">
+                        <i class="fas fa-shopping-bag"></i> Añadir al carrito
+                    </button>
+                </div>
+            }
+        </div>
+
+        <!-- Paginación -->
+        <div class="pagination-container">
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A; /* Negro */
+        --primary-light: #FFFFFF; /* Blanco */
+        --accent-purple: #4B0082; /* Morado oscuro */
+        --accent-gold: #D4AF37; /* Dorado */
+        --light-gray: #F5F5F5;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'Montserrat', sans-serif;
+    }
+
+    body {
+        background-color: var(--light-gray);
+        color: var(--text-color);
+    }
+
+    .catalog-container {
+        display: flex;
+        max-width: 1400px;
+        margin: 30px auto;
+        padding: 0 15px;
+        gap: 20px;
+    }
+
+    /* Sidebar Styles */
+    .catalog-sidebar {
+        flex: 0 0 250px;
+    }
+
+    .sidebar-section {
+        background-color: var(--primary-light);
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 20px;
+        overflow: hidden;
+    }
+
+    .sidebar-header {
+        background-color: var(--primary-dark);
+        color: var(--primary-light);
+        padding: 15px;
+        font-weight: 600;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .sidebar-header i {
+            color: var(--accent-gold);
+        }
+
+    .sidebar-body {
+        padding: 15px;
+    }
+
+    .form-option {
+        margin-bottom: 12px;
+        position: relative;
+    }
+
+        .form-option:last-child {
+            margin-bottom: 0;
+        }
+
+    .form-check-input {
+        position: absolute;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .form-check-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        font-size: 14px;
+        color: var(--text-color);
+        transition: all 0.2s;
+    }
+
+        .form-check-label:hover {
+            color: var(--accent-purple);
+        }
+
+    .checkmark {
+        position: relative;
+        height: 18px;
+        width: 18px;
+        background-color: var(--light-gray);
+        border: 1px solid var(--medium-gray);
+        margin-right: 10px;
+        border-radius: 3px;
+        transition: all 0.2s;
+    }
+
+    .form-check-input[type="radio"] + .checkmark {
+        border-radius: 50%;
+    }
+
+    .form-check-input:checked ~ .checkmark {
+        background-color: var(--accent-purple);
+        border-color: var(--accent-purple);
+    }
+
+    .form-check-input[type="radio"]:checked ~ .checkmark::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--primary-light);
+    }
+
+    .form-check-input[type="checkbox"]:checked ~ .checkmark::after {
+        content: "\f00c";
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: var(--primary-light);
+        font-size: 10px;
+    }
+
+    .option-text {
+        flex: 1;
+    }
+
+    /* Promo Section */
+    .sidebar-promo {
+        background: linear-gradient(135deg, var(--accent-purple), #2E0854);
+        border-radius: 8px;
+        padding: 20px;
+        color: var(--primary-light);
+        text-align: center;
+        margin-top: 20px;
+    }
+
+    .promo-content {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .promo-text {
+        font-size: 14px;
+        opacity: 0.9;
+    }
+
+    .promo-highlight {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--accent-gold);
+    }
+
+    .promo-btn {
+        background-color: var(--accent-gold);
+        color: var(--primary-dark);
+        border: none;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: all 0.3s;
+    }
+
+        .promo-btn:hover {
+            background-color: var(--primary-light);
+            transform: translateY(-2px);
+        }
+
+    /* Products Section */
+    .catalog-products {
+        flex: 1;
+    }
+
+    .products-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+        .products-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
+
+    .sort-options .form-select {
+        border: 1px solid var(--medium-gray);
+        border-radius: 20px;
+        padding: 8px 15px;
+        font-size: 14px;
+        color: var(--text-color);
+        cursor: pointer;
+        outline: none;
+        width: 200px;
+    }
+
+        .sort-options .form-select:focus {
+            border-color: var(--accent-purple);
+        }
+
+    /* Products Grid */
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 20px;
+    }
+
+    /* Product Card */
+    .product-card {
+        background-color: var(--primary-light);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+    .product-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+
+    .product-image-container {
+        position: relative;
+        padding-top: 120%;
+        overflow: hidden;
+    }
+
+    .product-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s ease;
+    }
+
+    .product-card:hover .product-image {
+        transform: scale(1.05);
+    }
+
+    .product-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background-color: var(--accent-gold);
+        color: var(--primary-dark);
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 1;
+    }
+
+    .wishlist-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border: none;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1;
+        transition: all 0.3s;
+        opacity: 0;
+    }
+
+    .product-card:hover .wishlist-btn {
+        opacity: 1;
+    }
+
+    .wishlist-btn:hover {
+        background-color: var(--primary-light);
+        color: var(--accent-purple);
+    }
+
+    .wishlist-btn i {
+        font-size: 14px;
+    }
+
+    .product-info {
+        padding: 15px;
+    }
+
+    .product-title {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--text-color);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .product-price {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--accent-purple);
+        margin-bottom: 10px;
+    }
+
+    .product-colors {
+        display: flex;
+        gap: 5px;
+        margin-bottom: 10px;
+    }
+
+    .color-option {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 1px solid var(--medium-gray);
+        cursor: pointer;
+    }
+
+    .add-to-cart-btn {
+        width: 100%;
+        padding: 10px;
+        background-color: var(--primary-dark);
+        color: var(--primary-light);
+        border: none;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+
+        .add-to-cart-btn:hover {
+            background-color: var(--accent-purple);
+        }
+
+        .add-to-cart-btn i {
+            font-size: 14px;
+        }
+
+    /* Pagination */
+    .pagination-container {
+        margin-top: 40px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .pagination {
+        display: flex;
+        gap: 5px;
+    }
+
+    .page-item {
+        list-style: none;
+    }
+
+    .page-link {
+        display: block;
+        padding: 8px 15px;
+        background-color: var(--primary-light);
+        color: var(--text-color);
+        border: 1px solid var(--medium-gray);
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+
+        .page-link:hover {
+            background-color: var(--light-gray);
+        }
+
+    .page-item.active .page-link {
+        background-color: var(--accent-purple);
+        color: var(--primary-light);
+        border-color: var(--accent-purple);
+    }
+
+    /* Responsive */
+    @@media (max-width: 992px) {
+        .catalog-container
+
+    {
+        flex-direction: column;
+    }
+
+    .catalog-sidebar {
+        flex: 1;
+        margin-bottom: 30px;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    }
+
+    }
+
+    @@media (max-width: 576px) {
+        .products-header
+
+    {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .sort-options .form-select {
+        width: 100%;
+    }
+
+    .products-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+    }
+
+    }
+</style>
+
+<!-- Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">

@@ -1,83 +1,237 @@
-<div class="ui container mt-5">
-    <div class="ui segment">
+@{
+    ViewData["Title"] = ViewBag.Subcategoria != null ? "Editar Subcategoría" : "Añadir Subcategoría";
+}
+
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .form-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .form-card {
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .form-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        color: var(--accent-purple);
+    }
+
+        .form-header i {
+            font-size: 1.8rem;
+            margin-right: 1rem;
+        }
+
+        .form-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--dark-gray);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+        .form-input:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+            outline: none;
+        }
+
+    .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        font-size: 1rem;
+        background-color: var(--primary-light);
+        transition: all 0.3s ease;
+    }
+
+        .form-select:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+            outline: none;
+        }
+
+        .form-select:disabled {
+            background-color: var(--light-gray);
+            cursor: not-allowed;
+        }
+
+    .submit-btn {
+        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
+        }
+
+    .empty-state {
+        color: var(--text-light);
+        font-style: italic;
+        padding: 0.5rem 0;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .form-card {
+            padding: 1.5rem;
+        }
+
+        .form-header h2 {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<div class="form-container fade-in">
+    <div class="form-card">
+        <div class="form-header">
+            <i class="fas fa-tags"></i>
+            <h2>@ViewData["Title"]</h2>
+        </div>
 
         @if (ViewBag.Subcategoria != null)
         {
-            <h2 class="ui header">
-                <i class="box icon"></i>
-                <div class="content">Editar Subcategoria</div>
-            </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="EditarSubcategoria">
-                <!-- Nombre Subcategoria-->
-                <div class="field">
-                    <label for="Nombre">Nombre Subcategoria</label>
-                    <input type="text" name="nombresubCategoria" id="Nombre" placeholder="Nombre de la subcategoria"
-                        required value="@ViewBag.Subcategoria.NombreSubcategoria"/>
+            <!-- Formulario de Edición -->
+            <form method="post" asp-controller="Panel" asp-action="EditarSubcategoria">
+                @Html.AntiForgeryToken()
+
+                <div class="form-group">
+                    <label for="Nombre" class="form-label">Nombre de la Subcategoría</label>
+                    <input type="text" name="nombresubCategoria" id="Nombre" class="form-input"
+                           placeholder="Ingrese el nombre de la subcategoría" required
+                           value="@ViewBag.Subcategoria.NombreSubcategoria" />
                 </div>
 
-                <!-- Proveedor id escondido -->
                 <input type="hidden" name="subcategoriaID" value="@ViewBag.Subcategoria.SubcategoriaID" />
 
-                <!-- Categoria -->
-                <div class="field">
+                <div class="form-group">
+                    <label for="CategoriaID" class="form-label">Categoría</label>
                     @if (ViewBag.Categorias.Count > 0)
                     {
-                        <label for="Categoria">Categoría</label>
-                        <select name="categoriaID" id="CategoriaID" class="ui dropdown" required>
+                        <select name="categoriaID" id="CategoriaID" class="form-select" required>
                             <option value="">Seleccione una categoría</option>
                             @foreach (var categoria in ViewBag.Categorias)
                             {
-                                <option
-                                data-categoria-id = "@categoria.CategoriaID" 
-                                value="@categoria.CategoriaID">@categoria.Nombre</option>
+                                <option value="@categoria.CategoriaID"
+                                        selected="@(categoria.CategoriaID == ViewBag.Subcategoria.CategoriaID)">
+                                    @categoria.Nombre
+                                </option>
                             }
                         </select>
                     }
                     else
                     {
-                        <select name="categoriaID" id="CategoriaID" class="ui dropdown" disabled required>
-                            <option value="">No hay categorias disponibles</option>
+                        <select name="categoriaID" id="CategoriaID" class="form-select" disabled required>
+                            <option value="">No hay categorías disponibles</option>
                         </select>
+                        <p class="empty-state">Debe crear categorías primero</p>
                     }
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function () {
-                            var selectedCategoryID = '@ViewBag.Subcategoria.CategoriaID';
-                            var dropdown = document.getElementById("CategoriaID");
-                            var options = dropdown.querySelectorAll('option');
-                            options.forEach(function (option) {
-                                if (option.getAttribute('data-categoria-id') === selectedCategoryID) {
-                                    option.selected = true;
-                                }
-                            });
-                        });
-                    </script>
                 </div>
 
-                <!-- Submit Button -->
-                <button type="submit" class="ui green button">Editar Subcategoria</button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
             </form>
         }
         else
         {
-            <h2 class="ui header">
-                <i class="box icon"></i>
-                <div class="content">Añadir Subcategoria</div>
-            </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirSubcategoria">
+            <!-- Formulario de Creación -->
+            <form method="post" asp-controller="Panel" asp-action="AnadirSubcategoria">
+                @Html.AntiForgeryToken()
 
-                <!-- Nombre Subcategoria -->
-                <div class="field">
-                    <label for="Nombre">Nombre Subcategoria</label>
-                    <input type="text" name="nombresubCategoria" id="Nombre" placeholder="Nombre de la subcategoria"
-                        required />
+                <div class="form-group">
+                    <label for="Nombre" class="form-label">Nombre de la Subcategoría</label>
+                    <input type="text" name="nombresubCategoria" id="Nombre" class="form-input"
+                           placeholder="Ingrese el nombre de la subcategoría" required />
                 </div>
 
-                <!-- Categoria -->
-                <div class="field">
+                <div class="form-group">
+                    <label for="Categoria" class="form-label">Categoría</label>
                     @if (ViewBag.Categorias.Count > 0)
                     {
-                        <label for="Categoria">Categoría</label>
-                        <select name="categoriaID" id="Categoria" class="ui dropdown" required>
+                        <select name="categoriaID" id="Categoria" class="form-select" required>
                             <option value="">Seleccione una categoría</option>
                             @foreach (var categoria in ViewBag.Categorias)
                             {
@@ -87,15 +241,21 @@
                     }
                     else
                     {
-                        <select name="categoriaID" id="Categoria" class="ui dropdown" disabled required>
-                            <option value="">No hay categorias disponibles</option>
+                        <select name="categoriaID" id="Categoria" class="form-select" disabled required>
+                            <option value="">No hay categorías disponibles</option>
                         </select>
+                        <p class="empty-state">Debe crear categorías primero</p>
                     }
                 </div>
 
-                <!-- Submit Button -->
-                <button type="submit" class="ui green button">Añadir Categoria</button>
+                <button type="submit" class="submit-btn">
+                    <i class="fas fa-plus me-2"></i>Añadir Subcategoría
+                </button>
             </form>
         }
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

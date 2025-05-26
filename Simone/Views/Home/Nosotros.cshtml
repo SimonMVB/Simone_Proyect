@@ -20,8 +20,13 @@
         </div>
     </div>
     <div class="col-md-6">
-        <div class="p-3">
-            <img src="~/Nosotros/equipo.png" alt="Equipo Simone" class="img-fluid rounded shadow w-100" style="object-fit: cover;">
+        <div class="zoom-container">
+            <img src="@Url.Content("~/images/Nosotros/equipo.jpg")" alt="Nuestro equipo"
+                 class="zoomable-img rounded shadow-lg" />
+        </div>
+
+
+
 
         </div>
     </div>
@@ -127,4 +132,45 @@
     .list-unstyled li {
         margin-bottom: 6px;
     }
+
+    .zoom-container {
+        position: relative;
+        display: inline-block;
+        max-width: 100%;
+    }
+
+    .zoomable-img {
+        width: 100%;
+        height: auto;
+        cursor: zoom-in;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 12px;
+    }
+
+        .zoomable-img.zoomed {
+            position: relative;
+            z-index: 1000;
+            transform: scale(1.6);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+            cursor: zoom-out;
+        }
+
+
+    }
 </style>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const img = document.querySelector(".zoomable-img");
+
+        img.addEventListener("click", function () {
+            this.classList.toggle("zoomed");
+        });
+
+        // Opcional: cerrar con clic fuera
+        document.addEventListener("click", function (e) {
+            if (!img.contains(e.target) && img.classList.contains("zoomed")) {
+                img.classList.remove("zoomed");
+            }
+        });
+    });
+</script>

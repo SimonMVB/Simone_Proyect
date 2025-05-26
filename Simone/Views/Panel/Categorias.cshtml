@@ -3,149 +3,481 @@
     ViewData["Title"] = "Gestión de " + ViewData["Type"];
 }
 
-<div class="ui container mt-5">
-    <div class="ui segment">
-        <h2 class="ui header">
-            <i class="tags icon"></i>
-            <div class="content">@ViewData["Title"]</div>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .management-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .management-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--medium-gray);
+    }
+
+    .management-title {
+        font-size: 1.8rem;
+        color: var(--accent-purple);
+        display: flex;
+        align-items: center;
+    }
+
+        .management-title i {
+            margin-right: 1rem;
+            color: var(--accent-purple);
+        }
+
+    .add-btn {
+        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
+        .add-btn:hover {
+            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
+        }
+
+        .add-btn i {
+            margin-right: 0.5rem;
+        }
+
+    .management-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+        .management-table th {
+            background-color: var(--accent-purple);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .management-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--medium-gray);
+            vertical-align: middle;
+        }
+
+        .management-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .management-table tr:hover td {
+            background-color: rgba(75, 0, 130, 0.03);
+        }
+
+    .action-btn {
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .edit-btn {
+        background-color: rgba(23, 162, 184, 0.1);
+        color: var(--info-color);
+    }
+
+        .edit-btn:hover {
+            background-color: var(--info-color);
+            color: white;
+        }
+
+    .delete-btn {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+        .delete-btn:hover {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+    .empty-state {
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--medium-gray);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+    /* Floating Card Styles */
+    .floating-card {
+        position: fixed;
+        right: -400px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 380px;
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        transition: right 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        padding: 1.5rem;
+    }
+
+        .floating-card.active {
+            right: 20px;
+        }
+
+    .card-header {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: var(--accent-purple);
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .close-card {
+        background: none;
+        border: none;
+        color: var(--text-light);
+        font-size: 1.2rem;
+        cursor: pointer;
+        transition: color 0.3s ease;
+    }
+
+        .close-card:hover {
+            color: var(--danger-color);
+        }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--dark-gray);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+        .form-input:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+            outline: none;
+        }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+            transform: translateY(-2px);
+        }
+
+    .cancel-btn {
+        background-color: var(--light-gray);
+        color: var(--text-color);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+        .cancel-btn:hover {
+            background-color: var(--medium-gray);
+        }
+
+    /* Overlay for when card is open */
+    .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+        .overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .management-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .add-btn {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .floating-card {
+            width: 90%;
+            right: -100%;
+        }
+
+            .floating-card.active {
+                right: 5%;
+            }
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+</style>
+
+<div class="management-container fade-in">
+    <div class="management-header">
+        <h2 class="management-title">
+            <i class="fas fa-tags"></i> @ViewData["Title"]
         </h2>
+        <button id="openCardButton" class="add-btn">
+            <i class="fas fa-plus"></i> Añadir @ViewData["Type"]
+        </button>
+    </div>
 
-        <!-- Button to open the floating card -->
-        <div class="two wide column" style="display: flex; align-items: center; justify-content: flex-end;">
-            <button id="openCardButton" class="ui green button">Añadir una @ViewData["Type"]</button>
-        </div>
-
-        <!-- Table displaying categories -->
-        @if (ViewBag.Categorias.Count > 0)
-        {
-            <table class="ui celled striped table">
-                <thead>
+    @if (ViewBag.Categorias.Count > 0)
+    {
+        <table class="management-table">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var categoria in ViewBag.Categorias)
+                {
                     <tr>
-                        <th>Nombre</th>
-                        <th>Opciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var categoria in ViewBag.Categorias)
-                    {
-                        <tr>
-                            <td>@categoria.Nombre</td>
-                            <td>
-                                <!-- Edit Category -->
-                                <button type="button" class="ui icon blue button" title="Editar @ViewData["Type"]"
+                        <td>@categoria.Nombre</td>
+                        <td>
+                            <button type="button" class="action-btn edit-btn" title="Editar"
                                     id="editCategoryCardButton" data-category-id="@categoria.CategoriaID"
                                     data-category-name="@categoria.Nombre">
-                                    <i class="edit icon"></i>
+                                <i class="fas fa-edit"></i>
+                            </button>
+
+                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarCategoria"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
+                                <input type="hidden" name="categoriaID" value="@categoria.CategoriaID" />
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="action-btn delete-btn" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
                                 </button>
-                                <!-- Delete Category -->
-                                <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarCategoria"
-                                    onsubmit="return confirm('¿Estás seguro de eliminar esta categoría?');">
-                                    <input type="hidden" name="categoriaID" value="@categoria.CategoriaID" />
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
-                                        <i class="trash icon"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-
-                </tbody>
-            </table>
-        }
-        else
-        {
-            <p>No hay categorías disponibles.</p>
-        }
-
-    </div>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-tags"></i>
+            <p>No hay categorías disponibles</p>
+        </div>
+    }
 </div>
 
-<!-- Floating Card for Adding and Editing a Category -->
-<div id="addCategoryCard" class="ui raised card"
-    style="position: fixed; right: -350px; top: 10%; width: 350px; transition: right 0.3s ease;">
-    <div class="content">
-        <div class="header" id="cardHeader">Añadir Nueva @ViewData["Type"]</div>
-        <form id="categoryForm" method="post">
-            @Html.AntiForgeryToken()
-            <div class="field">
-                <label for="nombreCategoria">Nombre de la Categoría</label>
-                <input type="text" name="nombreCategoria" id="nombreCategoria" placeholder="Nombre de la categoría" required />
-                <input type="hidden" name="categoriaID" id="categoriaID"/>
-            </div>
-            <div class="actions">
-                <button type="submit" class="ui green button" id="submitButton">Añadir</button>
-                <button type="button" class="ui button" id="closeCardButton">Cancelar</button>
-            </div>
-        </form>
+<!-- Floating Card for Adding/Editing Categories -->
+<div id="addCategoryCard" class="floating-card">
+    <div class="card-header">
+        <span id="cardHeader">Añadir Nueva @ViewData["Type"]</span>
+        <button class="close-card" id="closeCardButton">
+            <i class="fas fa-times"></i>
+        </button>
     </div>
+    <form id="categoryForm" method="post">
+        @Html.AntiForgeryToken()
+        <div class="form-group">
+            <label for="nombreCategoria" class="form-label">Nombre de la Categoría</label>
+            <input type="text" name="nombreCategoria" id="nombreCategoria" class="form-input" placeholder="Ingrese el nombre" required />
+            <input type="hidden" name="categoriaID" id="categoriaID" />
+        </div>
+        <div class="form-actions">
+            <button type="button" class="cancel-btn" id="closeCardButton">Cancelar</button>
+            <button type="submit" class="submit-btn" id="submitButton">Añadir</button>
+        </div>
+    </form>
 </div>
 
+<div id="overlay" class="overlay"></div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             const newCategoryCardButton = document.getElementById("openCardButton");
             const closeCardButton = document.getElementById("closeCardButton");
             const addCategoryCard = document.getElementById("addCategoryCard");
+            const overlay = document.getElementById("overlay");
             const categoryForm = document.getElementById("categoryForm");
             const cardHeader = document.getElementById("cardHeader");
             const submitButton = document.getElementById("submitButton");
 
             // Function to open the card (Add or Edit)
             function openCategoryCard(isEdit, categoryId, categoryName) {
-                addCategoryCard.style.right = "0"; // Slide in the card
+                addCategoryCard.classList.add("active");
+                overlay.classList.add("active");
 
                 if (isEdit) {
-                    cardHeader.textContent = "Editar Categoria";
-                    submitButton.textContent = "Editar";
-                    submitButton.classList.remove("green");
-                    submitButton.classList.add("blue");
-                    categoryForm.setAttribute("action", "/Panel/EditarCategoria"); // Use the "EditarCategoria" action
-                    document.getElementById("nombreCategoria").value = categoryName; // Pre-fill the input with the category name
-                    document.getElementById("categoriaID").value = categoryId; // Set the category ID for editing
-                    categoryForm.setAttribute("data-category-id", categoryId); // Set the category ID for editing
+                    cardHeader.textContent = "Editar Categoría";
+                    submitButton.textContent = "Guardar Cambios";
+                    categoryForm.setAttribute("action", "/Panel/EditarCategoria");
+                    document.getElementById("nombreCategoria").value = categoryName;
+                    document.getElementById("categoriaID").value = categoryId;
                 } else {
-                    cardHeader.textContent = "Añadir Nueva Categoria";
+                    cardHeader.textContent = "Añadir Nueva Categoría";
                     submitButton.textContent = "Añadir";
-                    submitButton.classList.remove("blue");
-                    submitButton.classList.add("green");
-                    categoryForm.setAttribute("action", "/Panel/AnadirCategoria"); // Use the "EditarCategoria" action
-                    document.getElementById("categoriaID").value = categoryId; // Set the category ID for editing
-                    document.getElementById("nombreCategoria").value = ""; // Clear the input for a new category
+                    categoryForm.setAttribute("action", "/Panel/AnadirCategoria");
+                    document.getElementById("nombreCategoria").value = "";
+                    document.getElementById("categoriaID").value = "";
                 }
             }
 
             // Open the card for editing an existing category
             document.querySelectorAll("#editCategoryCardButton").forEach(button => {
                 button.addEventListener("click", function (e) {
-                    e.stopPropagation();
                     const categoryId = button.getAttribute("data-category-id");
                     const categoryName = button.getAttribute("data-category-name");
-                    openCategoryCard(true, categoryId, categoryName); // Edit mode
+                    openCategoryCard(true, categoryId, categoryName);
                 });
             });
 
-            // Open the card for adding a new category (same button or function can be reused)
-            newCategoryCardButton.addEventListener("click", function (e) {
-                e.stopPropagation();
-                openCategoryCard(false); // Add mode
+            // Open the card for adding a new category
+            newCategoryCardButton.addEventListener("click", function () {
+                openCategoryCard(false);
             });
 
-            // Close the card when the cancel button is clicked
-            closeCardButton.addEventListener("click", function (e) {
+            // Close the card
+            function closeCard() {
+                addCategoryCard.classList.remove("active");
+                overlay.classList.remove("active");
+            }
+
+            closeCardButton.addEventListener("click", closeCard);
+            overlay.addEventListener("click", closeCard);
+
+            // Prevent closing when clicking inside the card
+            addCategoryCard.addEventListener("click", function(e) {
                 e.stopPropagation();
-                addCategoryCard.style.right = "-350px"; // Slide out the card
             });
 
-            // Close the card if clicked outside of the card
-            document.addEventListener("click", function (e) {
-                if (!addCategoryCard.contains(e.target) && !newCategoryCardButton.contains(e.target)) {
-                    addCategoryCard.style.right = "-350px"; // Slide out the card
+            // Form submission handling
+            categoryForm.addEventListener("submit", function(e) {
+                if (!this.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
                 }
+                this.classList.add("was-validated");
             });
         });
     </script>
-
-    <partial name="_ValidationScriptsPartial" />
 }

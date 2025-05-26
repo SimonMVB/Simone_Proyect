@@ -5,21 +5,28 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-5 perfil-container">
-    <div class="card perfil-card">
-        <div class="card-header">
-            <h4><i class="fa-solid fa-user-circle me-2"></i>Mi Perfil</h4>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<div class="profile-container">
+    <div class="profile-card">
+        <div class="profile-header">
+            <h2><i class="fas fa-user-circle me-2"></i>Mi Perfil</h2>
+            <p class="profile-subtitle">Administra tu información personal</p>
         </div>
 
-        <div class="card-body">
+        <div class="profile-body">
             @if (TempData["MensajeExito"] != null || TempData["MensajeError"] != null)
             {
                 var message = TempData["MensajeExito"] ?? TempData["MensajeError"];
                 var alertClass = TempData["MensajeExito"] != null ? "alert-success" : "alert-danger";
                 var iconClass = TempData["MensajeExito"] != null ? "fa-circle-check" : "fa-circle-exclamation";
 
-                <div class="alert @alertClass">
-                    <i class="fa-solid @iconClass me-2"></i> @message
+                <div class="profile-alert @alertClass">
+                    <i class="fas @iconClass me-2"></i> @message
                 </div>
             }
 
@@ -27,76 +34,100 @@
                 @Html.AntiForgeryToken()
                 <input asp-for="Id" hidden />
 
-                <div class="text-center mb-4">
-                    @if (Model != null && !string.IsNullOrEmpty(Model.FotoPerfil))
+                <div class="profile-avatar-container">
+                    <div class="avatar-wrapper">
+                        @if (Model != null && !string.IsNullOrEmpty(Model.FotoPerfil))
+                        {
+                            <img src="@Model.FotoPerfil" class="profile-avatar" alt="Foto de perfil" />
+                        }
+                        else
+                        {
+                            <div class="avatar-placeholder">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        }
+                    </div>
 
-                    {
-                        <img src="@Model.FotoPerfil" class="rounded-circle shadow" style="width: 120px; height: 120px; object-fit: cover;" />
-                    }
-                    else
-                    {
-                        <div class="rounded-circle bg-secondary d-inline-flex align-items-center justify-content-center text-white" style="width: 120px; height: 120px; font-size: 40px;">
-                            <i class="fa-solid fa-user"></i>
-                        </div>
-                    }
-                    <!-- Botón personalizado para subir imagen -->
-                    <div class="mb-3 text-center">
+                    <div class="avatar-upload">
                         <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/*" hidden />
-                        <button type="button" class="btn-upload" onclick="document.getElementById('ImagenPerfil').click()">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon">
-                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                <circle cx="12" cy="13" r="4" />
-                            </svg>
-                            <span class="label-upload">Tomar una Foto</span>
-                        </button>
+                        <label for="ImagenPerfil" class="upload-btn">
+                            <i class="fas fa-camera me-2"></i> Cambiar foto
+                        </label>
+                        <small class="upload-hint">Formatos: JPG, PNG (max 5MB)</small>
                     </div>
+                </div>
 
-
-
-                    <div class="mb-3">
+                <div class="profile-form-grid">
+                    <div class="form-group">
                         <label asp-for="NombreCompleto" class="form-label">Nombre completo</label>
-                        <input asp-for="NombreCompleto" class="form-control" />
-                        <span asp-validation-for="NombreCompleto" class="text-danger small"></span>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input asp-for="NombreCompleto" class="form-control" />
+                        </div>
+                        <span asp-validation-for="NombreCompleto" class="form-error"></span>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="form-group">
                         <label asp-for="Telefono" class="form-label">Teléfono</label>
-                        <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" />
-                        <span asp-validation-for="Telefono" class="text-danger small"></span>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                            <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" />
+                        </div>
+                        <span asp-validation-for="Telefono" class="form-error"></span>
                     </div>
 
-
-                    <div class="mb-3">
+                    <div class="form-group">
                         <label asp-for="Direccion" class="form-label">Dirección</label>
-                        <input asp-for="Direccion" class="form-control" />
-                        <span asp-validation-for="Direccion" class="text-danger small"></span>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                            <input asp-for="Direccion" class="form-control" />
+                        </div>
+                        <span asp-validation-for="Direccion" class="form-error"></span>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="form-group">
                         <label asp-for="Referencia" class="form-label">Referencia</label>
-                        <input asp-for="Referencia" class="form-control" />
-                        <span asp-validation-for="Referencia" class="text-danger small"></span>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                            <input asp-for="Referencia" class="form-control" />
+                        </div>
+                        <span asp-validation-for="Referencia" class="form-error"></span>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="form-group">
                         <label class="form-label">Rol actual</label>
-                        <input value="@ViewBag.RolUsuario" class="form-control" readonly />
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                            <input value="@ViewBag.RolUsuario" class="form-control" readonly />
+                        </div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="form-group">
                         <label class="form-label">Fecha de registro</label>
-                        <input value="@(Model.FechaRegistro.ToShortDateString())" class="form-control" readonly />
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input value="@(Model.FechaRegistro.ToShortDateString())" class="form-control" readonly />
+                        </div>
                     </div>
 
-                    <div class="mb-4">
+                    <div class="form-group">
                         <label class="form-label">Estado</label>
-                        <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control text-success" readonly />
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-circle"></i></span>
+                            <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control" readonly />
+                            <span class="input-group-text status-icon @(Model.Activo ? "active" : "inactive")">
+                                <i class="fas @(Model.Activo ? "fa-check" : "fa-times")"></i>
+                            </span>
+                        </div>
                     </div>
+                </div>
 
-                    <button type="submit" class="btn btn-guardar w-100" id="btnPerfil">
-                        <i class="fa-solid fa-floppy-disk me-2"></i>Guardar cambios
+                <div class="form-actions">
+                    <button type="submit" class="save-btn" id="btnPerfil">
+                        <i class="fas fa-save me-2"></i>
+                        <span class="btn-text">Guardar cambios</span>
                     </button>
-
+                </div>
             </form>
         </div>
     </div>
@@ -110,92 +141,279 @@
             const $btn = $('#btnPerfil');
 
             $form.on('submit', function (e) {
-                // Verifica con jQuery Validate si el formulario es válido
                 if (!$form.valid()) {
-                    e.preventDefault(); // cancela envío
-                    return; // no cambia botón
+                    e.preventDefault();
+                    return;
                 }
 
-                // Si es válido, desactiva botón y muestra spinner
                 $btn.prop('disabled', true);
-                $btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Guardando...');
+                $btn.find('.btn-text').text('Guardando...');
+                $btn.prepend('<span class="spinner-border spinner-border-sm me-2"></span>');
+            });
+
+            // Mostrar vista previa de la imagen seleccionada
+            $('#ImagenPerfil').change(function() {
+                if (this.files && this.files[0]) {
+                    var reader = new FileReader();
+
+                    reader.onload = function(e) {
+                        $('.profile-avatar').attr('src', e.target.result).show();
+                        $('.avatar-placeholder').hide();
+                    }
+
+                    reader.readAsDataURL(this.files[0]);
+                }
             });
         });
     </script>
 }
 
-
-
-
 <style>
-    .btn-guardar {
-        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
-        color: white;
-        font-weight: bold;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        transition: all 0.3s ease;
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
     }
 
-        .btn-guardar:hover {
-            background: linear-gradient(135deg, #f4a7c1, #f9d5ec);
-            color: white;
-            box-shadow: 0 4px 12px rgba(244, 167, 193, 0.4);
-        }
-
-        .btn-guardar:focus {
-            outline: none;
-            box-shadow: 0 0 0 0.2rem rgba(244, 167, 193, 0.4);
-        }
-
-    .perfil-container {
-        max-width: 650px;
-        margin: 3rem auto;
-        animation: fadeIn 0.6s ease-in-out;
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
     }
 
-    .perfil-card {
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .profile-container {
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 15px;
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    .profile-card {
+        background-color: var(--primary-light);
         border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
         overflow: hidden;
     }
 
-        .perfil-card .card-header {
-            background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
-            color: white;
-            text-align: center;
-            padding: 1.5rem;
+    .profile-header {
+        background: linear-gradient(135deg, var(--accent-purple), #2E0854);
+        color: var(--primary-light);
+        padding: 2rem;
+        text-align: center;
+    }
+
+        .profile-header h2 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
         }
 
-        .perfil-card .card-body {
-            padding: 2rem;
-            background-color: #fafafa;
+    .profile-subtitle {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+
+    .profile-body {
+        padding: 2rem;
+    }
+
+    .profile-alert {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: center;
+    }
+
+        .profile-alert.alert-success {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border-left: 4px solid var(--success-color);
         }
 
-        .perfil-card .form-label {
-            font-weight: 600;
+        .profile-alert.alert-danger {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+            border-left: 4px solid var(--danger-color);
         }
 
-        .perfil-card .form-control:read-only {
-            background-color: #e9ecef;
-            font-style: italic;
+    .profile-avatar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .avatar-wrapper {
+        position: relative;
+        margin-bottom: 1rem;
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid var(--primary-light);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .avatar-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background-color: var(--medium-gray);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        font-size: 3rem;
+        border: 4px solid var(--primary-light);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .avatar-upload {
+        text-align: center;
+    }
+
+    .upload-btn {
+        display: inline-block;
+        background-color: var(--accent-gold);
+        color: var(--primary-dark);
+        padding: 0.5rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 0.5rem;
+    }
+
+        .upload-btn:hover {
+            background-color: var(--primary-dark);
+            color: var(--primary-light);
         }
 
-        .perfil-card .btn-primary {
-            background-color: #f4a7c1;
-            border: none;
-            font-weight: 600;
+    .upload-hint {
+        display: block;
+        color: var(--text-light);
+        font-size: 0.8rem;
+    }
+
+    .profile-form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--dark-gray);
+    }
+
+    .input-group {
+        margin-bottom: 0.25rem;
+    }
+
+    .input-group-text {
+        background-color: var(--light-gray);
+        border-right: none;
+        color: var(--accent-purple);
+    }
+
+    .form-control {
+        border-left: none;
+        padding: 0.75rem 1rem;
+        border-radius: 0 8px 8px 0 !important;
+        background-color: var(--light-gray);
+    }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(75, 0, 130, 0.1);
+            border-color: var(--medium-gray);
         }
 
-            .perfil-card .btn-primary:hover {
-                background-color: #f4a7c1;
-            }
+        .form-control:read-only {
+            background-color: var(--light-gray);
+            color: var(--text-light);
+        }
+
+    .form-error {
+        color: var(--danger-color);
+        font-size: 0.85rem;
+        display: block;
+    }
+
+    .status-icon {
+        color: var(--primary-light);
+        border-left: none !important;
+    }
+
+        .status-icon.active {
+            background-color: var(--success-color);
+        }
+
+        .status-icon.inactive {
+            background-color: var(--danger-color);
+        }
+
+    .form-actions {
+        text-align: center;
+        margin-top: 2rem;
+    }
+
+    .save-btn {
+        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
+        color: var(--primary-light);
+        border: none;
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 30px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 200px;
+    }
+
+        .save-btn:hover {
+            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
+        }
+
+        .save-btn:disabled {
+            opacity: 0.7;
+            transform: none !important;
+            box-shadow: none !important;
+        }
 
     @@keyframes fadeIn {
         from {
             opacity: 0;
-            transform: translateY(-10px);
+            transform: translateY(-20px);
         }
 
         to {
@@ -204,175 +422,32 @@
         }
     }
 
-
-
-
-
-
-
-    /* From Uiverse.io by andrew-demchenk0 */
-    .button {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 9px 12px;
-        gap: 8px;
-        height: 40px;
-        width: 172px;
-        border: none;
-        background: #FF2849;
-        border-radius: 20px;
-        cursor: pointer;
-    }
-
-    .lable {
-        line-height: 22px;
-        font-size: 17px;
-        color: #fff;
-        font-family: sans-serif;
-        letter-spacing: 1px;
-    }
-
-    .button:hover {
-        background: #e52441;
-    }
-
-        .button:hover .svg-icon {
-            animation: flickering 2s linear infinite;
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .profile-header {
+            padding: 1.5rem;
         }
 
-    /* From Uiverse.io by andrew-demchenk0 */
-    .button {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 9px 12px;
-        gap: 8px;
-        height: 40px;
-        width: 172px;
-        border: none;
-        background: #FF2849;
-        border-radius: 20px;
-        cursor: pointer;
-    }
-
-    .lable {
-        line-height: 22px;
-        font-size: 17px;
-        color: #fff;
-        font-family: sans-serif;
-        letter-spacing: 1px;
-    }
-
-    .button:hover {
-        background: #e52441;
-    }
-
-        .button:hover .svg-icon {
-            animation: flickering 2s linear infinite;
+        .profile-body {
+            padding: 1.5rem;
         }
 
-    @@keyframes flickering {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 1;
-        }
-
-        52% {
-            opacity: 1;
-        }
-
-        54% {
-            opacity: 0;
-        }
-
-        56% {
-            opacity: 1;
-        }
-
-        90% {
-            opacity: 1;
-        }
-
-        92% {
-            opacity: 0;
-        }
-
-        94% {
-            opacity: 1;
-        }
-
-        96% {
-            opacity: 0;
-        }
-
-        98% {
-            opacity: 1;
-        }
-
-        99% {
-            opacity: 0;
-        }
-
-        100% {
-            opacity: 1;
+        .profile-form-grid {
+            grid-template-columns: 1fr;
         }
     }
 
-    keyframes flickering {
-        0%
+    @@media (max-width: 576px) {
+        .profile-header h2 {
+            font-size: 1.5rem;
+        }
 
-    {
-        opacity: 1;
-    }
+        .profile-subtitle {
+            font-size: 0.9rem;
+        }
 
-    50% {
-        opacity: 1;
-    }
-
-    52% {
-        opacity: 1;
-    }
-
-    54% {
-        opacity: 0;
-    }
-
-    56% {
-        opacity: 1;
-    }
-
-    90% {
-        opacity: 1;
-    }
-
-    92% {
-        opacity: 0;
-    }
-
-    94% {
-        opacity: 1;
-    }
-
-    96% {
-        opacity: 0;
-    }
-
-    98% {
-        opacity: 1;
-    }
-
-    99% {
-        opacity: 0;
-    }
-
-    100% {
-        opacity: 1;
-    }
-
-
+        .save-btn {
+            width: 100%;
+        }
     }
 </style>

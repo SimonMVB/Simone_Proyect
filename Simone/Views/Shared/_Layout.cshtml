@@ -365,7 +365,164 @@
             .back-to-top:hover svg {
                 transform: translateY(-50%) rotate(-90deg);
             }
+        /* From Uiverse.io by elijahgummer */
+        .badge {
+            float: right;
+            position: relative;
+            text-decoration: none;
+            padding: 8px 16px;
+            color: white;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            user-select: none;
+        }
 
+            .badge span {
+                width: 25px;
+                height: 25px;
+                position: absolute;
+                top: -12px;
+                right: -2px;
+                transform: rotate(-20deg);
+                filter: blur(0.5px);
+            }
+
+                .badge span:before,
+                .badge span:after {
+                    content: "";
+                    position: absolute;
+                }
+
+                .badge span:before {
+                    width: 1px;
+                    height: 100%;
+                    left: 12px;
+                    background: linear-gradient( to bottom, transparent, rgba(255, 255, 255, 0.7), transparent );
+                }
+
+                .badge span:after {
+                    width: 100%;
+                    height: 1px;
+                    top: 12px;
+                    background: linear-gradient( to left, transparent, rgba(255, 255, 255, 0.7), transparent );
+                }
+
+            .badge:hover span:after {
+                display: block;
+                animation: rotate 3s ease-in-out; /* Adjust timing as needed */
+            }
+
+            .badge:hover span::before {
+                display: block;
+                animation: rotate 3s ease-in-out; /* Adjust timing as needed */
+            }
+
+        @@keyframes rotate {
+            0%
+
+        {
+            transform: rotate(0deg) scale(1);
+        }
+
+        50% {
+            transform: rotate(180deg) scale(1.8);
+        }
+
+        100% {
+            transform: rotate(360deg) scale(1);
+        }
+
+        }
+
+        .badge:before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            background: rgba(255, 255, 255, 0.25);
+            box-shadow: 0 8px 32px 0 rgba(105, 106, 111, 0.37);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            top: -1px;
+            right: -1px;
+            bottom: -1px;
+            left: -1px;
+            border-radius: 999px;
+        }
+
+        .inspired {
+            position: absolute;
+            bottom: 8%;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+            .inspired:hover {
+                color: rgba(255, 255, 255, 0.8);
+            }
+
+        #cart-count {
+            font-size: 10px !important;
+            padding: 2px 6px;
+            min-width: 18px;
+            height: 18px;
+            line-height: 14px;
+            font-weight: 600;
+            display: inline-block;
+            text-align: center;
+            border-radius: 50px;
+            position: absolute;
+            top: 0;
+            right: -8px;
+        }
+
+
+
+
+
+
+        /* Estilos personalizados para el dropdown de dirección */
+        #direccionDropdown:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .dropdown-menu {
+            border-radius: 12px;
+            padding: 8px 0;
+        }
+
+        .dropdown-item {
+            border-radius: 8px;
+            margin: 2px 8px;
+            transition: all 0.2s ease;
+        }
+
+            .dropdown-item:hover {
+                background-color: #f8f9fa;
+                transform: translateX(3px);
+            }
+
+            .dropdown-item.active {
+                background-color: rgba(13, 110, 253, 0.1);
+            }
+
+            .dropdown-item .bg-light {
+                background-color: #f8f9fa !important;
+            }
+
+        .dropdown-header {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 
@@ -494,24 +651,70 @@
                     </ul>
                 </div>
 
-                <!-- Sección derecha: Dirección, búsqueda, favoritos, carrito y usuario -->
+                <!-- Sección de Dirección Mejorada -->
                 <div class="d-flex align-items-center">
                     @if (User.Identity.IsAuthenticated)
                     {
                         <div class="dropdown mx-2">
-                            <a class="text-white dropdown-toggle d-flex align-items-center" href="#" role="button"
-                                id="direccionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                                title="Haz clic para cambiar tu dirección">
-                                <i class="fa-solid fa-location-dot me-1"></i> Enviar a:
-                                <span class="fw-bold ms-1 text-truncate" style="max-width: 150px;">
-                                    @(ViewBag.UserDireccion ?? "Tu dirección")
+                            <a class="text-white dropdown-toggle d-flex align-items-center position-relative pe-3" href="#" role="button"
+                               id="direccionDropdown" data-bs-toggle="dropdown" aria-expanded="false"
+                               title="Haz clic para cambiar tu dirección" style="transition: all 0.3s ease;">
+                                <span class="position-relative">
+                                    <i class="fa-solid fa-location-dot me-1"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"
+                                          style="font-size: 6px; display: @(ViewBag.UserDireccion == null ? "block" : "none")"
+                                          title="Dirección no configurada"></span>
                                 </span>
+                                <span class="d-none d-md-inline ms-1">Enviar a:</span>
+                                <span class="fw-bold ms-1 text-truncate" style="max-width: 150px; display: inline-block;">
+                                    @(ViewBag.UserDireccion ?? "Seleccionar dirección")
+                                </span>
+                                <i class="fa-solid fa-chevron-down ms-1" style="font-size: 0.7rem;"></i>
                             </a>
-                            <ul class="dropdown-menu dropdown-menu-end animate__animated animate__fadeIn"
-                                aria-labelledby="direccionDropdown">
+                            <ul class="dropdown-menu dropdown-menu-end animate__animated animate__fadeIn shadow"
+                                aria-labelledby="direccionDropdown" style="min-width: 280px; border: none;">
                                 <li>
-                                    <a class="dropdown-item" asp-controller="Cuenta" asp-action="CambiarDireccion">
-                                        <i class="fa-solid fa-map-marker-alt me-2 text-primary"></i> Cambiar Dirección
+                                    <h6 class="dropdown-header d-flex align-items-center">
+                                        <i class="fa-solid fa-map-location-dot me-2 text-primary"></i>
+                                        Dirección de envío
+                                    </h6>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center py-2" asp-controller="Cuenta" asp-action="CambiarDireccion">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fa-solid fa-plus text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">Agregar nueva dirección</div>
+                                            <small class="text-muted">Selecciona en el mapa</small>
+                                        </div>
+                                    </a>
+                                </li>
+                                @if (ViewBag.UserDireccion != null)
+                                {
+                                    <li>
+                                        <a class="dropdown-item d-flex align-items-center py-2 active">
+                                            <div class="bg-primary bg-opacity-10 rounded-circle p-2 me-2">
+                                                <i class="fa-solid fa-check text-primary"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">Dirección actual</div>
+                                                <small class="text-muted">@ViewBag.UserDireccion</small>
+                                            </div>
+                                        </a>
+                                    </li>
+                                }
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center py-2" href="#">
+                                        <div class="bg-light rounded-circle p-2 me-2">
+                                            <i class="fa-solid fa-clock-rotate-left text-primary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold">Historial de direcciones</div>
+                                            <small class="text-muted">Tus direcciones anteriores</small>
+                                        </div>
                                     </a>
                                 </li>
                             </ul>
@@ -519,11 +722,16 @@
                     }
                     else
                     {
-                        <a class="text-white mx-2" asp-controller="Cuenta" asp-action="Login"
-                            title="Inicia sesión para ingresar tu dirección">
-                            <i class="fa-solid fa-location-dot me-1"></i> Enviar a:
-                            <span class="fw-bold">Iniciar Sesión</span>
-                        </a>
+                        <div class="position-relative mx-2">
+                            <a class="text-white d-flex align-items-center" asp-controller="Cuenta" asp-action="Login"
+                               title="Inicia sesión para ingresar tu dirección" style="transition: all 0.3s ease;">
+                                <i class="fa-solid fa-location-dot me-1"></i>
+                                <span class="d-none d-md-inline ms-1">Enviar a:</span>
+                                <span class="fw-bold ms-1">Iniciar Sesión</span>
+                            </a>
+                            <div class="position-absolute top-0 start-100 translate-middle p-1 bg-warning border border-light rounded-circle"
+                                 style="font-size: 6px;" title="Requiere autenticación"></div>
+                        </div>
                     }
                 </div>
 
@@ -750,6 +958,10 @@
                     <i class="fab fa-x-twitter"></i>
                 </li>
             </ul>
+            <div class="badge" href="#">
+                v0.1
+                <span></span>
+            </div>
 
             <!-- Marca y derechos -->
             <div class="mb-2 mt-4">

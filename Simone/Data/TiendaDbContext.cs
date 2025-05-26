@@ -123,9 +123,10 @@ namespace Simone.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Favorito>()
-            .HasOne(f => f.Producto)
+            .HasOne(f => f.Usuario)
             .WithMany()
-            .HasForeignKey(f => f.ProductoId);
+            .HasForeignKey(f => f.UsuarioId)
+            .OnDelete(DeleteBehavior.Restrict); 
 
             // Tipos DECIMAL para campos financieros
             var decimalProps = new (Type entity, string[] props)[]

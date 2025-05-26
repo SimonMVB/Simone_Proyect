@@ -1,355 +1,445 @@
-<div class="ui container mt-5">
-    <div class="ui segment">
-        @if (ViewBag.Producto != null)
-        {
-            <h2 class="ui header">
-                <i class="box icon"></i>
-                <div class="content">Editar Producto</div>
-            </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="EditarProducto"
-                enctype="multipart/form-data">
+@{
+    ViewData["Title"] = ViewBag.Producto != null ? "Editar Producto" : "Añadir Producto";
+}
 
-                <!-- ID -->
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --info-color: #17a2b8;
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .form-container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .form-card {
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    .form-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        color: var(--accent-purple);
+    }
+
+        .form-header i {
+            font-size: 1.8rem;
+            margin-right: 1rem;
+        }
+
+        .form-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+        .form-group.full-width {
+            grid-column: span 2;
+        }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--dark-gray);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+        .form-input:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+            outline: none;
+        }
+
+    .form-textarea {
+        width: 100%;
+        min-height: 100px;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        resize: vertical;
+    }
+
+        .form-textarea:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+            outline: none;
+        }
+
+    .form-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 8px;
+        font-size: 1rem;
+        background-color: var(--primary-light);
+        transition: all 0.3s ease;
+    }
+
+        .form-select:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+            outline: none;
+        }
+
+        .form-select:disabled {
+            background-color: var(--light-gray);
+            cursor: not-allowed;
+        }
+
+    .image-upload {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .image-preview {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid var(--medium-gray);
+    }
+
+    .no-image {
+        width: 150px;
+        height: 150px;
+        background-color: var(--light-gray);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-light);
+        font-size: 0.9rem;
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .file-label {
+        background-color: var(--light-gray);
+        color: var(--text-color);
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .file-label:hover {
+            background-color: var(--medium-gray);
+        }
+
+    .error-msg {
+        color: var(--danger-color);
+        font-size: 0.85rem;
+        display: none;
+    }
+
+    .submit-btn {
+        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 30px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+        grid-column: span 2;
+        justify-self: center;
+    }
+
+        .submit-btn:hover {
+            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
+        }
+
+    .empty-state {
+        color: var(--text-light);
+        font-style: italic;
+        padding: 0.5rem 0;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group.full-width {
+            grid-column: span 1;
+        }
+
+        .submit-btn {
+            grid-column: span 1;
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="form-container fade-in">
+    <div class="form-card">
+        <div class="form-header">
+            <i class="fas fa-box-open"></i>
+            <h2>@ViewData["Title"]</h2>
+        </div>
+
+        <form class="form-grid" method="post"
+              asp-controller="Panel"
+              asp-action="@(ViewBag.Producto != null ? "EditarProducto" : "AnadirProducto")"
+              enctype="multipart/form-data">
+            @Html.AntiForgeryToken()
+
+            @if (ViewBag.Producto != null)
+            {
                 <input type="hidden" name="productoID" value="@ViewBag.Producto.ProductoID" />
+            }
 
-                <!-- Nombre -->
-                <div class="field">
-                    <label for="Nombre">Nombre</label>
-                    <input type="text" name="nombreProducto" id="Nombre" placeholder="Nombre del producto" required
-                        value="@ViewBag.Producto.Nombre" />
-                </div>
+            <!-- Nombre -->
+            <div class="form-group">
+                <label for="Nombre" class="form-label">Nombre</label>
+                <input type="text" name="nombreProducto" id="Nombre" class="form-input"
+                       placeholder="Nombre del producto" required
+                       value="@ViewBag.Producto?.Nombre" />
+            </div>
 
-                <!-- Descripcion -->
-                <div class="field">
-                    <label for="Descripcion">Descripción</label>
-                    <textarea name="descripcion" id="Descripcion" placeholder="Descripción del producto" rows="3" required>
-                    @ViewBag.Producto.Descripcion
-                    </textarea>
-                </div>
+            <!-- Descripción -->
+            <div class="form-group full-width">
+                <label for="Descripcion" class="form-label">Descripción</label>
+                <textarea name="descripcion" id="Descripcion" class="form-textarea"
+                          placeholder="Descripción del producto" required>@ViewBag.Producto?.Descripcion</textarea>
+            </div>
 
-                <!-- Talla -->
-                <div class="field">
-                    <label for="Talla">Talla</label>
-                    <input type="text" name="talla" id="Talla" placeholder="Tamaño del producto" required
-                        value="@ViewBag.Producto.Talla" />
-                </div>
+            <!-- Talla -->
+            <div class="form-group">
+                <label for="Talla" class="form-label">Talla</label>
+                <input type="text" name="talla" id="Talla" class="form-input"
+                       placeholder="Tamaño del producto" required
+                       value="@ViewBag.Producto?.Talla" />
+            </div>
 
-                <!-- Color -->
-                <div class="field">
-                    <label for="Color">Color</label>
-                    <input type="text" name="color" id="Color" placeholder="Color del producto" required
-                        value="@ViewBag.Producto.Color" />
-                </div>
+            <!-- Color -->
+            <div class="form-group">
+                <label for="Color" class="form-label">Color</label>
+                <input type="text" name="color" id="Color" class="form-input"
+                       placeholder="Color del producto" required
+                       value="@ViewBag.Producto?.Color" />
+            </div>
 
-                <!-- Marca -->
-                <div class="field">
-                    <label for="Marca">Marca</label>
-                    <input type="text" name="marca" id="Marca" placeholder="Marca del producto" required
-                        value="@ViewBag.Producto.Marca" />
-                </div>
+            <!-- Marca -->
+            <div class="form-group">
+                <label for="Marca" class="form-label">Marca</label>
+                <input type="text" name="marca" id="Marca" class="form-input"
+                       placeholder="Marca del producto" required
+                       value="@ViewBag.Producto?.Marca" />
+            </div>
 
-                <!-- PrecioCompra -->
-                <div class="field">
-                    <label for="PrecioCompra">Precio de Compra</label>
-                    <input type="text" name="precioCompra" id="PrecioCompra" placeholder="Precio de compra"
-                        value="@ViewBag.Producto.PrecioCompra" step="0.01" required />
-                </div>
+            <!-- PrecioCompra -->
+            <div class="form-group">
+                <label for="PrecioCompra" class="form-label">Precio de Compra</label>
+                <input type="number" name="precioCompra" id="PrecioCompra" class="form-input"
+                       placeholder="Precio de compra" step="0.01" min="0" required
+                       value="@ViewBag.Producto?.PrecioCompra" />
+            </div>
 
-                <!-- PrecioVenta -->
-                <div class="field">
-                    <label for="PrecioVenta">Precio de Venta</label>
-                    <input type="text" name="precioVenta" id="PrecioVenta" placeholder="Precio de venta" required
-                        value="@ViewBag.Producto.PrecioVenta" step="0.01" />
-                </div>
+            <!-- PrecioVenta -->
+            <div class="form-group">
+                <label for="PrecioVenta" class="form-label">Precio de Venta</label>
+                <input type="number" name="precioVenta" id="PrecioVenta" class="form-input"
+                       placeholder="Precio de venta" step="0.01" min="0" required
+                       value="@ViewBag.Producto?.PrecioVenta" />
+            </div>
 
-                <!-- Categoria -->
-                <div class="field">
-                    @if (ViewBag.Categorias.Count > 0)
+            <!-- Categoría -->
+            <div class="form-group">
+                <label for="Categoria" class="form-label">Categoría</label>
+                @if (ViewBag.Categorias.Count > 0)
+                {
+                    <select name="categoriaID" id="Categoria" class="form-select" required>
+                        <option value="">Seleccione una categoría</option>
+                        @foreach (var categoria in ViewBag.Categorias)
+                        {
+                            <option value="@categoria.CategoriaID"
+                                    selected="@(ViewBag.Producto?.CategoriaID == categoria.CategoriaID)">
+                                @categoria.Nombre
+                            </option>
+                        }
+                    </select>
+                }
+                else
+                {
+                    <select name="categoriaID" id="Categoria" class="form-select" disabled required>
+                        <option value="">No hay categorías disponibles</option>
+                    </select>
+                    <p class="empty-state">Debe crear categorías primero</p>
+                }
+            </div>
+
+            <!-- Subcategoría -->
+            <div class="form-group">
+                <label for="Subcategoria" class="form-label">Subcategoría</label>
+                <select name="subcategoriaID" id="Subcategoria" class="form-select" required>
+                    <option value="">Seleccione una subcategoría</option>
+                    @if (ViewBag.Producto != null)
                     {
-                        <label for="Categoria">Categoría</label>
-                        <select name="categoriaID" id="Categoria" class="ui dropdown" required>
-                            <option value="">Seleccione una categoría</option>
-                            @foreach (var categoria in ViewBag.Categorias)
-                            {
-                                <option value="@categoria.CategoriaID">@categoria.Nombre</option>
-                            }
-                        </select>
-                    }
-                    else
-                    {
-                        <select name="categoria" id="Categoria" class="ui dropdown" disabled required>
-                            <option value="">No hay categorias disponibles</option>
-                        </select>
-                    }
-                </div>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function () {
-                        var selectedCategoryID = '@ViewBag.Producto.CategoriaID';
-                        var dropdown = document.getElementById("Categoria");
-                        var options = dropdown.querySelectorAll('option');
-                        options.forEach(function (option) {
-                            if (option.getAttribute('value') === selectedCategoryID) {
-                                option.selected = true;
-                            }
-                        });
-                    });
-                </script>
-
-                <!-- Subcategoria -->
-                <div class="field">
-                    <label for="Subcategoria">Subcategoría</label>
-                    <select name="subcategoriaID" id="Subcategoria" class="ui dropdown" required>
-                        <option value="">Seleccione una subcategoria</option>
                         @foreach (var subcategoria in ViewBag.Subcategorias)
                         {
                             if (subcategoria.CategoriaID == ViewBag.Producto.CategoriaID)
                             {
-                                <option value="@subcategoria.SubcategoriaID">@subcategoria.NombreSubcategoria</option>
+                                <option value="@subcategoria.SubcategoriaID"
+                                        selected="@(ViewBag.Producto.SubcategoriaID == subcategoria.SubcategoriaID)">
+                                    @subcategoria.NombreSubcategoria
+                                </option>
                             }
+                        }
+                    }
+                </select>
+            </div>
 
+            <!-- Proveedor -->
+            <div class="form-group">
+                <label for="Proveedor" class="form-label">Proveedor</label>
+                @if (ViewBag.Proveedores.Count > 0)
+                {
+                    <select name="proveedorID" id="Proveedor" class="form-select" required>
+                        <option value="">Seleccione un proveedor</option>
+                        @foreach (var proveedor in ViewBag.Proveedores)
+                        {
+                            <option value="@proveedor.ProveedorID"
+                                    selected="@(ViewBag.Producto?.ProveedorID == proveedor.ProveedorID)">
+                                @proveedor.NombreProveedor
+                            </option>
                         }
                     </select>
-                </div>
+                }
+                else
+                {
+                    <select name="proveedorID" id="Proveedor" class="form-select" disabled required>
+                        <option value="">No hay proveedores disponibles</option>
+                    </select>
+                    <p class="empty-state">Debe crear proveedores primero</p>
+                }
+            </div>
 
-                <script>
-                    document.addEventListener('DOMContentLoaded', function () {
-                        var selectedSubCategoryID = '@ViewBag.Producto.SubcategoriaID';
-                        var dropdown = document.getElementById("Subcategoria");
-                        var options = dropdown.querySelectorAll('option');
-                        options.forEach(function (option) {
-                            if (option.getAttribute('value') === selectedSubCategoryID) {
-                                option.selected = true;
-                            }
-                        });
-                    });
-                </script>
+            <!-- Stock -->
+            <div class="form-group">
+                <label for="Stock" class="form-label">Stock</label>
+                <input type="number" name="stock" id="Stock" class="form-input"
+                       placeholder="Cantidad en stock" min="0" required
+                       value="@ViewBag.Producto?.Stock" />
+            </div>
 
-                <!-- Proveedor -->
-                <div class="field">
-                    @if (ViewBag.Proveedores.Count > 0)
+            <!-- Imagen -->
+            <div class="form-group full-width">
+                <label class="form-label">Imagen del Producto</label>
+                <div class="image-upload">
+                    @if (ViewBag.Producto != null && !string.IsNullOrEmpty(ViewBag.Producto.ImagenPath))
                     {
-                        <label for="Proveedor">Proveedor</label>
-                        <select name="proveedorID" id="Proveedor" class="ui dropdown" required>
-                            <option value="">Seleccione un proveedor</option>
-                            @foreach (var proveedor in ViewBag.Proveedores)
-                            {
-                                <option value="@proveedor.ProveedorID">@proveedor.NombreProveedor</option>
-                            }
-                        </select>
+                        <img src="@ViewBag.Producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview">
                     }
                     else
                     {
-                        <select name="proveedorID" id="Proveedor" class="ui dropdown" disabled required>
-                            <option value="">No hay proveedores disponibles</option>
-                        </select>
-                    }
-                </div>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function () {
-                        var selectedProveedorID = '@ViewBag.Producto.ProveedorID';
-                        var dropdown = document.getElementById("Proveedor");
-                        var options = dropdown.querySelectorAll('option');
-                        options.forEach(function (option) {
-                            if (option.getAttribute('value') === selectedProveedorID) {
-                                option.selected = true;
-                            }
-                        });
-                    });
-                </script>
-
-                <!-- Stock -->
-                <div class="field">
-                    <label for="Stock">Stock</label>
-                    <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required
-                        value="@ViewBag.Producto.Stock" />
-                </div>
-
-                <div class="field">
-                    <label for="Imagen">Imagen del Producto</label>
-
-                    <!-- Show existing image preview -->
-                    @if (!string.IsNullOrEmpty(ViewBag.Producto?.ImagenPath))
-                    {
-                        <div>
-                            <img src="@ViewBag.Producto.ImagenPath" alt="Imagen actual"
-                                style="max-height: 150px; display: block; margin-bottom: 10px;" />
+                        <div class="no-image" id="imagePreview">
+                            No hay imagen seleccionada
                         </div>
                     }
 
-                    <input type="file" name="imagen" id="Imagen" accept="image/*" />
-                    <small id="error-msg" style="color: red; display: none;">
+                    <input type="file" name="imagen" id="Imagen" class="file-input" accept="image/*">
+                    <label for="Imagen" class="file-label">
+                        <i class="fas fa-camera"></i>
+                        @(ViewBag.Producto != null ? "Cambiar imagen" : "Seleccionar imagen")
+                    </label>
+                    <small class="error-msg" id="error-msg">
                         El archivo debe ser menor o igual a 2MB.
                     </small>
-
-                    <!-- Hidden input to hold current image path -->
-                    <input type="hidden" name="existingImagenPath" value="@ViewBag.Producto?.ImagenPath" />
-                </div>
-
-                <script>
-                    const inputFile = document.getElementById('Imagen');
-                    const errorMsg = document.getElementById('error-msg');
-                    const maxSizeMB = 2;
-                    const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-                    inputFile.addEventListener('change', () => {
-                        errorMsg.style.display = 'none';
-                        const file = inputFile.files[0];
-                        if (file && file.size > maxSizeBytes) {
-                            errorMsg.style.display = 'inline';
-                            inputFile.value = ''; // Reset the input
-                            alert(`El archivo es demasiado grande. El tamaño máximo permitido es ${maxSizeMB}MB.`);
-                        }
-                    });
-                </script>
-
-
-                <!-- Submit Button -->
-                <button type="submit" class="ui blue button">Editar Producto</button>
-            </form>
-        }
-        else
-        {
-            <h2 class="ui header">
-                <i class="box icon"></i>
-                <div class="content">Añadir Producto</div>
-            </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProducto"
-                enctype="multipart/form-data">
-
-                <!-- Nombre -->
-                <div class="field">
-                    <label for="Nombre">Nombre</label>
-                    <input type="text" name="nombreProducto" id="Nombre" placeholder="Nombre del producto" required />
-                </div>
-
-                <!-- Descripcion -->
-                <div class="field">
-                    <label for="Descripcion">Descripción</label>
-                    <textarea name="descripcion" id="Descripcion" placeholder="Descripción del producto" rows="3"
-                    required></textarea>
-                </div>
-
-                <!-- Talla -->
-                <div class="field">
-                    <label for="Talla">Talla</label>
-                    <input type="text" name="talla" id="Talla" placeholder="Tamaño del producto" required />
-                </div>
-
-                <!-- Color -->
-                <div class="field">
-                    <label for="Color">Color</label>
-                    <input type="text" name="color" id="Color" placeholder="Color del producto" required />
-                </div>
-
-                <!-- Marca -->
-                <div class="field">
-                    <label for="Marca">Marca</label>
-                    <input type="text" name="marca" id="Marca" placeholder="Marca del producto" required />
-                </div>
-
-                <!-- PrecioCompra -->
-                <div class="field">
-                    <label for="PrecioCompra">Precio de Compra</label>
-                    <input type="text" name="precioCompra" id="PrecioCompra" placeholder="Precio de compra" step="0.01"
-                        required />
-                </div>
-
-                <!-- PrecioVenta -->
-                <div class="field">
-                    <label for="PrecioVenta">Precio de Venta</label>
-                    <input type="text" name="precioVenta" id="PrecioVenta" placeholder="Precio de venta" step="0.01"
-                        required />
-                </div>
-
-                <!-- Categoria -->
-                <div class="field">
-                    @if (ViewBag.Categorias.Count > 0)
+                    @if (ViewBag.Producto != null)
                     {
-                        <label for="Categoria">Categoría</label>
-                        <select name="categoriaID" id="Categoria" class="ui dropdown" required>
-                            <option value="">Seleccione una categoría</option>
-                            @foreach (var categoria in ViewBag.Categorias)
-                            {
-                                <option value="@categoria.CategoriaID">@categoria.Nombre</option>
-                            }
-                        </select>
-                    }
-                    else
-                    {
-                        <select name="categoriaID" id="Categoria" class="ui dropdown" disabled required>
-                            <option value="">No hay categorías disponibles</option>
-                        </select>
+                        <input type="hidden" name="existingImagenPath" value="@ViewBag.Producto.ImagenPath" />
                     }
                 </div>
+            </div>
 
-                <!-- Subcategoria -->
-                <div class="field">
-                    <label for="Subcategoria">Subcategoría</label>
-                    <select name="subcategoriaID" id="Subcategoria" class="ui dropdown" required>
-                        <option value="">Seleccione una subcategoria</option>
-                    </select>
-                </div>
-
-                <!-- Proveedor -->
-                <div class="field">
-                    @if (ViewBag.Proveedores.Count > 0)
-                    {
-                        <label for="Proveedor">Proveedor</label>
-                        <select name="proveedorID" id="Proveedor" class="ui dropdown" required>
-                            <option value="">Seleccione un proveedor</option>
-                            @foreach (var proveedor in ViewBag.Proveedores)
-                            {
-                                <option value="@proveedor.ProveedorID">@proveedor.NombreProveedor</option>
-                            }
-                        </select>
-                    }
-                    else
-                    {
-                        <select name="proveedorID" id="Proveedor" class="ui dropdown" disabled required>
-                            <option value="">No hay proveedores disponibles</option>
-                        </select>
-                    }
-                </div>
-
-                <!-- Stock -->
-                <div class="field">
-                    <label for="Stock">Stock</label>
-                    <input type="number" name="stock" id="Stock" placeholder="Cantidad en stock" required />
-                </div>
-
-                <!-- Image Upload Field -->
-                <div class="field">
-                    <label for="Imagen">Imagen del Producto</label>
-                    <input type="file" name="imagen" id="Imagen" accept="image/*" />
-                    <small id="error-msg" style="color: red; display: none;">El archivo debe ser menor o igual a
-                        2MB.</small>
-                </div>
-
-                <script>
-                    const inputFile = document.getElementById('Imagen');
-                    const errorMsg = document.getElementById('error-msg');
-                    const maxSizeMB = 2;
-                    const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-                    inputFile.addEventListener('change', () => {
-                        errorMsg.style.display = 'none';
-                        const file = inputFile.files[0];
-                        if (file && file.size > maxSizeBytes) {
-                            errorMsg.style.display = 'inline';
-                            inputFile.value = ''; // Reset the input
-                            alert(`El archivo es demasiado grande. El tamaño máximo permitido es ${maxSizeMB}MB.`);
-                        }
-                    });
-                </script>
-
-                <!-- Submit Button -->
-                <button type="submit" class="ui green button">Añadir Producto</button>
-
-
-            </form>
-        }
+            <!-- Submit Button -->
+            <button type="submit" class="submit-btn">
+                <i class="fas @(ViewBag.Producto != null ? "fa-save" : "fa-plus") me-2"></i>
+                @(ViewBag.Producto != null ? "Guardar Cambios" : "Añadir Producto")
+            </button>
+        </form>
     </div>
 </div>
 
@@ -357,21 +447,18 @@
     <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Ensure subcategorias is always an array, even if ViewBag.Subcategorias is null or empty
-            const subcategorias = @Json.Serialize(ViewBag.Subcategorias); // Correct way to embed subcategorias as a JS object
-
+            // Subcategorías dinámicas
+            const subcategorias = @Json.Serialize(ViewBag.Subcategorias);
             const categoriaDropdown = document.getElementById("Categoria");
             const subcategoriaDropdown = document.getElementById("Subcategoria");
 
-            // Function to filter subcategories based on the selected category
             function filterSubcategoriasByCategoria(categoriaID) {
-                // Filter subcategories by CategoriaID
-                const filteredSubcategorias = subcategorias.filter(subcategoria => subcategoria.categoriaID == Number(categoriaID));
+                const filteredSubcategorias = subcategorias.filter(
+                    subcategoria => subcategoria.categoriaID == Number(categoriaID)
+                );
 
-                // Clear the current options in Subcategoria dropdown
                 subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
 
-                // Add filtered subcategories to Subcategoria dropdown
                 filteredSubcategorias.forEach(subcategoria => {
                     const option = document.createElement("option");
                     option.value = subcategoria.subcategoriaID;
@@ -379,43 +466,80 @@
                     subcategoriaDropdown.appendChild(option);
                 });
 
-                // Enable the Subcategoria dropdown if there are options, or disable it if no options are available
                 subcategoriaDropdown.disabled = filteredSubcategorias.length === 0;
             }
 
-            // When Categoria changes, filter the subcategories
             if (categoriaDropdown && subcategoriaDropdown) {
+                // Cargar subcategorías si ya hay una categoría seleccionada (modo edición)
+                if (@(ViewBag.Producto?.CategoriaID != null ? "true" : "false")) {
+                    filterSubcategoriasByCategoria(@(ViewBag.Producto?.CategoriaID ?? 0));
+                }
+
                 categoriaDropdown.addEventListener("change", function () {
                     const selectedCategoriaID = this.value;
-
-                    // Only filter if a valid category is selected
                     if (selectedCategoriaID) {
                         filterSubcategoriasByCategoria(selectedCategoriaID);
                     } else {
-                        // Reset the subcategory dropdown when no category is selected
                         subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
                         subcategoriaDropdown.disabled = true;
                     }
                 });
             }
-        });
 
-        function validatePriceInput(event) {
-            const input = event.target;
+            // Vista previa de imagen
+            const imageInput = document.getElementById("Imagen");
+            const imagePreview = document.getElementById("imagePreview");
+            const errorMsg = document.getElementById("error-msg");
+            const maxSizeMB = 2;
+            const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
-            const validNumberPattern = /^\d+(,\d+)?$/;
+            imageInput.addEventListener("change", function() {
+                errorMsg.style.display = "none";
+                const file = this.files[0];
 
-            if (!validNumberPattern.test(input.value)) {
-                event.preventDefault();
-                alert(`Por favor, ingrese un número válido para el precio.`);
-                input.value = "";
+                if (file) {
+                    if (file.size > maxSizeBytes) {
+                        errorMsg.style.display = "block";
+                        this.value = "";
+                        alert(`El archivo es demasiado grande. El tamaño máximo permitido es ${maxSizeMB}MB.`);
+                        return;
+                    }
+
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        if (imagePreview.tagName === "IMG") {
+                            imagePreview.src = e.target.result;
+                        } else {
+                            // Reemplazar el div por una imagen
+                            const newImg = document.createElement("img");
+                            newImg.src = e.target.result;
+                            newImg.className = "image-preview";
+                            newImg.id = "imagePreview";
+                            imagePreview.parentNode.replaceChild(newImg, imagePreview);
+                        }
+                    }
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            // Validación de precios
+            document.getElementById("PrecioCompra").addEventListener("blur", validatePriceInput);
+            document.getElementById("PrecioVenta").addEventListener("blur", validatePriceInput);
+
+            function validatePriceInput(event) {
+                const input = event.target;
+                const value = parseFloat(input.value);
+
+                if (isNaN(value) {
+                    alert("Por favor ingrese un número válido para el precio.");
+                    input.value = "";
+                    input.focus();
+                } else if (value < 0) {
+                    alert("El precio no puede ser negativo.");
+                    input.value = "";
+                    input.focus();
+                }
             }
-        }
-
-        document.getElementById("PrecioCompra").addEventListener("change", validatePriceInput);
-        document.getElementById("PrecioVenta").addEventListener("change", validatePriceInput);
-
-
+        });
     </script>
-
 }

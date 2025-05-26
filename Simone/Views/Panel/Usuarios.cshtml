@@ -3,68 +3,277 @@
     ViewData["Title"] = "Gestión de " + ViewData["Type"];
 }
 
-<div class="ui container mt-5">
-    <div class="ui segment">
-        <h2 class="ui header">
-            <i class="users icon"></i>
-            <div class="content">@ViewData["Title"]</div>
-        </h2>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        <table class="ui celled striped table">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background-color: #f5f5f7;
+        color: var(--text-color);
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
+    }
+
+    .management-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 15px;
+    }
+
+    .management-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--medium-gray);
+    }
+
+    .management-title {
+        font-size: 1.8rem;
+        color: var(--accent-purple);
+        display: flex;
+        align-items: center;
+        margin-bottom: 0;
+    }
+
+        .management-title i {
+            margin-right: 1rem;
+            color: var(--accent-purple);
+        }
+
+    .management-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+        .management-table th {
+            background-color: var(--accent-purple);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+        }
+
+        .management-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--medium-gray);
+            vertical-align: middle;
+        }
+
+        .management-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .management-table tr:hover td {
+            background-color: rgba(75, 0, 130, 0.03);
+        }
+
+    .role-select {
+        min-width: 180px;
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 6px;
+        background-color: var(--primary-light);
+        color: var(--text-color);
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+    }
+
+        .role-select:focus {
+            border-color: var(--accent-purple);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+        }
+
+    .action-btn {
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .delete-btn {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+        .delete-btn:hover {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+    .empty-state {
+        background-color: var(--primary-light);
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--medium-gray);
+            margin-bottom: 1rem;
+        }
+
+        .empty-state p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+    /* Status indicators */
+    .status-active {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background-color: rgba(40, 167, 69, 0.1);
+        color: var(--success-color);
+    }
+
+    .status-inactive {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background-color: rgba(220, 53, 69, 0.1);
+        color: var(--danger-color);
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 1200px) {
+        .management-container {
+            overflow-x: auto;
+        }
+
+        .management-table {
+            min-width: 1000px;
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .management-title {
+            font-size: 1.5rem;
+        }
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+</style>
+
+<div class="management-container fade-in">
+    <div class="management-header">
+        <h2 class="management-title">
+            <i class="fas fa-users"></i> @ViewData["Title"]
+        </h2>
+    </div>
+
+    @if (ViewBag.Usuarios.Count > 0)
+    {
+        <table class="management-table">
             <thead>
                 <tr>
                     <th>Nombre</th>
                     <th>Email</th>
                     <th>Teléfono</th>
                     <th>Dirección</th>
-                    <th>Fecha de Registro</th>
+                    <th>Registro</th>
                     <th>Rol</th>
-                    <th>Opciones</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var usuario in ViewBag.Usuarios)
                 {
                     <tr>
-                        <td>@usuario.NombreCompleto</td>
+                        <td>
+                            <strong>@usuario.NombreCompleto</strong>
+                            @if (usuario.Activo)
+                            {
+                                <span class="status-active">Activo</span>
+                            }
+                            else
+                            {
+                                <span class="status-inactive">Inactivo</span>
+                            }
+                        </td>
                         <td>@usuario.Email</td>
-                        <td>@usuario.Telefono</td>
-                        <td>@usuario.Direccion</td>
+                        <td>@(usuario.Telefono ?? "-")</td>
+                        <td>@(usuario.Direccion ?? "-")</td>
                         <td>@(usuario.FechaRegistro?.ToString("dd/MM/yyyy") ?? "-")</td>
                         <td>
-                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EditarRol">
+                            <form method="post" asp-controller="Panel" asp-action="EditarRol" class="role-form">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="usuarioID" value="@usuario.Id" />
-                                <select name="nuevoRolID" class="ui dropdown" id="roleNameDropdown_@usuario.Id" onChange="this.form.submit();">
-                                    <option value="" disabled>Seleccione un Rol</option>
+                                <select name="nuevoRolID" class="role-select" onchange="this.form.submit()">
+                                    <option value="" disabled>Seleccionar rol</option>
                                     @foreach (var role in ViewBag.Roles)
                                     {
-                                        <option value="@role.Id" data-role-id="@role.Id">
+                                        <option value="@role.Id" selected="@(role.Id == usuario.RolID)">
                                             @role.Name
                                         </option>
                                     }
                                 </select>
-
-                                <script>
-                                    document.addEventListener('DOMContentLoaded', function () {
-                                        var selectedRoleId = '@usuario.RolID';
-                                        var dropdown = document.getElementById("roleNameDropdown_@usuario.Id");
-                                        var options = dropdown.querySelectorAll('option');
-
-                                        options.forEach(function (option) {
-                                            if (option.getAttribute('data-role-id') === selectedRoleId) {
-                                                option.selected = true;
-                                            }
-                                        });
-                                    });
-                                </script>
                             </form>
                         </td>
                         <td>
-                            <form method="post" style="display:inline" asp-controller="Panel" asp-action="EliminarUsuario" asp-route-id="@usuario.Id" onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                            <form method="post" asp-controller="Panel" asp-action="EliminarUsuario"
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="ui icon red button" title="Eliminar @ViewData["Type"]">
-                                    <i class="trash icon"></i>
+                                <input type="hidden" name="id" value="@usuario.Id" />
+                                <button type="submit" class="action-btn delete-btn" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </form>
                         </td>
@@ -72,9 +281,35 @@
                 }
             </tbody>
         </table>
-    </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-users-slash"></i>
+            <p>No hay usuarios registrados</p>
+        </div>
+    }
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize dropdowns
+            document.querySelectorAll('.role-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    this.closest('form').submit();
+                });
+            });
+
+            // Add confirmation for role changes
+            document.querySelectorAll('.role-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!this.querySelector('select').value) {
+                        e.preventDefault();
+                    }
+                });
+            });
+        });
+    </script>
 }
