@@ -55,6 +55,7 @@ builder.Services.AddScoped<CategoriasService>();
 builder.Services.AddScoped<SubcategoriasService>();
 builder.Services.AddScoped<ProveedorService>();
 builder.Services.AddScoped<ProductosService>();
+builder.Services.AddScoped<CarritoService>();
 
 // 2.5. Configurar la cookie de autenticación para definir las rutas de Login y Acceso Denegado
 builder.Services.ConfigureApplicationCookie(options =>
@@ -64,7 +65,11 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // 2.6. Agregar soporte para controladores con vistas
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews(options =>
+{
+    // Registramos el filtro de acción global CarritoActionFilter
+    options.Filters.Add<CarritoActionFilter>(); 
+});
 
 var app = builder.Build();
 

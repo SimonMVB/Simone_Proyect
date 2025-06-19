@@ -10,7 +10,7 @@ namespace Simone.Models
     public class CarritoDetalle
     {
         /// <summary>
-        /// Identificador único del detalle del carrito.
+        /// Identificador ï¿½nico del detalle del carrito.
         /// </summary>
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -38,7 +38,7 @@ namespace Simone.Models
         /// <summary>
         /// Producto asociado al detalle.
         /// </summary>
-        public virtual Producto Producto { get; set; } = null!;
+        public virtual Producto Producto { get; set; } = null;
 
         /// <summary>
         /// Cantidad de unidades del producto en el carrito.
@@ -58,7 +58,7 @@ namespace Simone.Models
         public decimal Precio { get; internal set; }
 
         /// <summary>
-        /// Fecha y hora en la que se agregó el producto al carrito.
+        /// Fecha y hora en la que se agregï¿½ el producto al carrito.
         /// </summary>
         [Required]
         public DateTime FechaAgregado { get; set; } = DateTime.Now;

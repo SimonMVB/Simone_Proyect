@@ -20,32 +20,28 @@ namespace Simone.Models
         /// Identificador del cliente al que pertenece el carrito.
         /// </summary>
         [Required]
-        public int ClienteID { get; set; }
+        public string ClienteID { get; set; } = "";
 
         /// <summary>
-        /// Cliente asociado al carrito.
-        /// </summary>
-        [ForeignKey("ClienteID")]
-        public virtual Cliente Cliente { get; set; } = null!;
-
-        /// <summary>
-        /// Fecha de creación del carrito.
+        /// Fecha de creaciÃ³n del carrito.
         /// </summary>
         [Required]
         public DateTime FechaCreacion { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// Estado del carrito (por ejemplo, "Activo", "Procesado", "Cancelado").
+        /// Estado del carrito ("En Uso", "Vacio", "Cerrado").
         /// </summary>
         [Required]
         [StringLength(50)]
-        public string EstadoCarrito { get; set; } = "Activo";
+        public string EstadoCarrito { get; set; } = "Vacio";
 
         /// <summary>
-        /// Colección de detalles del carrito.
+        /// ColecciÃ³n de detalles del carrito.
         /// </summary>
         public virtual ICollection<CarritoDetalle> CarritoDetalles { get; set; } = new List<CarritoDetalle>();
 
+        // Navigation property for the Cliente (Usuario)
+        [ForeignKey("ClienteID")]
+        public virtual Usuario Cliente { get; set; }
     }
 }
-

@@ -3,6 +3,7 @@ using Simone.Models;
 using Simone.Data;
 using Microsoft.EntityFrameworkCore;
 using Simone.Extensions;
+using Microsoft.AspNetCore.Identity;
 
 namespace Simone.Controllers
 {
@@ -10,43 +11,45 @@ namespace Simone.Controllers
     {
         private readonly TiendaDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
+        private readonly UserManager<Usuario> _userManager;
 
-        public CarritoController(TiendaDbContext context, IHttpContextAccessor httpContextAccessor)
+        public CarritoController(TiendaDbContext context, IHttpContextAccessor httpContextAccessor, UserManager<Usuario> user)
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
+            _userManager = user;
         }
 
-        // Obtener carrito de la sesión
+        // Obtener carrito de la sesiï¿½n
         private List<CarritoDetalle> ObtenerCarrito()
         {
             return _httpContextAccessor.HttpContext.Session.GetObjectFromJson<List<CarritoDetalle>>("Carrito") ?? new List<CarritoDetalle>();
         }
 
-        // Guardar carrito en la sesión
+        // Guardar carrito en la sesiï¿½n
         private void GuardarCarrito(List<CarritoDetalle> carrito)
         {
             _httpContextAccessor.HttpContext.Session.SetObjectAsJson("Carrito", carrito);
         }
 
-        // Obtener cupón actual de la sesión
+        // Obtener cupï¿½n actual de la sesiï¿½n
         private Promocion? ObtenerCupon()
         {
             return _httpContextAccessor.HttpContext.Session.GetObjectFromJson<Promocion>("Cupon");
         }
 
-        // Guardar cupón en la sesión
+        // Guardar cupï¿½n en la sesiï¿½n
         private void GuardarCupon(Promocion cupon)
         {
             _httpContextAccessor.HttpContext.Session.SetObjectAsJson("Cupon", cupon);
         }
 
-        // Eliminar cupón de la sesión
+        // Eliminar cupï¿½n de la sesiï¿½n
         [HttpPost]
         public IActionResult QuitarCupon()
         {
             _httpContextAccessor.HttpContext.Session.Remove("Cupon");
-            TempData["MensajeExito"] = "Cupón eliminado correctamente.";
+            TempData["MensajeExito"] = "Cupï¿½n eliminado correctamente.";
             return RedirectToAction("VerCarrito");
         }
 
@@ -132,7 +135,7 @@ namespace Simone.Controllers
             return RedirectToAction("VerCarrito");
         }
 
-        // Aplicar cupón
+        // Aplicar cupï¿½n
         [HttpPost]
         public IActionResult AplicarCupon(string codigoCupon)
         {
@@ -144,12 +147,12 @@ namespace Simone.Controllers
             if (cupon != null)
             {
                 GuardarCupon(cupon);
-                TempData["CuponAplicado"] = $"Cupón '{cupon.CodigoCupon}' aplicado correctamente: {cupon.Descuento:C} de descuento.";
+                TempData["CuponAplicado"] = $"Cupï¿½n '{cupon.CodigoCupon}' aplicado correctamente: {cupon.Descuento:C} de descuento.";
             }
             else
             {
                 _httpContextAccessor.HttpContext.Session.Remove("Cupon");
-                TempData["CuponError"] = "El cupón ingresado no es válido o ha expirado.";
+                TempData["CuponError"] = "El cupï¿½n ingresado no es vï¿½lido o ha expirado.";
             }
 
             return RedirectToAction("VerCarrito");
@@ -162,16 +165,17 @@ namespace Simone.Controllers
             var carrito = ObtenerCarrito();
             if (carrito == null || !carrito.Any())
             {
-                TempData["MensajeError"] = "Tu carrito está vacío.";
+                TempData["MensajeError"] = "Tu carrito estï¿½ vacï¿½o.";
                 return RedirectToAction("VerCarrito");
             }
 
+            var cliente = await _userManager.GetUserAsync(User);
+
             var userId = User.Identity?.Name;
-            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == userId);
 
             if (cliente == null)
             {
-                TempData["MensajeError"] = "Debes iniciar sesión para confirmar tu compra.";
+                TempData["MensajeError"] = "Debes iniciar sesiï¿½n para confirmar tu compra.";
                 return RedirectToAction("VerCarrito");
             }
 
@@ -182,7 +186,7 @@ namespace Simone.Controllers
 
             var venta = new Ventas
             {
-                ClienteID = cliente.ClienteID,
+                ClienteID = cliente.Id,
                 FechaVenta = DateTime.Now,
                 Total = totalFinal
             };
@@ -202,26 +206,16 @@ namespace Simone.Controllers
                 });
             }
 
-            if (cupon != null)
-            {
-                _context.CuponesUsados.Add(new CuponesUsados
-                {
-                    ClienteID = cliente.ClienteID,
-                    PromocionID = cupon.PromocionID,
-                    FechaUso = DateTime.Now
-                });
-            }
-
             await _context.SaveChangesAsync();
 
             _httpContextAccessor.HttpContext.Session.Remove("Carrito");
             _httpContextAccessor.HttpContext.Session.Remove("Cupon");
 
-            TempData["MensajeExito"] = "¡Gracias por tu compra!";
+            TempData["MensajeExito"] = "ï¿½Gracias por tu compra!";
             return RedirectToAction("ConfirmacionCompra", new { id = venta.VentaID });
         }
 
-        // Página de confirmación
+        // Pï¿½gina de confirmaciï¿½n
         public IActionResult ConfirmacionCompra(int id)
         {
             return View(id);

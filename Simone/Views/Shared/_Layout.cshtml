@@ -1,4 +1,9 @@
-﻿<!DOCTYPE html>
+﻿@{
+    var carrito = Context.Items["Carrito"] as IEnumerable<Simone.Models.CarritoDetalle>;
+    var cartCount = Context.Items["CartCount"];
+}
+
+<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -750,7 +755,7 @@
                     <i class="fa-solid fa-cart-shopping fa-lg"></i>
                     <span id="cart-count"
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        @(ViewBag.CartCount ?? 0)
+                        @cartCount
                     </span>
                 </a>
                 @inject UserManager<Usuario> UserManager
@@ -923,7 +928,7 @@
         <h5>Carrito</h5>
         <div id="cart-content">
             @* Aquí se cargarán los artículos del carrito dinámicamente a través de un partial o componente *@
-            @await Html.PartialAsync("_CartPartial", ViewData["Carrito"])
+            @await Html.PartialAsync("_CartPartial", carrito)
         </div>
     </aside>
 

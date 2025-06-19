@@ -1,0 +1,15 @@
+@{
+    ViewData["Title"] = "Error en la Compra";
+}
+
+<div class="container text-center">
+    <h1 class="mt-5 text-danger">
+        <i class="fa fa-times-circle" style="font-size: 80px;"></i><br />
+        Ha ocurrido un error y la compra no pudo ser procesada.
+    </h1>
+    <div class="mt-4">
+        <button class="btn btn-primary" onclick="window.location.href='@Url.Action("Index", "Home")'">
+            <i class="fa fa-home"></i> Volver al Menú Principal
+        </button>
+    </div>
+</div>

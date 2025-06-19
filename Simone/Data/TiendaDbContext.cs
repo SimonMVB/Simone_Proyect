@@ -126,7 +126,14 @@ namespace Simone.Data
             .HasOne(f => f.Usuario)
             .WithMany()
             .HasForeignKey(f => f.UsuarioId)
-            .OnDelete(DeleteBehavior.Restrict); 
+            .OnDelete(DeleteBehavior.Restrict);
+
+            // Explicitly configure the foreign key relationship
+            modelBuilder.Entity<Ventas>()
+                .HasOne(v => v.Clientes)  // Navigation property
+                .WithMany()  // No inverse navigation property on the Cliente model
+                .HasForeignKey(v => v.ClienteID)  // The foreign key property
+                .OnDelete(DeleteBehavior.Restrict);  // Optional, depending on your deletion behavior
 
             // Tipos DECIMAL para campos financieros
             var decimalProps = new (Type entity, string[] props)[]

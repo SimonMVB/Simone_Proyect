@@ -12,8 +12,8 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20250503200626_AddFavoritos")]
-    partial class AddFavoritos
+    [Migration("20250619185833_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -233,8 +233,9 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CarritoID"));
 
-                    b.Property<int>("ClienteID")
-                        .HasColumnType("int");
+                    b.Property<string>("ClienteID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("EstadoCarrito")
                         .IsRequired()
@@ -483,16 +484,11 @@ namespace Simone.Migrations
                     b.Property<int>("VentaID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("VentasVentaID")
-                        .HasColumnType("int");
-
                     b.HasKey("DetalleVentaID");
 
                     b.HasIndex("ProductoID");
 
                     b.HasIndex("VentaID");
-
-                    b.HasIndex("VentasVentaID");
 
                     b.ToTable("DetalleVentas");
                 });
@@ -681,16 +677,21 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("FechaGuardado")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ProductoId")
                         .HasColumnType("int");
 
                     b.Property<string>("UsuarioId")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ProductoId");
+
+                    b.HasIndex("UsuarioId");
 
                     b.ToTable("Favoritos");
                 });
@@ -888,6 +889,9 @@ namespace Simone.Migrations
                     b.Property<DateTime>("FechaAgregado")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("ImagenPath")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Marca")
                         .HasColumnType("nvarchar(max)");
 
@@ -913,6 +917,10 @@ namespace Simone.Migrations
                     b.Property<string>("Talla")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("VendedorID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("ProductoID");
 
                     b.HasIndex("CategoriaID");
@@ -920,6 +928,8 @@ namespace Simone.Migrations
                     b.HasIndex("ProveedorID");
 
                     b.HasIndex("SubcategoriaID");
+
+                    b.HasIndex("VendedorID");
 
                     b.ToTable("Productos");
                 });
@@ -1081,6 +1091,10 @@ namespace Simone.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Email")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
@@ -1090,6 +1104,9 @@ namespace Simone.Migrations
 
                     b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("FotoPerfil")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -1119,11 +1136,19 @@ namespace Simone.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("RolID")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SecurityStamp")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Telefono")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("TwoFactorEnabled")
@@ -1154,11 +1179,13 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VentaID"));
 
-                    b.Property<int?>("ClienteID")
-                        .HasColumnType("int");
+                    b.Property<string>("ClienteID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
-                    b.Property<int?>("EmpleadoID")
-                        .HasColumnType("int");
+                    b.Property<string>("EmpleadoID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Estado")
                         .IsRequired()
@@ -1269,7 +1296,7 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Carrito", b =>
                 {
-                    b.HasOne("Simone.Models.Cliente", "Cliente")
+                    b.HasOne("Simone.Models.Usuario", "Cliente")
                         .WithMany()
                         .HasForeignKey("ClienteID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1379,10 +1406,6 @@ namespace Simone.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Simone.Models.Ventas", null)
-                        .WithMany("DetallesVenta")
-                        .HasForeignKey("VentasVentaID");
-
                     b.Navigation("Producto");
 
                     b.Navigation("Venta");
@@ -1465,7 +1488,15 @@ namespace Simone.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Simone.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Producto");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Simone.Models.Gastos", b =>
@@ -1543,11 +1574,19 @@ namespace Simone.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Simone.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("VendedorID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Categoria");
 
                     b.Navigation("Proveedor");
 
                     b.Navigation("Subcategoria");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Simone.Models.Reseñas", b =>
@@ -1582,13 +1621,17 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Ventas", b =>
                 {
-                    b.HasOne("Simone.Models.Cliente", "Clientes")
+                    b.HasOne("Simone.Models.Usuario", "Clientes")
                         .WithMany()
-                        .HasForeignKey("ClienteID");
+                        .HasForeignKey("ClienteID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
-                    b.HasOne("Simone.Models.Empleados", "Empleado")
+                    b.HasOne("Simone.Models.Usuario", "Empleado")
                         .WithMany()
-                        .HasForeignKey("EmpleadoID");
+                        .HasForeignKey("EmpleadoID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Clientes");
 
@@ -1675,8 +1718,6 @@ namespace Simone.Migrations
             modelBuilder.Entity("Simone.Models.Ventas", b =>
                 {
                     b.Navigation("DetalleVentas");
-
-                    b.Navigation("DetallesVenta");
                 });
 #pragma warning restore 612, 618
         }

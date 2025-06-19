@@ -1,0 +1,81 @@
+@model CatalogoViewModel
+
+@{
+    ViewData["Title"] = "Detalles del Producto";
+    var producto = ViewBag.Producto as Simone.Models.Producto;
+}
+
+<div class="container">
+    <div class="row mt-5">
+        <!-- Product Image Section -->
+        <div class="col-md-6">
+            <img src="@producto.ImagenPath" alt="@producto.Nombre" class="img-fluid"
+                style="max-height: 500px; object-fit: contain;" onerror="this.src='/images/Productos/default.jpg';" />
+        </div>
+
+        <!-- Product Details Section -->
+        <div class="col-md-6">
+            <h2 class="fw-bold">@producto.Nombre</h2>
+            <p><strong>Descripción:</strong> @producto.Descripcion</p>
+            <p class="text-muted"><strong>Categoría:</strong> @producto.Categoria.Nombre</p>
+            <p class="text-muted"><strong>Subcategoría:</strong> @producto.Subcategoria.NombreSubcategoria</p>
+
+            <!-- Price -->
+            <p class="fw-bold text-primary" style="font-size: 1.5rem;">@producto.PrecioVenta.ToString("C",
+                                CultureInfo.CreateSpecificCulture("es-ES"))</p>
+            <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
+                <!-- Quantity Selection -->
+                <div class="mb-3">
+                    <input asp-for="ProductoID" type="hidden" name="productoID" value="@producto.ProductoID" />
+                    <label for="cantidad" class="form-label">Cantidad</label>
+                    <input type="number" id="cantidad" name="cantidad" asp-for="Cantidad" class="form-control" min="1"
+                        value="1" />
+                </div>
+
+                <!-- Add to Cart Button -->
+                <button class="btn btn-success" id="add-to-cart-btn" data-producto-id="@producto.ProductoID">
+                    <i class="fa fa-cart-plus"></i> Añadir al carrito
+                </button>
+            </form>
+
+            <!-- Back to Catalog Button -->
+            <a href="@Url.Action("Catalogo", "Compras")" class="btn btn-outline-primary mt-3">
+                <i class="fa fa-arrow-left"></i> Volver al catálogo
+            </a>
+        </div>
+    </div>
+
+    <hr />
+
+    <!-- Additional Information Section (Optional) -->
+    <div class="row">
+        <div class="col-md-12">
+            <h4 class="fw-bold">Detalles adicionales</h4>
+            <p>@producto.Descripcion</p>
+        </div>
+    </div>
+
+</div>
+
+<!-- Modal for adding product to cart (Optional) -->
+<div class="modal fade" id="addToCartModal" tabindex="-1" aria-labelledby="addToCartModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addToCartModalLabel">Producto añadido al carrito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                El producto ha sido añadido a tu carrito. ¿Deseas seguir comprando o ir al carrito?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Seguir comprando</button>
+                <a href="@Url.Action("Carrito", "Compras")" class="btn btn-primary">Ir al carrito</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+}

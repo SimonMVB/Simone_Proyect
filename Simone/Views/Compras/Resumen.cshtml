@@ -1,0 +1,154 @@
+@model Simone.Models.Usuario
+@{
+    ViewData["Title"] = "Resumen de Compra";
+}
+
+<div class="container">
+    <h1 class="mb-4">Resumen de tu Compra</h1>
+
+    <div class="row">
+        <!-- Left Section: Cart Details & Address -->
+        <div class="col-md-8">
+            <!-- Cart Details Section -->
+            <h3>Artículos en tu carrito</h3>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Imagen</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unitario</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in ViewBag.CarritoDetalles)
+                    {
+                        <tr>
+                            <td>@item.Producto.Nombre</td>
+                            <td><img src="@item.Producto.ImagenPath" alt="@item.Producto.Nombre"
+                                    style="width: 50px; height: 50px; object-fit: cover;" /></td>
+                            <td>@item.Cantidad</td>
+                            <td>@item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</td>
+                            <td>@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <!-- Address Section -->
+            <h3>Dirección de Envío</h3>
+            @if (ViewBag.HasAddress)
+            {
+                <p><strong>Dirección:</strong> @Model.Direccion</p>
+                <a href="@Url.Action("EditarDireccion", "Cuenta")" class="btn btn-secondary">Editar Dirección</a>
+            }
+            else
+            {
+                <p>Para continuar con la compra, necesitas agregar una dirección de envío.</p>
+                <a href="@Url.Action("AgregarDireccion", "Cuenta")" class="btn btn-primary">Agregar Dirección</a>
+            }
+        </div>
+
+        <!-- Right Section: Subtotal, Service Fee, Taxes & Total -->
+        <div class="col-md-4">
+            <div class="sticky-top">
+                <!-- Subtotal Section -->
+                <div class="mb-3">
+                    <h5>Subtotal:</h5>
+                    <p>@ViewBag.TotalCompra.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</p>
+                </div>
+
+                <!-- Service Fee Section -->
+                <div class="mb-3">
+                    <h5>Servicio (5%):</h5>
+                    <p>@((ViewBag.TotalCompra * 0.05m).ToString("C", CultureInfo.CreateSpecificCulture("es-US"))) </p>
+                </div>
+
+                <!-- Taxes Section -->
+                <div class="mb-3">
+                    <h5>Impuestos (15%):</h5>
+                    <p>@((ViewBag.TotalCompra * 0.15m).ToString("C", CultureInfo.CreateSpecificCulture("es-US"))) </p>
+                </div>
+
+                <!-- Total Section -->
+                <div class="mb-3">
+                    @{
+                        decimal serviceFee = ViewBag.TotalCompra * 0.05m; // 5% service fee
+                        decimal taxFee = ViewBag.TotalCompra * 0.15m; // 15% tax fee
+                        decimal grandTotal = ViewBag.TotalCompra + serviceFee + taxFee;
+                    }
+                    <h5>Total a pagar:</h5>
+                    <p class="fw-bold">@grandTotal.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Information Section -->
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Información de Pago</h3>
+            <form>
+                <div class="mb-3">
+                    <label for="cardNumber" class="form-label">Número de tarjeta</label>
+                    <input type="text" class="form-control" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" />
+                </div>
+                <div class="mb-3">
+                    <label for="expirationDate" class="form-label">Fecha de expiración</label>
+                    <input type="text" class="form-control" id="expirationDate" placeholder="MM/AA" />
+                </div>
+                <div class="mb-3">
+                    <label for="cvv" class="form-label">CVV</label>
+                    <input type="text" class="form-control" id="cvv" placeholder="XXX" />
+                </div>
+                <div class="mb-3">
+                    <label for="billingAddress" class="form-label">Dirección de facturación</label>
+                    <input type="text" class="form-control" id="billingAddress" placeholder="Dirección" />
+                </div>
+                <button type="submit" class="btn btn-primary">Guardar Información</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Checkout Button -->
+    <div class="row mt-4">
+        <div class="col-md-12 text-end">
+            @if (ViewBag.HasAddress)
+            {
+                <form asp-controller="Compras" asp-action="ConfirmarCompra" method="post">
+                    <!-- Finalizar Compra Button with Confirmation -->
+                    <button type="submit" class="btn btn-success btn-lg" id="confirmPurchaseBtn">
+                        <i class="fa fa-check-circle me-2"></i> Finalizar Compra
+                    </button>
+                </form>
+            }
+            else
+            {
+                <p class="alert alert-warning">Por favor, agrega una dirección de envío para proceder con la compra.</p>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @* <script>
+        // Get the confirmation button
+        const confirmPurchaseBtn = document.getElementById("confirmPurchaseBtn");
+
+        // When the button is clicked, show the confirmation dialog
+        confirmPurchaseBtn.addEventListener("click", function () {
+            const userConfirmed = window.confirm("¿Estás seguro de que deseas finalizar la compra?");
+
+            if (userConfirmed) {
+                // Proceed with the purchase (redirect to the controller action)
+                // Use the absolute path to the controller action:
+                const url = '@Url.Action("ConfirmarCompra", "Compras")';
+                window.location.href = url; // This will correctly redirect to the controller action
+            } else {
+                // Do nothing, stay on the current page
+                console.log("Compra cancelada.");
+            }
+        });
+    </script> *@
+}

@@ -33,8 +33,8 @@
                     {
                         <tr>
                             <td>@venta.VentaID</td>
-                            <td>@venta.Clientes?.Nombre</td>
-                            <td>@venta.Empleado?.Nombre</td>
+                            <td>@venta.Clientes?.NombreCompleto</td>
+                            <td>@venta.Empleado?.NombreCompleto</td>
                             <td>@venta.FechaVenta.ToString("dd/MM/yyyy")</td>
                             <td>$@venta.Total.ToString("F2")</td>
                             <td>
