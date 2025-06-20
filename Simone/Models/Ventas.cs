@@ -7,29 +7,28 @@ namespace Simone.Models
     public class Ventas
     {
         [Key]
-        public int VentaID { get; set; }  // Clave primaria
+        public int VentaID { get; set; }
 
-        // Relación con Empleados (opcional)
-        public int? EmpleadoID { get; set; }
-        public Empleados Empleado { get; set; }
+        // RelaciÃ³n con Empleado (Usuario como empleado)
+        public string EmpleadoID { get; set; }
+        public virtual Usuario Empleado { get; set; }
+
         public string Estado { get; set; }
 
-        // Relación con Clientes (opcional)
-        public int? ClienteID { get; set; }
-        public Cliente Clientes { get; set; }
+        // RelaciÃ³n con Cliente (Usuario como cliente)
+        public string ClienteID { get; set; }  // Foreign Key, ensure this matches the column name in the database
+        public virtual Usuario Clientes { get; set; }  // Navigation property to Cliente
 
-        public DateTime FechaVenta { get; set; }  // Fecha en la que se realizó la venta
+        public DateTime FechaVenta { get; set; }
 
         [Required]
         [StringLength(50)]
-        public string MetodoPago { get; set; }  // Método de pago utilizado en la venta
+        public string MetodoPago { get; set; }
 
         [Required]
         [Column(TypeName = "decimal(10,2)")]
-        public decimal Total { get; set; }  // Total de la venta
+        public decimal Total { get; set; }
 
-        // Relación con DetalleVentas
-        public ICollection<DetalleVentas> DetallesVenta { get; set; }
-        public virtual ICollection<DetalleVentas> DetalleVentas { get; set; } = new List<DetalleVentas>();
+        public virtual ICollection<DetalleVentas> DetalleVentas { get; set; }
     }
 }

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class creationSQL : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -33,6 +33,10 @@ namespace Simone.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     NombreCompleto = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Telefono = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Direccion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Referencia = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    FotoPerfil = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     FechaRegistro = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Activo = table.Column<bool>(type: "bit", nullable: false),
                     RolID = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -295,6 +299,57 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Carrito",
+                columns: table => new
+                {
+                    CarritoID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ClienteID = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EstadoCarrito = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Carrito", x => x.CarritoID);
+                    table.ForeignKey(
+                        name: "FK_Carrito_AspNetUsers_ClienteID",
+                        column: x => x.ClienteID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Ventas",
+                columns: table => new
+                {
+                    VentaID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EmpleadoID = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Estado = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ClienteID = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FechaVenta = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    MetodoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Total = table.Column<decimal>(type: "decimal(10,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Ventas", x => x.VentaID);
+                    table.ForeignKey(
+                        name: "FK_Ventas_AspNetUsers_ClienteID",
+                        column: x => x.ClienteID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Ventas_AspNetUsers_EmpleadoID",
+                        column: x => x.EmpleadoID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Subcategorias",
                 columns: table => new
                 {
@@ -312,27 +367,6 @@ namespace Simone.Migrations
                         principalTable: "Categorias",
                         principalColumn: "CategoriaID",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Carrito",
-                columns: table => new
-                {
-                    CarritoID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    EstadoCarrito = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Carrito", x => x.CarritoID);
-                    table.ForeignKey(
-                        name: "FK_Carrito_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -501,76 +535,6 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Ventas",
-                columns: table => new
-                {
-                    VentaID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EmpleadoID = table.Column<int>(type: "int", nullable: true),
-                    Estado = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ClienteID = table.Column<int>(type: "int", nullable: true),
-                    FechaVenta = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    MetodoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(10,2)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Ventas", x => x.VentaID);
-                    table.ForeignKey(
-                        name: "FK_Ventas_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID");
-                    table.ForeignKey(
-                        name: "FK_Ventas_Empleados_EmpleadoID",
-                        column: x => x.EmpleadoID,
-                        principalTable: "Empleados",
-                        principalColumn: "EmpleadoID");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Productos",
-                columns: table => new
-                {
-                    ProductoID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FechaAgregado = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Talla = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Color = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Marca = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PrecioCompra = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PrecioVenta = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Stock = table.Column<int>(type: "int", nullable: false),
-                    ProveedorID = table.Column<int>(type: "int", nullable: false),
-                    SubcategoriaID = table.Column<int>(type: "int", nullable: false),
-                    CategoriaID = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Productos", x => x.ProductoID);
-                    table.ForeignKey(
-                        name: "FK_Productos_Categorias_CategoriaID",
-                        column: x => x.CategoriaID,
-                        principalTable: "Categorias",
-                        principalColumn: "CategoriaID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Productos_Proveedores_ProveedorID",
-                        column: x => x.ProveedorID,
-                        principalTable: "Proveedores",
-                        principalColumn: "ProveedorID",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Productos_Subcategorias_SubcategoriaID",
-                        column: x => x.SubcategoriaID,
-                        principalTable: "Subcategorias",
-                        principalColumn: "SubcategoriaID",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Comisiones",
                 columns: table => new
                 {
@@ -598,6 +562,56 @@ namespace Simone.Migrations
                         principalTable: "Ventas",
                         principalColumn: "VentaID",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Productos",
+                columns: table => new
+                {
+                    ProductoID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FechaAgregado = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Descripcion = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Talla = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Color = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Marca = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ImagenPath = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PrecioCompra = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PrecioVenta = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Stock = table.Column<int>(type: "int", nullable: false),
+                    ProveedorID = table.Column<int>(type: "int", nullable: false),
+                    SubcategoriaID = table.Column<int>(type: "int", nullable: false),
+                    CategoriaID = table.Column<int>(type: "int", nullable: false),
+                    VendedorID = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Productos", x => x.ProductoID);
+                    table.ForeignKey(
+                        name: "FK_Productos_AspNetUsers_VendedorID",
+                        column: x => x.VendedorID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Productos_Categorias_CategoriaID",
+                        column: x => x.CategoriaID,
+                        principalTable: "Categorias",
+                        principalColumn: "CategoriaID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Productos_Proveedores_ProveedorID",
+                        column: x => x.ProveedorID,
+                        principalTable: "Proveedores",
+                        principalColumn: "ProveedorID",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Productos_Subcategorias_SubcategoriaID",
+                        column: x => x.SubcategoriaID,
+                        principalTable: "Subcategorias",
+                        principalColumn: "SubcategoriaID",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -641,13 +655,13 @@ namespace Simone.Migrations
                         column: x => x.CarritoID,
                         principalTable: "Carrito",
                         principalColumn: "CarritoID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.NoAction);
                     table.ForeignKey(
                         name: "FK_CarritoDetalle_Productos_ProductoID",
                         column: x => x.ProductoID,
                         principalTable: "Productos",
                         principalColumn: "ProductoID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.NoAction);
                 });
 
             migrationBuilder.CreateTable(
@@ -720,8 +734,7 @@ namespace Simone.Migrations
                     PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Descuento = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     Subtotal = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    VentasVentaID = table.Column<int>(type: "int", nullable: true)
+                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -738,11 +751,33 @@ namespace Simone.Migrations
                         principalTable: "Ventas",
                         principalColumn: "VentaID",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Favoritos",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProductoId = table.Column<int>(type: "int", nullable: false),
+                    FechaGuardado = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Favoritos", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_DetalleVentas_Ventas_VentasVentaID",
-                        column: x => x.VentasVentaID,
-                        principalTable: "Ventas",
-                        principalColumn: "VentaID");
+                        name: "FK_Favoritos_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Favoritos_Productos_ProductoId",
+                        column: x => x.ProductoId,
+                        principalTable: "Productos",
+                        principalColumn: "ProductoID",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -983,11 +1018,6 @@ namespace Simone.Migrations
                 column: "VentaID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DetalleVentas_VentasVentaID",
-                table: "DetalleVentas",
-                column: "VentasVentaID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Devoluciones_DetalleVentaID",
                 table: "Devoluciones",
                 column: "DetalleVentaID");
@@ -1001,6 +1031,16 @@ namespace Simone.Migrations
                 name: "IX_Empleados_RolID",
                 table: "Empleados",
                 column: "RolID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Favoritos_ProductoId",
+                table: "Favoritos",
+                column: "ProductoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Favoritos_UsuarioId",
+                table: "Favoritos",
+                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Gastos_EmpleadoID",
@@ -1041,6 +1081,11 @@ namespace Simone.Migrations
                 name: "IX_Productos_SubcategoriaID",
                 table: "Productos",
                 column: "SubcategoriaID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Productos_VendedorID",
+                table: "Productos",
+                column: "VendedorID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reseñas_ClienteID",
@@ -1120,6 +1165,9 @@ namespace Simone.Migrations
                 name: "DireccionesCliente");
 
             migrationBuilder.DropTable(
+                name: "Favoritos");
+
+            migrationBuilder.DropTable(
                 name: "Gastos");
 
             migrationBuilder.DropTable(
@@ -1136,9 +1184,6 @@ namespace Simone.Migrations
 
             migrationBuilder.DropTable(
                 name: "Reseñas");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "Carrito");
@@ -1159,10 +1204,19 @@ namespace Simone.Migrations
                 name: "DetalleVentas");
 
             migrationBuilder.DropTable(
+                name: "Empleados");
+
+            migrationBuilder.DropTable(
+                name: "Clientes");
+
+            migrationBuilder.DropTable(
                 name: "Productos");
 
             migrationBuilder.DropTable(
                 name: "Ventas");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Proveedores");
@@ -1171,16 +1225,10 @@ namespace Simone.Migrations
                 name: "Subcategorias");
 
             migrationBuilder.DropTable(
-                name: "Clientes");
-
-            migrationBuilder.DropTable(
-                name: "Empleados");
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "Categorias");
-
-            migrationBuilder.DropTable(
-                name: "AspNetRoles");
         }
     }
 }

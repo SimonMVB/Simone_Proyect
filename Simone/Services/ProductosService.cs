@@ -48,9 +48,12 @@ namespace Simone.Services
         // Obtener una producto por su ID de manera asíncrona
         public async Task<Producto> GetByIdAsync(int id)
         {
-            return await _context.Productos.FindAsync(id); // Usamos FindAsync
+            return await _context.Productos
+                .Where(p => p.ProductoID == id)  // Using Where to filter the product by its ID
+                .Include(p => p.Categoria)
+                .Include(p => p.Subcategoria)      // Eagerly load the related Categoria
+                .FirstOrDefaultAsync();         // Return the first matching product or null if not found
         }
-
         // Actualizar una producto de manera asíncrona
         public async Task<bool> UpdateAsync(Producto producto)
         {

@@ -18,24 +18,26 @@
                     <div class="row align-items-center">
                         <!-- Columna para la imagen (si tienes la propiedad "Imagen") -->
                         <div class="col-3">
-                            @* Ajusta según tu propiedad real (Imagen, Foto, etc.) *@
-                            <img src="@item.Producto.ImagenesProductos"
+                            <img src="@item.Producto.ImagenPath"
                                  alt="@item.Producto.Nombre"
                                  class="img-fluid"
-                                 onerror="this.src='/images/default-product.png';" />
+                                 onerror="this.src='/images/Productos/default.jpg';" />
                         </div>
                         <!-- Columna con detalles del producto -->
                         <div class="col-6">
                             <h6 class="mb-1">@item.Producto.Nombre</h6>
                             <p class="mb-1"><small>Cantidad: @item.Cantidad</small></p>
-                            <p class="mb-1"><small>Precio: @item.Precio.ToString("C2")</small></p>
+                            <p class="mb-1"><small>Precio: @item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</small></p>
                         </div>
                         <!-- Columna con total y botón de acción -->
                         <div class="col-3 text-end">
-                            <p class="mb-1 fw-bold">@item.Total.ToString("C2")</p>
-                            <button class="btn btn-sm btn-danger remove-item" data-id="@item.CarritoDetalleID" title="Eliminar artículo">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
+                            <p class="mb-1 fw-bold">@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</p>
+                            <form asp-controller="Compras" asp-action="EliminarArticulo" method="post">
+                                <input type="hidden" name="carritoDetalleID" value="@item.CarritoDetalleID" />
+                                <button type="submit" class="btn btn-sm btn-danger remove-item" title="Eliminar artículo">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </li>
@@ -47,7 +49,15 @@
             @{
                 decimal totalCompra = Model.Sum(x => x.Total);
             }
-            <h5>Total: @totalCompra.ToString("C2")</h5>
+            <h5>Total: @totalCompra.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</h5>
         </div>
+
+        <!-- "Comprar Ahora" Button (Only visible if user is logged in and cart has items) -->
+        @if (User.Identity.IsAuthenticated && Model.Any())
+        {
+            <a href="@Url.Action("Resumen", "Compras")" class="btn btn-lg btn-success w-100 mt-3">
+                <i class="fa fa-shopping-cart me-2"></i> Comprar Ahora
+            </a>
+        }
     }
 </div>

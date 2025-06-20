@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Simone.Models;
 using Simone.ViewModels;
 using Simone.Data;
+using Simone.Services;
 using System;
 using System.Threading.Tasks;
 using System.Linq;
@@ -15,14 +16,17 @@ namespace Simone.Controllers
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
         private readonly RoleManager<Roles> _roleManager;
+        private readonly CarritoService _carritoManager;
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
+
 
         // Constructor que inyecta las dependencias necesarias
         public CuentaController(UserManager<Usuario> userManager,
                                 SignInManager<Usuario> signInManager,
                                 RoleManager<Roles> roleManager,
                                 ILogger<CuentaController> logger,
+                                CarritoService carrito,
                                 TiendaDbContext context)
         {
             _userManager = userManager;
@@ -30,6 +34,7 @@ namespace Simone.Controllers
             _roleManager = roleManager;
             _logger = logger;
             _context = context;
+            _carritoManager = carrito;
         }
 
         /// <summary>
@@ -134,7 +139,7 @@ namespace Simone.Controllers
         public IActionResult Registrar()
         {
             bool sesionIniciada = User.Identity.IsAuthenticated;
-            
+
             // Si el usuario ya está autenticado, redirige al índice.
             if (sesionIniciada)
             {
@@ -178,6 +183,9 @@ namespace Simone.Controllers
             {
                 // Asigna el rol "Cliente" por defecto
                 await _userManager.AddToRoleAsync(usuario, "Cliente");
+
+                // Crea un carrito para el usuario
+                await _carritoManager.AddAsync(usuario);
 
                 _logger.LogInformation("Usuario registrado: {Email}", model.Email);
                 await _signInManager.SignInAsync(usuario, isPersistent: false);
@@ -234,10 +242,8 @@ namespace Simone.Controllers
             var roles = await _userManager.GetRolesAsync(usuario);
             ViewBag.RolUsuario = roles.FirstOrDefault() ?? "Sin rol";
 
-            return View(usuario); 
+            return View(usuario);
         }
-
-
 
         [HttpPost]
         public async Task<IActionResult> ActualizarPerfil(Usuario usuario, IFormFile ImagenPerfil)
@@ -328,8 +334,6 @@ namespace Simone.Controllers
         {
             return View();
         }
-
-
 
         [HttpGet]
         public IActionResult CambiarDireccion()

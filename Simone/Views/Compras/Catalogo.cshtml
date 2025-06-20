@@ -106,28 +106,33 @@
             @foreach (var p in Model.Productos)
             {
                 <div class="product-card">
-                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
-                        <div class="product-image-container">
-                            <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
-                            <div class="product-badge">Nuevo</div>
-                            <button class="wishlist-btn" title="Añadir a favoritos">
-                                <i class="far fa-heart"></i>
-                            </button>
-                        </div>
-                        <div class="product-info">
-                            <h3 class="product-title">@p.Nombre</h3>
-                            <div class="product-price">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
-                            <div class="product-colors">
-                                <span class="color-option" style="background-color: #000;"></span>
-                                <span class="color-option" style="background-color: #6A0DAD;"></span>
-                                <span class="color-option" style="background-color: #D4AF37;"></span>
-                            </div>
-                        </div>
-                    </a>
-                    <button class="add-to-cart-btn">
-                        <i class="fas fa-shopping-bag"></i> Añadir al carrito
-                    </button>
-                </div>
+    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
+        <div class="product-image-container">
+            <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
+            <div class="product-badge">Nuevo</div>
+            <button class="wishlist-btn" title="Añadir a favoritos" type="button">
+                <i class="far fa-heart"></i>
+            </button>
+        </div>
+        <div class="product-info">
+            <h3 class="product-title">@p.Nombre</h3>
+            <div class="product-price">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+            <div class="product-colors">
+                <span class="color-option" style="background-color: #000;"></span>
+                <span class="color-option" style="background-color: #6A0DAD;"></span>
+                <span class="color-option" style="background-color: #D4AF37;"></span>
+            </div>
+        </div>
+    </a>
+    <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
+        <input asp-for="ProductoID" type="hidden" name="productoID" value="@p.ProductoID"  />
+        <input asp-for="Cantidad" type="hidden" name="cantidad" value=1  />
+        <button type="submit" class="add-to-cart-btn">
+            <i class="fas fa-shopping-bag"></i> Añadir al carrito
+        </button>
+    </form>
+</div>
+
             }
         </div>
 
