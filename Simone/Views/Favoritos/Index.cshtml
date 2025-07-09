@@ -1,10 +1,10 @@
 ﻿@model List<Simone.Models.Favorito>
-
 @{
     ViewData["Title"] = "Mis Favoritos";
+    var culture = new System.Globalization.CultureInfo("es-EC");
 }
 
-<div class="ui container mt-5">
+<section class="ui container mt-5">
     <h2 class="ui header">
         <i class="heart icon"></i>
         <div class="content">Mis Productos Favoritos</div>
@@ -13,29 +13,110 @@
     @if (!Model.Any())
     {
         <div class="ui message">
-            No has agregado productos a favoritos aún.
+            <i class="info circle icon"></i>
+            <div class="content">
+                <p>No has agregado productos a favoritos aún.</p>
+                <a asp-controller="Compras" asp-action="Catalogo" class="ui primary button mt-2">
+                    Explorar productos
+                </a>
+            </div>
         </div>
     }
     else
     {
-        <div class="ui stackable cards">
+        <div class="ui stackable cards centered">
             @foreach (var fav in Model)
             {
-                <div class="card">
+                <article class="card" role="group" aria-label="Producto favorito">
+                    <picture class="image">
+                        <img src="@fav.Producto.ImagenPath"
+                             alt="Imagen de @fav.Producto.Nombre"
+                             class="favorito-img"
+                             loading="lazy">
+                    </picture>
+
                     <div class="content">
-                        <div class="header">@fav.Producto.Nombre</div>
-                        <div class="meta">Agregado el @fav.FechaGuardado.ToShortDateString()</div>
+                        <h3 class="header">@fav.Producto.Nombre</h3>
+                        <div class="meta">
+                            <i class="calendar icon"></i>
+                            Agregado el @fav.FechaGuardado.ToString("dd MMM yyyy", culture)
+                        </div>
+                        <div class="description">
+                            <i class="tags icon"></i>
+                            @fav.Producto.PrecioVenta.ToString("C", culture)
+                        </div>
                     </div>
-                    <div class="extra content">
-                        <form method="post" asp-controller="Favoritos" asp-action="Toggle">
+
+                    <div class="extra content action-buttons">
+                        <form method="post"
+                              asp-controller="Favoritos"
+                              asp-action="Toggle"
+                              class="ui form d-inline">
                             <input type="hidden" name="id" value="@fav.ProductoId" />
-                            <button class="ui red icon button" title="Quitar de favoritos">
+                            <button type="submit"
+                                    class="ui red icon button"
+                                    title="Quitar de favoritos"
+                                    aria-label="Quitar de favoritos">
                                 <i class="heart icon"></i>
                             </button>
                         </form>
+
+                        <form asp-controller="Compras"
+                              asp-action="AnadirAlCarrito"
+                              method="post"
+                              class="ui form d-inline">
+                            <input type="hidden" name="ProductoID" value="@fav.ProductoId" />
+                            <input type="hidden" name="Cantidad" value="1" />
+                            <button type="submit"
+                                    class="ui green icon button"
+                                    title="Añadir al carrito"
+                                    aria-label="Añadir al carrito">
+                                <i class="shopping bag icon"></i>
+                            </button>
+                        </form>
+
+                        <a asp-controller="Productos"
+                           asp-action="Details"
+                           asp-route-id="@fav.ProductoId"
+                           class="ui blue icon button"
+                           title="Ver detalles"
+                           aria-label="Ver detalles del producto">
+                            <i class="eye icon"></i>
+                        </a>
                     </div>
-                </div>
+                </article>
             }
         </div>
     }
-</div>
+</section>
+
+<style>
+    .favorito-img {
+        height: 200px;
+        object-fit: cover;
+        object-position: center;
+        width: 100%;
+        border-radius: 0.28571429rem 0.28571429rem 0 0;
+    }
+
+    .action-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding-top: 0.5rem;
+    }
+
+        .action-buttons .button {
+            margin: 0;
+            flex: 1;
+        }
+
+    @@media screen and (max-width: 600px) {
+        .action-buttons
+
+    {
+        flex-direction: column;
+    }
+
+    }
+</style>

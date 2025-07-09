@@ -36,42 +36,20 @@
 <div class="container mt-5">
     <h3 class="fw-bold">Destacados:</h3>
     <div class="row">
-        <div class="col-md-3">
-            <div class="card border-0">
-                <img src="~/img/traje1.jpg" class="card-img-top" alt="Traje de baño">
-                <div class="card-body text-center">
-                    <p class="card-text">Traje de baño</p>
-                    <p class="fw-bold">$20,00</p>
+        @foreach (var producto in Model)
+        {
+            <div class="col-md-3 mb-4">
+                <div class="card border-0 h-100">
+                    <img src="@Url.Content("~/img/" + (string.IsNullOrEmpty(producto.ImagenPath) ? "placeholder.png" : producto.ImagenPath))"
+                         class="card-img-top"
+                         alt="@producto.Nombre">
+                    <div class="card-body text-center">
+                        <p class="card-text">@producto.Nombre</p>
+                        <p class="fw-bold">@producto.PrecioVenta.ToString("C")</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0">
-                <img src="~/img/traje2.jpg" class="card-img-top" alt="Traje de baño">
-                <div class="card-body text-center">
-                    <p class="card-text">Traje de baño</p>
-                    <p class="fw-bold">$20,00</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0">
-                <img src="~/img/traje3.jpg" class="card-img-top" alt="Traje de baño">
-                <div class="card-body text-center">
-                    <p class="card-text">Traje de baño</p>
-                    <p class="fw-bold">$20,00</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0">
-                <img src="~/img/traje4.jpg" class="card-img-top" alt="Traje de baño">
-                <div class="card-body text-center">
-                    <p class="card-text">Traje de baño</p>
-                    <p class="fw-bold">$20,00</p>
-                </div>
-            </div>
-        </div>
+        }
     </div>
 </div>
 

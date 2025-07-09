@@ -34,16 +34,13 @@ namespace Simone.Controllers
         [HttpGet]
         public IActionResult Index()
         {
-            _logger.LogInformation("Cargando la página de inicio (Index).");
-
-            // Si deseas mostrar productos destacados, podrías hacer algo como:
-            // var productosDestacados = _context.Productos
-            //     .Where(p => p.EsDestacado == true)
-            //     .ToList();
-            // return View(productosDestacados);
-
-            return View();
+            var destacados = _context.Productos
+                .OrderBy(r => Guid.NewGuid())
+                .Take(4)
+                .ToList();
+            return View(destacados);
         }
+
         #endregion
 
         #region Privacy

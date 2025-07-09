@@ -28,5 +28,11 @@ namespace Simone.Models
         // Relación Roles
         [Required]
         public string RolID { get; set; }
+        [StringLength(100)]
+        public string? Ciudad { get; set; }
+
+        [StringLength(100)]
+        public string? Provincia { get; set; }
+
     }
 }

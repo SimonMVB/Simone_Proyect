@@ -16,4 +16,6 @@ public class CatalogoViewModel
     public int PageSize { get; set; } = 20;
     public int TotalProducts { get; set; }
     public int TotalPages => (int)Math.Ceiling(TotalProducts / (double)PageSize);
+    public List<int> ProductoIDsFavoritos { get; set; } = new();
+
 }
