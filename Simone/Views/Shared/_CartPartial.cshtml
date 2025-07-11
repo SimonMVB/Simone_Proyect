@@ -13,35 +13,42 @@
     {
         <ul class="list-group">
             @foreach (var item in Model)
-            {
-                <li class="list-group-item">
-                    <div class="row align-items-center">
-                        <!-- Columna para la imagen (si tienes la propiedad "Imagen") -->
-                        <div class="col-3">
-                            <img src="@item.Producto.ImagenPath"
-                                 alt="@item.Producto.Nombre"
-                                 class="img-fluid"
-                                 onerror="this.src='/images/Productos/default.jpg';" />
-                        </div>
-                        <!-- Columna con detalles del producto -->
-                        <div class="col-6">
-                            <h6 class="mb-1">@item.Producto.Nombre</h6>
-                            <p class="mb-1"><small>Cantidad: @item.Cantidad</small></p>
-                            <p class="mb-1"><small>Precio: @item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</small></p>
-                        </div>
-                        <!-- Columna con total y botón de acción -->
-                        <div class="col-3 text-end">
-                            <p class="mb-1 fw-bold">@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</p>
-                            <form asp-controller="Compras" asp-action="EliminarArticulo" method="post">
-                                <input type="hidden" name="carritoDetalleID" value="@item.CarritoDetalleID" />
-                                <button type="submit" class="btn btn-sm btn-danger remove-item" title="Eliminar artículo">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </li>
-            }
+{
+    <li class="list-group-item">
+        <div class="row align-items-center">
+            <!-- Columna para la imagen (si tienes la propiedad "Imagen") -->
+            <div class="col-3">
+                <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.Producto.ProductoID">
+                    <img src="@item.Producto.ImagenPath"
+                         alt="@item.Producto.Nombre"
+                         class="img-fluid"
+                         onerror="this.src='/images/Productos/default.jpg';" />
+                </a>
+            </div>
+            <!-- Columna con detalles del producto -->
+            <div class="col-6">
+                <!-- Producto nombre es ahora un enlace -->
+                <h6 class="mb-1">
+                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.Producto.ProductoID" class="text-decoration-none">
+                        @item.Producto.Nombre
+                    </a>
+                </h6>
+                <p class="mb-1"><small>Cantidad: @item.Cantidad</small></p>
+                <p class="mb-1"><small>Precio: @item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</small></p>
+            </div>
+            <!-- Columna con total y botón de acción -->
+            <div class="col-3 text-end">
+                <p class="mb-1 fw-bold">@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</p>
+                <form asp-controller="Compras" asp-action="EliminarArticulo" method="post">
+                    <input type="hidden" name="carritoDetalleID" value="@item.CarritoDetalleID" />
+                    <button type="submit" class="btn btn-sm btn-danger remove-item" title="Eliminar artículo">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </li>
+}
         </ul>
 
         <!-- Total general del carrito -->

@@ -6,7 +6,9 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
 
 <style>
     :root {
@@ -30,7 +32,12 @@
         color: var(--text-color);
     }
 
-    h1, h2, h3, h4, h5, h6 {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
         font-family: 'Playfair Display', serif;
         font-weight: 600;
     }
@@ -55,15 +62,15 @@
         color: var(--accent-purple);
     }
 
-        .form-header i {
-            font-size: 1.8rem;
-            margin-right: 1rem;
-        }
+    .form-header i {
+        font-size: 1.8rem;
+        margin-right: 1rem;
+    }
 
-        .form-header h2 {
-            margin: 0;
-            font-size: 1.8rem;
-        }
+    .form-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+    }
 
     .form-grid {
         display: grid;
@@ -75,9 +82,9 @@
         margin-bottom: 1.5rem;
     }
 
-        .form-group.full-width {
-            grid-column: span 2;
-        }
+    .form-group.full-width {
+        grid-column: span 2;
+    }
 
     .form-label {
         display: block;
@@ -95,11 +102,11 @@
         transition: all 0.3s ease;
     }
 
-        .form-input:focus {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
-            outline: none;
-        }
+    .form-input:focus {
+        border-color: var(--accent-purple);
+        box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+        outline: none;
+    }
 
     .form-textarea {
         width: 100%;
@@ -112,11 +119,11 @@
         resize: vertical;
     }
 
-        .form-textarea:focus {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
-            outline: none;
-        }
+    .form-textarea:focus {
+        border-color: var(--accent-purple);
+        box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+        outline: none;
+    }
 
     .form-select {
         width: 100%;
@@ -128,16 +135,16 @@
         transition: all 0.3s ease;
     }
 
-        .form-select:focus {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
-            outline: none;
-        }
+    .form-select:focus {
+        border-color: var(--accent-purple);
+        box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
+        outline: none;
+    }
 
-        .form-select:disabled {
-            background-color: var(--light-gray);
-            cursor: not-allowed;
-        }
+    .form-select:disabled {
+        background-color: var(--light-gray);
+        cursor: not-allowed;
+    }
 
     .image-upload {
         display: flex;
@@ -182,9 +189,9 @@
         gap: 0.5rem;
     }
 
-        .file-label:hover {
-            background-color: var(--medium-gray);
-        }
+    .file-label:hover {
+        background-color: var(--medium-gray);
+    }
 
     .error-msg {
         color: var(--danger-color);
@@ -207,11 +214,11 @@
         justify-self: center;
     }
 
-        .submit-btn:hover {
-            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
-        }
+    .submit-btn:hover {
+        background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(75, 0, 130, 0.3);
+    }
 
     .empty-state {
         color: var(--text-light);
@@ -259,10 +266,9 @@
             <h2>@ViewData["Title"]</h2>
         </div>
 
-        <form class="form-grid" method="post"
-              asp-controller="Panel"
-              asp-action="@(ViewBag.Producto != null ? "EditarProducto" : "AnadirProducto")"
-              enctype="multipart/form-data">
+        <form class="form-grid" method="post" asp-controller="Panel"
+            asp-action="@(ViewBag.Producto != null ? "EditarProducto" : "AnadirProducto")"
+            enctype="multipart/form-data">
             @Html.AntiForgeryToken()
 
             @if (ViewBag.Producto != null)
@@ -274,55 +280,51 @@
             <div class="form-group">
                 <label for="Nombre" class="form-label">Nombre</label>
                 <input type="text" name="nombreProducto" id="Nombre" class="form-input"
-                       placeholder="Nombre del producto" required
-                       value="@ViewBag.Producto?.Nombre" />
+                    placeholder="Nombre del producto" required value="@ViewBag.Producto?.Nombre" />
             </div>
 
             <!-- Descripción -->
             <div class="form-group full-width">
                 <label for="Descripcion" class="form-label">Descripción</label>
                 <textarea name="descripcion" id="Descripcion" class="form-textarea"
-                          placeholder="Descripción del producto" required>@ViewBag.Producto?.Descripcion</textarea>
+                    placeholder="Descripción del producto" required>@ViewBag.Producto?.Descripcion</textarea>
             </div>
 
             <!-- Talla -->
             <div class="form-group">
                 <label for="Talla" class="form-label">Talla</label>
-                <input type="text" name="talla" id="Talla" class="form-input"
-                       placeholder="Tamaño del producto" required
-                       value="@ViewBag.Producto?.Talla" />
+                <input type="text" name="talla" id="Talla" class="form-input" placeholder="Tamaño del producto" required
+                    value="@ViewBag.Producto?.Talla" />
             </div>
 
             <!-- Color -->
             <div class="form-group">
                 <label for="Color" class="form-label">Color</label>
-                <input type="text" name="color" id="Color" class="form-input"
-                       placeholder="Color del producto" required
-                       value="@ViewBag.Producto?.Color" />
+                <input type="text" name="color" id="Color" class="form-input" placeholder="Color del producto" required
+                    value="@ViewBag.Producto?.Color" />
             </div>
 
             <!-- Marca -->
             <div class="form-group">
                 <label for="Marca" class="form-label">Marca</label>
-                <input type="text" name="marca" id="Marca" class="form-input"
-                       placeholder="Marca del producto" required
-                       value="@ViewBag.Producto?.Marca" />
+                <input type="text" name="marca" id="Marca" class="form-input" placeholder="Marca del producto" required
+                    value="@ViewBag.Producto?.Marca" />
             </div>
 
             <!-- PrecioCompra -->
             <div class="form-group">
                 <label for="PrecioCompra" class="form-label">Precio de Compra</label>
                 <input type="number" name="precioCompra" id="PrecioCompra" class="form-input"
-                       placeholder="Precio de compra" step="0.01" min="0" required
-                       value="@ViewBag.Producto?.PrecioCompra" />
+                    placeholder="Precio de compra" step="0.01" min="0" required
+                    value="@ViewBag.Producto?.PrecioCompra.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
             </div>
 
             <!-- PrecioVenta -->
             <div class="form-group">
                 <label for="PrecioVenta" class="form-label">Precio de Venta</label>
                 <input type="number" name="precioVenta" id="PrecioVenta" class="form-input"
-                       placeholder="Precio de venta" step="0.01" min="0" required
-                       value="@ViewBag.Producto?.PrecioVenta" />
+                    placeholder="Precio de venta" step="0.01" min="0" required
+                    value="@ViewBag.Producto?.PrecioVenta.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)" />
             </div>
 
             <!-- Categoría -->
@@ -335,7 +337,7 @@
                         @foreach (var categoria in ViewBag.Categorias)
                         {
                             <option value="@categoria.CategoriaID"
-                                    selected="@(ViewBag.Producto?.CategoriaID == categoria.CategoriaID)">
+                                selected="@(ViewBag.Producto?.CategoriaID == categoria.CategoriaID)">
                                 @categoria.Nombre
                             </option>
                         }
@@ -355,14 +357,14 @@
                 <label for="Subcategoria" class="form-label">Subcategoría</label>
                 <select name="subcategoriaID" id="Subcategoria" class="form-select" required>
                     <option value="">Seleccione una subcategoría</option>
-                    @if (ViewBag.Producto != null)
+                    @if (ViewBag.Producto != null && ViewBag.Producto.CategoriaID != null)
                     {
                         @foreach (var subcategoria in ViewBag.Subcategorias)
                         {
                             if (subcategoria.CategoriaID == ViewBag.Producto.CategoriaID)
                             {
                                 <option value="@subcategoria.SubcategoriaID"
-                                        selected="@(ViewBag.Producto.SubcategoriaID == subcategoria.SubcategoriaID)">
+                                    selected="@(ViewBag.Producto?.SubcategoriaID == subcategoria.SubcategoriaID)">
                                     @subcategoria.NombreSubcategoria
                                 </option>
                             }
@@ -370,6 +372,8 @@
                     }
                 </select>
             </div>
+
+
 
             <!-- Proveedor -->
             <div class="form-group">
@@ -381,7 +385,7 @@
                         @foreach (var proveedor in ViewBag.Proveedores)
                         {
                             <option value="@proveedor.ProveedorID"
-                                    selected="@(ViewBag.Producto?.ProveedorID == proveedor.ProveedorID)">
+                                selected="@(ViewBag.Producto?.ProveedorID == proveedor.ProveedorID)">
                                 @proveedor.NombreProveedor
                             </option>
                         }
@@ -399,9 +403,8 @@
             <!-- Stock -->
             <div class="form-group">
                 <label for="Stock" class="form-label">Stock</label>
-                <input type="number" name="stock" id="Stock" class="form-input"
-                       placeholder="Cantidad en stock" min="0" required
-                       value="@ViewBag.Producto?.Stock" />
+                <input type="number" name="stock" id="Stock" class="form-input" placeholder="Cantidad en stock" min="0"
+                    required value="@ViewBag.Producto?.Stock" />
             </div>
 
             <!-- Imagen -->
@@ -410,10 +413,12 @@
                 <div class="image-upload">
                     @if (ViewBag.Producto != null && !string.IsNullOrEmpty(ViewBag.Producto.ImagenPath))
                     {
+                        <!-- Existing Image -->
                         <img src="@ViewBag.Producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview">
                     }
                     else
                     {
+                        <!-- Placeholder if no image is selected -->
                         <div class="no-image" id="imagePreview">
                             No hay imagen seleccionada
                         </div>
@@ -444,102 +449,99 @@
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Subcategorías dinámicas
-            const subcategorias = @Json.Serialize(ViewBag.Subcategorias);
             const categoriaDropdown = document.getElementById("Categoria");
             const subcategoriaDropdown = document.getElementById("Subcategoria");
+            const subcategorias = @Html.Raw(Json.Serialize(ViewBag.Subcategorias)); // All subcategories
 
+            // Function to filter subcategories based on the selected category
             function filterSubcategoriasByCategoria(categoriaID) {
-                const filteredSubcategorias = subcategorias.filter(
-                    subcategoria => subcategoria.categoriaID == Number(categoriaID)
-                );
-
+                // Clear current options in subcategory dropdown
                 subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
 
-                filteredSubcategorias.forEach(subcategoria => {
-                    const option = document.createElement("option");
-                    option.value = subcategoria.subcategoriaID;
-                    option.textContent = subcategoria.nombreSubcategoria;
-                    subcategoriaDropdown.appendChild(option);
-                });
+                // Filter subcategories based on category ID
+                const filteredSubcategorias = subcategorias.filter(subcategoria => subcategoria.categoriaID == categoriaID);
 
-                subcategoriaDropdown.disabled = filteredSubcategorias.length === 0;
+                // If there are subcategories, populate the dropdown
+                if (filteredSubcategorias.length > 0) {
+                    filteredSubcategorias.forEach(subcategoria => {
+                        const option = document.createElement("option");
+                        option.value = subcategoria.subcategoriaID;
+                        option.textContent = subcategoria.nombreSubcategoria;
+                        subcategoriaDropdown.appendChild(option);
+                    });
+                    subcategoriaDropdown.disabled = false; // Enable subcategory dropdown
+                } else {
+                    // If no subcategories, disable dropdown and show a default message
+                    const option = document.createElement("option");
+                    option.value = "";
+                    option.textContent = "No hay subcategorías disponibles";
+                    subcategoriaDropdown.appendChild(option);
+                    subcategoriaDropdown.disabled = true; // Disable subcategory dropdown
+                }
             }
 
-            if (categoriaDropdown && subcategoriaDropdown) {
-                // Cargar subcategorías si ya hay una categoría seleccionada (modo edición)
-                if (@(ViewBag.Producto?.CategoriaID != null ? "true" : "false")) {
-                    filterSubcategoriasByCategoria(@(ViewBag.Producto?.CategoriaID ?? 0));
+            // Initialize subcategories based on the selected category
+            if (categoriaDropdown) {
+                // If a category is selected, filter the subcategories
+                const selectedCategoriaID = parseInt(categoriaDropdown.value, 10);
+                if (selectedCategoriaID) {
+                    filterSubcategoriasByCategoria(selectedCategoriaID);
+                } else {
+                    subcategoriaDropdown.disabled = true;
+                    subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
                 }
 
+                // When category changes, update the subcategory dropdown
                 categoriaDropdown.addEventListener("change", function () {
-                    const selectedCategoriaID = this.value;
-                    if (selectedCategoriaID) {
-                        filterSubcategoriasByCategoria(selectedCategoriaID);
-                    } else {
-                        subcategoriaDropdown.innerHTML = '<option value="">Seleccione una subcategoría</option>';
-                        subcategoriaDropdown.disabled = true;
-                    }
+                    const selectedCategoriaID = parseInt(this.value, 10);
+                    filterSubcategoriasByCategoria(selectedCategoriaID);
                 });
             }
+        });
 
-            // Vista previa de imagen
+        document.addEventListener("DOMContentLoaded", function () {
+            // Image preview handling
             const imageInput = document.getElementById("Imagen");
-            const imagePreview = document.getElementById("imagePreview");
-            const errorMsg = document.getElementById("error-msg");
-            const maxSizeMB = 2;
-            const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
-            imageInput.addEventListener("change", function() {
-                errorMsg.style.display = "none";
+            const errorMsg = document.getElementById("error-msg");
+            const maxSizeMB = 2; // Maximum file size in MB
+            const maxSizeBytes = maxSizeMB * 1024 * 1024; // Convert MB to bytes
+
+            // Function to handle image preview
+            imageInput.addEventListener("change", function () {
+                const imagePreview = document.getElementById("imagePreview");
+                errorMsg.style.display = "none"; // Hide error message
                 const file = this.files[0];
 
                 if (file) {
+                    // Check for file size limit
                     if (file.size > maxSizeBytes) {
-                        errorMsg.style.display = "block";
-                        this.value = "";
+                        errorMsg.style.display = "block"; // Show error if file size exceeds the limit
+                        this.value = ""; // Clear file input
                         alert(`El archivo es demasiado grande. El tamaño máximo permitido es ${maxSizeMB}MB.`);
                         return;
                     }
 
+                    // Create a FileReader to load the selected image
                     const reader = new FileReader();
-                    reader.onload = function(e) {
+                    reader.onload = function (e) {
+                        // If there's already an image, replace it with the new one
                         if (imagePreview.tagName === "IMG") {
                             imagePreview.src = e.target.result;
                         } else {
-                            // Reemplazar el div por una imagen
+                            // If no image exists, replace the placeholder div with the preview image
                             const newImg = document.createElement("img");
                             newImg.src = e.target.result;
                             newImg.className = "image-preview";
                             newImg.id = "imagePreview";
                             imagePreview.parentNode.replaceChild(newImg, imagePreview);
                         }
-                    }
-                    reader.readAsDataURL(file);
+                    };
+                    reader.readAsDataURL(file); // Read the selected image as a data URL
                 }
             });
-
-            // Validación de precios
-            document.getElementById("PrecioCompra").addEventListener("blur", validatePriceInput);
-            document.getElementById("PrecioVenta").addEventListener("blur", validatePriceInput);
-
-            function validatePriceInput(event) {
-                const input = event.target;
-                const value = parseFloat(input.value);
-
-                if (isNaN(value)) {
-                    alert("Por favor ingrese un número válido para el precio.");
-                    input.value = "";
-                    input.focus();
-                } else if (value < 0) {
-                    alert("El precio no puede ser negativo.");
-                    input.value = "";
-                    input.focus();
-                }
-            }
         });
     </script>
 }

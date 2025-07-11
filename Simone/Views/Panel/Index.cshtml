@@ -1,4 +1,5 @@
 @model Usuario
+
 @{
     ViewData["Title"] = "Panel de Control";
 }
@@ -30,11 +31,6 @@
         font-family: 'Montserrat', sans-serif;
         background-color: #f5f5f7;
         color: var(--text-color);
-    }
-
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Playfair Display', serif;
-        font-weight: 600;
     }
 
     .dashboard-container {
@@ -89,11 +85,11 @@
         height: 100%;
     }
 
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            border-left: 4px solid var(--accent-gold);
-        }
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border-left: 4px solid var(--accent-gold);
+    }
 
     .card-header {
         display: flex;
@@ -148,71 +144,67 @@
         text-decoration: none;
     }
 
-        .card-btn i {
-            margin-right: 0.5rem;
-        }
-
     .btn-primary {
         background-color: var(--accent-purple);
         color: var(--primary-light);
     }
 
-        .btn-primary:hover {
-            background-color: #5E2D8C;
-            color: var(--primary-light);
-        }
+    .btn-primary:hover {
+        background-color: #5E2D8C;
+        color: var(--primary-light);
+    }
 
     .btn-success {
         background-color: var(--success-color);
         color: var(--primary-light);
     }
 
-        .btn-success:hover {
-            background-color: #218838;
-            color: var(--primary-light);
-        }
+    .btn-success:hover {
+        background-color: #218838;
+        color: var(--primary-light);
+    }
 
     .btn-warning {
         background-color: var(--warning-color);
         color: var(--primary-dark);
     }
 
-        .btn-warning:hover {
-            background-color: #e0a800;
-            color: var(--primary-dark);
-        }
+    .btn-warning:hover {
+        background-color: #e0a800;
+        color: var(--primary-dark);
+    }
 
     .btn-info {
         background-color: var(--info-color);
         color: var(--primary-light);
     }
 
-        .btn-info:hover {
-            background-color: #138496;
-            color: var(--primary-light);
-        }
+    .btn-info:hover {
+        background-color: #138496;
+        color: var(--primary-light);
+    }
 
     .btn-secondary {
         background-color: var(--medium-gray);
         color: var(--text-color);
     }
 
-        .btn-secondary:hover {
-            background-color: #d6d8db;
-            color: var(--text-color);
-        }
+    .btn-secondary:hover {
+        background-color: #d6d8db;
+        color: var(--text-color);
+    }
 
     .disabled-card {
         opacity: 0.7;
         filter: grayscale(30%);
     }
 
-        .disabled-card:hover {
-            transform: none;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid var(--accent-purple);
-            cursor: not-allowed;
-        }
+    .disabled-card:hover {
+        transform: none;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        border-left: 4px solid var(--accent-purple);
+        cursor: not-allowed;
+    }
 
     .card-image {
         width: 80px;

@@ -1,3 +1,9 @@
+@{
+    ViewData["Type"] = "Proveedores";
+    ViewData["Title"] = "Gestión de " + ViewData["Type"];
+}
+
+<div class="ui container mt-5">
 <style>
     .custom-form-wrapper {
         max-width: 600px;
@@ -84,10 +90,54 @@
                        value="@(ViewBag.Proveedor?.Direccion ?? "")" required />
             </div>
 
-            <button type="submit" class="ui green button fluid">
-                <i class="save icon"></i>
-                @(ViewBag.Proveedor != null ? "Guardar Cambios" : "Registrar Proveedor")
-            </button>
-        </form>
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button add-btn">Editar Proveedor</button>
+            </form>
+        }
+        else
+        {
+            <h2 class="ui header">
+                <i class="box icon"></i>
+                <div class="content">Añadir Proveedor</div>
+            </h2>
+            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProveedor">
+                <!-- Nombre -->
+                <div class="field">
+                    <label for="NombreProveedor">Nombre Proveedor</label>
+                    <input type="text" name="nombreProveedor" id="NombreProveedor" placeholder="Nombre del proveedor"
+                        required />
+                </div>
+                <!-- Descripcion -->
+                <div class="field">
+                    <label for="Contacto">Contacto</label>
+                    <input name="contacto" id="Contacto" placeholder="Contacto del proveedor" required></input>
+                </div>
+
+                <!-- Talla -->
+                <div class="field">
+                    <label for="Telefono">Telefono</label>
+                    <input type="text" name="telefono" id="Telefono" placeholder="Telefono del contacto" required />
+                </div>
+
+                <!-- Color -->
+                <div class="field">
+                    <label for="Email">Email</label>
+                    <input type="text" name="email" id="Color" placeholder="Email del proveedor" required />
+                </div>
+
+                <!-- Marca -->
+                <div class="field">
+                    <label for="Direccion">Direccion</label>
+                    <input type="text" name="direccion" id="Direccion" placeholder="Direccion del proveedor" required />
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="ui green button add-btn">Añadir Proveedor</button>
+            </form>
+        }
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
