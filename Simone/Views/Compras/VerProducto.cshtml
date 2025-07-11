@@ -5,6 +5,17 @@
     var producto = ViewBag.Producto as Simone.Models.Producto;
 }
 
+@{
+    var mensajeError = TempData["MensajeError"];
+}
+
+@if (mensajeError != null)
+{
+    <div class="alert alert-danger">
+        <i class="fa-solid fa-circle-exclamation me-2"></i> @mensajeError
+    </div>
+}
+
 <div class="container">
     <div class="row mt-5">
         <!-- Product Image Section -->
@@ -15,14 +26,19 @@
 
         <!-- Product Details Section -->
         <div class="col-md-6">
-            <h2 class="fw-bold">@producto.Nombre</h2>
+            <h2 class="fw-bold">@producto.Nombre
+                @if (producto.Stock == 0)
+                {
+                    <span class="text-danger"> - No hay stock!</span>
+                }
+            </h2>
             <p><strong>Descripción:</strong> @producto.Descripcion</p>
             <p class="text-muted"><strong>Categoría:</strong> @producto.Categoria.Nombre</p>
             <p class="text-muted"><strong>Subcategoría:</strong> @producto.Subcategoria.NombreSubcategoria</p>
 
             <!-- Price -->
             <p class="fw-bold text-primary" style="font-size: 1.5rem;">@producto.PrecioVenta.ToString("C",
-                                CultureInfo.CreateSpecificCulture("es-ES"))</p>
+                                CultureInfo.CreateSpecificCulture("es-EC"))</p>
             <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
                 <!-- Quantity Selection -->
                 <div class="mb-3">
@@ -77,5 +93,5 @@
 </div>
 
 @section Scripts {
-
+    <!-- You can add script here for any dynamic behavior if needed -->
 }

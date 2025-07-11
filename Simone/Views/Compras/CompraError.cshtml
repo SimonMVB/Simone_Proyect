@@ -7,6 +7,15 @@
         <i class="fa fa-times-circle" style="font-size: 80px;"></i><br />
         Ha ocurrido un error y la compra no pudo ser procesada.
     </h1>
+    
+    <!-- Show error details if present -->
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger mt-4">
+            <strong>Error:</strong> @TempData["MensajeError"]
+        </div>
+    }
+
     <div class="mt-4">
         <button class="btn btn-primary" onclick="window.location.href='@Url.Action("Index", "Home")'">
             <i class="fa fa-home"></i> Volver al Menú Principal

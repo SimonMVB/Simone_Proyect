@@ -1,3 +1,8 @@
+@{
+    ViewData["Type"] = "Proveedores";
+    ViewData["Title"] = "Gestión de " + ViewData["Type"];
+}
+
 <div class="ui container mt-5">
     <div class="ui segment">
         @if (ViewBag.Proveedor != null)
@@ -47,7 +52,7 @@
                 </div>
 
                 <!-- Submit Button -->
-                <button type="submit" class="ui green button">Editar Proveedor</button>
+                <button type="submit" class="ui green button add-btn">Editar Proveedor</button>
             </form>
         }
         else
@@ -88,8 +93,12 @@
                 </div>
 
                 <!-- Submit Button -->
-                <button type="submit" class="ui green button">Añadir Proveedor</button>
+                <button type="submit" class="ui green button add-btn">Añadir Proveedor</button>
             </form>
         }
     </div>
 </div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

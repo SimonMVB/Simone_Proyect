@@ -55,12 +55,21 @@ namespace Simone.Controllers
             _proveedoresManager = proveedores;
         }
 
+        /// <summary>
+        /// Acción GET para mostrar la vista del panel de administración (Inicio).
+        /// </summary>
+        /// <returns>Vista de inicio del panel de administración.</returns>
         [HttpGet]
         public IActionResult Index()
         {
             return View();
         }
 
+        /// <summary>
+        /// Acción GET para mostrar la vista de gestión de usuarios.
+        /// Permite visualizar usuarios y sus roles.
+        /// </summary>
+        /// <returns>Vista de usuarios con la lista de roles asociados.</returns>
         [HttpGet]
         public IActionResult Usuarios()
         {
@@ -100,6 +109,12 @@ namespace Simone.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Acción POST para eliminar un usuario.
+        /// Elimina un usuario del sistema y redirige a la vista de usuarios.
+        /// </summary>
+        /// <param name="id">ID del usuario a eliminar.</param>
+        /// <returns>Redirige a la vista de usuarios después de la eliminación.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarUsuario(string id)
@@ -121,6 +136,13 @@ namespace Simone.Controllers
             }
         }
 
+        /// <summary>
+        /// Acción POST para editar el rol de un usuario.
+        /// Cambia el rol de un usuario y redirige a la vista de usuarios.
+        /// </summary>
+        /// <param name="usuarioID">ID del usuario.</param>
+        /// <param name="nuevoRolID">ID del nuevo rol.</param>
+        /// <returns>Redirige a la vista de usuarios después de la edición del rol.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarRol(string usuarioID, string nuevoRolID)
@@ -154,7 +176,7 @@ namespace Simone.Controllers
                 return RedirectToAction("Usuarios");
             }
 
-            // Asignar el nuevo rol por medio del nombre. (Se podria crear un metodo para recibir ID en lugar de nombre)
+            // Asignar el nuevo rol por medio del nombre.
             var resultadoAsignar = await _userManager.AddToRoleAsync(usuario, nuevoRol.Name);
             if (!resultadoAsignar.Succeeded)
             {
@@ -170,6 +192,10 @@ namespace Simone.Controllers
             return RedirectToAction("Usuarios");
         }
 
+        /// <summary>
+        /// Acción GET para mostrar las categorías disponibles.
+        /// </summary>
+        /// <returns>Vista con la lista de categorías.</returns>
         [HttpGet]
         public async Task<IActionResult> Categorias()
         {
@@ -178,6 +204,11 @@ namespace Simone.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Acción POST para añadir una nueva categoría.
+        /// </summary>
+        /// <param name="nombreCategoria">Nombre de la nueva categoría.</param>
+        /// <returns>Redirige a la vista de categorías después de añadir la nueva categoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirCategoria(string nombreCategoria)
@@ -194,6 +225,12 @@ namespace Simone.Controllers
             return RedirectToAction("Categorias");
         }
 
+        /// <summary>
+        /// Acción POST para editar una categoría existente.
+        /// </summary>
+        /// <param name="categoriaID">ID de la categoría a editar.</param>
+        /// <param name="nombreCategoria">Nuevo nombre de la categoría.</param>
+        /// <returns>Redirige a la vista de categorías después de editar la categoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarCategoria(int categoriaID, string nombreCategoria)
@@ -215,6 +252,11 @@ namespace Simone.Controllers
             return RedirectToAction("Categorias");
         }
 
+        /// <summary>
+        /// Acción POST para eliminar una categoría existente.
+        /// </summary>
+        /// <param name="categoriaID">ID de la categoría a eliminar.</param>
+        /// <returns>Redirige a la vista de categorías después de eliminar la categoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarCategoria(int categoriaID)
@@ -223,17 +265,23 @@ namespace Simone.Controllers
             return RedirectToAction("Categorias");
         }
 
+        /// <summary>
+        /// Acción GET para mostrar las subcategorías.
+        /// </summary>
+        /// <returns>Vista con la lista de subcategorías.</returns>
         [HttpGet]
         public async Task<IActionResult> Subcategorias()
         {
             // Load Subcategorias with the related Categoria name
             var subcategorias = await _subcategoriasManager.GetAllSubcategoriasWithCategoriaAsync();
-
-            // Send Subcategorias to ViewBag
             ViewBag.Subcategorias = subcategorias;
             return View();
         }
 
+        /// <summary>
+        /// Acción GET para mostrar el formulario de añadir una subcategoría.
+        /// </summary>
+        /// <returns>Vista del formulario para añadir una subcategoría.</returns>
         [HttpGet]
         public async Task<IActionResult> AnadirSubcategoria()
         {
@@ -242,6 +290,12 @@ namespace Simone.Controllers
             return View("SubcategoriaForm");
         }
 
+        /// <summary>
+        /// Acción POST para añadir una nueva subcategoría.
+        /// </summary>
+        /// <param name="categoriaID">ID de la categoría asociada a la subcategoría.</param>
+        /// <param name="nombresubCategoria">Nombre de la subcategoría.</param>
+        /// <returns>Redirige a la vista de subcategorías después de añadir la nueva subcategoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirSubcategoria(int categoriaID, string nombresubCategoria)
@@ -259,6 +313,11 @@ namespace Simone.Controllers
             return RedirectToAction("Subcategorias");
         }
 
+        /// <summary>
+        /// Acción GET para editar una subcategoría existente.
+        /// </summary>
+        /// <param name="subcategoriaID">ID de la subcategoría a editar.</param>
+        /// <returns>Vista del formulario para editar la subcategoría.</returns>
         [HttpGet]
         public async Task<IActionResult> EditarSubcategoria(int subcategoriaID)
         {
@@ -269,6 +328,13 @@ namespace Simone.Controllers
             return View("SubcategoriaForm");
         }
 
+        /// <summary>
+        /// Acción POST para editar una subcategoría existente.
+        /// </summary>
+        /// <param name="subcategoriaID">ID de la subcategoría a editar.</param>
+        /// <param name="categoriaID">Nuevo ID de la categoría asociada.</param>
+        /// <param name="nombresubCategoria">Nuevo nombre de la subcategoría.</param>
+        /// <returns>Redirige a la vista de subcategorías después de editar la subcategoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarSubcategoria(int subcategoriaID, int categoriaID, string nombresubCategoria)
@@ -292,6 +358,11 @@ namespace Simone.Controllers
             return RedirectToAction("Subcategorias");
         }
 
+        /// <summary>
+        /// Acción POST para eliminar una subcategoría.
+        /// </summary>
+        /// <param name="categoriaID">ID de la subcategoría a eliminar.</param>
+        /// <returns>Redirige a la vista de subcategorías después de eliminar la subcategoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarSubcategoria(int categoriaID)
@@ -300,6 +371,10 @@ namespace Simone.Controllers
             return RedirectToAction("Subcategorias");
         }
 
+        /// <summary>
+        /// Acción GET para mostrar la vista de proveedores.
+        /// </summary>
+        /// <returns>Vista con la lista de proveedores.</returns>
         [HttpGet]
         public async Task<IActionResult> Proveedores()
         {
@@ -308,12 +383,25 @@ namespace Simone.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Acción GET para mostrar el formulario de añadir un proveedor.
+        /// </summary>
+        /// <returns>Vista del formulario para añadir un proveedor.</returns>
         [HttpGet]
         public IActionResult AnadirProveedor()
         {
             return View("ProveedorForm");
         }
 
+        /// <summary>
+        /// Acción POST para añadir un proveedor.
+        /// </summary>
+        /// <param name="nombreProveedor">Nombre del proveedor.</param>
+        /// <param name="contacto">Contacto del proveedor.</param>
+        /// <param name="telefono">Teléfono del proveedor.</param>
+        /// <param name="email">Correo electrónico del proveedor.</param>
+        /// <param name="direccion">Dirección del proveedor.</param>
+        /// <returns>Redirige a la vista de proveedores después de añadir el proveedor.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirProveedor(
@@ -340,6 +428,11 @@ namespace Simone.Controllers
             return RedirectToAction("Proveedores");
         }
 
+        /// <summary>
+        /// Acción GET para editar un proveedor existente.
+        /// </summary>
+        /// <param name="proveedorID">ID del proveedor a editar.</param>
+        /// <returns>Vista del formulario para editar el proveedor.</returns>
         [HttpGet]
         public async Task<IActionResult> EditarProveedor(int proveedorID)
         {
@@ -348,6 +441,16 @@ namespace Simone.Controllers
             return View("ProveedorForm");
         }
 
+        /// <summary>
+        /// Acción POST para editar un proveedor existente.
+        /// </summary>
+        /// <param name="proveedorID">ID del proveedor a editar.</param>
+        /// <param name="nombreProveedor">Nuevo nombre del proveedor.</param>
+        /// <param name="contacto">Nuevo contacto del proveedor.</param>
+        /// <param name="telefono">Nuevo teléfono del proveedor.</param>
+        /// <param name="email">Nuevo correo electrónico del proveedor.</param>
+        /// <param name="direccion">Nueva dirección del proveedor.</param>
+        /// <returns>Redirige a la vista de proveedores después de editar el proveedor.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarProveedor(
@@ -381,14 +484,23 @@ namespace Simone.Controllers
             return RedirectToAction("Proveedores");
         }
 
+        /// <summary>
+        /// Acción POST para eliminar un proveedor.
+        /// </summary>
+        /// <param name="proveedorID">ID del proveedor a eliminar.</param>
+        /// <returns>Redirige a la vista de proveedores después de eliminar el proveedor.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarProveedor(int categoriaID)
+        public async Task<IActionResult> EliminarProveedor(int proveedorID)
         {
-            bool success = await _proveedoresManager.DeleteAsync(categoriaID);
-            return RedirectToAction("Categorias");
+            bool success = await _proveedoresManager.DeleteAsync(proveedorID);
+            return RedirectToAction("Proveedores");
         }
 
+        /// <summary>
+        /// Acción GET para mostrar los productos disponibles.
+        /// </summary>
+        /// <returns>Vista con la lista de productos.</returns>
         [HttpGet]
         public async Task<IActionResult> Productos()
         {
@@ -409,6 +521,10 @@ namespace Simone.Controllers
             return View();
         }
 
+        /// <summary>
+        /// Acción GET para mostrar el formulario de añadir un producto.
+        /// </summary>
+        /// <returns>Vista del formulario para añadir un producto.</returns>
         [HttpGet]
         public async Task<IActionResult> AnadirProducto()
         {
@@ -421,6 +537,22 @@ namespace Simone.Controllers
             return View("ProductoForm");
         }
 
+        /// <summary>
+        /// Acción POST para añadir un producto.
+        /// </summary>
+        /// <param name="nombreProducto">Nombre del producto.</param>
+        /// <param name="descripcion">Descripción del producto.</param>
+        /// <param name="talla">Talla del producto.</param>
+        /// <param name="color">Color del producto.</param>
+        /// <param name="marca">Marca del producto.</param>
+        /// <param name="precioCompra">Precio de compra del producto.</param>
+        /// <param name="precioVenta">Precio de venta del producto.</param>
+        /// <param name="proveedorID">ID del proveedor del producto.</param>
+        /// <param name="categoriaID">ID de la categoría del producto.</param>
+        /// <param name="subcategoriaID">ID de la subcategoría del producto.</param>
+        /// <param name="stock">Cantidad disponible del producto.</param>
+        /// <param name="imagen">Imagen del producto.</param>
+        /// <returns>Redirige a la vista de productos después de añadir el producto.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirProducto(
@@ -438,7 +570,6 @@ namespace Simone.Controllers
             IFormFile imagen
             )
         {
-
             var producto = new Producto
             {
                 Nombre = nombreProducto,
@@ -475,6 +606,11 @@ namespace Simone.Controllers
             return RedirectToAction("Productos");
         }
 
+        /// <summary>
+        /// Acción GET para editar un producto.
+        /// </summary>
+        /// <param name="productoID">ID del producto a editar.</param>
+        /// <returns>Vista del formulario para editar el producto.</returns>
         [HttpGet]
         public async Task<IActionResult> EditarProducto(int productoID)
         {
@@ -489,6 +625,24 @@ namespace Simone.Controllers
             return View("ProductoForm");
         }
 
+        /// <summary>
+        /// Acción POST para editar un producto.
+        /// </summary>
+        /// <param name="productoID">ID del producto a editar.</param>
+        /// <param name="nombreProducto">Nuevo nombre del producto.</param>
+        /// <param name="descripcion">Nueva descripción del producto.</param>
+        /// <param name="talla">Nueva talla del producto.</param>
+        /// <param name="color">Nuevo color del producto.</param>
+        /// <param name="marca">Nueva marca del producto.</param>
+        /// <param name="existingImagenPath">Ruta de la imagen existente.</param>
+        /// <param name="precioCompra">Nuevo precio de compra.</param>
+        /// <param name="precioVenta">Nuevo precio de venta.</param>
+        /// <param name="proveedorID">Nuevo proveedor.</param>
+        /// <param name="categoriaID">Nueva categoría.</param>
+        /// <param name="subcategoriaID">Nueva subcategoría.</param>
+        /// <param name="stock">Nuevo stock.</param>
+        /// <param name="imagen">Nueva imagen del producto.</param>
+        /// <returns>Redirige a la vista de productos después de editar el producto.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarProducto(
@@ -547,22 +701,13 @@ namespace Simone.Controllers
             await _productosManager.UpdateAsync(producto);
 
             return RedirectToAction("Productos");
-
-            return RedirectToAction("Productos");
         }
 
-        [AllowAnonymous]
-        public IActionResult Ofertas()
-        {
-            var productosEnOferta = _context.Productos
-                .Where(p => p.PrecioVenta < p.PrecioCompra)
-                .Include(p => p.ImagenesProductos)
-                .ToList();
-
-            return View(productosEnOferta);
-        }
-
-
+        /// <summary>
+        /// Acción POST para eliminar un producto.
+        /// </summary>
+        /// <param name="productoID">ID del producto a eliminar.</param>
+        /// <returns>Redirige a la vista de productos después de eliminar el producto.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarProducto(int productoID)

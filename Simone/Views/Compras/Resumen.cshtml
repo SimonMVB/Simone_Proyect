@@ -1,4 +1,5 @@
 @model Simone.Models.Usuario
+
 @{
     ViewData["Title"] = "Resumen de Compra";
 }
@@ -22,15 +23,24 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in ViewBag.CarritoDetalles)
+                    @if (ViewBag.CarritoDetalles != null)
+                    {
+                        @foreach (var item in ViewBag.CarritoDetalles)
+                        {
+                            <tr>
+                                <td>@item.Producto.Nombre</td>
+                                <td><img src="@item.Producto.ImagenPath" alt="@item.Producto.Nombre"
+                                         style="width: 50px; height: 50px; object-fit: cover;" /></td>
+                                <td>@item.Cantidad</td>
+                                <td>@item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</td>
+                                <td>@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</td>
+                            </tr>
+                        }
+                    }
+                    else
                     {
                         <tr>
-                            <td>@item.Producto.Nombre</td>
-                            <td><img src="@item.Producto.ImagenPath" alt="@item.Producto.Nombre"
-                                    style="width: 50px; height: 50px; object-fit: cover;" /></td>
-                            <td>@item.Cantidad</td>
-                            <td>@item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</td>
-                            <td>@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</td>
+                            <td colspan="5" class="text-center">Tu carrito está vacío.</td>
                         </tr>
                     }
                 </tbody>

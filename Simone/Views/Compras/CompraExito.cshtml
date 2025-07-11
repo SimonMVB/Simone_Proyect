@@ -4,6 +4,15 @@
 
 <div class="container text-center">
     <h1 class="mt-5 text-success">¡Gracias! Tu compra ha sido procesada correctamente.</h1>
+    
+    <!-- Success message with optional details -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success mt-4">
+            <strong>Éxito:</strong> @TempData["MensajeExito"]
+        </div>
+    }
+
     <div class="mt-4">
         <button class="btn btn-primary" onclick="window.location.href='@Url.Action("Index", "Home")'">
             <i class="fa fa-home"></i> Volver al Menú Principal
