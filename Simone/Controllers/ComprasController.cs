@@ -1,9 +1,11 @@
-using Microsoft.AspNetCore.Mvc;
-using Simone.Models;
-using Simone.Data;
-using Microsoft.EntityFrameworkCore;
-using Simone.Services;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Simone.Data;
+using Simone.Extensions;
+using Simone.Models;
+using Simone.Services;
+using System.Security.Claims;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Threading.Tasks;
@@ -79,9 +81,18 @@ namespace Simone.Controllers
                 Productos = productos,
                 PageNumber = pageNumber,
                 PageSize = pageSize,
-                TotalProducts = totalProducts
-            };
+                TotalProducts = totalProducts,
+                ProductoIDsFavoritos = new List<int>()
 
+            };
+            if (User.Identity.IsAuthenticated)
+            {
+                var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+                model.ProductoIDsFavoritos = await _context.Favoritos
+                    .Where(f => f.UsuarioId == userId)
+                    .Select(f => f.ProductoId)
+                    .ToListAsync();
+            }
             return View(model);
         }
 

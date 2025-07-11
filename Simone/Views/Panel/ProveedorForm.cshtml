@@ -4,52 +4,91 @@
 }
 
 <div class="ui container mt-5">
+<style>
+    .custom-form-wrapper {
+        max-width: 600px;
+        margin: auto;
+        margin-top: 3rem;
+    }
+
+        .custom-form-wrapper .ui.segment {
+            padding: 3rem;
+            box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
+            border-radius: 20px;
+            border: 1px solid #eee;
+            background-color: #ffffff;
+        }
+
+        .custom-form-wrapper .ui.header .icon {
+            color: #21ba45;
+        }
+
+        .custom-form-wrapper .ui.button:hover {
+            background-color: #16ab39 !important;
+        }
+
+    @@media only screen and (max-width: 600px) {
+        .custom-form-wrapper .ui.segment
+
+    {
+        padding: 2rem;
+    }
+
+    }
+</style>
+
+<div class="ui container custom-form-wrapper">
     <div class="ui segment">
-        @if (ViewBag.Proveedor != null)
-        {
-            <h2 class="ui header">
-                <i class="box icon"></i>
-                <div class="content">Editar Proveedor</div>
-            </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="EditarProveedor">
+        <h2 class="ui header">
+            <i class="box icon"></i>
+            <div class="content">
+                @(ViewBag.Proveedor != null ? "Editar Proveedor" : "Añadir Proveedor")
+            </div>
+        </h2>
 
-                <!-- Proveedor id escondido -->
+        <form class="ui form" method="post"
+              asp-controller="Panel"
+              asp-action="@(ViewBag.Proveedor != null ? "EditarProveedor" : "AnadirProveedor")">
+
+            @if (ViewBag.Proveedor != null)
+            {
                 <input type="hidden" name="proveedorID" value="@ViewBag.Proveedor.ProveedorID" />
+            }
 
-                <!-- Nombre -->
-                <div class="field">
-                    <label for="NombreProveedor">Nombre Proveedor</label>
-                    <input type="text" name="nombreProveedor" id="NombreProveedor" placeholder="Nombre del proveedor"
-                        required value="@ViewBag.Proveedor.NombreProveedor" />
-                </div>
+            <div class="field required">
+                <label for="NombreProveedor">Nombre del Proveedor</label>
+                <input type="text" name="nombreProveedor" id="NombreProveedor"
+                       placeholder="Ej. Distribuidora Andina"
+                       value="@(ViewBag.Proveedor?.NombreProveedor ?? "")" required />
+            </div>
 
-                <!-- Descripcion -->
-                <div class="field">
-                    <label for="Contacto">Contacto</label>
-                    <input name="contacto" id="Contacto" placeholder="Contacto del proveedor" required
-                        value="@ViewBag.Proveedor.Contacto" />
-                </div>
+            <div class="field required">
+                <label for="Contacto">Nombre del Contacto</label>
+                <input type="text" name="contacto" id="Contacto"
+                       placeholder="Ej. Carlos Pérez"
+                       value="@(ViewBag.Proveedor?.Contacto ?? "")" required />
+            </div>
 
-                <!-- Talla -->
-                <div class="field">
-                    <label for="Telefono">Telefono</label>
-                    <input type="text" name="telefono" id="Telefono" placeholder="Telefono del contacto" required
-                        value="@ViewBag.Proveedor.Telefono" />
-                </div>
+            <div class="field required">
+                <label for="Telefono">Teléfono</label>
+                <input type="tel" name="telefono" id="Telefono"
+                       placeholder="Ej. 0991234567"
+                       value="@(ViewBag.Proveedor?.Telefono ?? "")" required />
+            </div>
 
-                <!-- Color -->
-                <div class="field">
-                    <label for="Email">Email</label>
-                    <input type="text" name="email" id="Email" placeholder="Email del proveedor" required
-                        value="@ViewBag.Proveedor.Email" />
-                </div>
+            <div class="field required">
+                <label for="Email">Correo Electrónico</label>
+                <input type="email" name="email" id="Email"
+                       placeholder="Ej. contacto@proveedor.com"
+                       value="@(ViewBag.Proveedor?.Email ?? "")" required />
+            </div>
 
-                <!-- Marca -->
-                <div class="field">
-                    <label for="Direccion">Direccion</label>
-                    <input type="text" name="direccion" id="Direccion" placeholder="Direccion del proveedor" required
-                        value="@ViewBag.Proveedor.Direccion" />
-                </div>
+            <div class="field required">
+                <label for="Direccion">Dirección</label>
+                <input type="text" name="direccion" id="Direccion"
+                       placeholder="Ej. Av. Quito y Bolívar"
+                       value="@(ViewBag.Proveedor?.Direccion ?? "")" required />
+            </div>
 
                 <!-- Submit Button -->
                 <button type="submit" class="ui green button add-btn">Editar Proveedor</button>

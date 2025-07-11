@@ -30,7 +30,8 @@
             </button>
         </div>
 
-        <!-- Formulario mejorado -->
+        <!-- ... Manten tu código anterior arriba ... -->
+
         <form method="post" asp-action="GuardarDireccion" asp-controller="Cuenta" class="needs-validation" novalidate>
             <div class="row g-3">
                 <div class="col-md-6">
@@ -47,10 +48,24 @@
                     <div class="form-text">Detalles que nos ayuden a encontrar tu ubicación.</div>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label for="sector" class="form-label fw-semibold">Sector/Barrio</label>
                     <input type="text" class="form-control" id="sector" name="sector"
                            placeholder="Ej: Barrio Central" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="ciudad" class="form-label fw-semibold">Ciudad</label>
+                    <input type="text" class="form-control" id="ciudad" name="ciudad"
+                           placeholder="Ej: Milagro" required>
+                    <div class="invalid-feedback">Por favor ingresa tu ciudad.</div>
+                </div>
+
+                <div class="col-md-4">
+                    <label for="provincia" class="form-label fw-semibold">Provincia</label>
+                    <input type="text" class="form-control" id="provincia" name="provincia"
+                           placeholder="Ej: Guayas" required>
+                    <div class="invalid-feedback">Por favor ingresa tu provincia.</div>
                 </div>
 
                 <div class="col-md-6">
@@ -64,12 +79,11 @@
                 </div>
             </div>
 
-            <!-- Campos ocultos mejorados -->
+            <!-- Campos ocultos para geolocalización -->
             <input type="hidden" id="latitud" name="latitud" required>
             <input type="hidden" id="longitud" name="longitud" required>
             <input type="hidden" id="precision" name="precision">
 
-            <!-- Validación de ubicación -->
             <div id="location-alert" class="alert alert-warning mt-3 d-none">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i> Por favor selecciona tu ubicación exacta en el mapa.
             </div>
@@ -83,8 +97,7 @@
                 </button>
             </div>
         </form>
-    </div>
-</div>
+
 
 <!-- Leaflet CSS & JS con plugins -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
@@ -116,144 +129,220 @@
         .leaflet-control-geocoder-form input {
             width: 100% !important;
         }
+
+            .highlight-field {
+                animation: highlight 2s ease;
+                border-color: #86b7fe !important;
+                box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+            }
+
+            @@keyframes highlight {
+                0% {
+                    background-color: rgba(13, 110, 253, 0.1);
+                }
+
+                100% {
+                    background-color: transparent;
+                }
+            }
 </style>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Inicializar mapa con mejor configuración
-        const map = L.map('map', {
-            center: [-2.1353, -79.5889], // Milagro, Ecuador
-            zoom: 15,
-            zoomControl: true,
-            preferCanvas: true
-        });
-
-        // Capa de mapa
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-            maxZoom: 19,
-            detectRetina: true
-        }).addTo(map);
-
-        // Control de búsqueda
-        const geocoder = L.Control.Geocoder.nominatim();
-        new L.Control.Geocoder({
-            position: 'topleft',
-            placeholder: 'Buscar dirección...',
-            errorMessage: 'Dirección no encontrada',
-            showResultIcons: true,
-            geocoder: geocoder
-        }).addTo(map);
-
-        // Marcador personalizado
-        const icon = L.divIcon({
-            className: 'custom-marker',
-            html: '<i class="fa-solid fa-map-marker-alt fa-3x text-danger"></i>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 30]
-        });
-
-        let marker = null;
-        let circle = null;
-
-        // Evento de clic en el mapa
-        map.on('click', function(e) {
-            updatePosition(e.latlng);
-
-            // Reverse geocoding para obtener dirección
-            geocoder.reverse(e.latlng, map.options.crs.scale(map.getZoom()), results => {
-                if (results && results.length > 0) {
-                    document.getElementById('direccion').value = results[0].name || '';
-                }
-            });
-        });
-
-        // Botón de ubicación actual
-        document.getElementById('locate-me').addEventListener('click', function() {
-            map.locate({setView: true, maxZoom: 16});
-        });
-
-        // Evento de ubicación encontrada
-        map.on('locationfound', function(e) {
-            updatePosition(e.latlng);
-            document.getElementById('precision').value = e.accuracy.toFixed(2);
-
-            if (circle) {
-                circle.setLatLng(e.latlng).setRadius(e.accuracy);
-            } else {
-                circle = L.circle(e.latlng, {
-                    radius: e.accuracy,
-                    color: '#0d6efd',
-                    fillColor: '#0d6efd30',
-                    fillOpacity: 0.5
-                }).addTo(map);
-            }
-        });
-
-        // Evento de error de ubicación
-        map.on('locationerror', function(e) {
-            alert('No se pudo obtener tu ubicación: ' + e.message);
-        });
-
-        // Función para actualizar posición
-        function updatePosition(latlng) {
-            const { lat, lng } = latlng;
-
-            if (marker) {
-                marker.setLatLng(latlng);
-            } else {
-                marker = L.marker(latlng, { icon: icon, draggable: true }).addTo(map);
-                marker.on('dragend', function(e) {
-                    const newPos = marker.getLatLng();
-                    document.getElementById('latitud').value = newPos.lat;
-                    document.getElementById('longitud').value = newPos.lng;
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Inicializar mapa con mejor configuración
+                const map = L.map('map', {
+                    center: [-2.1353, -79.5889], // Milagro, Ecuador
+                    zoom: 15,
+                    zoomControl: true,
+                    preferCanvas: true
                 });
-            }
 
-            document.getElementById('latitud').value = lat;
-            document.getElementById('longitud').value = lng;
-            document.getElementById('location-alert').classList.add('d-none');
+                // Capa de mapa
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                    maxZoom: 19,
+                    detectRetina: true
+                }).addTo(map);
 
-            // Ajustar vista al marcador con offset para no cubrir controles
-            map.setView(latlng, 16, {
-                animate: true,
-                duration: 0.5,
-                paddingTopLeft: [0, 100]
-            });
-        }
+                // Control de búsqueda
+                const geocoder = L.Control.Geocoder.nominatim();
+                new L.Control.Geocoder({
+                    position: 'topleft',
+                    placeholder: 'Buscar dirección...',
+                    errorMessage: 'Dirección no encontrada',
+                    showResultIcons: true,
+                    geocoder: geocoder
+                }).addTo(map);
 
-        // Validación del formulario
-        const form = document.querySelector('.needs-validation');
-        form.addEventListener('submit', function(event) {
-            if (!form.checkValidity() || !document.getElementById('latitud').value) {
-                event.preventDefault();
-                event.stopPropagation();
+                // Marcador personalizado
+                const icon = L.divIcon({
+                    className: 'custom-marker',
+                    html: '<i class="fa-solid fa-map-marker-alt fa-3x text-danger"></i>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                });
 
-                if (!document.getElementById('latitud').value) {
-                    document.getElementById('location-alert').classList.remove('d-none');
-                    document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                let marker = null;
+                let circle = null;
+
+                // Función para destacar campos
+                function highlightField(id) {
+                    const field = document.getElementById(id);
+                    field.classList.add('highlight-field');
+                    setTimeout(() => field.classList.remove('highlight-field'), 2000);
                 }
-            }
 
-            form.classList.add('was-validated');
-        }, false);
+                // Función para actualizar posición
+                function updatePosition(latlng) {
+                    const { lat, lng } = latlng;
 
-        // Mostrar mapa cuando esté listo
-        map.whenReady(function() {
-            document.getElementById('map-loading').style.display = 'none';
-        });
+                    if (marker) {
+                        marker.setLatLng(latlng);
+                    } else {
+                        marker = L.marker(latlng, { icon: icon, draggable: true }).addTo(map);
+                        marker.on('dragend', function(e) {
+                            const newPos = marker.getLatLng();
+                            document.getElementById('latitud').value = newPos.lat;
+                            document.getElementById('longitud').value = newPos.lng;
+                            // Actualizar dirección al arrastrar
+                            geocoder.reverse(newPos, map.options.crs.scale(map.getZoom()), results => {
+                                if (results && results.length > 0) {
+                                    fillAddressFields(results[0]);
+                                }
+                            });
+                        });
+                    }
 
-        // Control de localización
-        L.control.locate({
-            position: 'topright',
-            strings: {
-                title: "Mostrar mi ubicación",
-                popup: "Estás dentro de {distance} metros desde este punto"
-            },
-            locateOptions: {
-                enableHighAccuracy: true,
-                maxZoom: 16
-            }
-        }).addTo(map);
-    });
-</script>
+                    document.getElementById('latitud').value = lat;
+                    document.getElementById('longitud').value = lng;
+                    document.getElementById('location-alert').classList.add('d-none');
+
+                    // Ajustar vista al marcador
+                    map.setView(latlng, 16, {
+                        animate: true,
+                        duration: 0.5,
+                        paddingTopLeft: [0, 100]
+                    });
+
+                    // Scroll a los campos
+                    setTimeout(() => {
+                        document.querySelector('.card').scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                        });
+                    }, 300);
+                }
+
+                // Función para rellenar campos de dirección
+                function fillAddressFields(result) {
+                    const address = result.properties.address || result.address || {};
+
+                    // Dirección principal
+                    if (result.name) {
+                        document.getElementById('direccion').value = result.name;
+                        highlightField('direccion');
+                    }
+
+                    // Sector/Barrio (probamos varios campos posibles)
+                    const sector = address.neighbourhood || address.suburb || address.quarter || address.city_district || '';
+                    if (sector) {
+                        document.getElementById('sector').value = sector;
+                        highlightField('sector');
+                    }
+
+                    // Ciudad (probamos varios campos posibles)
+                    const ciudad = address.city || address.town || address.village || address.municipality || '';
+                    if (ciudad) {
+                        document.getElementById('ciudad').value = ciudad;
+                        highlightField('ciudad');
+                    }
+
+                    // Provincia (probamos varios campos posibles)
+                    const provincia = address.state || address.county || address.region || '';
+                    if (provincia) {
+                        document.getElementById('provincia').value = provincia;
+                        highlightField('provincia');
+                    }
+                }
+
+                // Evento de clic en el mapa
+                map.on('click', function(e) {
+                    updatePosition(e.latlng);
+
+                    // Obtener detalles de la dirección
+                    geocoder.reverse(e.latlng, map.options.crs.scale(map.getZoom()), results => {
+                        if (results && results.length > 0) {
+                            fillAddressFields(results[0]);
+                        }
+                    });
+                });
+
+                // Botón de ubicación actual
+                document.getElementById('locate-me').addEventListener('click', function() {
+                    map.locate({setView: true, maxZoom: 16});
+                });
+
+                // Evento de ubicación encontrada
+                map.on('locationfound', function(e) {
+                    updatePosition(e.latlng);
+                    document.getElementById('precision').value = e.accuracy.toFixed(2);
+
+                    if (circle) {
+                        circle.setLatLng(e.latlng).setRadius(e.accuracy);
+                    } else {
+                        circle = L.circle(e.latlng, {
+                            radius: e.accuracy,
+                            color: '#0d6efd',
+                            fillColor: '#0d6efd30',
+                            fillOpacity: 0.5
+                        }).addTo(map);
+                    }
+
+                    // Obtener dirección de la ubicación actual
+                    geocoder.reverse(e.latlng, map.options.crs.scale(map.getZoom()), results => {
+                        if (results && results.length > 0) {
+                            fillAddressFields(results[0]);
+                        }
+                    });
+                });
+
+                // Evento de error de ubicación
+                map.on('locationerror', function(e) {
+                    alert('No se pudo obtener tu ubicación: ' + e.message);
+                });
+
+                // Validación del formulario
+                const form = document.querySelector('.needs-validation');
+                form.addEventListener('submit', function(event) {
+                    if (!form.checkValidity() || !document.getElementById('latitud').value) {
+                        event.preventDefault();
+                        event.stopPropagation();
+
+                        if (!document.getElementById('latitud').value) {
+                            document.getElementById('location-alert').classList.remove('d-none');
+                            document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
+                        }
+                    }
+
+                    form.classList.add('was-validated');
+                }, false);
+
+                // Mostrar mapa cuando esté listo
+                map.whenReady(function() {
+                    document.getElementById('map-loading').style.display = 'none';
+                });
+
+                // Control de localización
+                L.control.locate({
+                    position: 'topright',
+                    strings: {
+                        title: "Mostrar mi ubicación",
+                        popup: "Estás dentro de {distance} metros desde este punto"
+                    },
+                    locateOptions: {
+                        enableHighAccuracy: true,
+                        maxZoom: 16
+                    }
+                }).addTo(map);
+            });
+        </script>

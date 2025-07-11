@@ -106,32 +106,43 @@
             @foreach (var p in Model.Productos)
             {
                 <div class="product-card">
-    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
-        <div class="product-image-container">
-            <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
-            <div class="product-badge">Nuevo</div>
-            <button class="wishlist-btn" title="Añadir a favoritos" type="button">
-                <i class="far fa-heart"></i>
-            </button>
-        </div>
-        <div class="product-info">
-            <h3 class="product-title">@p.Nombre</h3>
-            <div class="product-price">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
-            <div class="product-colors">
-                <span class="color-option" style="background-color: #000;"></span>
-                <span class="color-option" style="background-color: #6A0DAD;"></span>
-                <span class="color-option" style="background-color: #D4AF37;"></span>
-            </div>
-        </div>
-    </a>
-    <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
-        <input asp-for="ProductoID" type="hidden" name="productoID" value="@p.ProductoID"  />
-        <input asp-for="Cantidad" type="hidden" name="cantidad" value=1  />
-        <button type="submit" class="add-to-cart-btn">
-            <i class="fas fa-shopping-bag"></i> Añadir al carrito
-        </button>
-    </form>
-</div>
+                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
+                        <div class="product-image-container">
+                            <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
+                            <div class="product-badge">Nuevo</div>
+                        </div>
+                        <div class="product-info">
+                            <h3 class="product-title">@p.Nombre</h3>
+                            <div class="product-price">@p.PrecioVenta.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</div>
+                            <div class="product-colors">
+                                <span class="color-option" style="background-color: #000;"></span>
+                                <span class="color-option" style="background-color: #6A0DAD;"></span>
+                                <span class="color-option" style="background-color: #D4AF37;"></span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- ⭐ FORMULARIO DE FAVORITO -->
+                    <form class="wishlist-form" method="post" action="/Favoritos/Toggle/@p.ProductoID">
+                        @Html.AntiForgeryToken()
+                        <button type="submit"
+                                class="wishlist-btn @(Model.ProductoIDsFavoritos.Contains(p.ProductoID) ? "active" : "")"
+                                title="@(Model.ProductoIDsFavoritos.Contains(p.ProductoID) ? "Eliminar de favoritos" : "Añadir a favoritos")">
+                            <i class="@(Model.ProductoIDsFavoritos.Contains(p.ProductoID) ? "fas" : "far") fa-heart"></i>
+                        </button>
+                    </form>
+
+
+
+                    <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
+                        <input asp-for="ProductoID" type="hidden" name="productoID" value="@p.ProductoID" />
+                        <input asp-for="Cantidad" type="hidden" name="cantidad" value=1 />
+                        <button type="submit" class="add-to-cart-btn">
+                            <i class="fas fa-shopping-bag"></i> Añadir al carrito
+                        </button>
+                    </form>
+                </div>
+
 
             }
         </div>
@@ -439,22 +450,25 @@
     }
 
     .wishlist-btn {
+        background-color: transparent;
+        border: none;
+        cursor: pointer;
         position: absolute;
         top: 10px;
         right: 10px;
-        background-color: rgba(255, 255, 255, 0.8);
-        border: none;
-        width: 30px;
-        height: 30px;
+        width: 34px;
+        height: 34px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
-        z-index: 1;
-        transition: all 0.3s;
-        opacity: 0;
+        transition: transform 0.3s ease;
+        z-index: 2;
     }
+
+        .wishlist-btn.active i {
+            animation: pulse 0.4s ease;
+        }
 
     .product-card:hover .wishlist-btn {
         opacity: 1;
@@ -466,7 +480,9 @@
     }
 
     .wishlist-btn i {
-        font-size: 14px;
+        font-size: 16px;
+        color: #D4AF37;
+        transition: transform 0.3s ease;
     }
 
     .product-info {
@@ -603,6 +619,23 @@
     }
 
     }
+
+    @@keyframes pulse {
+        0%
+
+    {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.4);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+
+    }
 </style>
 
 <!-- Font Awesome for icons -->
@@ -610,3 +643,37 @@
 
 <!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.wishlist-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+
+                const formData = new FormData(this);
+                const btn = this.querySelector('button');
+                const icon = btn.querySelector('i');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.esFavorito) {
+                        icon.classList.remove('far');
+                        icon.classList.add('fas');
+                        btn.title = "Eliminar de favoritos";
+                        btn.classList.add('active'); // animación
+                    } else {
+                        icon.classList.remove('fas');
+                        icon.classList.add('far');
+                        btn.title = "Añadir a favoritos";
+                        btn.classList.remove('active');
+                    }
+                })
+                .catch(err => console.error("Error en favoritos:", err));
+            });
+        });
+    </script>
+}

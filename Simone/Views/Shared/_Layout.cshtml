@@ -530,6 +530,38 @@
         }
     </style>
 </head>
+@section Scripts {
+    <script>
+        document.querySelectorAll('.wishlist-form').forEach(form => {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                const btn = this.querySelector('button');
+                const icon = btn.querySelector('i');
+
+                fetch(this.action, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.esFavorito) {
+                        icon.classList.remove('far');
+                        icon.classList.add('fas');
+                        btn.title = "Eliminar de favoritos";
+                    } else {
+                        icon.classList.remove('fas');
+                        icon.classList.add('far');
+                        btn.title = "Añadir a favoritos";
+                    }
+                })
+                .catch(err => console.error("Error en favoritos:", err));
+            });
+        });
+    </script>
+}
+
+
 
 <body class="bg-light">
     <!-- Navbar Superior -->
@@ -821,103 +853,39 @@
 
     <!-- Sidebar de Categorías Mejorado -->
     <aside id="sidebar" class="sidebar-custom position-fixed vh-100 p-4 text-white shadow"
-        style="transform: translateX(-100%);">
-        <button class="btn text-white border-0 mb-3" id="close-sidebar">
-
-        </button>
+           style="transform: translateX(-100%);">
+        <button class="btn text-white border-0 mb-3" id="close-sidebar"></button>
 
         <h5 class="fw-bold mb-4"><i class="fa-solid fa-bars-staggered me-2"></i>Categorías</h5>
 
         <ul class="list-unstyled sidebar-list">
             <li>
-                <a asp-controller="Categorias" asp-action="Ver_Todo" class="button" style="--clr: #7808d0">
+                <a href="/Compras/Catalogo" class="button" style="--clr: #7808d0">
                     <span class="button__icon-wrapper">
-                        <svg viewBox="0 0 14 15"
-                             fill="none"
-                             xmlns="http://www.w3.org/2000/svg"
-                             class="button__icon-svg"
-                             width="10">
-                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z"
-                                  fill="currentColor"></path>
+                        <svg viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg" width="10">
+                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
                         </svg>
-
-                        <svg viewBox="0 0 14 15"
-                             fill="none"
-                             width="10"
-                             xmlns="http://www.w3.org/2000/svg"
-                             class="button__icon-svg button__icon-svg--copy">
-                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z"
-                                  fill="currentColor"></path>
+                        <svg viewBox="0 0 14 15" fill="none" width="10" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg button__icon-svg--copy">
+                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
                         </svg>
                     </span>
                     Ver todo
                 </a>
             </li>
 
-            <li>
-                <a asp-controller="Categorias" asp-action="Blusas">
-                    <img src="~/images/Categorias_slider/blusas.png" class="me-2 sidebar-icon" alt="Blusas" />
-                    Blusas
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Tops">
-                    <img src="~/images/Categorias_slider/tops.png" class="me-2 sidebar-icon" alt="Tops" />
-                    Tops
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Bodys">
-                    <img src="~/images/Categorias_slider/bodys.png" class="me-2 sidebar-icon" alt="Bodys" />
-                    Body's
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="TrajeDeBaño">
-                    <img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon"
-                        alt="Trajes de baño" />
-                    Trajes de Baño
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Conjuntos">
-                    <img src="~/images/Categorias_slider/conjuntos.png" class="me-2 sidebar-icon" alt="Conjuntos" />
-                    Conjuntos
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Vestidos">
-                    <img src="~/images/Categorias_slider/vestidos.png" class="me-2 sidebar-icon" alt="Vestidos" />
-                    Vestidos
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Faldas">
-                    <img src="~/images/Categorias_slider/faldas.png" class="me-2 sidebar-icon" alt="Faldas" />
-                    Faldas
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Pantalones">
-                    <img src="~/images/Categorias_slider/pantalones.png" class="me-2 sidebar-icon" alt="Pantalones" />
-                    Pantalones
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Jeans">
-                    <img src="~/images/Categorias_slider/jeans.png" class="me-2 sidebar-icon" alt="Jeans" />
-                    Jeans
-                </a>
-            </li>
-            <li>
-                <a asp-controller="Categorias" asp-action="Bolsas">
-                    <img src="~/images/Categorias_slider/bolsas.png" class="me-2 sidebar-icon" alt="Bolsas" />
-                    Bolsas
-                </a>
-            </li>
+            <li><a href="/Compras/Catalogo?categoriaID=1"><img src="~/images/Categorias_slider/blusas.png" class="me-2 sidebar-icon" alt="Blusas" /> Blusas</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=2"><img src="~/images/Categorias_slider/tops.png" class="me-2 sidebar-icon" alt="Tops" /> Tops</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=3"><img src="~/images/Categorias_slider/bodys.png" class="me-2 sidebar-icon" alt="Bodys" /> Body's</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=4"><img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon" alt="Trajes de baño" /> Trajes de Baño</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=5"><img src="~/images/Categorias_slider/conjuntos.png" class="me-2 sidebar-icon" alt="Conjuntos" /> Conjuntos</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=6"><img src="~/images/Categorias_slider/vestidos.png" class="me-2 sidebar-icon" alt="Vestidos" /> Vestidos</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=7"><img src="~/images/Categorias_slider/faldas.png" class="me-2 sidebar-icon" alt="Faldas" /> Faldas</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=8"><img src="~/images/Categorias_slider/pantalones.png" class="me-2 sidebar-icon" alt="Pantalones" /> Pantalones</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=9"><img src="~/images/Categorias_slider/jeans.png" class="me-2 sidebar-icon" alt="Jeans" /> Jeans</a></li>
+            <li><a href="/Compras/Catalogo?categoriaID=10"><img src="~/images/Categorias_slider/bolsas.png" class="me-2 sidebar-icon" alt="Bolsas" /> Bolsas</a></li>
         </ul>
-
     </aside>
+
 
 
     <!-- Panel del Carrito (Sidebar derecho) -->

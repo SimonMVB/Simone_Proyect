@@ -56,4 +56,6 @@ public class CatalogoViewModel
     /// Total de páginas disponibles para la paginación.
     /// </summary>
     public int TotalPages => (int)Math.Ceiling(TotalProducts / (double)PageSize);
+    public List<int> ProductoIDsFavoritos { get; set; } = new();
+
 }

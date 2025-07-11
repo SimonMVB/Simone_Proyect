@@ -1,11 +1,31 @@
 @model Simone.Models.Usuario
 
+@using System.Globalization
 @{
     ViewData["Title"] = "Resumen de Compra";
+    var culture = new CultureInfo("es-EC");
+    decimal serviceFee = ViewBag.TotalCompra * 0.05m;
+    decimal taxFee = ViewBag.TotalCompra * 0.15m;
+    decimal grandTotal = ViewBag.TotalCompra + serviceFee + taxFee;
 }
 
-<div class="container">
-    <h1 class="mb-4">Resumen de tu Compra</h1>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumen de Compra - Simone Store</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3498db;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #f8f9fa;
+        }
 
     <div class="row">
         <!-- Left Section: Cart Details & Address -->
@@ -45,120 +65,603 @@
                     }
                 </tbody>
             </table>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-            <!-- Address Section -->
-            <h3>Dirección de Envío</h3>
-            @if (ViewBag.HasAddress)
-            {
-                <p><strong>Dirección:</strong> @Model.Direccion</p>
-                <a href="@Url.Action("EditarDireccion", "Cuenta")" class="btn btn-secondary">Editar Dirección</a>
+        .summary-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+            overflow: hidden;
+        }
+
+        .header-banner {
+            background: linear-gradient(135deg, #3498db, #1a5276);
+            color: white;
+            padding: 20px;
+            margin-bottom: 25px;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .product-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #eaeaea;
+        }
+
+        .payment-method {
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+            .payment-method:hover, .payment-method.active {
+                border-color: var(--primary);
+                background-color: rgba(52, 152, 219, 0.05);
             }
-            else
-            {
-                <p>Para continuar con la compra, necesitas agregar una dirección de envío.</p>
-                <a href="@Url.Action("AgregarDireccion", "Cuenta")" class="btn btn-primary">Agregar Dirección</a>
+
+                .payment-method.active .method-icon {
+                    color: var(--primary);
+                }
+
+        .method-icon {
+            font-size: 1.8rem;
+            margin-bottom: 10px;
+        }
+
+        .bank-logo {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .bank-card {
+            transition: all 0.3s ease;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: pointer;
+        }
+
+            .bank-card:hover, .bank-card.selected {
+                border-color: var(--primary);
+                background-color: rgba(52, 152, 219, 0.05);
             }
+
+            .bank-card.selected {
+                box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
+            }
+
+        .total-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid var(--primary);
+            border-radius: 0 8px 8px 0;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+            .btn-primary:hover {
+                background-color: #2980b9;
+                border-color: #2980b9;
+            }
+
+        .btn-success {
+            background-color: var(--success);
+            border-color: var(--success);
+            padding: 12px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+            .btn-success:hover {
+                background-color: #27ae60;
+                border-color: #27ae60;
+            }
+
+        .sticky-summary {
+            position: sticky;
+            top: 20px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 75%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            border-radius: 4px;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+        }
+
+        .step {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #e0e0e0;
+            color: #7f8c8d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            font-weight: bold;
+            z-index: 2;
+            position: relative;
+        }
+
+        .step.active .step-number {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .step.completed .step-number {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .step-title {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+
+        .step.active .step-title {
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .step:not(:last-child):after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 60%;
+            width: 80%;
+            height: 2px;
+            background-color: #e0e0e0;
+            z-index: 1;
+        }
+
+        .step.completed:after {
+            background-color: var(--success);
+        }
+
+        @@media (max-width: 768px) {
+            .sticky-summary
+
+        {
+            position: relative;
+            top: 0;
+        }
+
+        .step-title {
+            font-size: 0.75rem;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Progress indicator -->
+        <div class="step-indicator">
+            <div class="step completed">
+                <div class="step-number">1</div>
+                <div class="step-title">Carrito</div>
+            </div>
+            <div class="step completed">
+                <div class="step-number">2</div>
+                <div class="step-title">Envío</div>
+            </div>
+            <div class="step active">
+                <div class="step-number">3</div>
+                <div class="step-title">Pago</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-title">Confirmación</div>
+            </div>
         </div>
 
-        <!-- Right Section: Subtotal, Service Fee, Taxes & Total -->
-        <div class="col-md-4">
-            <div class="sticky-top">
-                <!-- Subtotal Section -->
-                <div class="mb-3">
-                    <h5>Subtotal:</h5>
-                    <p>@ViewBag.TotalCompra.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</p>
-                </div>
+        <div class="header-banner text-center">
+            <h1><i class="fas fa-shopping-cart me-2"></i>Resumen de tu Compra</h1>
+            <p>Revisa tus productos y completa tu pago</p>
+        </div>
 
-                <!-- Service Fee Section -->
-                <div class="mb-3">
-                    <h5>Servicio (5%):</h5>
-                    <p>@((ViewBag.TotalCompra * 0.05m).ToString("C", CultureInfo.CreateSpecificCulture("es-US"))) </p>
-                </div>
+        <div class="summary-container p-4 mb-4">
+            <h3 class="mb-3"><i class="fas fa-box-open me-2"></i>Artículos en tu carrito</h3>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Imagen</th>
+                            <th>Cantidad</th>
+                            <th>Precio Unitario</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in ViewBag.CarritoDetalles)
+                        {
+                            <tr>
+                                <td>@item.Producto.Nombre</td>
+                                <td>
+                                    <img src="@item.Producto.ImagenPath" alt="@item.Producto.Nombre" class="product-img">
+                                </td>
+                                <td>@item.Cantidad</td>
+                                <td>@item.Precio.ToString("C", culture)</td>
+                                <td>@item.Total.ToString("C", culture)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
-                <!-- Taxes Section -->
-                <div class="mb-3">
-                    <h5>Impuestos (15%):</h5>
-                    <p>@((ViewBag.TotalCompra * 0.15m).ToString("C", CultureInfo.CreateSpecificCulture("es-US"))) </p>
-                </div>
-
-                <!-- Total Section -->
-                <div class="mb-3">
-                    @{
-                        decimal serviceFee = ViewBag.TotalCompra * 0.05m; // 5% service fee
-                        decimal taxFee = ViewBag.TotalCompra * 0.15m; // 15% tax fee
-                        decimal grandTotal = ViewBag.TotalCompra + serviceFee + taxFee;
+        <div class="row g-4">
+            <!-- Left: Dirección y Métodos de pago -->
+            <div class="col-lg-8">
+                <div class="summary-container p-4 mb-4">
+                    <h3 class="mb-3"><i class="fas fa-map-marker-alt me-2"></i>Dirección de Envío</h3>
+                    @if (ViewBag.HasAddress)
+                    {
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <p class="mb-1"><strong>@Model.NombreCompleto</strong></p>
+                                <p class="mb-1">@Model.Direccion</p>
+                                <p class="mb-1">@Model.Ciudad, @Model.Provincia</p>
+                                <p class="mb-0">Teléfono: @Model.Telefono</p>
+                            </div>
+                            <a href="@Url.Action("EditarDireccion", "Cuenta")" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </a>
+                        </div>
                     }
-                    <h5>Total a pagar:</h5>
-                    <p class="fw-bold">@grandTotal.ToString("C", CultureInfo.CreateSpecificCulture("es-US"))</p>
+                    else
+                    {
+                        <p class="mb-2 text-danger">Para continuar, necesitas agregar una dirección de envío.</p>
+                        <a href="@Url.Action("AgregarDireccion", "Cuenta")" class="btn btn-primary">Agregar Dirección</a>
+                    }
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="summary-container p-4">
+                    <h3 class="mb-4"><i class="fas fa-credit-card me-2"></i>Formas de Pago</h3>
+
+                    <!-- Payment Method Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-4 mb-3">
+                            <div class="payment-method text-center active" data-method="card">
+                                <i class="fas fa-credit-card method-icon text-primary"></i>
+                                <h5>Tarjeta</h5>
+                                <p class="small">Crédito/Débito</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="payment-method text-center" data-method="deposit">
+                                <i class="fas fa-university method-icon"></i>
+                                <h5>Depósito</h5>
+                                <p class="small">Transferencia Bancaria</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="payment-method text-center" data-method="paypal">
+                                <i class="fab fa-paypal method-icon"></i>
+                                <h5>PayPal</h5>
+                                <p class="small">Pago en línea</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card Payment Form -->
+                    <form id="form-card" class="payment-form">
+                        <h5 class="mb-3"><i class="fas fa-credit-card me-2"></i>Detalles de Tarjeta</h5>
+                        <div class="mb-3">
+                            <label for="cardNumber" class="form-label">Número de tarjeta</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
+                                <input type="text" class="form-control" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="expirationDate" class="form-label">Expiración</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                    <input type="text" class="form-control" id="expirationDate" placeholder="MM/AA" maxlength="5">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="cvv" class="form-label">CVV</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control" id="cvv" placeholder="XXX" maxlength="4">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="cardName" class="form-label">Nombre en la tarjeta</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="cardName" placeholder="Nombre completo">
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Deposit Payment Form -->
+                    <form id="form-deposit" class="payment-form d-none">
+                        <h5 class="mb-4"><i class="fas fa-university me-2"></i>Depósito Bancario</h5>
+
+                        <div class="alert alert-primary">
+                            <h5><i class="fas fa-info-circle me-2"></i>Instrucciones</h5>
+                            <ol>
+                                <li>Selecciona tu banco</li>
+                                <li>Realiza la transferencia a nuestra cuenta</li>
+                                <li>Sube tu comprobante</li>
+                                <li>Recibirás confirmación en 24 horas</li>
+                            </ol>
+                        </div>
+
+                        <!-- Bank Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">Selecciona tu banco</label>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="bank-card" data-bank="pichincha">
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Banco_Pichincha_logo.svg/320px-Banco_Pichincha_logo.svg.png" alt="Banco Pichincha" class="bank-logo">
+                                            <h6 class="mb-0">Banco Pichincha</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="bank-card" data-bank="guayaquil">
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Banco_del_Pacifico.svg/320px-Banco_del_Pacifico.svg.png" alt="Banco Guayaquil" class="bank-logo">
+                                            <h6 class="mb-0">Banco Guayaquil</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="bank-card" data-bank="pacifico">
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Banco_del_Pac%C3%ADfico_%28Ecuador%29_logo.svg/320px-Banco_del_Pac%C3%ADfico_%28Ecuador%29_logo.svg.png" alt="Banco del Pacífico" class="bank-logo">
+                                            <h6 class="mb-0">Banco del Pacífico</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="bank-card" data-bank="jep">
+                                        <div class="d-flex align-items-center">
+                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Banco_JEP_logo.svg/320px-Banco_JEP_logo.svg.png" alt="Banco JEP" class="bank-logo">
+                                            <h6 class="mb-0">Banco JEP</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bank Account Details -->
+                        <div id="bank-details" class="mb-4 d-none">
+                            <h5><i class="fas fa-university me-2"></i>Detalles de la cuenta</h5>
+                            <div class="alert alert-success">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <p class="mb-1"><strong>Banco: <span id="bank-name">-</span></strong></p>
+                                        <p class="mb-1">Número de cuenta: <span id="account-number">-</span></p>
+                                        <p class="mb-1">Tipo: <span id="account-type">-</span></p>
+                                        <p class="mb-1">Titular: Simone Store S.A.</p>
+                                        <p class="mb-0">RUC: 1790123456001</p>
+                                    </div>
+                                    <i class="fas fa-building fa-3x text-success"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deposit Form -->
+                        <div class="mb-3">
+                            <label for="depositName" class="form-label">Nombre de quien deposita</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="text" class="form-control" id="depositName" placeholder="Nombre completo">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="depositReceipt" class="form-label">Adjuntar comprobante</label>
+                            <div class="input-group">
+                                <input type="file" class="form-control" id="depositReceipt" accept="image/*,.pdf">
+                            </div>
+                            <div class="form-text">Formatos aceptados: JPG, PNG, PDF (máx. 5MB)</div>
+                        </div>
+                        <div class="alert alert-info mt-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Envíe su comprobante al WhatsApp:</strong>
+                            <a href="https://wa.me/593987654321" target="_blank" class="alert-link">
+                                <i class="fab fa-whatsapp me-1"></i>098 765 4321
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- PayPal Payment Form -->
+                    <form id="form-paypal" class="payment-form d-none">
+                        <h5 class="mb-3"><i class="fab fa-paypal me-2"></i>Pago con PayPal</h5>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Serás redirigido a PayPal para completar el pago de manera segura.
+                        </div>
+                        <div class="text-center py-4">
+                            <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" class="mb-3">
+                            <button type="button" class="btn btn-primary btn-lg">
+                                <i class="fab fa-paypal me-2"></i>Pagar con PayPal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right: Resumen de compra -->
+            <div class="col-lg-4">
+                <div class="sticky-summary">
+                    <div class="summary-container p-4">
+                        <h3 class="mb-4"><i class="fas fa-receipt me-2"></i>Resumen de Compra</h3>
+                        <div class="total-box">
+                            <div class="d-flex justify-content-between">
+                                <span>Subtotal:</span>
+                                <span>@ViewBag.TotalCompra.ToString("C", culture)</span>
+                            </div>
+                        </div>
+                        <div class="total-box">
+                            <div class="d-flex justify-content-between">
+                                <span>Servicio (5%):</span>
+                                <span>@serviceFee.ToString("C", culture)</span>
+                            </div>
+                        </div>
+                        <div class="total-box">
+                            <div class="d-flex justify-content-between">
+                                <span>Impuestos (15%):</span>
+                                <span>@taxFee.ToString("C", culture)</span>
+                            </div>
+                        </div>
+                        <div class="total-box bg-light">
+                            <div class="d-flex justify-content-between fw-bold fs-5">
+                                <span>Total a pagar:</span>
+                                <span class="text-success">@grandTotal.ToString("C", culture)</span>
+                            </div>
+                        </div>
+                        <div class="mt-4 text-center">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Ecuador.svg/320px-Flag_of_Ecuador.svg.png" alt="Ecuador" height="30" class="me-2">
+                            <small class="text-muted">Todos los precios en dólares estadounidenses (USD)</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Payment Information Section -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <h3>Información de Pago</h3>
-            <form>
-                <div class="mb-3">
-                    <label for="cardNumber" class="form-label">Número de tarjeta</label>
-                    <input type="text" class="form-control" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" />
-                </div>
-                <div class="mb-3">
-                    <label for="expirationDate" class="form-label">Fecha de expiración</label>
-                    <input type="text" class="form-control" id="expirationDate" placeholder="MM/AA" />
-                </div>
-                <div class="mb-3">
-                    <label for="cvv" class="form-label">CVV</label>
-                    <input type="text" class="form-control" id="cvv" placeholder="XXX" />
-                </div>
-                <div class="mb-3">
-                    <label for="billingAddress" class="form-label">Dirección de facturación</label>
-                    <input type="text" class="form-control" id="billingAddress" placeholder="Dirección" />
-                </div>
-                <button type="submit" class="btn btn-primary">Guardar Información</button>
-            </form>
-        </div>
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Payment method selection
+            const paymentMethods = document.querySelectorAll('.payment-method');
+            const paymentForms = document.querySelectorAll('.payment-form');
 
-    <!-- Checkout Button -->
-    <div class="row mt-4">
-        <div class="col-md-12 text-end">
-            @if (ViewBag.HasAddress)
-            {
-                <form asp-controller="Compras" asp-action="ConfirmarCompra" method="post">
-                    <!-- Finalizar Compra Button with Confirmation -->
-                    <button type="submit" class="btn btn-success btn-lg" id="confirmPurchaseBtn">
-                        <i class="fa fa-check-circle me-2"></i> Finalizar Compra
-                    </button>
-                </form>
+            paymentMethods.forEach(method => {
+                method.addEventListener('click', function() {
+                    // Remove active class from all methods
+                    paymentMethods.forEach(m => m.classList.remove('active'));
+
+                    // Add active class to clicked method
+                    this.classList.add('active');
+
+                    // Hide all forms
+                    paymentForms.forEach(form => form.classList.add('d-none'));
+
+                    // Show selected form
+                    const methodName = this.dataset.method;
+                    document.getElementById(`form-${methodName}`).classList.remove('d-none');
+                });
+            });
+
+            // Bank selection for deposit
+            const bankCards = document.querySelectorAll('.bank-card');
+            const bankDetails = document.getElementById('bank-details');
+
+            // Bank account data
+            const bankAccounts = {
+                pichincha: {
+                    name: "Banco Pichincha",
+                    account: "1234567890",
+                    type: "Cuenta Corriente"
+                },
+                guayaquil: {
+                    name: "Banco Guayaquil",
+                    account: "0987654321",
+                    type: "Cuenta de Ahorros"
+                },
+                pacifico: {
+                    name: "Banco del Pacífico",
+                    account: "1122334455",
+                    type: "Cuenta Corriente"
+                },
+                jep: {
+                    name: "Banco JEP",
+                    account: "5566778899",
+                    type: "Cuenta de Ahorros"
+                }
+            };
+
+            bankCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // Remove selected class from all cards
+                    bankCards.forEach(c => c.classList.remove('selected'));
+
+                    // Add selected class to clicked card
+                    this.classList.add('selected');
+
+                    // Show bank details
+                    bankDetails.classList.remove('d-none');
+
+                    // Populate bank details
+                    const bankId = this.dataset.bank;
+                    document.getElementById('bank-name').textContent = bankAccounts[bankId].name;
+                    document.getElementById('account-number').textContent = bankAccounts[bankId].account;
+                    document.getElementById('account-type').textContent = bankAccounts[bankId].type;
+                });
+            });
+
+            // Format card number
+            const cardNumberInput = document.getElementById('cardNumber');
+            if (cardNumberInput) {
+                cardNumberInput.addEventListener('input', function() {
+                    let value = this.value.replace(/\D/g, '');
+                    value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
+                    this.value = value.substring(0, 19);
+                });
             }
-            else
-            {
-                <p class="alert alert-warning">Por favor, agrega una dirección de envío para proceder con la compra.</p>
-            }
-        </div>
-    </div>
-</div>
 
-@section Scripts {
-    @* <script>
-        // Get the confirmation button
-        const confirmPurchaseBtn = document.getElementById("confirmPurchaseBtn");
-
-        // When the button is clicked, show the confirmation dialog
-        confirmPurchaseBtn.addEventListener("click", function () {
-            const userConfirmed = window.confirm("¿Estás seguro de que deseas finalizar la compra?");
-
-            if (userConfirmed) {
-                // Proceed with the purchase (redirect to the controller action)
-                // Use the absolute path to the controller action:
-                const url = '@Url.Action("ConfirmarCompra", "Compras")';
-                window.location.href = url; // This will correctly redirect to the controller action
-            } else {
-                // Do nothing, stay on the current page
-                console.log("Compra cancelada.");
+            // Format expiration date
+            const expDateInput = document.getElementById('expirationDate');
+            if (expDateInput) {
+                expDateInput.addEventListener('input', function() {
+                    let value = this.value.replace(/\D/g, '');
+                    if (value.length > 2) {
+                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                    }
+                    this.value = value.substring(0, 5);
+                });
             }
         });
-    </script> *@
-}
+    </script>
+</body>
+</html>
