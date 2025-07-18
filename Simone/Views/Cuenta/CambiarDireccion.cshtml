@@ -1,348 +1,758 @@
-﻿@{
-    ViewData["Title"] = "Cambiar Dirección";
-}
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Actualizar Dirección</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <style>
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --success-color: #4cc9f0;
+            --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
 
-<div class="container my-5">
-    <div class="card shadow-lg p-4 border-0" style="max-width: 800px; margin: 0 auto; border-radius: 15px;">
-        <h2 class="text-center mb-3 text-primary">
-            <i class="fa-solid fa-location-dot me-2"></i> Cambiar Dirección
-        </h2>
-        <p class="text-center text-muted mb-4">
-            Selecciona tu ubicación exacta en el mapa y proporciona detalles para una entrega precisa.
-        </p>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f5 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-top: 30px;
+            padding-bottom: 50px;
+        }
 
-        <!-- Progreso -->
-        <div class="progress mb-4" style="height: 8px;">
-            <div class="progress-bar bg-success" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
-        </div>
+        .card-main {
+            border-radius: 20px;
+            border: none;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            background: white;
+            max-width: 900px;
+            margin: 0 auto;
+        }
 
-        <!-- Mapa interactivo mejorado -->
-        <div class="position-relative mb-4">
-            <div id="map" style="height: 400px; border-radius: 10px;" class="shadow-sm"></div>
-            <div id="map-loading" class="position-absolute top-50 start-50 translate-middle text-center">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Cargando mapa...</span>
-                </div>
-                <p class="mt-2 text-muted">Cargando mapa...</p>
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 25px 30px;
+            border-radius: 20px 20px 0 0 !important;
+            text-align: center;
+            border: none;
+        }
+
+            .card-header h2 {
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                margin-bottom: 5px;
+            }
+
+            .card-header p {
+                opacity: 0.9;
+                font-size: 1.05rem;
+                margin-bottom: 0;
+            }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .progress-container {
+            margin: 25px 0 35px;
+        }
+
+        .progress {
+            height: 10px;
+            border-radius: 10px;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, var(--success-color) 0%, #4895ef 100%);
+            border-radius: 10px;
+        }
+
+        .map-container {
+            position: relative;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        #map {
+            height: 420px;
+            z-index: 1;
+        }
+
+        #map-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            border-width: 0.25em;
+        }
+
+        #locate-me {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            background: white;
+            border: none;
+            border-radius: 50px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            color: var(--primary-color);
+            transition: var(--transition);
+        }
+
+            #locate-me:hover {
+                background: var(--primary-color);
+                color: white;
+                transform: scale(1.05);
+            }
+
+        .form-label {
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 8px;
+        }
+
+        .form-control, .input-group-text {
+            border-radius: 10px !important;
+            transition: var(--transition);
+        }
+
+        .input-group-text {
+            background: #f8f9fa;
+            border-right: none;
+        }
+
+        .form-control:focus {
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 10px rgba(67, 97, 238, 0.25);
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 7px 15px rgba(67, 97, 238, 0.3);
+            }
+
+        .btn-outline-secondary {
+            border-radius: 10px;
+            padding: 10px 25px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+            .btn-outline-secondary:hover {
+                background: #f8f9fa;
+            }
+
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .location-info {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px dashed #dee2e6;
+        }
+
+            .location-info h5 {
+                color: var(--primary-color);
+                font-weight: 600;
+                margin-bottom: 15px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            gap: 10px;
+        }
+
+            .info-item i {
+                color: var(--primary-color);
+                font-size: 1.1rem;
+                min-width: 24px;
+            }
+
+        .highlight-field {
+            animation: highlight 2s ease;
+            border-color: #4361ee !important;
+            box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.15) !important;
+        }
+
+        @@keyframes highlight {
+            0%
+
+        {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+
+        100% {
+            background-color: transparent;
+        }
+
+        }
+
+        .custom-marker {
+            background: transparent;
+            border: none;
+        }
+
+            .custom-marker i {
+                text-shadow: 0 0 5px white;
+                font-size: 2.5rem;
+                color: #e63946;
+                transition: transform 0.3s ease;
+            }
+
+        .map-marker-pulse {
+            display: block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e63946;
+            cursor: pointer;
+            box-shadow: 0 0 0 rgba(230, 57, 70, 0.4);
+            animation: pulse 1.5s infinite;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+        }
+
+        @@keyframes pulse {
+            0%
+
+        {
+            box-shadow: 0 0 0 0 rgba(230, 57, 70, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 15px rgba(230, 57, 70, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(230, 57, 70, 0);
+        }
+
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            border: none;
+        }
+
+        .toast-header {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            font-weight: 600;
+        }
+
+        .location-preview {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+            .location-preview h6 {
+                color: var(--primary-color);
+                font-weight: 600;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .location-preview p {
+                margin-bottom: 5px;
+                font-size: 0.95rem;
+            }
+
+            .location-preview .coordinates {
+                color: #6c757d;
+                font-size: 0.85rem;
+                margin-top: 8px;
+            }
+
+        .address-field-group {
+            position: relative;
+        }
+
+            .address-field-group .spinner-border {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                display: none;
+                width: 1.2rem;
+                height: 1.2rem;
+                border-width: 0.15em;
+            }
+
+        /* Responsive design */
+        @@media (max-width: 768px) {
+            .card-body
+
+        {
+            padding: 20px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card card-main">
+            <div class="card-header">
+                <h2><i class="fas fa-map-marker-alt me-2"></i> Actualizar Dirección</h2>
+                <p>Selecciona tu ubicación exacta y completa los detalles para una entrega precisa</p>
             </div>
-            <button id="locate-me" class="btn btn-sm btn-primary position-absolute top-0 end-0 m-2">
-                <i class="fa-solid fa-location-crosshairs me-1"></i> Mi ubicación
-            </button>
-        </div>
 
-        <!-- ... Manten tu código anterior arriba ... -->
-
-        <form method="post" asp-action="GuardarDireccion" asp-controller="Cuenta" class="needs-validation" novalidate>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="direccion" class="form-label fw-semibold">Dirección exacta</label>
-                    <input type="text" class="form-control" id="direccion" name="direccionReferencia"
-                           placeholder="Ej: Calle Bolívar 123 entre 9 de Octubre y Olmedo" required>
-                    <div class="invalid-feedback">Por favor ingresa una dirección válida.</div>
-                </div>
-
-                <div class="col-md-6">
-                    <label for="referencia" class="form-label fw-semibold">Referencia adicional</label>
-                    <input type="text" class="form-control" id="referencia" name="referenciaAdicional"
-                           placeholder="Ej: Casa blanca con portón negro">
-                    <div class="form-text">Detalles que nos ayuden a encontrar tu ubicación.</div>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="sector" class="form-label fw-semibold">Sector/Barrio</label>
-                    <input type="text" class="form-control" id="sector" name="sector"
-                           placeholder="Ej: Barrio Central" required>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="ciudad" class="form-label fw-semibold">Ciudad</label>
-                    <input type="text" class="form-control" id="ciudad" name="ciudad"
-                           placeholder="Ej: Milagro" required>
-                    <div class="invalid-feedback">Por favor ingresa tu ciudad.</div>
-                </div>
-
-                <div class="col-md-4">
-                    <label for="provincia" class="form-label fw-semibold">Provincia</label>
-                    <input type="text" class="form-control" id="provincia" name="provincia"
-                           placeholder="Ej: Guayas" required>
-                    <div class="invalid-feedback">Por favor ingresa tu provincia.</div>
-                </div>
-
-                <div class="col-md-6">
-                    <label for="telefono" class="form-label fw-semibold">Teléfono de contacto</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
-                        <input type="tel" class="form-control" id="telefono" name="telefonoContacto"
-                               placeholder="Ej: 0991234567" pattern="[0-9]{10}" required>
-                        <div class="invalid-feedback">Ingresa un número de 10 dígitos.</div>
+            <div class="card-body">
+                <!-- Progreso -->
+                <div class="progress-container">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Progreso de actualización</span>
+                        <span>100%</span>
+                    </div>
+                    <div class="progress">
+                        <div class="progress-bar" role="progressbar" style="width: 100%;" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                 </div>
+
+                <!-- Mapa interactivo -->
+                <div class="map-container">
+                    <div id="map">
+                        <div id="map-loading">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Cargando mapa...</span>
+                            </div>
+                            <p class="mt-3">Cargando mapa interactivo...</p>
+                        </div>
+                    </div>
+                    <button id="locate-me" title="Usar mi ubicación actual">
+                        <i class="fas fa-location-crosshairs"></i>
+                    </button>
+                    <div class="map-marker-pulse"></div>
+                </div>
+
+                <!-- Formulario -->
+                <form method="post" class="needs-validation" novalidate>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="direccion" class="form-label">Dirección exacta</label>
+                            <div class="address-field-group">
+                                <input type="text" class="form-control" id="direccion" name="direccionReferencia"
+                                       placeholder="Selecciona un punto en el mapa..." required>
+                                <div class="spinner-border text-primary" role="status" id="address-spinner"></div>
+                            </div>
+                            <div class="invalid-feedback">Por favor ingresa una dirección válida.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="referencia" class="form-label">Referencia adicional</label>
+                            <input type="text" class="form-control" id="referencia" name="referenciaAdicional"
+                                   placeholder="Ej: Casa blanca con portón negro">
+                            <div class="form-text">Detalles que nos ayuden a encontrar tu ubicación.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="sector" class="form-label">Sector/Barrio</label>
+                            <input type="text" class="form-control" id="sector" name="sector"
+                                   placeholder="Selecciona un punto en el mapa..." required>
+                            <div class="invalid-feedback">Por favor ingresa tu sector o barrio.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="ciudad" class="form-label">Ciudad</label>
+                            <input type="text" class="form-control" id="ciudad" name="ciudad"
+                                   placeholder="Selecciona un punto en el mapa..." required>
+                            <div class="invalid-feedback">Por favor ingresa tu ciudad.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="provincia" class="form-label">Provincia</label>
+                            <input type="text" class="form-control" id="provincia" name="provincia"
+                                   placeholder="Selecciona un punto en el mapa..." required>
+                            <div class="invalid-feedback">Por favor ingresa tu provincia.</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="telefono" class="form-label">Teléfono de contacto</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input type="tel" class="form-control" id="telefono" name="telefonoContacto"
+                                       placeholder="Ej: 0991234567" pattern="[0-9]{10}" required>
+                                <div class="invalid-feedback">Ingresa un número de 10 dígitos.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Campos ocultos para geolocalización -->
+                    <input type="hidden" id="latitud" name="latitud" required>
+                    <input type="hidden" id="longitud" name="longitud" required>
+                    <input type="hidden" id="precision" name="precision">
+
+                    <!-- Vista previa de ubicación -->
+                    <div class="location-preview">
+                        <h6><i class="fas fa-info-circle"></i> Vista previa de ubicación</h6>
+                        <p id="location-preview-text">Selecciona una ubicación en el mapa para ver los detalles</p>
+                        <div class="coordinates">
+                            <span id="lat-text">Latitud: -</span> |
+                            <span id="lng-text">Longitud: -</span>
+                        </div>
+                    </div>
+
+                    <div id="location-alert" class="alert alert-warning mt-3 d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <div>Por favor selecciona tu ubicación exacta en el mapa para continuar</div>
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="#" class="btn btn-outline-secondary px-4">
+                            <i class="fas fa-arrow-left me-2"></i> Volver al perfil
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4" id="submit-btn">
+                            <i class="fas fa-save me-2"></i> Guardar Dirección
+                        </button>
+                    </div>
+                </form>
             </div>
+        </div>
+    </div>
 
-            <!-- Campos ocultos para geolocalización -->
-            <input type="hidden" id="latitud" name="latitud" required>
-            <input type="hidden" id="longitud" name="longitud" required>
-            <input type="hidden" id="precision" name="precision">
+    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true" id="success-toast">
+        <div class="toast-header">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong class="me-auto">¡Éxito!</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Dirección actualizada correctamente
+        </div>
+    </div>
 
-            <div id="location-alert" class="alert alert-warning mt-3 d-none">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i> Por favor selecciona tu ubicación exacta en el mapa.
-            </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js"></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos DOM
+            const addressField = document.getElementById('direccion');
+            const sectorField = document.getElementById('sector');
+            const cityField = document.getElementById('ciudad');
+            const provinceField = document.getElementById('provincia');
+            const addressSpinner = document.getElementById('address-spinner');
 
-            <div class="d-flex justify-content-between mt-4">
-                <a href="@Url.Action("Perfil", "Cuenta")" class="btn btn-outline-secondary px-4">
-                    <i class="fa-solid fa-arrow-left me-2"></i> Volver
-                </a>
-                <button type="submit" class="btn btn-success px-4" id="submit-btn">
-                    <i class="fa-solid fa-floppy-disk me-2"></i> Guardar Dirección
-                </button>
-            </div>
-        </form>
+            // Inicializar mapa
+            const map = L.map('map', {
+                center: [-2.170998, -79.922356], // Guayaquil, Ecuador
+                zoom: 14,
+                zoomControl: true,
+                preferCanvas: true
+            });
 
+            // Capa de mapa
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+                maxZoom: 19,
+                detectRetina: true
+            }).addTo(map);
 
-<!-- Leaflet CSS & JS con plugins -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.css" />
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.locatecontrol/dist/L.Control.Locate.min.js" defer></script>
+            // Control de búsqueda
+            const geocoder = L.Control.Geocoder.nominatim();
+            new L.Control.Geocoder({
+                position: 'topleft',
+                placeholder: 'Buscar dirección...',
+                errorMessage: 'Dirección no encontrada',
+                showResultIcons: true,
+                geocoder: geocoder
+            }).addTo(map);
 
-<!-- Geocoding -->
-<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+            // Marcador personalizado
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: '<i class="fa-solid fa-location-dot"></i>',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
 
-<style>
-    #map {
-        transition: opacity 0.3s ease;
-    }
+            let marker = null;
+            let circle = null;
 
-        #map.loading {
-            opacity: 0.5;
-        }
+            // Función para mostrar vista previa de ubicación
+            function showLocationPreview(latlng, address = null) {
+                const previewText = document.getElementById('location-preview-text');
+                const latText = document.getElementById('lat-text');
+                const lngText = document.getElementById('lng-text');
 
-    .leaflet-control-locate a {
-        color: #0d6efd;
-    }
+                latText.textContent = `Latitud: ${latlng.lat.toFixed(6)}`;
+                lngText.textContent = `Longitud: ${latlng.lng.toFixed(6)}`;
 
-    .leaflet-control-geocoder-form {
-        width: 250px;
-    }
-
-        .leaflet-control-geocoder-form input {
-            width: 100% !important;
-        }
-
-            .highlight-field {
-                animation: highlight 2s ease;
-                border-color: #86b7fe !important;
-                box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+                if (address) {
+                    previewText.textContent = address;
+                } else {
+                    previewText.textContent = `Ubicación seleccionada: ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+                }
             }
 
-            @@keyframes highlight {
-                0% {
-                    background-color: rgba(13, 110, 253, 0.1);
+            // Función para destacar campos
+            function highlightField(id) {
+                const field = document.getElementById(id);
+                field.classList.add('highlight-field');
+                setTimeout(() => field.classList.remove('highlight-field'), 2000);
+            }
+
+            // Función para actualizar posición
+            function updatePosition(latlng) {
+                const { lat, lng } = latlng;
+
+                if (marker) {
+                    marker.setLatLng(latlng);
+                } else {
+                    marker = L.marker(latlng, { icon: icon, draggable: true }).addTo(map);
+                    marker.on('dragend', function(e) {
+                        const newPos = marker.getLatLng();
+                        document.getElementById('latitud').value = newPos.lat;
+                        document.getElementById('longitud').value = newPos.lng;
+                        showLocationPreview(newPos);
+                        getAddressDetails(newPos);
+                    });
                 }
 
-                100% {
-                    background-color: transparent;
+                document.getElementById('latitud').value = lat;
+                document.getElementById('longitud').value = lng;
+                document.getElementById('location-alert').classList.add('d-none');
+                showLocationPreview(latlng);
+
+                // Ajustar vista al marcador
+                map.setView(latlng, 16, {
+                    animate: true,
+                    duration: 0.5,
+                    paddingTopLeft: [0, 100]
+                });
+            }
+
+            // Función para obtener detalles de la dirección
+            function getAddressDetails(latlng) {
+                // Mostrar spinner mientras se carga
+                addressSpinner.style.display = 'block';
+
+                // Obtener detalles de la dirección
+                geocoder.reverse(latlng, map.options.crs.scale(map.getZoom()), results => {
+                    if (results && results.length > 0) {
+                        fillAddressFields(results[0]);
+                        showLocationPreview(latlng, results[0].name);
+                    } else {
+                        showLocationPreview(latlng);
+                    }
+                    addressSpinner.style.display = 'none';
+                });
+            }
+
+            // Función para rellenar campos de dirección
+            function fillAddressFields(result) {
+                const address = result.properties.address || result.address || {};
+
+                // Dirección exacta
+                const exactAddress = result.name ||
+                                    (address.road ? `${address.road} ${address.house_number || ''}`.trim() : '') ||
+                                    (address.hamlet || '') ||
+                                    (address.neighbourhood || '');
+
+                // Sector/Barrio
+                const sector = address.neighbourhood || address.suburb || address.quarter || address.city_district || '';
+
+                // Ciudad
+                const ciudad = address.city || address.town || address.village || address.municipality || '';
+
+                // Provincia
+                const provincia = address.state || address.county || address.region || '';
+
+                // Actualizar campos del formulario
+                if (exactAddress) {
+                    addressField.value = exactAddress;
+                    highlightField('direccion');
+                }
+
+                if (sector) {
+                    sectorField.value = sector;
+                    highlightField('sector');
+                }
+
+                if (ciudad) {
+                    cityField.value = ciudad;
+                    highlightField('ciudad');
+                }
+
+                if (provincia) {
+                    provinceField.value = provincia;
+                    highlightField('provincia');
                 }
             }
-</style>
 
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Inicializar mapa con mejor configuración
-                const map = L.map('map', {
-                    center: [-2.1353, -79.5889], // Milagro, Ecuador
-                    zoom: 15,
-                    zoomControl: true,
-                    preferCanvas: true
-                });
+            // Evento de clic en el mapa
+            map.on('click', function(e) {
+                updatePosition(e.latlng);
+                getAddressDetails(e.latlng);
+            });
 
-                // Capa de mapa
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-                    maxZoom: 19,
-                    detectRetina: true
-                }).addTo(map);
+            // Botón de ubicación actual
+            document.getElementById('locate-me').addEventListener('click', function() {
+                map.locate({setView: true, maxZoom: 16, enableHighAccuracy: true});
+            });
 
-                // Control de búsqueda
-                const geocoder = L.Control.Geocoder.nominatim();
-                new L.Control.Geocoder({
-                    position: 'topleft',
-                    placeholder: 'Buscar dirección...',
-                    errorMessage: 'Dirección no encontrada',
-                    showResultIcons: true,
-                    geocoder: geocoder
-                }).addTo(map);
+            // Evento de ubicación encontrada
+            map.on('locationfound', function(e) {
+                updatePosition(e.latlng);
+                document.getElementById('precision').value = e.accuracy.toFixed(2);
 
-                // Marcador personalizado
-                const icon = L.divIcon({
-                    className: 'custom-marker',
-                    html: '<i class="fa-solid fa-map-marker-alt fa-3x text-danger"></i>',
-                    iconSize: [30, 30],
-                    iconAnchor: [15, 30]
-                });
-
-                let marker = null;
-                let circle = null;
-
-                // Función para destacar campos
-                function highlightField(id) {
-                    const field = document.getElementById(id);
-                    field.classList.add('highlight-field');
-                    setTimeout(() => field.classList.remove('highlight-field'), 2000);
+                if (circle) {
+                    circle.setLatLng(e.latlng).setRadius(e.accuracy);
+                } else {
+                    circle = L.circle(e.latlng, {
+                        radius: e.accuracy,
+                        color: '#4361ee',
+                        fillColor: '#4361ee30',
+                        fillOpacity: 0.5
+                    }).addTo(map);
                 }
 
-                // Función para actualizar posición
-                function updatePosition(latlng) {
-                    const { lat, lng } = latlng;
+                // Obtener dirección de la ubicación actual
+                getAddressDetails(e.latlng);
+            });
 
-                    if (marker) {
-                        marker.setLatLng(latlng);
-                    } else {
-                        marker = L.marker(latlng, { icon: icon, draggable: true }).addTo(map);
-                        marker.on('dragend', function(e) {
-                            const newPos = marker.getLatLng();
-                            document.getElementById('latitud').value = newPos.lat;
-                            document.getElementById('longitud').value = newPos.lng;
-                            // Actualizar dirección al arrastrar
-                            geocoder.reverse(newPos, map.options.crs.scale(map.getZoom()), results => {
-                                if (results && results.length > 0) {
-                                    fillAddressFields(results[0]);
-                                }
-                            });
-                        });
-                    }
+            // Evento de error de ubicación
+            map.on('locationerror', function(e) {
+                alert('No se pudo obtener tu ubicación: ' + e.message);
+            });
 
-                    document.getElementById('latitud').value = lat;
-                    document.getElementById('longitud').value = lng;
-                    document.getElementById('location-alert').classList.add('d-none');
+            // Validación del formulario
+            const form = document.querySelector('.needs-validation');
+            form.addEventListener('submit', function(event) {
+                event.preventDefault();
 
-                    // Ajustar vista al marcador
-                    map.setView(latlng, 16, {
-                        animate: true,
-                        duration: 0.5,
-                        paddingTopLeft: [0, 100]
-                    });
+                if (!form.checkValidity() || !document.getElementById('latitud').value) {
+                    event.stopPropagation();
 
-                    // Scroll a los campos
-                    setTimeout(() => {
-                        document.querySelector('.card').scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-                    }, 300);
-                }
-
-                // Función para rellenar campos de dirección
-                function fillAddressFields(result) {
-                    const address = result.properties.address || result.address || {};
-
-                    // Dirección principal
-                    if (result.name) {
-                        document.getElementById('direccion').value = result.name;
-                        highlightField('direccion');
-                    }
-
-                    // Sector/Barrio (probamos varios campos posibles)
-                    const sector = address.neighbourhood || address.suburb || address.quarter || address.city_district || '';
-                    if (sector) {
-                        document.getElementById('sector').value = sector;
-                        highlightField('sector');
-                    }
-
-                    // Ciudad (probamos varios campos posibles)
-                    const ciudad = address.city || address.town || address.village || address.municipality || '';
-                    if (ciudad) {
-                        document.getElementById('ciudad').value = ciudad;
-                        highlightField('ciudad');
-                    }
-
-                    // Provincia (probamos varios campos posibles)
-                    const provincia = address.state || address.county || address.region || '';
-                    if (provincia) {
-                        document.getElementById('provincia').value = provincia;
-                        highlightField('provincia');
-                    }
-                }
-
-                // Evento de clic en el mapa
-                map.on('click', function(e) {
-                    updatePosition(e.latlng);
-
-                    // Obtener detalles de la dirección
-                    geocoder.reverse(e.latlng, map.options.crs.scale(map.getZoom()), results => {
-                        if (results && results.length > 0) {
-                            fillAddressFields(results[0]);
-                        }
-                    });
-                });
-
-                // Botón de ubicación actual
-                document.getElementById('locate-me').addEventListener('click', function() {
-                    map.locate({setView: true, maxZoom: 16});
-                });
-
-                // Evento de ubicación encontrada
-                map.on('locationfound', function(e) {
-                    updatePosition(e.latlng);
-                    document.getElementById('precision').value = e.accuracy.toFixed(2);
-
-                    if (circle) {
-                        circle.setLatLng(e.latlng).setRadius(e.accuracy);
-                    } else {
-                        circle = L.circle(e.latlng, {
-                            radius: e.accuracy,
-                            color: '#0d6efd',
-                            fillColor: '#0d6efd30',
-                            fillOpacity: 0.5
-                        }).addTo(map);
-                    }
-
-                    // Obtener dirección de la ubicación actual
-                    geocoder.reverse(e.latlng, map.options.crs.scale(map.getZoom()), results => {
-                        if (results && results.length > 0) {
-                            fillAddressFields(results[0]);
-                        }
-                    });
-                });
-
-                // Evento de error de ubicación
-                map.on('locationerror', function(e) {
-                    alert('No se pudo obtener tu ubicación: ' + e.message);
-                });
-
-                // Validación del formulario
-                const form = document.querySelector('.needs-validation');
-                form.addEventListener('submit', function(event) {
-                    if (!form.checkValidity() || !document.getElementById('latitud').value) {
-                        event.preventDefault();
-                        event.stopPropagation();
-
-                        if (!document.getElementById('latitud').value) {
-                            document.getElementById('location-alert').classList.remove('d-none');
-                            document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
-                        }
+                    if (!document.getElementById('latitud').value) {
+                        document.getElementById('location-alert').classList.remove('d-none');
+                        document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
                     }
 
                     form.classList.add('was-validated');
-                }, false);
+                } else {
+                    // Simulación de éxito
+                    const toast = new bootstrap.Toast(document.getElementById('success-toast'));
+                    toast.show();
 
-                // Mostrar mapa cuando esté listo
-                map.whenReady(function() {
-                    document.getElementById('map-loading').style.display = 'none';
-                });
+                    // Simular redirección después de 2 segundos
+                    setTimeout(() => {
+                        alert('¡Dirección actualizada con éxito!');
+                        // En un entorno real, aquí se enviaría el formulario
+                        // form.submit();
+                    }, 2000);
+                }
+            }, false);
 
-                // Control de localización
-                L.control.locate({
-                    position: 'topright',
-                    strings: {
-                        title: "Mostrar mi ubicación",
-                        popup: "Estás dentro de {distance} metros desde este punto"
-                    },
-                    locateOptions: {
-                        enableHighAccuracy: true,
-                        maxZoom: 16
-                    }
-                }).addTo(map);
+            // Mostrar mapa cuando esté listo
+            map.whenReady(function() {
+                document.getElementById('map-loading').style.display = 'none';
             });
-        </script>
+
+            // Control de localización
+            L.control.locate({
+                position: 'topright',
+                strings: {
+                    title: "Mostrar mi ubicación",
+                    popup: "Estás dentro de {distance} metros desde este punto"
+                },
+                locateOptions: {
+                    enableHighAccuracy: true,
+                    maxZoom: 16
+                }
+            }).addTo(map);
+
+            // Simular ubicación inicial
+            setTimeout(() => {
+                const initialLocation = L.latLng(-2.170998, -79.922356);
+                updatePosition(initialLocation);
+                getAddressDetails(initialLocation);
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

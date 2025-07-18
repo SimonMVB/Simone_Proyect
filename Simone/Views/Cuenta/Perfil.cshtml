@@ -1,100 +1,289 @@
 ﻿@model Simone.Models.Usuario
-
 @{
     ViewData["Title"] = "Mi Perfil";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+<style>
+    body, .profile-main-bg {
+        background: #f7f7fa;
+    }
 
-<div class="profile-container">
+    .profile-card {
+        background: #fff;
+        border-radius: 1.2rem;
+        box-shadow: 0 2px 16px #1111, 0 0.5px 2px #6366f120;
+        padding: 2rem 2.3rem 1.4rem 2.3rem;
+        margin: 2rem auto;
+        max-width: 500px;
+        transition: box-shadow .3s;
+    }
+
+        .profile-card:hover {
+            box-shadow: 0 8px 48px #3232462e;
+        }
+
+    .profile-header h2 {
+        font-weight: 800;
+        color: #1a1a1a;
+        font-size: 2.1rem;
+    }
+
+    .profile-header i {
+        color: #ffb88b;
+    }
+
+    .profile-subtitle {
+        font-size: 1.02rem;
+        color: #a1a1aa;
+        margin-bottom: 1.1rem;
+        font-weight: 500;
+    }
+
+    .profile-alert {
+        border-radius: 1rem;
+        font-size: 1.05rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .profile-avatar-container {
+        display: flex;
+        align-items: center;
+        gap: 1.4rem;
+        margin-bottom: 2.1rem;
+        position: relative;
+    }
+
+    .avatar-wrapper {
+        width: 92px;
+        height: 92px;
+        border-radius: 50%;
+        background: #fff5ee;
+        border: 2px solid #ffd5b2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .profile-avatar {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+    }
+
+    .avatar-placeholder {
+        color: #ffd1b1;
+        font-size: 2.7rem;
+        text-align: center;
+        width: 100%;
+    }
+
+    .avatar-upload {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+        align-items: flex-start;
+        flex: 1;
+    }
+
+    .upload-btn, .btn-outline-primary {
+        font-weight: 600;
+        border-radius: 1.2rem;
+        padding: .35rem 1.2rem;
+        border: 1.5px solid #FFC89C;
+        color: #d97706;
+        background: #fff6ec;
+        transition: background .13s, color .13s;
+    }
+
+        .upload-btn:hover, .btn-outline-primary:hover {
+            background: #FFC89C;
+            color: #111;
+        }
+
+    .btn-outline-danger {
+        border-radius: 1.2rem;
+        background: #fff;
+        color: #dc2626;
+        border-color: #fecaca;
+        padding: .35rem 1.2rem;
+    }
+
+        .btn-outline-danger:hover {
+            background: #fecaca;
+            color: #7f1d1d;
+        }
+
+    .upload-hint {
+        font-size: .86rem;
+        color: #bca389;
+        margin-left: .2rem;
+    }
+
+    .profile-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.18rem 1.2rem;
+        margin-bottom: 1.45rem;
+    }
+
+    @@media (max-width: 650px) {
+        .profile-card
+
+    {
+        padding: 1.2rem .3rem;
+    }
+
+    .profile-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #e57736;
+    }
+
+    .input-group-text {
+        background: #fff6ec;
+        color: #ffb87d;
+        border-radius: 1.1rem 0 0 1.1rem;
+        border-right: 0;
+        border: 1.5px solid #ffe3c7;
+    }
+
+    .form-control, .form-control:focus {
+        border-radius: 0 1.1rem 1.1rem 0;
+        box-shadow: none;
+        border: 1.5px solid #ffe3c7;
+    }
+
+    .form-error {
+        color: #dc2626;
+        font-size: .97rem;
+    }
+
+    .status-icon.active i {
+        color: #16a34a !important;
+    }
+
+    .status-icon.inactive i {
+        color: #ef4444 !important;
+    }
+
+    .form-actions {
+        justify-content: flex-end;
+        margin-top: .85rem;
+    }
+
+    .save-btn {
+        font-weight: 700;
+        border-radius: 1.3rem;
+        padding: .65rem 1.5rem;
+        background: #FFC89C;
+        color: #1a1a1a;
+        border: none;
+        box-shadow: 0 1.5px 6px #FFD7AE33;
+        transition: background .16s, color .16s;
+    }
+
+        .save-btn:disabled {
+            opacity: .7;
+            pointer-events: none;
+        }
+
+    .btn-outline-secondary {
+        border-radius: 1.3rem;
+        color: #888;
+        border: 1.5px solid #e5e7eb;
+        background: #fff;
+    }
+
+        .btn-outline-secondary:hover {
+            background: #f3f4f6;
+            color: #333;
+        }
+</style>
+
+<div class="profile-main-bg">
     <div class="profile-card">
-        <div class="profile-header">
-            <h2><i class="fas fa-user-circle me-2"></i>Mi Perfil</h2>
-            <p class="profile-subtitle">Administra tu información personal</p>
+        <div class="profile-header text-center mb-2">
+            <h2><i class="fas fa-user-circle me-1"></i> Mi Perfil</h2>
+            <div class="profile-subtitle">Administra tu información personal</div>
         </div>
-
         <div class="profile-body">
             @if (TempData["MensajeExito"] != null || TempData["MensajeError"] != null)
             {
-                var message = TempData["MensajeExito"] ?? TempData["MensajeError"];
                 var alertClass = TempData["MensajeExito"] != null ? "alert-success" : "alert-danger";
                 var iconClass = TempData["MensajeExito"] != null ? "fa-circle-check" : "fa-circle-exclamation";
-
-                <div class="profile-alert @alertClass">
-                    <i class="fas @iconClass me-2"></i> @message
+                <div class="profile-alert alert @alertClass alert-dismissible fade show" role="alert">
+                    <i class="fas @iconClass me-2"></i>
+                    @(TempData["MensajeExito"] ?? TempData["MensajeError"])
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
-
             <form asp-action="ActualizarPerfil" asp-controller="Cuenta" method="post" enctype="multipart/form-data" id="formPerfil" class="needs-validation" novalidate>
                 @Html.AntiForgeryToken()
-                <input asp-for="Id" hidden />
+                <input asp-for="Id" type="hidden" />
 
-                <!-- Profile Avatar Section -->
                 <div class="profile-avatar-container">
                     <div class="avatar-wrapper">
-                        @if (Model != null && !string.IsNullOrEmpty(Model.FotoPerfil))
+                        @if (!string.IsNullOrEmpty(Model.FotoPerfil))
                         {
-                            <img src="@Model.FotoPerfil" class="profile-avatar" alt="Foto de perfil" />
+                            <img src="@Model.FotoPerfil" class="profile-avatar" alt="Foto de perfil"
+                                 onerror="this.onerror=null;this.classList.add('d-none');$('.avatar-placeholder').show()" />
                         }
-                        else
-                        {
-                            <div class="avatar-placeholder">
-                                <i class="fas fa-user"></i>
-                            </div>
-                        }
+                        <div class="avatar-placeholder @(Model?.FotoPerfil == null ? "" : "d-none")">
+                            <i class="fas fa-user"></i>
+                        </div>
                     </div>
-
                     <div class="avatar-upload">
-                        <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/*" hidden />
-                        <label for="ImagenPerfil" class="upload-btn">
+                        <label for="ImagenPerfil" class="upload-btn mb-1" tabindex="0">
                             <i class="fas fa-camera me-2"></i> Cambiar foto
                         </label>
-                        <small class="upload-hint">Formatos: JPG, PNG (max 5MB)</small>
+                        <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/jpeg,image/png,image/webp" class="d-none" aria-label="Seleccionar imagen de perfil" />
+                        <button type="button" id="btnEliminarFoto" class="btn btn-outline-danger btn-sm mb-1 @(string.IsNullOrEmpty(Model.FotoPerfil) ? "d-none" : "")">
+                            <i class="fas fa-trash me-2"></i> Eliminar
+                        </button>
+                        <div class="upload-hint">Formatos: JPG, PNG, WEBP (máx 5MB)</div>
                     </div>
                 </div>
 
-                <!-- Personal Information Form -->
                 <div class="profile-form-grid">
-                    <!-- Full Name -->
                     <div class="form-group">
-                        <label asp-for="NombreCompleto" class="form-label">Nombre completo</label>
+                        <label asp-for="NombreCompleto" class="form-label"></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input asp-for="NombreCompleto" class="form-control" />
+                            <input asp-for="NombreCompleto" class="form-control" placeholder="Nombre completo" autocomplete="off" />
                         </div>
                         <span asp-validation-for="NombreCompleto" class="form-error"></span>
                     </div>
-
-                    <!-- Phone -->
                     <div class="form-group">
-                        <label asp-for="Telefono" class="form-label">Teléfono</label>
+                        <label asp-for="Telefono" class="form-label"></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                            <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" />
+                            <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" maxlength="15" autocomplete="off" />
                         </div>
                         <span asp-validation-for="Telefono" class="form-error"></span>
                     </div>
-
-                    <!-- Address -->
                     <div class="form-group">
-                        <label asp-for="Direccion" class="form-label">Dirección</label>
+                        <label asp-for="Direccion" class="form-label"></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
-                            <input asp-for="Direccion" class="form-control" />
+                            <input asp-for="Direccion" class="form-control" placeholder="Dirección completa" autocomplete="off" />
                         </div>
                         <span asp-validation-for="Direccion" class="form-error"></span>
                     </div>
-
-                    <!-- Reference -->
                     <div class="form-group">
-                        <label asp-for="Referencia" class="form-label">Referencia</label>
+                        <label asp-for="Referencia" class="form-label"></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
-                            <input asp-for="Referencia" class="form-control" />
+                            <input asp-for="Referencia" class="form-control" placeholder="Punto de referencia" autocomplete="off" />
                         </div>
                         <span asp-validation-for="Referencia" class="form-error"></span>
                     </div>
-
-                    <!-- Current Role -->
                     <div class="form-group">
                         <label class="form-label">Rol actual</label>
                         <div class="input-group">
@@ -102,17 +291,13 @@
                             <input value="@ViewBag.RolUsuario" class="form-control" readonly />
                         </div>
                     </div>
-
-                    <!-- Registration Date -->
                     <div class="form-group">
                         <label class="form-label">Fecha de registro</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                            <input value="@(Model.FechaRegistro.ToShortDateString())" class="form-control" readonly />
+                            <input value="@Model.FechaRegistro.ToString("dd/MM/yyyy")" class="form-control" readonly />
                         </div>
                     </div>
-
-                    <!-- Status -->
                     <div class="form-group">
                         <label class="form-label">Estado</label>
                         <div class="input-group">
@@ -124,13 +309,14 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Save Button -->
-                <div class="form-actions">
+                <div class="form-actions d-flex gap-2 mt-3">
                     <button type="submit" class="save-btn" id="btnPerfil">
                         <i class="fas fa-save me-2"></i>
                         <span class="btn-text">Guardar cambios</span>
                     </button>
+                    <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-2"></i> Cancelar
+                    </a>
                 </div>
             </form>
         </div>
@@ -140,34 +326,97 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        $(function () {
-            const $form = $('#formPerfil');
-            const $btn = $('#btnPerfil');
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('formPerfil');
+            const btnPerfil = document.getElementById('btnPerfil');
+            const imgInput = document.getElementById('ImagenPerfil');
+            const deleteBtn = document.getElementById('btnEliminarFoto');
+            const MAX_SIZE_MB = 5;
 
-            $form.on('submit', function (e) {
-                if (!$form.valid()) {
+            form.addEventListener('submit', function (e) {
+                if (!form.checkValidity()) {
                     e.preventDefault();
+                    e.stopPropagation();
+                    form.classList.add('was-validated');
                     return;
                 }
-
-                $btn.prop('disabled', true);
-                $btn.find('.btn-text').text('Guardando...');
-                $btn.prepend('<span class="spinner-border spinner-border-sm me-2"></span>');
+                btnPerfil.disabled = true;
+                btnPerfil.querySelector('.btn-text').textContent = 'Guardando...';
+                btnPerfil.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-2"></span>');
             });
 
-            // Mostrar vista previa de la imagen seleccionada
-            $('#ImagenPerfil').change(function() {
-                if (this.files && this.files[0]) {
-                    var reader = new FileReader();
-
-                    reader.onload = function(e) {
-                        $('.profile-avatar').attr('src', e.target.result).show();
-                        $('.avatar-placeholder').hide();
+            imgInput.addEventListener('change', function () {
+                if (!this.files.length) return;
+                const file = this.files[0];
+                const fileSizeMB = file.size / (1024 * 1024);
+                const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (!validTypes.includes(file.type)) {
+                    showToast('Formato inválido', 'Solo se permiten imágenes JPG, PNG o WEBP', 'danger');
+                    this.value = '';
+                    return;
+                }
+                if (fileSizeMB > MAX_SIZE_MB) {
+                    showToast('Tamaño excedido', `El tamaño máximo permitido es ${MAX_SIZE_MB}MB`, 'danger');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const avatar = document.querySelector('.profile-avatar');
+                    const placeholder = document.querySelector('.avatar-placeholder');
+                    if (avatar) {
+                        avatar.src = e.target.result;
+                        avatar.classList.remove('d-none');
+                    } else {
+                        const newAvatar = document.createElement('img');
+                        newAvatar.src = e.target.result;
+                        newAvatar.className = 'profile-avatar';
+                        newAvatar.alt = 'Foto de perfil';
+                        document.querySelector('.avatar-wrapper').prepend(newAvatar);
                     }
+                    placeholder.classList.add('d-none');
+                    deleteBtn.classList.remove('d-none');
+                }
+                reader.readAsDataURL(file);
+            });
 
-                    reader.readAsDataURL(this.files[0]);
+            deleteBtn.addEventListener('click', function () {
+                const avatar = document.querySelector('.profile-avatar');
+                const placeholder = document.querySelector('.avatar-placeholder');
+                if (avatar) avatar.classList.add('d-none');
+                placeholder.classList.remove('d-none');
+                imgInput.value = '';
+                deleteBtn.classList.add('d-none');
+                if (!document.getElementById('EliminarFoto')) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'EliminarFoto';
+                    input.value = 'true';
+                    input.id = 'EliminarFoto';
+                    form.appendChild(input);
                 }
             });
+
+            function showToast(title, message, type) {
+                const toastId = `toast-${Date.now()}`;
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-bg-${type} border-0 position-fixed top-0 end-0 m-3`;
+                toast.id = toastId;
+                toast.role = 'alert';
+                toast.ariaLive = 'assertive';
+                toast.ariaAtomic = 'true';
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <strong>${title}:</strong> ${message}
+                        </div>
+                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>`;
+                document.body.appendChild(toast);
+                var bsToast = new bootstrap.Toast(toast, { delay: 3500 });
+                bsToast.show();
+                setTimeout(() => { toast.remove(); }, 4000);
+            }
         });
     </script>
 }

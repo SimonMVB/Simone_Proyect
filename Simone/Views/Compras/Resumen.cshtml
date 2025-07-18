@@ -337,16 +337,23 @@
                     @if (ViewBag.HasAddress)
                     {
                         <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <p class="mb-1"><strong>@Model.NombreCompleto</strong></p>
-                                <p class="mb-1">@Model.Direccion</p>
-                                <p class="mb-1">@Model.Ciudad, @Model.Provincia</p>
-                                <p class="mb-0">Teléfono: @Model.Telefono</p>
-                            </div>
-                            <a href="@Url.Action("EditarDireccion", "Cuenta")" class="btn btn-outline-primary">
-                                <i class="fas fa-edit me-1"></i>Editar
-                            </a>
-                        </div>
+    <div>
+        <p class="mb-1"><strong>@(string.IsNullOrEmpty(Model.NombreCompleto) ? "Sin nombre" : Model.NombreCompleto)</strong></p>
+        <p class="mb-1">@(string.IsNullOrEmpty(Model.Direccion) ? "Sin dirección" : Model.Direccion)</p>
+        <p class="mb-1">
+            @(
+                (!string.IsNullOrEmpty(Model.Ciudad) ? Model.Ciudad : "Sin ciudad")
+                + ", " +
+                (!string.IsNullOrEmpty(Model.Provincia) ? Model.Provincia : "Sin provincia")
+            )
+        </p>
+        <p class="mb-0">Teléfono: @(string.IsNullOrEmpty(Model.Telefono) ? "Sin teléfono" : Model.Telefono)</p>
+    </div>
+    <a href="@Url.Action("EditarDireccion", "Cuenta")" class="btn btn-outline-primary">
+        <i class="fas fa-edit me-1"></i>Editar
+    </a>
+</div>
+
                     }
                     else
                     {
@@ -358,6 +365,7 @@
                 <!-- Payment Methods -->
                 <div class="summary-container p-4">
                     <h3 class="mb-4"><i class="fas fa-credit-card me-2"></i>Formas de Pago</h3>
+
 
                     <!-- Payment Method Selection -->
                     <div class="row mb-4">
@@ -434,43 +442,44 @@
                         </div>
 
                         <!-- Bank Selection -->
-                        <div class="mb-4">
-                            <label class="form-label">Selecciona tu banco</label>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="pichincha">
-                                        <div class="d-flex align-items-center">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/Banco_Pichincha_logo.svg/320px-Banco_Pichincha_logo.svg.png" alt="Banco Pichincha" class="bank-logo">
-                                            <h6 class="mb-0">Banco Pichincha</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="guayaquil">
-                                        <div class="d-flex align-items-center">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/21/Banco_del_Pacifico.svg/320px-Banco_del_Pacifico.svg.png" alt="Banco Guayaquil" class="bank-logo">
-                                            <h6 class="mb-0">Banco Guayaquil</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="pacifico">
-                                        <div class="d-flex align-items-center">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0d/Banco_del_Pac%C3%ADfico_%28Ecuador%29_logo.svg/320px-Banco_del_Pac%C3%ADfico_%28Ecuador%29_logo.svg.png" alt="Banco del Pacífico" class="bank-logo">
-                                            <h6 class="mb-0">Banco del Pacífico</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="jep">
-                                        <div class="d-flex align-items-center">
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Banco_JEP_logo.svg/320px-Banco_JEP_logo.svg.png" alt="Banco JEP" class="bank-logo">
-                                            <h6 class="mb-0">Banco JEP</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+<div class="mb-4">
+    <label class="form-label">Selecciona tu banco</label>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <div class="bank-card" data-bank="pichincha">
+                <div class="d-flex align-items-center">
+                    <img src="/images/Bancos/pichincha.webp" alt="Banco Pichincha" class="bank-logo">
+                    <h6 class="mb-0">Banco Pichincha</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="bank-card" data-bank="guayaquil">
+                <div class="d-flex align-items-center">
+                    <img src="/images/Bancos/guayaquil.png" alt="Banco Guayaquil" class="bank-logo">
+                    <h6 class="mb-0">Banco Guayaquil</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="bank-card" data-bank="pacifico">
+                <div class="d-flex align-items-center">
+                    <img src="/images/Bancos/pacifico.png" alt="Banco del Pacífico" class="bank-logo">
+                    <h6 class="mb-0">Banco del Pacífico</h6>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <div class="bank-card" data-bank="jep">
+                <div class="d-flex align-items-center">
+                    <img src="/images/Bancos/jeb.png" alt="Banco JEP" class="bank-logo">
+                    <h6 class="mb-0">Banco JEP</h6>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 
                         <!-- Bank Account Details -->
                         <div id="bank-details" class="mb-4 d-none">
@@ -481,7 +490,7 @@
                                         <p class="mb-1"><strong>Banco: <span id="bank-name">-</span></strong></p>
                                         <p class="mb-1">Número de cuenta: <span id="account-number">-</span></p>
                                         <p class="mb-1">Tipo: <span id="account-type">-</span></p>
-                                        <p class="mb-1">Titular: Simone Store S.A.</p>
+                                        <p class="mb-1">Titular: Simon Vanegas</p>
                                         <p class="mb-0">RUC: 1790123456001</p>
                                     </div>
                                     <i class="fas fa-building fa-3x text-success"></i>
@@ -569,8 +578,10 @@
         </div>
     </div>
 
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+
         document.addEventListener('DOMContentLoaded', function() {
             // Payment method selection
             const paymentMethods = document.querySelectorAll('.payment-method');
@@ -601,12 +612,12 @@
             const bankAccounts = {
                 pichincha: {
                     name: "Banco Pichincha",
-                    account: "1234567890",
-                    type: "Cuenta Corriente"
+                    account: "2210704773",
+                    type: "Cuenta ahorro"
                 },
                 guayaquil: {
                     name: "Banco Guayaquil",
-                    account: "0987654321",
+                    account: "0044139354",
                     type: "Cuenta de Ahorros"
                 },
                 pacifico: {
@@ -662,6 +673,27 @@
                 });
             }
         });
+        paymentMethods.forEach(method => {
+    method.addEventListener('click', function() {
+        const methodName = this.dataset.method;
+        document.getElementById('MetodoPagoInput').value = methodName.charAt(0).toUpperCase() + methodName.slice(1);
+        // (Agrega aquí los campos condicionales si lo deseas)
+    });
+});
+
     </script>
+<form id="finalizarPagoForm" asp-action="ProcesarCompra" asp-controller="Compras" method="post" enctype="multipart/form-data">
+    <!-- Datos ocultos de usuario/dirección si los tienes -->
+    <input type="hidden" name="Direccion" value="@Model.Direccion" />
+    <input type="hidden" name="Total" value="@grandTotal" />
+    <!-- Método de pago, se actualiza dinámicamente -->
+    <input type="hidden" id="MetodoPagoInput" name="MetodoPago" value="Tarjeta" />
+    <!-- Campos adicionales según el método de pago -->
+    <div id="CamposAdicionales"></div>
+    <button type="submit" class="btn btn-success btn-lg w-100 mt-4">
+        <i class="fas fa-check-circle me-2"></i>Finalizar Pago
+    </button>
+</form>
+
 </body>
 </html>
