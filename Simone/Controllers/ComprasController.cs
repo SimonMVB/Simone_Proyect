@@ -96,6 +96,93 @@ namespace Simone.Controllers
             return View(model);
         }
 
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ProcesarCompra(CompraViewModel model)
+        {
+            // Validación del modelo (por si usas campos adicionales)
+            if (!ModelState.IsValid)
+            {
+                // Vuelve a cargar los datos necesarios para la vista Resumen
+                var user = await _userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    TempData["MensajeError"] = "Debes iniciar sesión para confirmar la compra.";
+                    return RedirectToAction("Login", "Cuenta");
+                }
+
+                var carrito = await _carrito.GetByClienteIdAsync(user.Id);
+                var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+                decimal totalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
+
+                ViewBag.CarritoDetalles = carritoDetalles;
+                ViewBag.TotalCompra = totalCompra;
+                ViewBag.HasAddress = !string.IsNullOrEmpty(user.Direccion);
+
+                // Devuelve la vista resumen con los datos cargados y el modelo actual
+                return View("Resumen", user);
+            }
+
+            // Usuario autenticado
+            var currentUser = await _userManager.GetUserAsync(User);
+            if (currentUser == null)
+            {
+                TempData["MensajeError"] = "Debes iniciar sesión para confirmar la compra.";
+                return RedirectToAction("Login", "Cuenta");
+            }
+
+            // Verifica el carrito
+            var carritoUser = await _carrito.GetByClienteIdAsync(currentUser.Id);
+            var carritoDetallesUser = await _carrito.LoadCartDetails(carritoUser.CarritoID);
+            if (!carritoDetallesUser.Any())
+            {
+                TempData["MensajeError"] = "Tu carrito está vacío.";
+                return RedirectToAction("CompraError", "Compras");
+            }
+
+            // Verifica que tenga dirección
+            if (string.IsNullOrEmpty(currentUser.Direccion))
+            {
+                TempData["MensajeError"] = "Debes registrar una dirección de envío antes de finalizar la compra.";
+                return RedirectToAction("Resumen", "Compras");
+            }
+
+            try
+            {
+                // Procesa el carrito y registra la compra (ajusta según tu lógica)
+                var result = await _carrito.ProcessCartDetails(carritoUser.CarritoID, currentUser);
+                if (result)
+                {
+                    await _carrito.AddAsync(currentUser); // Crea un nuevo carrito vacío después de la compra
+                }
+
+                TempData["MensajeExito"] = "Compra realizada con éxito.";
+                return RedirectToAction("CompraExito", "Compras");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Error al procesar el pedido: {ex.Message}");
+                TempData["MensajeError"] = "Hubo un error al procesar tu pedido.";
+                return RedirectToAction("CompraError", "Compras");
+            }
+        }
+
+
+
+
+
+        public IActionResult CompraError()
+        {
+            return View();
+        }
+
+        // Acción que muestra la página de éxito tras finalizar la compra
+        public IActionResult CompraExito()
+        {
+            return View();
+        }
+
         /// <summary>
         /// Acción para mostrar los detalles de un producto específico.
         /// </summary>

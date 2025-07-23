@@ -5,6 +5,9 @@ using Simone.Models;
 using Simone.Data;
 
 namespace Simone.Controllers
+
+
+
 {
     /// <summary>
     /// Controlador principal de la aplicación. Maneja las páginas de inicio,
@@ -24,6 +27,10 @@ namespace Simone.Controllers
         {
             _logger = logger;
             _context = context;
+        }
+        public IActionResult Proximamente()
+        {
+            return View();
         }
 
         #region Index
@@ -73,7 +80,7 @@ namespace Simone.Controllers
             // return View(productosEnOferta);
 
             // Por ahora, devolvemos la vista sin datos (o con datos mock).
-            return View();
+           return View("~/Views/Panel/Ofertas.cshtml");
         }
         #endregion
 

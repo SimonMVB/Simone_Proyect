@@ -2,20 +2,21 @@
     ViewData["Title"] = "Compra Exitosa";
 }
 
-<div class="container text-center">
-    <h1 class="mt-5 text-success">¡Gracias! Tu compra ha sido procesada correctamente.</h1>
-    
-    <!-- Success message with optional details -->
-    @if (TempData["MensajeExito"] != null)
-    {
-        <div class="alert alert-success mt-4">
-            <strong>Éxito:</strong> @TempData["MensajeExito"]
+<div class="ui container text-center" style="margin-top: 80px;">
+    <div class="ui positive message" style="padding:2.5em 2em;">
+        <h2 style="color:#21ba45;"><i class="fa fa-check-circle"></i> ¡Gracias por tu compra!</h2>
+        <p class="lead" style="margin:1em 0 0.5em 0;">Tu pedido fue procesado correctamente.</p>
+        @if (TempData["MensajeExito"] != null)
+        {
+            <div class="ui info message" style="margin-top:1em;">@TempData["MensajeExito"]</div>
+        }
+        <div style="margin-top:1.5em;">
+            <a href="@Url.Action("MisCompras", "Cuenta")" class="ui button teal big">
+                <i class="list icon"></i> Ver mis pedidos
+            </a>
+            <a href="@Url.Action("Index", "Home")" class="ui button green big">
+                <i class="home icon"></i> Volver al inicio
+            </a>
         </div>
-    }
-
-    <div class="mt-4">
-        <button class="btn btn-primary" onclick="window.location.href='@Url.Action("Index", "Home")'">
-            <i class="fa fa-home"></i> Volver al Menú Principal
-        </button>
     </div>
 </div>
