@@ -22,6 +22,44 @@ namespace Simone.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("DetalleVentas", b =>
+                {
+                    b.Property<int>("DetalleVentaID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DetalleVentaID"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Descuento")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductoID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Subtotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("VentaID")
+                        .HasColumnType("int");
+
+                    b.HasKey("DetalleVentaID");
+
+                    b.HasIndex("ProductoID");
+
+                    b.HasIndex("VentaID");
+
+                    b.ToTable("DetalleVentas");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
                 {
                     b.Property<string>("Id")
@@ -193,7 +231,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("ActividadesUsuarios", (string)null);
+                    b.ToTable("ActividadesUsuarios");
                 });
 
             modelBuilder.Entity("Simone.Models.AsistenciaEmpleados", b =>
@@ -220,7 +258,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("EmpleadoID");
 
-                    b.ToTable("AsistenciaEmpleados", (string)null);
+                    b.ToTable("AsistenciaEmpleados");
                 });
 
             modelBuilder.Entity("Simone.Models.AuditoriaProductos", b =>
@@ -251,7 +289,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("AuditoriaProductos", (string)null);
+                    b.ToTable("AuditoriaProductos");
                 });
 
             modelBuilder.Entity("Simone.Models.Carrito", b =>
@@ -278,7 +316,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ClienteID");
 
-                    b.ToTable("Carrito", (string)null);
+                    b.ToTable("Carrito");
                 });
 
             modelBuilder.Entity("Simone.Models.CarritoDetalle", b =>
@@ -304,13 +342,18 @@ namespace Simone.Migrations
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProductoID1")
+                        .HasColumnType("int");
+
                     b.HasKey("CarritoDetalleID");
 
                     b.HasIndex("CarritoID");
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("CarritoDetalle", (string)null);
+                    b.HasIndex("ProductoID1");
+
+                    b.ToTable("CarritoDetalle");
                 });
 
             modelBuilder.Entity("Simone.Models.CatalogoEstados", b =>
@@ -328,7 +371,7 @@ namespace Simone.Migrations
 
                     b.HasKey("EstadoID");
 
-                    b.ToTable("CatalogoEstados", (string)null);
+                    b.ToTable("CatalogoEstados");
                 });
 
             modelBuilder.Entity("Simone.Models.Categorias", b =>
@@ -346,7 +389,7 @@ namespace Simone.Migrations
 
                     b.HasKey("CategoriaID");
 
-                    b.ToTable("Categorias", (string)null);
+                    b.ToTable("Categorias");
                 });
 
             modelBuilder.Entity("Simone.Models.Cliente", b =>
@@ -358,6 +401,7 @@ namespace Simone.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ClienteID"));
 
                     b.Property<string>("Direccion")
+                        .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
@@ -375,12 +419,13 @@ namespace Simone.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Telefono")
+                        .IsRequired()
                         .HasMaxLength(15)
                         .HasColumnType("nvarchar(15)");
 
                     b.HasKey("ClienteID");
 
-                    b.ToTable("Clientes", (string)null);
+                    b.ToTable("Clientes");
                 });
 
             modelBuilder.Entity("Simone.Models.ClientesProgramas", b =>
@@ -400,7 +445,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProgramaID");
 
-                    b.ToTable("ClientesProgramas", (string)null);
+                    b.ToTable("ClientesProgramas");
                 });
 
             modelBuilder.Entity("Simone.Models.Comisiones", b =>
@@ -435,7 +480,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("VentaID");
 
-                    b.ToTable("Comisiones", (string)null);
+                    b.ToTable("Comisiones");
                 });
 
             modelBuilder.Entity("Simone.Models.Compras", b =>
@@ -459,7 +504,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProveedorID");
 
-                    b.ToTable("Compras", (string)null);
+                    b.ToTable("Compras");
                 });
 
             modelBuilder.Entity("Simone.Models.CuponesUsados", b =>
@@ -479,45 +524,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("PromocionID");
 
-                    b.ToTable("CuponesUsados", (string)null);
-                });
-
-            modelBuilder.Entity("Simone.Models.DetalleVentas", b =>
-                {
-                    b.Property<int>("DetalleVentaID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DetalleVentaID"));
-
-                    b.Property<int>("Cantidad")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("Descuento")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("PrecioUnitario")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("ProductoID")
-                        .HasColumnType("int");
-
-                    b.Property<decimal?>("Subtotal")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int>("VentaID")
-                        .HasColumnType("int");
-
-                    b.HasKey("DetalleVentaID");
-
-                    b.HasIndex("ProductoID");
-
-                    b.HasIndex("VentaID");
-
-                    b.ToTable("DetalleVentas", (string)null);
+                    b.ToTable("CuponesUsados");
                 });
 
             modelBuilder.Entity("Simone.Models.DetallesCompra", b =>
@@ -549,7 +556,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("DetallesCompra", (string)null);
+                    b.ToTable("DetallesCompra");
                 });
 
             modelBuilder.Entity("Simone.Models.DetallesPedido", b =>
@@ -581,7 +588,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("DetallesPedido", (string)null);
+                    b.ToTable("DetallesPedido");
                 });
 
             modelBuilder.Entity("Simone.Models.Devoluciones", b =>
@@ -612,7 +619,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("DetalleVentaID");
 
-                    b.ToTable("Devoluciones", (string)null);
+                    b.ToTable("Devoluciones");
                 });
 
             modelBuilder.Entity("Simone.Models.DireccionesCliente", b =>
@@ -652,7 +659,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ClienteID");
 
-                    b.ToTable("DireccionesCliente", (string)null);
+                    b.ToTable("DireccionesCliente");
                 });
 
             modelBuilder.Entity("Simone.Models.Empleados", b =>
@@ -693,7 +700,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("RolID");
 
-                    b.ToTable("Empleados", (string)null);
+                    b.ToTable("Empleados");
                 });
 
             modelBuilder.Entity("Simone.Models.Favorito", b =>
@@ -720,7 +727,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("Favoritos", (string)null);
+                    b.ToTable("Favoritos");
                 });
 
             modelBuilder.Entity("Simone.Models.Gastos", b =>
@@ -751,7 +758,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("EmpleadoID");
 
-                    b.ToTable("Gastos", (string)null);
+                    b.ToTable("Gastos");
                 });
 
             modelBuilder.Entity("Simone.Models.HistorialPrecios", b =>
@@ -782,7 +789,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("HistorialPrecios", (string)null);
+                    b.ToTable("HistorialPrecios");
                 });
 
             modelBuilder.Entity("Simone.Models.ImagenesProductos", b =>
@@ -804,7 +811,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("ImagenesProductos", (string)null);
+                    b.ToTable("ImagenesProductos");
                 });
 
             modelBuilder.Entity("Simone.Models.LogActividad", b =>
@@ -836,7 +843,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("UsuarioID");
 
-                    b.ToTable("LogsActividad", (string)null);
+                    b.ToTable("LogsActividad");
                 });
 
             modelBuilder.Entity("Simone.Models.LogIniciosSesion", b =>
@@ -878,7 +885,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("UsuarioId");
 
-                    b.ToTable("LogIniciosSesion", (string)null);
+                    b.ToTable("LogIniciosSesion");
                 });
 
             modelBuilder.Entity("Simone.Models.MovimientosInventario", b =>
@@ -909,7 +916,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("MovimientosInventario", (string)null);
+                    b.ToTable("MovimientosInventario");
                 });
 
             modelBuilder.Entity("Simone.Models.Pedido", b =>
@@ -943,7 +950,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ClienteID");
 
-                    b.ToTable("Pedidos", (string)null);
+                    b.ToTable("Pedidos");
                 });
 
             modelBuilder.Entity("Simone.Models.Producto", b =>
@@ -1008,7 +1015,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("VendedorID");
 
-                    b.ToTable("Productos", (string)null);
+                    b.ToTable("Productos");
                 });
 
             modelBuilder.Entity("Simone.Models.ProgramasFidelizacion", b =>
@@ -1031,7 +1038,7 @@ namespace Simone.Migrations
 
                     b.HasKey("ProgramaID");
 
-                    b.ToTable("ProgramasFidelizacion", (string)null);
+                    b.ToTable("ProgramasFidelizacion");
                 });
 
             modelBuilder.Entity("Simone.Models.Promocion", b =>
@@ -1063,7 +1070,7 @@ namespace Simone.Migrations
 
                     b.HasKey("PromocionID");
 
-                    b.ToTable("Promociones", (string)null);
+                    b.ToTable("Promociones");
                 });
 
             modelBuilder.Entity("Simone.Models.Proveedores", b =>
@@ -1096,7 +1103,7 @@ namespace Simone.Migrations
 
                     b.HasKey("ProveedorID");
 
-                    b.ToTable("Proveedores", (string)null);
+                    b.ToTable("Proveedores");
                 });
 
             modelBuilder.Entity("Simone.Models.Reseñas", b =>
@@ -1128,7 +1135,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("ProductoID");
 
-                    b.ToTable("Reseñas", (string)null);
+                    b.ToTable("Reseñas");
                 });
 
             modelBuilder.Entity("Simone.Models.Subcategorias", b =>
@@ -1150,7 +1157,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("CategoriaID");
 
-                    b.ToTable("Subcategorias", (string)null);
+                    b.ToTable("Subcategorias");
                 });
 
             modelBuilder.Entity("Simone.Models.Usuario", b =>
@@ -1264,9 +1271,8 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VentaID"));
 
-                    b.Property<string>("ClienteID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("ClienteID")
+                        .HasColumnType("int");
 
                     b.Property<string>("EmpleadoID")
                         .IsRequired()
@@ -1293,7 +1299,7 @@ namespace Simone.Migrations
 
                     b.HasIndex("EmpleadoID");
 
-                    b.ToTable("Ventas", (string)null);
+                    b.ToTable("Ventas");
                 });
 
             modelBuilder.Entity("Simone.Models.Roles", b =>
@@ -1306,6 +1312,25 @@ namespace Simone.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasDiscriminator().HasValue("Roles");
+                });
+
+            modelBuilder.Entity("DetalleVentas", b =>
+                {
+                    b.HasOne("Simone.Models.Producto", "Producto")
+                        .WithMany("DetalleVentas")
+                        .HasForeignKey("ProductoID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Simone.Models.Ventas", "Venta")
+                        .WithMany("DetalleVentas")
+                        .HasForeignKey("VentaID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Producto");
+
+                    b.Navigation("Venta");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1406,14 +1431,18 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Carrito", "Carrito")
                         .WithMany("CarritoDetalles")
                         .HasForeignKey("CarritoID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Producto", "Producto")
-                        .WithMany("CarritoDetalles")
+                        .WithMany()
                         .HasForeignKey("ProductoID")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("Simone.Models.Producto", null)
+                        .WithMany("CarritoDetalles")
+                        .HasForeignKey("ProductoID1");
 
                     b.Navigation("Carrito");
 
@@ -1488,25 +1517,6 @@ namespace Simone.Migrations
                     b.Navigation("Promocion");
                 });
 
-            modelBuilder.Entity("Simone.Models.DetalleVentas", b =>
-                {
-                    b.HasOne("Simone.Models.Producto", "Producto")
-                        .WithMany("DetalleVentas")
-                        .HasForeignKey("ProductoID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Simone.Models.Ventas", "Venta")
-                        .WithMany("DetalleVentas")
-                        .HasForeignKey("VentaID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Producto");
-
-                    b.Navigation("Venta");
-                });
-
             modelBuilder.Entity("Simone.Models.DetallesCompra", b =>
                 {
                     b.HasOne("Simone.Models.Compras", "Compra")
@@ -1547,7 +1557,7 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Devoluciones", b =>
                 {
-                    b.HasOne("Simone.Models.DetalleVentas", "DetalleVenta")
+                    b.HasOne("DetalleVentas", "DetalleVenta")
                         .WithMany()
                         .HasForeignKey("DetalleVentaID")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1735,7 +1745,7 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Ventas", b =>
                 {
-                    b.HasOne("Simone.Models.Usuario", "Clientes")
+                    b.HasOne("Simone.Models.Cliente", "Clientes")
                         .WithMany()
                         .HasForeignKey("ClienteID")
                         .OnDelete(DeleteBehavior.Restrict)

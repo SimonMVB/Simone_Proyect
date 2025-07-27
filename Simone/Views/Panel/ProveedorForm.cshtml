@@ -4,140 +4,156 @@
 }
 
 <div class="ui container mt-5">
-<style>
-    .custom-form-wrapper {
-        max-width: 600px;
-        margin: auto;
-        margin-top: 3rem;
-    }
-
-        .custom-form-wrapper .ui.segment {
-            padding: 3rem;
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
-            border-radius: 20px;
-            border: 1px solid #eee;
-            background-color: #ffffff;
+    <style>
+        .custom-form-wrapper {
+            max-width: 600px;
+            margin: auto;
+            margin-top: 3rem;
         }
 
-        .custom-form-wrapper .ui.header .icon {
-            color: #21ba45;
-        }
-
-        .custom-form-wrapper .ui.button:hover {
-            background-color: #16ab39 !important;
-        }
-
-    @@media only screen and (max-width: 600px) {
-        .custom-form-wrapper .ui.segment
-
-    {
-        padding: 2rem;
-    }
-
-    }
-</style>
-
-<div class="ui container custom-form-wrapper">
-    <div class="ui segment">
-        <h2 class="ui header">
-            <i class="box icon"></i>
-            <div class="content">
-                @(ViewBag.Proveedor != null ? "Editar Proveedor" : "Añadir Proveedor")
-            </div>
-        </h2>
-
-        <form class="ui form" method="post"
-              asp-controller="Panel"
-              asp-action="@(ViewBag.Proveedor != null ? "EditarProveedor" : "AnadirProveedor")">
-
-            @if (ViewBag.Proveedor != null)
-            {
-                <input type="hidden" name="proveedorID" value="@ViewBag.Proveedor.ProveedorID" />
+            .custom-form-wrapper .ui.segment {
+                padding: 3rem;
+                box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
+                border-radius: 20px;
+                border: 1px solid #eee;
+                background-color: #ffffff;
             }
 
-            <div class="field required">
-                <label for="NombreProveedor">Nombre del Proveedor</label>
-                <input type="text" name="nombreProveedor" id="NombreProveedor"
-                       placeholder="Ej. Distribuidora Andina"
-                       value="@(ViewBag.Proveedor?.NombreProveedor ?? "")" required />
-            </div>
+            .custom-form-wrapper .ui.header .icon {
+                color: #21ba45;
+            }
 
-            <div class="field required">
-                <label for="Contacto">Nombre del Contacto</label>
-                <input type="text" name="contacto" id="Contacto"
-                       placeholder="Ej. Carlos Pérez"
-                       value="@(ViewBag.Proveedor?.Contacto ?? "")" required />
-            </div>
+            .custom-form-wrapper .ui.button:hover {
+                background-color: #16ab39 !important;
+            }
 
-            <div class="field required">
-                <label for="Telefono">Teléfono</label>
-                <input type="tel" name="telefono" id="Telefono"
-                       placeholder="Ej. 0991234567"
-                       value="@(ViewBag.Proveedor?.Telefono ?? "")" required />
-            </div>
-
-            <div class="field required">
-                <label for="Email">Correo Electrónico</label>
-                <input type="email" name="email" id="Email"
-                       placeholder="Ej. contacto@proveedor.com"
-                       value="@(ViewBag.Proveedor?.Email ?? "")" required />
-            </div>
-
-            <div class="field required">
-                <label for="Direccion">Dirección</label>
-                <input type="text" name="direccion" id="Direccion"
-                       placeholder="Ej. Av. Quito y Bolívar"
-                       value="@(ViewBag.Proveedor?.Direccion ?? "")" required />
-            </div>
-
-                <!-- Submit Button -->
-                <button type="submit" class="ui green button add-btn">Editar Proveedor</button>
-            </form>
+        .field.required label:after {
+            content: " *";
+            color: red;
         }
-        else
-        {
+
+        @@media only screen and (max-width: 600px) {
+            .custom-form-wrapper .ui.segment {
+                padding: 2rem;
+            }
+        }
+    </style>
+
+    <div class="ui container custom-form-wrapper">
+        <div class="ui segment">
             <h2 class="ui header">
                 <i class="box icon"></i>
-                <div class="content">Añadir Proveedor</div>
+                <div class="content">
+                    @(ViewBag.Proveedor != null ? "Editar Proveedor" : "Añadir Proveedor")
+                </div>
             </h2>
-            <form class="ui form" method="post" asp-controller="Panel" asp-action="AnadirProveedor">
-                <!-- Nombre -->
-                <div class="field">
-                    <label for="NombreProveedor">Nombre Proveedor</label>
-                    <input type="text" name="nombreProveedor" id="NombreProveedor" placeholder="Nombre del proveedor"
-                        required />
-                </div>
-                <!-- Descripcion -->
-                <div class="field">
-                    <label for="Contacto">Contacto</label>
-                    <input name="contacto" id="Contacto" placeholder="Contacto del proveedor" required></input>
+
+            <form class="ui form" method="post"
+                  asp-controller="Panel"
+                  asp-action="@(ViewBag.Proveedor != null ? "EditarProveedor" : "AnadirProveedor")">
+
+                @if (ViewBag.Proveedor != null)
+                {
+                    <input type="hidden" name="proveedorID" value="@ViewBag.Proveedor.ProveedorID" />
+                }
+
+                <!-- Nombre del Proveedor -->
+                <div class="field required">
+                    <label for="NombreProveedor">Nombre del Proveedor</label>
+                    <input type="text" name="nombreProveedor" id="NombreProveedor"
+                           placeholder="Ej. Distribuidora Andina"
+                           value="@(ViewBag.Proveedor?.NombreProveedor ?? "")" required />
                 </div>
 
-                <!-- Talla -->
-                <div class="field">
-                    <label for="Telefono">Telefono</label>
-                    <input type="text" name="telefono" id="Telefono" placeholder="Telefono del contacto" required />
+                <!-- Contacto -->
+                <div class="field required">
+                    <label for="Contacto">Nombre del Contacto</label>
+                    <input type="text" name="contacto" id="Contacto"
+                           placeholder="Ej. Carlos Pérez"
+                           value="@(ViewBag.Proveedor?.Contacto ?? "")" required />
                 </div>
 
-                <!-- Color -->
-                <div class="field">
-                    <label for="Email">Email</label>
-                    <input type="text" name="email" id="Color" placeholder="Email del proveedor" required />
+                <!-- Teléfono -->
+                <div class="field required">
+                    <label for="Telefono">Teléfono</label>
+                    <input type="tel" name="telefono" id="Telefono"
+                           placeholder="Ej. 0991234567"
+                           value="@(ViewBag.Proveedor?.Telefono ?? "")"
+                           pattern="[0-9]{10}"
+                           title="Ingrese un número de teléfono válido (10 dígitos)"
+                           required />
                 </div>
 
-                <!-- Marca -->
-                <div class="field">
-                    <label for="Direccion">Direccion</label>
-                    <input type="text" name="direccion" id="Direccion" placeholder="Direccion del proveedor" required />
+                <!-- Email -->
+                <div class="field required">
+                    <label for="Email">Correo Electrónico</label>
+                    <input type="email" name="email" id="Email"
+                           placeholder="Ej. contacto@proveedor.com"
+                           value="@(ViewBag.Proveedor?.Email ?? "")" required />
                 </div>
 
-                <!-- Submit Button -->
-                <button type="submit" class="ui green button add-btn">Añadir Proveedor</button>
+                <!-- Dirección -->
+                <div class="field required">
+                    <label for="Direccion">Dirección</label>
+                    <input type="text" name="direccion" id="Direccion"
+                           placeholder="Ej. Av. Quito y Bolívar"
+                           value="@(ViewBag.Proveedor?.Direccion ?? "")" required />
+                </div>
+
+                <!-- Botón de envío -->
+                <button type="submit" class="ui green button add-btn">
+                    @(ViewBag.Proveedor != null ? "Actualizar Proveedor" : "Añadir Proveedor")
+                </button>
             </form>
-        }
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        // Validación adicional del formulario
+        $(document).ready(function() {
+            $('.ui.form').form({
+                fields: {
+                    nombreProveedor: {
+                        identifier: 'nombreProveedor',
+                        rules: [{
+                            type: 'empty',
+                            prompt: 'Por favor ingrese el nombre del proveedor'
+                        }]
+                    },
+                    contacto: {
+                        identifier: 'contacto',
+                        rules: [{
+                            type: 'empty',
+                            prompt: 'Por favor ingrese el nombre del contacto'
+                        }]
+                    },
+                    telefono: {
+                        identifier: 'telefono',
+                        rules: [{
+                            type: 'regExp[/^[0-9]{10}$/]',
+                            prompt: 'Por favor ingrese un número de teléfono válido (10 dígitos)'
+                        }]
+                    },
+                    email: {
+                        identifier: 'email',
+                        rules: [{
+                            type: 'email',
+                            prompt: 'Por favor ingrese un correo electrónico válido'
+                        }]
+                    },
+                    direccion: {
+                        identifier: 'direccion',
+                        rules: [{
+                            type: 'empty',
+                            prompt: 'Por favor ingrese la dirección'
+                        }]
+                    }
+                }
+            });
+        });
+    </script>
 }

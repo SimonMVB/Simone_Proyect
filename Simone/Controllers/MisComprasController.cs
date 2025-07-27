@@ -21,41 +21,66 @@ namespace Simone.Controllers
             _userManager = userManager;
         }
 
-        // Mostrar historial de VENTAS del cliente autenticado
+        /// <summary>
+        /// Muestra el historial de ventas del usuario autenticado
+        /// </summary>
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
+            {
+                TempData["MensajeError"] = "Debes iniciar sesión para ver tus compras.";
                 return RedirectToAction("Login", "Cuenta");
+            }
 
-            // Buscar ventas donde el ClienteID sea el mismo que el usuario actual
+            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == user.Email);
+            if (cliente == null)
+            {
+                TempData["MensajeError"] = "No se encontró información de cliente vinculada a tu cuenta.";
+                return RedirectToAction("Index", "Home");
+            }
+
             var ventas = await _context.Ventas
-               .Where(v => v.ClienteID == user.Id)
+                .Where(v => v.ClienteID == cliente.ClienteID)
+                .Include(v => v.DetalleVentas)
+                .ThenInclude(dv => dv.Producto)
                 .OrderByDescending(v => v.FechaVenta)
                 .ToListAsync();
 
-            return View(ventas); // La vista debe ser fuertemente tipada a List<Ventas>
+            return View(ventas);
         }
 
-        // Mostrar detalle de una venta específica
+        /// <summary>
+        /// Muestra el detalle de una venta específica del usuario autenticado
+        /// </summary>
         public async Task<IActionResult> Detalle(int id)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
+            {
+                TempData["MensajeError"] = "Debes iniciar sesión para ver el detalle.";
                 return RedirectToAction("Login", "Cuenta");
+            }
+
+            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == user.Email);
+            if (cliente == null)
+            {
+                TempData["MensajeError"] = "No se encontró información de cliente vinculada a tu cuenta.";
+                return RedirectToAction("Index", "Home");
+            }
 
             var venta = await _context.Ventas
-                  .Include(v => v.DetalleVentas)   // ← El nombre correcto de la colección
-                  .ThenInclude(dv => dv.Producto)
-                  .FirstOrDefaultAsync(v => v.VentaID == id && v.ClienteID == user.Id);
-
-
-
+                .Include(v => v.DetalleVentas)
+                    .ThenInclude(dv => dv.Producto)
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.ClienteID == cliente.ClienteID);
 
             if (venta == null)
-                return NotFound();
+            {
+                TempData["MensajeError"] = "No se encontró la venta solicitada.";
+                return RedirectToAction("Index");
+            }
 
-            return View(venta); // La vista debe ser fuertemente tipada a Ventas
+            return View(venta);
         }
     }
 }

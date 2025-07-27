@@ -1,4 +1,4 @@
-using Simone.Models;
+﻿using Simone.Models;
 using Simone.Data;
 using System.Collections.Generic;
 using System.Linq;
@@ -172,6 +172,7 @@ namespace Simone.Services
         {
             try
             {
+                // Obtener detalles del carrito con productos incluidos
                 var carritoDetalles = await _context.CarritoDetalle
                     .Where(cd => cd.CarritoID == carritoID)
                     .Include(cd => cd.Producto)
@@ -179,44 +180,57 @@ namespace Simone.Services
 
                 if (!carritoDetalles.Any())
                 {
+                    _logger.LogWarning("No hay productos en el carrito para procesar.");
                     return false;
                 }
 
+                // Buscar cliente correspondiente al usuario actual (por Email)
+                var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == user.Email);
+                if (cliente == null)
+                {
+                    _logger.LogError($"No se encontró un cliente con el correo: {user.Email}");
+                    return false;
+                }
+
+                // Verificar y procesar stock
                 foreach (var detalle in carritoDetalles)
                 {
                     var producto = detalle.Producto;
-                    if (producto.Stock >= detalle.Cantidad)
-                    {
-                        producto.Stock -= detalle.Cantidad;
 
-                        var movimientoInventario = new MovimientosInventario
-                        {
-                            ProductoID = producto.ProductoID,
-                            Cantidad = detalle.Cantidad,
-                            TipoMovimiento = "Salida",
-                            FechaMovimiento = DateTime.Now,
-                            Descripcion = "Venta - Compra realizada en carrito"
-                        };
-
-                        await _context.MovimientosInventario.AddAsync(movimientoInventario);
-                    }
-                    else
+                    if (producto.Stock < detalle.Cantidad)
                     {
+                        _logger.LogWarning($"Stock insuficiente para el producto ID {producto.ProductoID}");
                         return false;
                     }
+
+                    producto.Stock -= detalle.Cantidad;
+
+                    var movimientoInventario = new MovimientosInventario
+                    {
+                        ProductoID = producto.ProductoID,
+                        Cantidad = detalle.Cantidad,
+                        TipoMovimiento = "Salida",
+                        FechaMovimiento = DateTime.Now,
+                        Descripcion = "Venta - Compra realizada en carrito"
+                    };
+
+                    await _context.MovimientosInventario.AddAsync(movimientoInventario);
                 }
 
+                // Registrar la venta
                 var venta = new Ventas
                 {
                     EmpleadoID = (await _userManager.Users.FirstOrDefaultAsync(u => u.UserName == "admin@tienda.com"))?.Id,
                     Estado = "Completada",
-                    ClienteID = user.Id,
+                    ClienteID = cliente.ClienteID, // 🔹 ID entero, ahora compatible
                     FechaVenta = DateTime.Now,
                     MetodoPago = "Transferencia",
                     Total = carritoDetalles.Sum(cd => cd.Total)
                 };
 
                 await _context.Ventas.AddAsync(venta);
+
+                // Cerrar carrito
                 var carrito = await _context.Carrito.FindAsync(carritoID);
                 if (carrito != null)
                 {
@@ -229,9 +243,10 @@ namespace Simone.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error processing cart details: {ex.Message}");
+                _logger.LogError($"Error al procesar el carrito {carritoID}: {ex.Message}");
                 return false;
             }
         }
+
     }
 }

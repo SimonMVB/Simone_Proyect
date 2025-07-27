@@ -161,7 +161,7 @@ namespace Simone.Controllers
 
         // Confirmar compra
         [HttpPost]
-        public async Task<IActionResult> ConfirmarCompra()
+        public async Task<IActionResult> ConfirmarCompra(int carritoID)
         {
             var carrito = ObtenerCarrito();
             if (carrito == null || !carrito.Any())
@@ -172,11 +172,18 @@ namespace Simone.Controllers
 
             var cliente = await _userManager.GetUserAsync(User);
 
-            var userId = User.Identity?.Name;
-
             if (cliente == null)
             {
-                TempData["MensajeError"] = "Debes iniciar sesi�n para confirmar tu compra.";
+                TempData["MensajeError"] = "Debes iniciar sesión para confirmar tu compra.";
+                return RedirectToAction("VerCarrito");
+            }
+
+            // Buscar en tabla Cliente (tu modelo personalizado) por el Email
+            var clienteDB = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == cliente.Email);
+
+            if (clienteDB == null)
+            {
+                TempData["MensajeError"] = "Tu cuenta no está registrada como cliente.";
                 return RedirectToAction("VerCarrito");
             }
 
@@ -187,10 +194,11 @@ namespace Simone.Controllers
 
             var venta = new Ventas
             {
-                ClienteID = cliente.Id,
+                ClienteID = clienteDB.ClienteID, // 👍 ClienteID es tipo int
                 FechaVenta = DateTime.Now,
                 Total = totalFinal
             };
+
 
             _context.Ventas.Add(venta);
             await _context.SaveChangesAsync();

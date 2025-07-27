@@ -10,7 +10,7 @@ namespace Simone.Models
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public string ClienteID { get; set; }
+        public int ClienteID { get; set; }
 
         [Required(ErrorMessage = "El nombre es obligatorio.")]
         [StringLength(100, ErrorMessage = "El nombre no puede tener m�s de 100 caracteres.")]

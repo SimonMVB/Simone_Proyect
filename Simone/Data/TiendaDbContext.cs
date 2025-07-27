@@ -64,8 +64,23 @@ namespace Simone.Data
 
             // Relaciones de Producto
 
-          
-        modelBuilder.Entity<Producto>()
+            // 🚫 Evitar múltiples cascadas en CarritoDetalle
+            // ✅ Evitar múltiples cascadas en CarritoDetalle
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Carrito)
+                .WithMany(c => c.CarritoDetalles)  // ← Este nombre sí existe
+                .HasForeignKey(cd => cd.CarritoID)
+                .OnDelete(DeleteBehavior.Restrict);  // o .NoAction()
+
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Producto)
+                .WithMany()
+                .HasForeignKey(cd => cd.ProductoID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+
+
+            modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
                 .HasForeignKey(p => p.ProveedorID)
