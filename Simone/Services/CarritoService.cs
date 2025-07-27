@@ -212,7 +212,7 @@ namespace Simone.Services
                     Estado = "Completada",
                     ClienteID = user.Id,
                     FechaVenta = DateTime.Now,
-                    MetodoPago = "Tarjeta de Débito",
+                    MetodoPago = "Transferencia",
                     Total = carritoDetalles.Sum(cd => cd.Total)
                 };
 

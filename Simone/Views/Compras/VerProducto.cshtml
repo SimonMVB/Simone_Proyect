@@ -3,9 +3,6 @@
 @{
     ViewData["Title"] = "Detalles del Producto";
     var producto = ViewBag.Producto as Simone.Models.Producto;
-}
-
-@{
     var mensajeError = TempData["MensajeError"];
 }
 
@@ -18,43 +15,49 @@
 
 <div class="container">
     <div class="row mt-5">
-        <!-- Product Image Section -->
+        <!-- Imagen del producto -->
         <div class="col-md-6">
             <img src="@producto.ImagenPath" alt="@producto.Nombre" class="img-fluid"
-                style="max-height: 500px; object-fit: contain;" onerror="this.src='/images/Productos/default.jpg';" />
+                 style="max-height: 500px; object-fit: contain;" onerror="this.src='/images/Productos/default.jpg';" />
         </div>
 
-        <!-- Product Details Section -->
+        <!-- Detalles del producto -->
         <div class="col-md-6">
-            <h2 class="fw-bold">@producto.Nombre
+            <h2 class="fw-bold">
+                @producto.Nombre
                 @if (producto.Stock == 0)
                 {
                     <span class="text-danger"> - No hay stock!</span>
                 }
             </h2>
             <p><strong>Descripción:</strong> @producto.Descripcion</p>
-            <p class="text-muted"><strong>Categoría:</strong> @producto.Categoria.Nombre</p>
-            <p class="text-muted"><strong>Subcategoría:</strong> @producto.Subcategoria.NombreSubcategoria</p>
+            <p class="text-muted"><strong>Categoría:</strong> @producto.Categoria?.Nombre</p>
+            <p class="text-muted"><strong>Subcategoría:</strong> @producto.Subcategoria?.NombreSubcategoria</p>
 
-            <!-- Price -->
-            <p class="fw-bold text-primary" style="font-size: 1.5rem;">@producto.PrecioVenta.ToString("C",
-                                CultureInfo.CreateSpecificCulture("es-EC"))</p>
+            <p class="fw-bold text-primary" style="font-size: 1.5rem;">
+                @producto.PrecioVenta.ToString("C", System.Globalization.CultureInfo.CreateSpecificCulture("es-EC"))
+            </p>
+
             <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
-                <!-- Quantity Selection -->
+                <input asp-for="ProductoID" type="hidden" name="productoID" value="@producto.ProductoID" />
+                <input asp-for="Cantidad" type="hidden" name="cantidad" value=1 />
                 <div class="mb-3">
-                    <input asp-for="ProductoID" type="hidden" name="productoID" value="@producto.ProductoID" />
-                    <label for="cantidad" class="form-label">Cantidad</label>
-                    <input type="number" id="cantidad" name="cantidad" asp-for="Cantidad" class="form-control" min="1"
-                        value="1" />
+                    <label for="Cantidad" class="form-label">Cantidad</label>
+                    <input type="number" id="Cantidad" name="Cantidad" class="form-control" min="1" max="@producto.Stock" value="1" @(producto.Stock == 0 ? "disabled" : "") />
                 </div>
-
-                <!-- Add to Cart Button -->
-                <button class="btn btn-success" id="add-to-cart-btn" data-producto-id="@producto.ProductoID">
-                    <i class="fa fa-cart-plus"></i> Añadir al carrito
-                </button>
+                @if (producto.Stock == 0)
+                {
+                    <button class="btn btn-secondary" disabled><i class="fa fa-cart-plus"></i> Sin stock</button>
+                }
+                else
+                {
+                    <button class="btn btn-success" id="add-to-cart-btn" data-producto-id="@producto.ProductoID">
+                        <i class="fa fa-cart-plus"></i> Añadir al carrito
+                    </button>
+                }
             </form>
 
-            <!-- Back to Catalog Button -->
+
             <a href="@Url.Action("Catalogo", "Compras")" class="btn btn-outline-primary mt-3">
                 <i class="fa fa-arrow-left"></i> Volver al catálogo
             </a>
@@ -63,17 +66,15 @@
 
     <hr />
 
-    <!-- Additional Information Section (Optional) -->
     <div class="row">
         <div class="col-md-12">
             <h4 class="fw-bold">Detalles adicionales</h4>
             <p>@producto.Descripcion</p>
         </div>
     </div>
-
 </div>
 
-<!-- Modal for adding product to cart (Optional) -->
+<!-- Modal de éxito (opcional, solo markup, puedes activarlo vía JS si lo deseas) -->
 <div class="modal fade" id="addToCartModal" tabindex="-1" aria-labelledby="addToCartModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -93,5 +94,12 @@
 </div>
 
 @section Scripts {
-    <!-- You can add script here for any dynamic behavior if needed -->
+    <!-- Aquí puedes poner scripts para activar el modal, si quieres mostrarlo tras añadir -->
+    <!-- Por ejemplo: -->
+    <!--
+    <script>
+    // Ejemplo: mostrar modal si añades con AJAX o en respuesta al submit del formulario
+    // $('#addToCartModal').modal('show');
+    </script>
+    -->
 }

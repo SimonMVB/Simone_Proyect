@@ -1,8 +1,10 @@
 ﻿@model Simone.Models.Usuario
+
 @{
     ViewData["Title"] = "Mi Perfil";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
 <style>
     body, .profile-main-bg {
         background: #f7f7fa;
@@ -14,7 +16,7 @@
         box-shadow: 0 2px 16px #1111, 0 0.5px 2px #6366f120;
         padding: 2rem 2.3rem 1.4rem 2.3rem;
         margin: 2rem auto;
-        max-width: 500px;
+        max-width: 600px;
         transition: box-shadow .3s;
     }
 
@@ -54,8 +56,8 @@
     }
 
     .avatar-wrapper {
-        width: 92px;
-        height: 92px;
+        width: 100px;
+        height: 100px;
         border-radius: 50%;
         background: #fff5ee;
         border: 2px solid #ffd5b2;
@@ -63,6 +65,7 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
+        position: relative;
     }
 
     .profile-avatar {
@@ -128,22 +131,102 @@
         margin-bottom: 1.45rem;
     }
 
+    .profile-tabs {
+        border-bottom: 1px solid #e5e7eb;
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-tab {
+        padding: 0.5rem 1rem;
+        border: none;
+        background: none;
+        color: #6b7280;
+        font-weight: 600;
+        border-radius: 0.5rem 0.5rem 0 0;
+        margin-right: 0.5rem;
+        transition: all 0.2s;
+    }
+
+        .profile-tab.active {
+            color: #ea580c;
+            border-bottom: 2px solid #ea580c;
+            background-color: #fff7ed;
+        }
+
+        .profile-tab:hover:not(.active) {
+            color: #9a3412;
+            background-color: #ffedd5;
+        }
+
+    .security-badge {
+        background-color: #f0fdf4;
+        color: #166534;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .security-badge i {
+            font-size: 1rem;
+        }
+
+    .activity-item {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        gap: 1rem;
+    }
+
+    .activity-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        background-color: #ffedd5;
+        color: #ea580c;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .activity-content {
+        flex-grow: 1;
+    }
+
+    .activity-time {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+
     @@media (max-width: 650px) {
-        .profile-card
+        .profile-card {
+            padding: 1.2rem 1rem;
+            margin: 1rem auto;
+        }
 
-    {
-        padding: 1.2rem .3rem;
-    }
+        .profile-form-grid {
+            grid-template-columns: 1fr;
+        }
 
-    .profile-form-grid {
-        grid-template-columns: 1fr;
-    }
+        .profile-avatar-container {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
 
+        .avatar-wrapper {
+            width: 80px;
+            height: 80px;
+        }
     }
 
     .form-label {
         font-weight: 600;
         color: #e57736;
+        margin-bottom: 0.5rem;
     }
 
     .input-group-text {
@@ -163,6 +246,8 @@
     .form-error {
         color: #dc2626;
         font-size: .97rem;
+        margin-top: 0.25rem;
+        display: block;
     }
 
     .status-icon.active i {
@@ -175,7 +260,9 @@
 
     .form-actions {
         justify-content: flex-end;
-        margin-top: .85rem;
+        margin-top: 1.5rem;
+        display: flex;
+        gap: 1rem;
     }
 
     .save-btn {
@@ -205,6 +292,14 @@
             background: #f3f4f6;
             color: #333;
         }
+
+    .tab-content {
+        display: none;
+    }
+
+        .tab-content.active {
+            display: block;
+        }
 </style>
 
 <div class="profile-main-bg">
@@ -213,6 +308,13 @@
             <h2><i class="fas fa-user-circle me-1"></i> Mi Perfil</h2>
             <div class="profile-subtitle">Administra tu información personal</div>
         </div>
+
+        <div class="profile-tabs">
+            <button class="profile-tab active" data-tab="personal">Información Personal</button>
+            <button class="profile-tab" data-tab="security">Seguridad</button>
+            <button class="profile-tab" data-tab="activity">Actividad</button>
+        </div>
+
         <div class="profile-body">
             @if (TempData["MensajeExito"] != null || TempData["MensajeError"] != null)
             {
@@ -224,101 +326,273 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             }
-            <form asp-action="ActualizarPerfil" asp-controller="Cuenta" method="post" enctype="multipart/form-data" id="formPerfil" class="needs-validation" novalidate>
-                @Html.AntiForgeryToken()
-                <input asp-for="Id" type="hidden" />
 
-                <div class="profile-avatar-container">
-                    <div class="avatar-wrapper">
-                        @if (!string.IsNullOrEmpty(Model.FotoPerfil))
-                        {
-                            <img src="@Model.FotoPerfil" class="profile-avatar" alt="Foto de perfil"
-                                 onerror="this.onerror=null;this.classList.add('d-none');$('.avatar-placeholder').show()" />
-                        }
-                        <div class="avatar-placeholder @(Model?.FotoPerfil == null ? "" : "d-none")">
-                            <i class="fas fa-user"></i>
+            <!-- Pestaña Información Personal -->
+            <div id="personal-tab" class="tab-content active">
+                <form asp-action="ActualizarPerfil" asp-controller="Cuenta" method="post" enctype="multipart/form-data" id="formPerfil" class="needs-validation" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input asp-for="Id" type="hidden" />
+
+                    <div class="profile-avatar-container">
+                        <div class="avatar-wrapper">
+                            @if (!string.IsNullOrEmpty(Model.FotoPerfil))
+                            {
+                                <img src="@Model.FotoPerfil" class="profile-avatar" alt="Foto de perfil"
+                                     onerror="this.onerror=null;this.classList.add('d-none');$('.avatar-placeholder').show()" />
+                            }
+                            <div class="avatar-placeholder @(Model?.FotoPerfil == null ? "" : "d-none")">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                        <div class="avatar-upload">
+                            <label for="ImagenPerfil" class="upload-btn mb-1" tabindex="0">
+                                <i class="fas fa-camera me-2"></i> Cambiar foto
+                            </label>
+                            <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/jpeg,image/png,image/webp" class="d-none" aria-label="Seleccionar imagen de perfil" />
+                            <button type="button" id="btnEliminarFoto" class="btn btn-outline-danger btn-sm mb-1 @(string.IsNullOrEmpty(Model.FotoPerfil) ? "d-none" : "")">
+                                <i class="fas fa-trash me-2"></i> Eliminar
+                            </button>
+                            <div class="upload-hint">Formatos: JPG, PNG, WEBP (máx 5MB)</div>
                         </div>
                     </div>
-                    <div class="avatar-upload">
-                        <label for="ImagenPerfil" class="upload-btn mb-1" tabindex="0">
-                            <i class="fas fa-camera me-2"></i> Cambiar foto
-                        </label>
-                        <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/jpeg,image/png,image/webp" class="d-none" aria-label="Seleccionar imagen de perfil" />
-                        <button type="button" id="btnEliminarFoto" class="btn btn-outline-danger btn-sm mb-1 @(string.IsNullOrEmpty(Model.FotoPerfil) ? "d-none" : "")">
-                            <i class="fas fa-trash me-2"></i> Eliminar
+
+                    <div class="profile-form-grid">
+                        <div class="form-group">
+                            <label asp-for="NombreCompleto" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input asp-for="NombreCompleto" class="form-control" placeholder="Nombre completo" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="NombreCompleto" class="form-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Email" class="form-label">Correo electrónico</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input asp-for="Email" class="form-control" placeholder="Correo electrónico" readonly />
+                            </div>
+                            <small class="text-muted">Para cambiar tu correo, contacta al administrador</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Telefono" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                                <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" maxlength="15" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="Telefono" class="form-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Direccion" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
+                                <input asp-for="Direccion" class="form-control" placeholder="Dirección completa" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="Direccion" class="form-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Ciudad" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-city"></i></span>
+                                <input asp-for="Ciudad" class="form-control" placeholder="Ciudad" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="Ciudad" class="form-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Provincia" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-globe-americas"></i></span>
+                                <input asp-for="Provincia" class="form-control" placeholder="Provincia" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="Provincia" class="form-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label asp-for="Referencia" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                                <input asp-for="Referencia" class="form-control" placeholder="Punto de referencia" autocomplete="off" />
+                            </div>
+                            <span asp-validation-for="Referencia" class="form-error"></span>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Rol actual</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                                <input value="@ViewBag.RolUsuario" class="form-control" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Fecha de registro</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <input value="@Model.FechaRegistro.ToString("dd/MM/yyyy")" class="form-control" readonly />
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Estado</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-circle"></i></span>
+                                <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control" readonly />
+                                <span class="input-group-text status-icon @(Model.Activo ? "active" : "inactive")">
+                                    <i class="fas @(Model.Activo ? "fa-check" : "fa-times")"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i> Cancelar
+                        </a>
+                        <button type="submit" class="save-btn" id="btnPerfil">
+                            <i class="fas fa-save me-2"></i>
+                            <span class="btn-text">Guardar cambios</span>
                         </button>
-                        <div class="upload-hint">Formatos: JPG, PNG, WEBP (máx 5MB)</div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Pestaña Seguridad -->
+            <div id="security-tab" class="tab-content">
+                <div class="mb-4">
+                    <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i> Seguridad de la cuenta</h5>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
+                        <div>
+                            <h6 class="mb-1">Contraseña</h6>
+                            <p class="mb-0 text-muted">Última actualización: @DateTime.Now.AddMonths(-2).ToString("dd/MM/yyyy")</p>
+                        </div>
+                        <button class="btn btn-outline-primary" id="btnCambiarPassword">
+                            <i class="fas fa-key me-2"></i> Cambiar
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center p-3 border rounded">
+                        <div>
+                            <h6 class="mb-1">Autenticación de dos factores</h6>
+                            <p class="mb-0 text-muted">Protección adicional para tu cuenta</p>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="twoFactorSwitch" disabled>
+                            <label class="form-check-label" for="twoFactorSwitch">Inactivo</label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Para mayor seguridad, te recomendamos cambiar tu contraseña periódicamente y no compartirla con nadie.
                     </div>
                 </div>
 
-                <div class="profile-form-grid">
-                    <div class="form-group">
-                        <label asp-for="NombreCompleto" class="form-label"></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user"></i></span>
-                            <input asp-for="NombreCompleto" class="form-control" placeholder="Nombre completo" autocomplete="off" />
+                <div id="passwordForm" class="d-none">
+                    <h5 class="mb-3"><i class="fas fa-key me-2"></i> Cambiar contraseña</h5>
+                    <form id="changePasswordForm" method="post" asp-action="CambiarPassword" asp-controller="Cuenta">
+                        @Html.AntiForgeryToken()
+
+                        <div class="form-group mb-3">
+                            <label for="CurrentPassword" class="form-label">Contraseña actual</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="CurrentPassword" name="CurrentPassword" required />
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
                         </div>
-                        <span asp-validation-for="NombreCompleto" class="form-error"></span>
+
+                        <div class="form-group mb-3">
+                            <label for="NewPassword" class="form-label">Nueva contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="NewPassword" name="NewPassword" required />
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Mínimo 8 caracteres, al menos una mayúscula, una minúscula y un número</small>
+                        </div>
+
+                        <div class="form-group mb-4">
+                            <label for="ConfirmPassword" class="form-label">Confirmar nueva contraseña</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                <input type="password" class="form-control" id="ConfirmPassword" name="ConfirmPassword" required />
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-outline-secondary" id="cancelPasswordChange">
+                                Cancelar
+                            </button>
+                            <button type="submit" class="save-btn">
+                                <i class="fas fa-save me-2"></i> Actualizar contraseña
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Pestaña Actividad -->
+            <div id="activity-tab" class="tab-content">
+                <h5 class="mb-3"><i class="fas fa-history me-2"></i> Actividad reciente</h5>
+
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-sign-in-alt"></i>
                     </div>
-                    <div class="form-group">
-                        <label asp-for="Telefono" class="form-label"></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-phone"></i></span>
-                            <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" maxlength="15" autocomplete="off" />
-                        </div>
-                        <span asp-validation-for="Telefono" class="form-error"></span>
-                    </div>
-                    <div class="form-group">
-                        <label asp-for="Direccion" class="form-label"></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span>
-                            <input asp-for="Direccion" class="form-control" placeholder="Dirección completa" autocomplete="off" />
-                        </div>
-                        <span asp-validation-for="Direccion" class="form-error"></span>
-                    </div>
-                    <div class="form-group">
-                        <label asp-for="Referencia" class="form-label"></label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
-                            <input asp-for="Referencia" class="form-control" placeholder="Punto de referencia" autocomplete="off" />
-                        </div>
-                        <span asp-validation-for="Referencia" class="form-error"></span>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Rol actual</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
-                            <input value="@ViewBag.RolUsuario" class="form-control" readonly />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Fecha de registro</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                            <input value="@Model.FechaRegistro.ToString("dd/MM/yyyy")" class="form-control" readonly />
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Estado</label>
-                        <div class="input-group">
-                            <span class="input-group-text"><i class="fas fa-circle"></i></span>
-                            <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control" readonly />
-                            <span class="input-group-text status-icon @(Model.Activo ? "active" : "inactive")">
-                                <i class="fas @(Model.Activo ? "fa-check" : "fa-times")"></i>
-                            </span>
-                        </div>
+                    <div class="activity-content">
+                        <div>Inicio de sesión exitoso</div>
+                        <div class="activity-time">Hoy a las @DateTime.Now.ToString("HH:mm")</div>
                     </div>
                 </div>
-                <div class="form-actions d-flex gap-2 mt-3">
-                    <button type="submit" class="save-btn" id="btnPerfil">
-                        <i class="fas fa-save me-2"></i>
-                        <span class="btn-text">Guardar cambios</span>
+
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-user-edit"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div>Actualizaste tu información de perfil</div>
+                        <div class="activity-time">Ayer a las 15:42</div>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div>Realizaste una compra (Orden #@(new Random().Next(1000, 9999)))</div>
+                        <div class="activity-time">3 días atrás</div>
+                    </div>
+                </div>
+
+                <div class="activity-item">
+                    <div class="activity-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div>Cambiaste tu contraseña</div>
+                        <div class="activity-time">Hace 2 semanas</div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3">
+                    <button class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-history me-2"></i> Ver historial completo
                     </button>
-                    <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary">
-                        <i class="fas fa-times me-2"></i> Cancelar
-                    </a>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
@@ -326,7 +600,49 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
+        //cambiarcontraseña
+            document.getElementById("btnCambiarPassword").addEventListener("click", function () {
+            document.getElementById("passwordForm").classList.remove("d-none");
+            this.classList.add("d-none");
+        });
+
+        document.getElementById("cancelPasswordChange").addEventListener("click", function () {
+            document.getElementById("passwordForm").classList.add("d-none");
+            document.getElementById("btnCambiarPassword").classList.remove("d-none");
+        });
+
+        // Mostrar/Ocultar contraseña
+        document.querySelectorAll(".toggle-password").forEach(button => {
+            button.addEventListener("click", () => {
+                const input = button.previousElementSibling;
+                if (input.type === "password") {
+                    input.type = "text";
+                    button.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                } else {
+                    input.type = "password";
+                    button.innerHTML = '<i class="fas fa-eye"></i>';
+                }
+            });
+        });
+
+
         document.addEventListener('DOMContentLoaded', function () {
+            // Tabs functionality
+            const tabs = document.querySelectorAll('.profile-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    document.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+
+                    document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+                });
+            });
+
+            // Form submission
             const form = document.getElementById('formPerfil');
             const btnPerfil = document.getElementById('btnPerfil');
             const imgInput = document.getElementById('ImagenPerfil');
@@ -345,25 +661,30 @@
                 btnPerfil.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-2"></span>');
             });
 
+            // Avatar upload
             imgInput.addEventListener('change', function () {
                 if (!this.files.length) return;
                 const file = this.files[0];
                 const fileSizeMB = file.size / (1024 * 1024);
                 const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+
                 if (!validTypes.includes(file.type)) {
                     showToast('Formato inválido', 'Solo se permiten imágenes JPG, PNG o WEBP', 'danger');
                     this.value = '';
                     return;
                 }
+
                 if (fileSizeMB > MAX_SIZE_MB) {
                     showToast('Tamaño excedido', `El tamaño máximo permitido es ${MAX_SIZE_MB}MB`, 'danger');
                     this.value = '';
                     return;
                 }
+
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     const avatar = document.querySelector('.profile-avatar');
                     const placeholder = document.querySelector('.avatar-placeholder');
+
                     if (avatar) {
                         avatar.src = e.target.result;
                         avatar.classList.remove('d-none');
@@ -374,19 +695,23 @@
                         newAvatar.alt = 'Foto de perfil';
                         document.querySelector('.avatar-wrapper').prepend(newAvatar);
                     }
+
                     placeholder.classList.add('d-none');
                     deleteBtn.classList.remove('d-none');
                 }
                 reader.readAsDataURL(file);
             });
 
+            // Delete avatar
             deleteBtn.addEventListener('click', function () {
                 const avatar = document.querySelector('.profile-avatar');
                 const placeholder = document.querySelector('.avatar-placeholder');
+
                 if (avatar) avatar.classList.add('d-none');
                 placeholder.classList.remove('d-none');
                 imgInput.value = '';
                 deleteBtn.classList.add('d-none');
+
                 if (!document.getElementById('EliminarFoto')) {
                     const input = document.createElement('input');
                     input.type = 'hidden';
@@ -397,6 +722,65 @@
                 }
             });
 
+            // Change password
+            const btnCambiarPassword = document.getElementById('btnCambiarPassword');
+            const passwordForm = document.getElementById('passwordForm');
+            const cancelPasswordChange = document.getElementById('cancelPasswordChange');
+
+            btnCambiarPassword.addEventListener('click', () => {
+                passwordForm.classList.remove('d-none');
+                btnCambiarPassword.classList.add('d-none');
+            });
+
+            cancelPasswordChange.addEventListener('click', () => {
+                passwordForm.classList.add('d-none');
+                btnCambiarPassword.classList.remove('d-none');
+                document.getElementById('changePasswordForm').reset();
+            });
+
+            // Toggle password visibility
+            document.querySelectorAll('.toggle-password').forEach(button => {
+                button.addEventListener('click', function() {
+                    const input = this.parentElement.querySelector('input');
+                    const icon = this.querySelector('i');
+
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
+                });
+            });
+
+            // Password form validation
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            changePasswordForm.addEventListener('submit', function(e) {
+                const newPassword = document.getElementById('NewPassword').value;
+                const confirmPassword = document.getElementById('ConfirmPassword').value;
+
+                if (newPassword !== confirmPassword) {
+                    e.preventDefault();
+                    showToast('Error', 'Las contraseñas no coinciden', 'danger');
+                    return;
+                }
+
+                if (newPassword.length < 8) {
+                    e.preventDefault();
+                    showToast('Error', 'La contraseña debe tener al menos 8 caracteres', 'danger');
+                    return;
+                }
+
+                // Show loading state
+                const submitBtn = this.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Actualizando...';
+            });
+
+            // Toast notifications
             function showToast(title, message, type) {
                 const toastId = `toast-${Date.now()}`;
                 const toast = document.createElement('div');

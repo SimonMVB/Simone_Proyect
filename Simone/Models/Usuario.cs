@@ -34,5 +34,9 @@ namespace Simone.Models
         [StringLength(100)]
         public string? Provincia { get; set; }
 
+        // Relaciones (opcional)
+        public virtual ICollection<ActividadUsuario> Actividades { get; set; }
+        public virtual ICollection<LogIniciosSesion> LogsInicioSesion { get; set; }
+
     }
 }

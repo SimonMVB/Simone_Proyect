@@ -6,6 +6,9 @@
 /* 🔹 ESTILOS GLOBALES MODERNOS */
 /* ============================= */
 /* Estilo para el dropdown de usuario */
+
+
+
 .dropdown {
     position: relative;
     z-index: 1060; /* más alto que el menú también, para evitar ser tapado */

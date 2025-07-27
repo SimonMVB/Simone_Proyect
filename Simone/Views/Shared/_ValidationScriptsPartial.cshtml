@@ -1,49 +1,43 @@
-﻿<!-- jQuery (necesario para Semantic UI) - Usando versión slim para mejor rendimiento -->
-<script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"
-        integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI="
-        crossorigin="anonymous"></script>
+﻿<!-- ✅ jQuery completo -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Semantic UI CSS - Precargar CSS para mejor performance -->
+
+<!-- ✅ Semantic UI CSS -->
 <link rel="preload" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.1/dist/semantic.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.1/dist/semantic.min.css"></noscript>
 
-<!-- jQuery Validation (para validación de formularios) -->
+<!-- ✅ jQuery Validation -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"
         integrity="sha512-rstIgDs0xPgmG6RX1Aba4KV5cWJbAMcvRCVmglpam9SoHZiUCyQVDdH2LPlxoHtrv17XWblE/V/PP+Tr04hbtA=="
         crossorigin="anonymous"></script>
 
-<!-- jQuery Unobtrusive Validation (integración con ASP.NET) -->
+<!-- ✅ jQuery Unobtrusive -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"
         integrity="sha512-o6XqxgrUsKmchwy9G5VRNWSSxTS4Urr4loO6/0hYdpWmFUfHqGzawGxeQGMDqYzxjY9sbktPbNlkIQJWagVZQg=="
         crossorigin="anonymous"></script>
 
-<!-- Semantic UI JS - Cargado diferido para mejor performance -->
-<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.1/dist/semantic.min.js"
-        integrity="sha256-CgSoWC9w5wNmj1WqDx3YX8yqg6X1SFnDrrWw2FNODE0="
-        crossorigin="anonymous"
-        defer></script>
+<!-- ✅ Semantic UI JS (sin integrity) -->
+<script src="https://cdn.jsdelivr.net/npm/semantic-ui@2.4.1/dist/semantic.min.js" defer></script>
 
-<!-- Inicialización de validación mejorada -->
+<!-- ✅ Inicialización -->
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Manejo de validación para formularios dinámicos
-        var initFormValidation = function() {
+    document.addEventListener('DOMContentLoaded', function () {
+        const initFormValidation = function () {
             var $form = $('form');
             if ($form.length) {
                 $form.removeData('validator')
                      .removeData('unobtrusiveValidation');
                 $.validator.unobtrusive.parse($form);
 
-                // Mejora: Manejo de errores personalizado
                 $.validator.setDefaults({
                     errorClass: 'ui pointing red basic label',
-                    highlight: function(element, errorClass) {
+                    highlight: function (element) {
                         $(element).closest('.field').addClass('error');
                     },
-                    unhighlight: function(element, errorClass) {
+                    unhighlight: function (element) {
                         $(element).closest('.field').removeClass('error');
                     },
-                    errorPlacement: function(error, element) {
+                    errorPlacement: function (error, element) {
                         if (element.parent('.input-group').length) {
                             error.insertAfter(element.parent());
                         } else {
@@ -56,8 +50,8 @@
 
         initFormValidation();
 
-        // Opcional: Re-inicializar validación si se cargan formularios dinámicamente
-        $(document).ajaxComplete(function() {
+        // Rehabilita ajaxComplete gracias a jQuery full
+        $(document).ajaxComplete(function () {
             initFormValidation();
         });
     });

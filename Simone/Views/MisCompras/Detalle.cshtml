@@ -1,0 +1,37 @@
+﻿@model Simone.Models.Pedido
+@{
+    ViewData["Title"] = $"Detalle de Pedido #{Model.PedidoID}";
+}
+
+<h3>Pedido #@Model.PedidoID</h3>
+<p><b>Fecha:</b> @Model.FechaPedido.ToString("dd/MM/yyyy")</p>
+<p><b>Estado:</b> <span class="badge bg-secondary">@Model.EstadoPedido</span></p>
+<p><b>Dirección:</b> @Model.DireccionEnvio</p>
+<p><b>Método de Envío:</b> @Model.MetodoEnvio</p>
+
+<h4>Productos</h4>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio Unitario</th>
+            <th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var det in Model.DetallesPedido)
+        {
+            <tr>
+                <td>@det.Producto.Nombre</td>
+                <td>@det.Cantidad</td>
+                <td>@(det.PrecioUnitario.ToString("C"))</td>
+                <td>@(det.Subtotal.HasValue? det.Subtotal.Value.ToString("C") : "$0.00")</td>
+            </tr>
+        }
+    </tbody>
+
+
+
+</table>
+<p class="fw-bold fs-5">Total: @Model.Total.ToString("C")</p>

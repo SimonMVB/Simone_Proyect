@@ -78,13 +78,51 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById("formLogin").addEventListener("submit", function () {
-            const btn = document.getElementById("btnLogin");
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm text-light-pink me-2" style="border-color: #f4a7c1; border-right-color: transparent;"></span>Ingresando...';
-        });
+        (function () {
+            const tryInit = () => {
+                const form = document.getElementById("formLogin");
+                const btn = document.getElementById("btnLogin");
+                if (!form || !btn) return;
+
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <div class="login-text">
+                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
+                    </div>
+                `;
+
+                form.removeEventListener('submit', handleSubmit);
+                form.addEventListener("submit", handleSubmit);
+            };
+
+            const handleSubmit = function (e) {
+                const btn = document.getElementById("btnLogin");
+                const validationSummary = document.querySelector(".validation-summary-errors, .text-danger");
+                const hasClientErrors = validationSummary && validationSummary.innerText.trim() !== "";
+
+                if (!hasClientErrors) {
+                    btn.disabled = true;
+                    btn.innerHTML = `
+                        <span class="spinner-border spinner-border-sm text-light-pink me-2"
+                              style="border-color: #f4a7c1; border-right-color: transparent;"></span>
+                        Ingresando...
+                    `;
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = `
+                        <div class="login-text">
+                            <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
+                        </div>
+                    `;
+                }
+            };
+
+            tryInit();
+        })();
     </script>
 }
+
+
 
 <style>
     .login-header {

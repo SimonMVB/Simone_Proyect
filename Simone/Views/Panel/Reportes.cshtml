@@ -1,0 +1,90 @@
+@model IEnumerable<Simone.Models.Ventas>
+
+@{
+    ViewData["Title"] = "Reportes de Actividad";
+}
+
+<div class="ui container mt-5">
+    <h2 class="ui header">
+        <i class="chart bar outline icon"></i>
+        <div class="content">
+            Reportes de Actividad
+            <div class="sub header">Últimos 100 eventos del sistema</div>
+        </div>
+    </h2>
+
+    <!-- Estadísticas -->
+    <div class="ui four column grid">
+        <div class="column">
+            <div class="ui blue raised card">
+                <div class="content">
+                    <div class="header">Total Ventas</div>
+                    <div class="description">@ViewBag.TotalVentas</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="ui green raised card">
+                <div class="content">
+                    <div class="header">Total Ingresos</div>
+                    <div class="description">$ @ViewBag.TotalIngresos</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="ui orange raised card">
+                <div class="content">
+                    <div class="header">Productos Vendidos</div>
+                    <div class="description">@ViewBag.ProductosVendidos</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="column">
+            <div class="ui purple raised card">
+                <div class="content">
+                    <div class="header">Clientes Nuevos</div>
+                    <div class="description">@ViewBag.ClientesNuevos</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Últimas Ventas -->
+    <h3 class="ui header mt-5">
+        <i class="shopping cart icon"></i>
+        <div class="content">
+            Últimas 10 Ventas
+            <div class="sub header">Detalles de las últimas 10 ventas registradas</div>
+        </div>
+    </h3>
+
+    <table class="ui celled table striped compact">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Productos</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var venta in Model)
+            {
+                <tr>
+                    <td>@venta.FechaVenta.ToString("g")</td>
+                    <td>@venta.Clientes?.Nombre</td>
+                    <td>$ @venta.Total</td>
+                    <td>
+                        @foreach (var detalle in venta.DetalleVentas)
+                        {
+                            <div>@detalle.Producto?.Nombre - @detalle.Cantidad</div>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

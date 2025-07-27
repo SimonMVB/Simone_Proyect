@@ -4,7 +4,8 @@ namespace Simone.ViewModels
 {
     public class ForgotPasswordViewModel
     {
-        [Required, EmailAddress]
+        [Required(ErrorMessage = "El correo electrónico es requerido")]
+        [EmailAddress(ErrorMessage = "Ingrese un correo electrónico válido")]
         [Display(Name = "Correo electrónico")]
         public string Email { get; set; }
     }

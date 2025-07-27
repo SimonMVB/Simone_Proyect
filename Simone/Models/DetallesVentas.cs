@@ -1,31 +1,34 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations.Schema;
-using Simone.Models;
+﻿using Simone.Models;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-
-namespace Simone.Models
+public class DetalleVentas
 {
-    public class DetalleVentas
-    {
-        [Key] // 🔹 Asegura que DetalleVentaID sea la clave primaria
-        public int DetalleVentaID { get; set; }
+    [Key]
+    public int DetalleVentaID { get; set; }
 
-        public int VentaID { get; set; }  // Clave foránea con Ventas
-        public int ProductoID { get; set; }  // Clave foránea con Productos
-        public int Cantidad { get; set; }  // Cantidad vendida
-        public decimal PrecioUnitario { get; set; }  // Precio por unidad
-        public decimal? Descuento { get; set; }  // Puede ser nulo
-        public decimal? Subtotal { get; set; }  // Puede ser nulo
-        public DateTime FechaCreacion { get; set; }  // Fecha de creación
+    public int VentaID { get; set; }
+    public int ProductoID { get; set; }
 
-        // Relación con Ventas
-        // Relaciones
-        [ForeignKey("VentaID")]
-        public Ventas Venta { get; set; }
+    [Range(1, int.MaxValue)]
+    public int Cantidad { get; set; }
 
-        // Relación con Productos
-        [ForeignKey("ProductoID")]
-        public Producto Producto { get; set; }
-    }
+    [Range(0, double.MaxValue)]
+    public decimal PrecioUnitario { get; set; }
+
+    [Range(0, double.MaxValue)]
+    public decimal? Descuento { get; set; }
+
+    public decimal? Subtotal { get; set; }
+
+    public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+    [ForeignKey("VentaID")]
+    public Ventas Venta { get; set; }
+
+    [ForeignKey("ProductoID")]
+    public Producto Producto { get; set; }
+
+    [NotMapped]
+    public decimal SubtotalCalculado => (PrecioUnitario * Cantidad) - (Descuento ?? 0);
 }

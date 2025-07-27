@@ -1,11 +1,11 @@
-using System;
+ï»¿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     /// <summary>
-    /// Representa el uso de un cupón por parte de un cliente.
+    /// Representa el uso de un cupÃ³n por parte de un cliente.
     /// </summary>
     public class CuponesUsados
     {
@@ -16,18 +16,18 @@ namespace Simone.Models
         public int PromocionID { get; set; }
 
         /// <summary>
-        /// Fecha en la que el cupón fue usado.
+        /// Fecha en la que el cupÃ³n fue usado.
         /// </summary>
         public DateTime? FechaUso { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// Cliente que utilizó el cupón.
+        /// Cliente que utilizÃ³ el cupÃ³n.
         /// </summary>
         [ForeignKey(nameof(ClienteID))]
         public virtual Cliente Cliente { get; set; } = null!;
 
         /// <summary>
-        /// Promoción aplicada.
+        /// PromociÃ³n aplicada.
         /// </summary>
         [ForeignKey(nameof(PromocionID))]
         public virtual Promocion Promocion { get; set; } = null!;

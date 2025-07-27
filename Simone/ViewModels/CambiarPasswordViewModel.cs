@@ -4,20 +4,20 @@ namespace Simone.ViewModels
 {
     public class CambiarPasswordViewModel
     {
-        [Required(ErrorMessage = "Debes ingresar tu contraseña actual.")]
+        [Required(ErrorMessage = "La contraseña actual es requerida")]
         [DataType(DataType.Password)]
         [Display(Name = "Contraseña actual")]
-        public string PasswordActual { get; set; }
+        public string CurrentPassword { get; set; }
 
-        [Required(ErrorMessage = "Ingresa una nueva contraseña.")]
-        [StringLength(100, ErrorMessage = "Debe tener al menos {2} caracteres.", MinimumLength = 6)]
+        [Required(ErrorMessage = "La nueva contraseña es requerida")]
         [DataType(DataType.Password)]
+        [StringLength(100, ErrorMessage = "La {0} debe tener al menos {2} caracteres.", MinimumLength = 8)]
         [Display(Name = "Nueva contraseña")]
-        public string NuevaPassword { get; set; }
+        public string NewPassword { get; set; }
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirmar nueva contraseña")]
-        [Compare("NuevaPassword", ErrorMessage = "La nueva contraseña y la confirmación no coinciden.")]
-        public string ConfirmarPassword { get; set; }
+        [Display(Name = "Confirmar contraseña")]
+        [Compare("NewPassword", ErrorMessage = "Las contraseñas no coinciden.")]
+        public string ConfirmPassword { get; set; }
     }
 }

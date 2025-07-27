@@ -1,22 +1,51 @@
+
+
 @{
     ViewData["Title"] = "Compra Exitosa";
 }
 
-<div class="ui container text-center" style="margin-top: 80px;">
-    <div class="ui positive message" style="padding:2.5em 2em;">
-        <h2 style="color:#21ba45;"><i class="fa fa-check-circle"></i> ¡Gracias por tu compra!</h2>
-        <p class="lead" style="margin:1em 0 0.5em 0;">Tu pedido fue procesado correctamente.</p>
+<div class="ui container" style="margin-top: 80px; max-width: 650px;">
+    <div class="ui positive message" style="padding: 2.5em 2em;">
+        <h2 class="ui header" style="color: #21ba45;">
+            <i class="fa fa-check-circle"></i> ¡Gracias por tu compra!
+        </h2>
+        <p class="lead" style="margin: 1.5em 0 1em 0;">Tu pedido fue procesado correctamente.</p>
+
         @if (TempData["MensajeExito"] != null)
         {
-            <div class="ui info message" style="margin-top:1em;">@TempData["MensajeExito"]</div>
+            <div class="ui info message" style="margin-bottom:1.5em;">
+                <i class="info circle icon"></i> @TempData["MensajeExito"]
+            </div>
         }
-        <div style="margin-top:1.5em;">
-            <a href="@Url.Action("MisCompras", "Cuenta")" class="ui button teal big">
-                <i class="list icon"></i> Ver mis pedidos
-            </a>
-            <a href="@Url.Action("Index", "Home")" class="ui button green big">
-                <i class="home icon"></i> Volver al inicio
-            </a>
+
+        @if (TempData["ResumenNombre"] != null && TempData["ResumenBanco"] != null && TempData["ResumenTotal"] != null)
+        {
+            <div class="ui segment text-start" style="max-width: 430px; margin: 2em auto 2em auto;">
+                <h4 class="ui dividing header" style="color: #1678c2;"><i class="list alternate outline icon"></i> Resumen de la transacción</h4>
+                <div class="ui list">
+                    <div class="item"><strong>Cliente:</strong> @TempData["ResumenNombre"]</div>
+                    <div class="item"><strong>Banco:</strong> @TempData["ResumenBanco"]</div>
+                    <div class="item"><strong>Total pagado:</strong> <span style="color:#21ba45;font-weight:bold;">$@TempData["ResumenTotal"]</span></div>
+                    @if (TempData["ResumenComprobante"] != null)
+                    {
+                        <div class="item"><strong>Comprobante:</strong> <span class="ui olive label">Subido correctamente</span></div>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="ui divider"></div>
+        <div class="ui two column grid" style="margin-top:2em;">
+            <div class="column center aligned">
+                <a href="@Url.Action("Index", "MisCompras")" class="ui teal big button">
+                    <i class="list icon"></i> Ver mis pedidos
+                </a>
+            </div>
+            <div class="column center aligned">
+                <a href="@Url.Action("Index", "Home")" class="ui green big button">
+                    <i class="home icon"></i> Volver al inicio
+                </a>
+            </div>
         </div>
     </div>
 </div>

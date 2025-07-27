@@ -17,14 +17,21 @@ namespace Simone.Controllers
         private readonly SignInManager<Usuario> _signInManager;
         private readonly RoleManager<Roles> _roleManager;
         private readonly CarritoService _carritoManager;
+        private readonly LogService? _logService;
+
+        //private readonly LoginLoggerService? _loginLogger;
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
+        private LogService? logService;
+
+        //private readonly LoginLoggerService loginLogger;
 
         public CuentaController(UserManager<Usuario> userManager,
                                 SignInManager<Usuario> signInManager,
                                 RoleManager<Roles> roleManager,
                                 ILogger<CuentaController> logger,
                                 CarritoService carrito,
+                                LogService logService,
                                 TiendaDbContext context)
         {
             _userManager = userManager;
@@ -33,6 +40,8 @@ namespace Simone.Controllers
             _logger = logger;
             _context = context;
             _carritoManager = carrito;
+            _logService = logService;
+            //_loginLogger = loginLogger; // Añade esta línea
         }
 
         /// <summary>
@@ -64,45 +73,63 @@ namespace Simone.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model)
         {
-            // Verifica que el modelo sea válido
             if (!ModelState.IsValid)
                 return View(model);
 
             var user = await _userManager.FindByEmailAsync(model.Email);
 
-            // Verifica si el usuario existe y si está activo
-            if (user != null && user.Activo)
+            if (user == null)
             {
-                // Intenta iniciar sesión con las credenciales proporcionadas
-                var result = await _signInManager.PasswordSignInAsync(user.UserName, model.Password, model.RememberMe, lockoutOnFailure: true);
-
-                if (result.Succeeded)
-                {
-                    _logger.LogInformation("Usuario autenticado: {Email}", model.Email);
-                    await RegistrarLog(model.Email, true);
-                    return RedirectToAction("Index", "Home");
-                }
-
-                if (result.IsLockedOut)
-                {
-                    _logger.LogWarning("Cuenta bloqueada: {Email}", model.Email);
-                    await RegistrarLog(model.Email, false);
-                    return View("Lockout");
-                }
-
-                _logger.LogWarning("Credenciales incorrectas: {Email}", model.Email);
-                ModelState.AddModelError(string.Empty, "Email o contraseña incorrectos.");
-            }
-            else
-            {
-                _logger.LogWarning("Intento de login con usuario inexistente o inactivo: {Email}", model.Email);
-                ModelState.AddModelError(string.Empty, "El usuario no existe o está inactivo.");
+                _logger.LogWarning("Intento con usuario no registrado: {Email}", model.Email);
+                TempData["MensajeError"] = "Correo o contraseña incorrectos.";
+                return View(model);
             }
 
-            // Registrar el intento de login
+            if (!user.Activo)
+            {
+                _logger.LogWarning("Usuario inactivo: {Email}", model.Email);
+                TempData["MensajeError"] = "Tu cuenta está desactivada. Contacta con soporte.";
+                return View(model);
+            }
+
+            // 🧠 Refresca el estado del usuario desde la base de datos
+            await _context.Entry(user).ReloadAsync();
+
+            // 🧪 Usa el email (como UserName) si no cambiaste el campo UserName manualmente
+            var result = await _signInManager.PasswordSignInAsync(user.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
+
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("Inicio de sesión exitoso: {Email}", model.Email);
+                await RegistrarLog(model.Email, true);
+                await _logService.Registrar($"Inicio de sesión exitoso para {model.Email}");
+                return RedirectToAction("Index", "Home");
+            }
+
+            if (result.IsLockedOut)
+            {
+                _logger.LogWarning("Usuario bloqueado por intentos fallidos: {Email}", model.Email);
+                TempData["MensajeError"] = "Tu cuenta ha sido bloqueada por múltiples intentos fallidos. Intenta más tarde.";
+                await RegistrarLog(model.Email, false);
+                return View("Lockout");
+            }
+
+            if (result.IsNotAllowed)
+            {
+                _logger.LogWarning("Login no permitido para: {Email}", model.Email);
+                TempData["MensajeError"] = "Tu cuenta no está habilitada para iniciar sesión.";
+                return View(model);
+            }
+
+            _logger.LogWarning("Contraseña incorrecta: {Email}", model.Email);
+            TempData["MensajeError"] = "Correo o contraseña incorrectos.";
             await RegistrarLog(model.Email, false);
+            await _logService.Registrar($"Intento de inicio de sesión fallido para {model.Email}");
             return View(model);
         }
+
+
+
 
         /// <summary>
         /// Registra los intentos de inicio de sesión en la base de datos.
@@ -116,7 +143,10 @@ namespace Simone.Controllers
             {
                 Usuario = email,
                 FechaInicio = DateTime.Now,
-                Exitoso = exitoso
+                Exitoso = exitoso,
+                DireccionIP = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1",
+                Localizacion = "N/A",
+                UserAgent = Request.Headers["User-Agent"].ToString()
             };
 
             _context.LogIniciosSesion.Add(log);
@@ -142,7 +172,7 @@ namespace Simone.Controllers
         /// <summary>
         /// Acción POST para registrar un nuevo usuario en el sistema.
         /// </summary>
-        /// <param name="model">Modelo que contiene la información del usuario.</param>
+       
         /// <returns>Redirige al Home si el registro es exitoso, o muestra los errores de registro.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -151,7 +181,6 @@ namespace Simone.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // Verifica si el rol "Cliente" existe
             var rol = await _roleManager.FindByNameAsync("Cliente");
 
             var usuario = new Usuario
@@ -175,8 +204,21 @@ namespace Simone.Controllers
                 await _userManager.AddToRoleAsync(usuario, "Cliente");
                 await _carritoManager.AddAsync(usuario);
 
+                // Crea también el cliente asociado
+                var cliente = new Cliente
+                {
+                    Nombre = usuario.NombreCompleto ?? usuario.UserName ?? "Sin nombre",
+                    Email = usuario.Email,
+                    Telefono = usuario.Telefono,
+                    Direccion = usuario.Direccion,
+                    FechaRegistro = DateTime.Now
+                };
+                _context.Clientes.Add(cliente);
+                await _context.SaveChangesAsync();
+
                 _logger.LogInformation("Usuario registrado: {Email}", model.Email);
                 await _signInManager.SignInAsync(usuario, isPersistent: false);
+                await _logService.Registrar($"Se registró un nuevo usuario: {usuario.Email}");
                 return RedirectToAction("Index", "Home");
             }
 
@@ -189,6 +231,7 @@ namespace Simone.Controllers
             return View(model);
         }
 
+
         /// <summary>
         /// Acción POST para cerrar la sesión de un usuario.
         /// </summary>
@@ -199,6 +242,7 @@ namespace Simone.Controllers
         {
             await _signInManager.SignOutAsync();
             _logger.LogInformation("Sesión cerrada.");
+            await _logService.Registrar("Cierre de sesión");
             return RedirectToAction("Login", "Cuenta");
         }
 
@@ -264,10 +308,12 @@ namespace Simone.Controllers
             usuarioDb.Telefono = usuario.Telefono;
             usuarioDb.Direccion = usuario.Direccion;
             usuarioDb.Referencia = usuario.Referencia;
+            usuarioDb.Ciudad = usuario.Ciudad;
+            usuarioDb.Provincia = usuario.Provincia;
 
             _context.Update(usuarioDb);
             await _context.SaveChangesAsync();
-
+            await _logService.Registrar($"Actualizó su perfil: {usuarioDb.Email}");
             TempData["MensajeExito"] = "Perfil actualizado correctamente.";
             return RedirectToAction("Perfil");
         }
@@ -293,6 +339,37 @@ namespace Simone.Controllers
             return RedirectToAction("Index", "Home");
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarPassword(CambiarPasswordViewModel model)
+        {
+            if (!ModelState.IsValid)
+                return View("MiPerfil", model); // Asegúrate de tener vista MiPerfil compatible
+
+            var usuario = await _userManager.GetUserAsync(User);
+            if (usuario == null)
+            {
+                TempData["MensajeError"] = "Usuario no encontrado.";
+                return RedirectToAction("Login");
+            }
+
+            var cambio = await _userManager.ChangePasswordAsync(usuario, model.CurrentPassword, model.NewPassword);
+            if (cambio.Succeeded)
+            {
+                await _logService.Registrar($"Cambió su contraseña: {usuario.Email}");
+                TempData["MensajeExito"] = "Contraseña actualizada correctamente.";
+                return RedirectToAction("MiPerfil");
+            }
+
+            foreach (var error in cambio.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error.Description);
+            }
+
+            return View("MiPerfil", model); // Vuelve a la misma vista con errores
+        }
+
+
         /// <summary>
         /// Acción POST que maneja la recuperación de la contraseña.
         /// </summary>
@@ -314,6 +391,7 @@ namespace Simone.Controllers
             var callbackUrl = Url.Action("ResetPassword", "Cuenta", new { email = user.Email, token = token }, protocol: HttpContext.Request.Scheme);
 
             _logger.LogWarning("Token de recuperación para {Email}: {Link}", user.Email, callbackUrl);
+            await _logService.Registrar($"Solicitó recuperación de contraseña: {user.Email}");
 
             TempData["MensajeExito"] = "Te hemos enviado un enlace de recuperación (o revisa la consola).";
             return RedirectToAction("Login");

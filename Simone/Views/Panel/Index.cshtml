@@ -385,7 +385,7 @@
                 </div>
 
                 <!-- Tarjeta: Logs -->
-                <div class="dashboard-card disabled-card">
+                <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon">
                             <i class="fas fa-clock"></i>
@@ -396,17 +396,18 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Revisa los logs de actividad del sistema. (Próximamente)</p>
+                        <p class="card-description">Revisa los logs de actividad del sistema.</p>
                     </div>
                     <div class="card-footer">
-                        <button class="card-btn btn-secondary" disabled>
+                        <a href="/Logs" class="card-btn btn-primary">
                             <i class="fas fa-clock me-2"></i> Ver Logs
-                        </button>
+                        </a>
                     </div>
                 </div>
 
+
                 <!-- Tarjeta: Reportes -->
-                <div class="dashboard-card disabled-card">
+                <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon">
                             <i class="fas fa-chart-bar"></i>
@@ -417,14 +418,15 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Consulta reportes de ventas, inventario y métricas. (Próximamente)</p>
+                        <p class="card-description">Consulta reportes de ventas, inventario y métricas.</p>
                     </div>
                     <div class="card-footer">
-                        <button class="card-btn btn-success" disabled>
+                        <a href="@Url.Action("Reportes", "Panel")" class="card-btn btn-success">
                             <i class="fas fa-chart-bar me-2"></i> Ver Reportes
-                        </button>
+                        </a>
                     </div>
                 </div>
+
             }
             else if (User.IsInRole("Vendedor"))
             {

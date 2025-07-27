@@ -16,8 +16,12 @@ namespace Simone.Data
         public DbSet<Usuario> Usuarios { get; set; }
 
         // ✅ Tablas del dominio
+        public virtual ICollection<ActividadUsuario> Actividades { get; set; }
+
+        public DbSet<LogIniciosSesion> LogIniciosSesiones { get; set; }
         public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
         public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
+        public DbSet<LogActividad> LogsActividad { get; set; }
         public DbSet<Carrito> Carrito { get; set; }
         public DbSet<CarritoDetalle> CarritoDetalle { get; set; }
         public DbSet<CatalogoEstados> CatalogoEstados { get; set; }
@@ -48,7 +52,8 @@ namespace Simone.Data
         public DbSet<Ventas> Ventas { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
 
-
+        public DbSet<ActividadUsuario> ActividadesUsuarios { get; set; }
+        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -58,7 +63,9 @@ namespace Simone.Data
             modelBuilder.Entity<CuponesUsados>().HasKey(cu => new { cu.ClienteID, cu.PromocionID });
 
             // Relaciones de Producto
-            modelBuilder.Entity<Producto>()
+
+          
+        modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
                 .HasForeignKey(p => p.ProveedorID)
@@ -168,6 +175,12 @@ namespace Simone.Data
                 entity.Property(l => l.FechaInicio).HasColumnType("datetime");
                 entity.Property(l => l.Exitoso).IsRequired(false);
             });
+            modelBuilder.Entity<ActividadUsuario>()
+         .HasOne(a => a.Usuario)          // Actividad tiene un Usuario
+         .WithMany(u => u.Actividades)     // Usuario tiene muchas Actividades
+         .HasForeignKey(a => a.UsuarioId)  // Clave foránea
+         .OnDelete(DeleteBehavior.Cascade);
+
         }
     }
 }

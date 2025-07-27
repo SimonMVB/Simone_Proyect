@@ -110,6 +110,10 @@
                         <div class="product-image-container">
                             <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
                             <div class="product-badge">Nuevo</div>
+                            @if (p.Stock <= 0)
+                            {
+                                <div class="out-of-stock-badge">Agotado</div>
+                            }
                         </div>
                         <div class="product-info">
                             <h3 class="product-title">@p.Nombre</h3>
@@ -132,15 +136,22 @@
                         </button>
                     </form>
 
-
-
-                    <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
-                        <input asp-for="ProductoID" type="hidden" name="productoID" value="@p.ProductoID" />
-                        <input asp-for="Cantidad" type="hidden" name="cantidad" value=1 />
-                        <button type="submit" class="add-to-cart-btn">
-                            <i class="fas fa-shopping-bag"></i> Añadir al carrito
+                    @if (p.Stock > 0)
+                    {
+                        <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
+                            <input type="hidden" name="ProductoID" value="@p.ProductoID" />
+                            <input type="hidden" name="Cantidad" value="1" />
+                            <button type="submit" class="add-to-cart-btn">
+                                <i class="fas fa-shopping-bag"></i> Añadir al carrito
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <button class="add-to-cart-btn" disabled style="background-color: #ccc; cursor: not-allowed;">
+                            <i class="fas fa-times-circle"></i> No hay stock
                         </button>
-                    </form>
+                    }
                 </div>
 
 
@@ -171,6 +182,18 @@
 </div>
 
 <style>
+    .out-of-stock-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: #f44336;
+        color: white;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 1;
+    }
     :root {
         --primary-dark: #1A1A1A; /* Negro */
         --primary-light: #FFFFFF; /* Blanco */

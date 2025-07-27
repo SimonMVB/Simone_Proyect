@@ -716,5 +716,15 @@ namespace Simone.Controllers
             return RedirectToAction("Productos");
         }
 
+        /// <summary>
+        /// Acción GET para mostrar los reportes del sistema.
+        /// </summary>
+        [HttpGet]
+        public IActionResult Reportes()
+        {
+            return View(); // Esto carga Views/Panel/Reportes.cshtml
+        }
+
+
     }
 }

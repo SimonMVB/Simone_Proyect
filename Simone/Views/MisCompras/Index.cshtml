@@ -1,0 +1,85 @@
+﻿@model List<Simone.Models.Ventas>
+@{
+    ViewData["Title"] = "Mis Compras";
+    Func<string, string> EstadoColor = estado =>
+    {
+        if (estado == null) return "grey";
+        switch (estado.ToLower())
+        {
+            case "procesando pago": return "yellow";
+            case "despachando": return "blue";
+            case "entregado": return "green";
+            case "completada": return "green";
+            case "cancelado": return "red";
+            default: return "grey";
+        }
+    };
+    var culture = new System.Globalization.CultureInfo("es-EC");
+}
+
+<div class="ui container" style="margin-top: 60px; max-width: 900px;">
+    <h2 class="ui header">
+        <i class="shopping bag icon"></i> Mis Compras
+    </h2>
+
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="ui negative message" style="margin-top:1em;">
+            <i class="exclamation circle icon"></i> @TempData["MensajeError"]
+        </div>
+    }
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="ui warning message" style="margin-top:2em;">
+            <i class="info circle icon"></i>
+            No tienes compras registradas aún. Cuando realices tu primer pedido, aparecerá aquí.
+        </div>
+    }
+    else
+    {
+        <div class="ui segment" style="margin-top:1.5em;">
+            <table class="ui celled striped table">
+                <thead>
+                    <tr>
+                        <th># Venta</th>
+                        <th>Fecha</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Método de Pago</th>
+                        <th>Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var venta in Model)
+                    {
+                        <tr>
+                            <td>@venta.VentaID</td>
+                            <td>@venta.FechaVenta.ToString("dd/MM/yyyy")</td>
+                            <td style="font-weight:500;">
+                                @venta.Total.ToString("C", culture)
+                            </td>
+                            <td>
+                                <span class="ui @EstadoColor(venta.Estado) label">
+                                    @venta.Estado
+                                </span>
+                            </td>
+                            <td>@venta.MetodoPago</td>
+                            <td>
+                                <a href="@Url.Action("Detalle", "MisCompras", new { id = venta.VentaID })"
+                                   class="ui icon mini blue button" title="Ver detalles">
+                                    <i class="eye icon"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    <div style="margin-top:2em;">
+        <a href="@Url.Action("Index", "Home")" class="ui green button">
+            <i class="home icon"></i> Volver al inicio
+        </a>
+    </div>
+</div>

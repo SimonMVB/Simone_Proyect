@@ -1,0 +1,38 @@
+@model IEnumerable<Simone.Models.LogActividad>
+@{
+    ViewData["Title"] = "Registros de Actividad";
+}
+
+<div class="ui container mt-5">
+    <h2 class="ui header">
+        <i class="clock outline icon"></i>
+        <div class="content">
+            Registros de Actividad
+            <div class="sub header">Últimos 100 eventos del sistema</div>
+        </div>
+    </h2>
+
+    <table class="ui celled table striped compact">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Email</th>
+                <th>Acción</th>
+                <th>IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in Model)
+            {
+                <tr>
+                    <td>@log.FechaHora.ToString("g")</td>
+                    <td>@log.Usuario?.NombreCompleto</td>
+                    <td>@log.Usuario?.Email</td>
+                    <td>@log.Accion</td>
+                    <td>@log.IP</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

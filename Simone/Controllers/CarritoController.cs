@@ -1,9 +1,10 @@
-using Microsoft.AspNetCore.Mvc;
-using Simone.Models;
-using Simone.Data;
-using Microsoft.EntityFrameworkCore;
-using Simone.Extensions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Simone.Data;
+using Simone.Extensions;
+using Simone.Models;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace Simone.Controllers
 {

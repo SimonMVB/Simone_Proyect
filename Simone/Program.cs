@@ -14,6 +14,9 @@ if (string.IsNullOrEmpty(connectionString))
 {
     throw new InvalidOperationException("La cadena de conexión a la base de datos no está configurada.");
 }
+// 2.5. Servicios adicionales necesarios para la lógica de negocio
+
+
 
 // 2. Configuración de los servicios de la aplicación
 
@@ -52,8 +55,8 @@ builder.Services.AddScoped<ProveedorService>();  // Servicio para la gestión de
 builder.Services.AddScoped<ProductosService>();  // Servicio para la gestión de productos
 builder.Services.AddScoped<CarritoService>();  // Servicio para la gestión de carrito de compras
 builder.Services.AddScoped<DatabaseSeeder>(); // Servicio para añadir elementos a la base de datos en el inicio 
-
-
+builder.Services.AddScoped<LogService>();
+// Servicio para la gestión de logs
 // 2.6. Configuración de la cookie de autenticación para definir las rutas de Login y Acceso Denegado
 builder.Services.ConfigureApplicationCookie(options =>
 {

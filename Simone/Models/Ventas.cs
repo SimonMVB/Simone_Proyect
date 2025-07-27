@@ -9,15 +9,13 @@ namespace Simone.Models
         [Key]
         public int VentaID { get; set; }
 
-        // Relación con Empleado (Usuario como empleado)
         public string EmpleadoID { get; set; }
         public virtual Usuario Empleado { get; set; }
 
         public string Estado { get; set; }
-
-        // Relación con Cliente (Usuario como cliente)
-        public string ClienteID { get; set; }  // Foreign Key, ensure this matches the column name in the database
-        public virtual Usuario Clientes { get; set; }  // Navigation property to Cliente
+        public int ClienteID { get; set; }
+        [ForeignKey("ClienteID")]
+        public virtual Cliente Clientes { get; set; }
 
         public DateTime FechaVenta { get; set; }
 
@@ -29,6 +27,7 @@ namespace Simone.Models
         [Column(TypeName = "decimal(10,2)")]
         public decimal Total { get; set; }
 
+        // SOLO ESTA colección, SIN "DetallesVenta" object
         public virtual ICollection<DetalleVentas> DetalleVentas { get; set; }
     }
 }
