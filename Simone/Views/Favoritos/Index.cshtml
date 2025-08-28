@@ -1,88 +1,109 @@
 ﻿@model List<Simone.Models.Favorito>
+@using System.Globalization
 @{
     ViewData["Title"] = "Mis Favoritos";
-    var culture = new System.Globalization.CultureInfo("es-EC");
+    var culture = new CultureInfo("es-EC");
 }
 
-<section class="ui container mt-5">
-    <h2 class="ui header">
-        <i class="heart icon"></i>
-        <div class="content">Mis Productos Favoritos</div>
-    </h2>
+<section class="container-xl px-3 px-md-4 my-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
+        <h2 class="m-0 fw-bold">Mis Productos Favoritos</h2>
+        @if (Model?.Any() == true)
+        {
+            <div class="text-muted small">Tienes <strong>@Model.Count</strong> @((Model.Count == 1) ? "producto" : "productos")</div>
+        }
+    </div>
 
-    @if (!Model.Any())
+    @if (Model == null || !Model.Any())
     {
-        <div class="ui message">
-            <i class="info circle icon"></i>
-            <div class="content">
-                <p>No has agregado productos a favoritos aún.</p>
-                <a asp-controller="Compras" asp-action="Catalogo" class="ui primary button mt-2">
-                    Explorar productos
-                </a>
-            </div>
+        <div class="text-center py-5">
+            <i class="fa-regular fa-heart fa-3x text-secondary mb-3"></i>
+            <h5 class="mb-2">No has agregado productos a favoritos aún</h5>
+            <a asp-controller="Compras" asp-action="Catalogo" class="btn btn-primary mt-2">
+                <i class="fa-solid fa-bag-shopping me-2"></i>Explorar productos
+            </a>
         </div>
     }
     else
     {
-        <div class="ui stackable cards centered">
+        <div class="catalog-grid">
             @foreach (var fav in Model)
             {
-                <article class="card" role="group" aria-label="Producto favorito">
-                    <picture class="image">
-                        <img src="@fav.Producto.ImagenPath"
-                             alt="Imagen de @fav.Producto.Nombre"
-                             class="favorito-img"
-                             loading="lazy">
-                    </picture>
+                var p = fav.Producto;
+                if (p == null) { continue; }
 
-                    <div class="content">
-                        <h3 class="header">@fav.Producto.Nombre</h3>
-                        <div class="meta">
-                            <i class="calendar icon"></i>
-                            Agregado el @fav.FechaGuardado.ToString("dd MMM yyyy", culture)
-                        </div>
-                        <div class="description">
-                            <i class="tags icon"></i>
-                            @fav.Producto.PrecioVenta.ToString("C", culture)
-                        </div>
+                // FIX 1: Stock es int no-nullable
+                var disponible = p.Stock > 0;
+                var esNuevo = p.FechaAgregado > DateTime.UtcNow.AddDays(-30);
+
+                <article class="product-card" aria-label="Producto favorito">
+                    <div class="product-media">
+                        @if (esNuevo)
+                        {
+                            <span class="badge-pill badge-new">Nuevo</span>
+                        }
+                        @if (!disponible)
+                        {
+                            <span class="badge-pill badge-out">Agotado</span>
+                        }
+
+                        <!-- Quitar de favoritos -->
+                        <form method="post" asp-controller="Favoritos" asp-action="Toggle" class="fav-toggle">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@p.ProductoID" />
+                            <button type="submit" class="btn btn-heart" title="Quitar de favoritos" aria-label="Quitar de favoritos">
+                                <i class="fa-solid fa-heart"></i>
+                            </button>
+                        </form>
+
+                        <img src="@(string.IsNullOrWhiteSpace(p.ImagenPath) ? Url.Content("~/images/placeholder-product.png") : p.ImagenPath)"
+                             alt="Imagen de @p.Nombre"
+                             loading="lazy"
+                             decoding="async"
+                             onerror="this.onerror=null;this.src='@Url.Content("~/images/placeholder-product.png")';" />
                     </div>
 
-                    <div class="extra content action-buttons">
-                        <form method="post"
-                              asp-controller="Favoritos"
-                              asp-action="Toggle"
-                              class="ui form d-inline">
-                            <input type="hidden" name="id" value="@fav.ProductoId" />
-                            <button type="submit"
-                                    class="ui red icon button"
-                                    title="Quitar de favoritos"
-                                    aria-label="Quitar de favoritos">
-                                <i class="heart icon"></i>
-                            </button>
-                        </form>
+                    <div class="product-body">
+                        <h3 class="product-title" title="@p.Nombre">@p.Nombre</h3>
 
-                        <form asp-controller="Compras"
-                              asp-action="AnadirAlCarrito"
-                              method="post"
-                              class="ui form d-inline">
-                            <input type="hidden" name="ProductoID" value="@fav.ProductoId" />
-                            <input type="hidden" name="Cantidad" value="1" />
-                            <button type="submit"
-                                    class="ui green icon button"
-                                    title="Añadir al carrito"
-                                    aria-label="Añadir al carrito">
-                                <i class="shopping bag icon"></i>
-                            </button>
-                        </form>
+                        <div class="product-price">
+                            @p.PrecioVenta.ToString("C", culture)
+                        </div>
 
-                        <a asp-controller="Productos"
-                           asp-action="Details"
-                           asp-route-id="@fav.ProductoId"
-                           class="ui blue icon button"
-                           title="Ver detalles"
-                           aria-label="Ver detalles del producto">
-                            <i class="eye icon"></i>
-                        </a>
+                        <div class="product-attrs">
+                            @if (!string.IsNullOrWhiteSpace(p.Marca))
+                            {
+                                <span class="attr"><i class="fa-solid fa-tag me-1"></i>@p.Marca</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(p.Color))
+                            {
+                                <span class="attr"><i class="fa-solid fa-palette me-1"></i>@p.Color</span>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(p.Talla))
+                            {
+                                <span class="attr"><i class="fa-solid fa-maximize me-1"></i>@p.Talla</span>
+                            }
+                        </div>
+
+                        <div class="product-actions">
+                            <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="w-100 js-add-cart">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ProductoID" value="@p.ProductoID" />
+                                <input type="hidden" name="Cantidad" value="1" />
+                                <button type="submit" class="btn btn-dark w-100" @(disponible ? "" : "disabled")>
+                                    <i class="fa-solid fa-bag-shopping me-2"></i>Añadir al carrito
+                                </button>
+                            </form>
+
+
+                            <a asp-controller="Compras"
+                               asp-action="VerProducto"
+                               asp-route-productoID="@p.ProductoID"
+                               class="btn btn-outline-secondary w-100">
+                                <i class="fa-regular fa-eye me-2"></i>Ver detalles
+                            </a>
+
+                        </div>
                     </div>
                 </article>
             }
@@ -91,32 +112,216 @@
 </section>
 
 <style>
-    .favorito-img {
-        height: 200px;
-        object-fit: cover;
-        object-position: center;
-        width: 100%;
-        border-radius: 0.28571429rem 0.28571429rem 0 0;
+    /* ======= Grid similar a tu catálogo ======= */
+    .catalog-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill,minmax(240px,1fr));
+        gap: 1.25rem;
     }
 
-    .action-buttons {
-        display: flex;
-        justify-content: space-between;
-        gap: 0.5rem;
-        padding-top: 0.5rem;
+    /* ======= Card ======= */
+    .product-card {
+        border: 1px solid rgba(0,0,0,.06);
+        border-radius: 14px;
+        background: #fff;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,.05);
+        transition: transform .12s ease, box-shadow .12s ease;
     }
 
-        .action-buttons .button {
-            margin: 0;
-            flex: 1;
+        .product-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0,0,0,.08);
         }
 
-    @@media screen and (max-width: 600px) {
-        .action-buttons
-
-    {
-        flex-direction: column;
+    /* Imagen / header */
+    .product-media {
+        position: relative;
+        background: #f6f7f9;
+        aspect-ratio: 4/5;
+        overflow: hidden;
     }
 
+        .product-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+        }
+
+    /* Badges */
+    .badge-pill {
+        position: absolute;
+        top: .75rem;
+        left: .75rem;
+        display: inline-block;
+        padding: .25rem .55rem;
+        font-size: .75rem;
+        font-weight: 700;
+        border-radius: 999px;
+        color: #111;
+        background: #f1f1f1;
+        box-shadow: 0 2px 6px rgba(0,0,0,.06);
+    }
+
+    .badge-new {
+        background: #ffe6a3;
+    }
+
+    .badge-out {
+        background: #ffd0d0;
+        left: auto;
+        right: .75rem;
+    }
+
+    /* Botón corazón */
+    .fav-toggle {
+        position: absolute;
+        right: .75rem;
+        bottom: .75rem;
+    }
+
+    .btn-heart {
+        border: none;
+        outline: none;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #fff;
+        color: #e63946;
+        box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    }
+
+        .btn-heart:hover {
+            filter: brightness(.97);
+        }
+
+    /* Body */
+    .product-body {
+        padding: .9rem .9rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: .55rem;
+    }
+
+    .product-title {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.35em;
+    }
+
+    .product-price {
+        font-weight: 800;
+        color: #111;
+    }
+
+    .product-attrs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .35rem .5rem;
+        font-size: .85rem;
+        color: #555;
+    }
+
+        .product-attrs .attr {
+            background: #f4f4f6;
+            border-radius: 999px;
+            padding: .15rem .6rem;
+        }
+
+    /* Acciones */
+    .product-actions {
+        display: grid;
+        gap: .5rem;
+        margin-top: .35rem;
+    }
+
+    /* Móviles – FIX 2: Razor requiere @@media */
+    @@media (max-width:576px) {
+        .catalog-grid {
+            grid-template-columns: repeat(2, minmax(0,1fr));
+        }
     }
 </style>
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          // Intercepta los POST de quitar favorito (form.fav-toggle)
+          document.querySelectorAll('form.fav-toggle').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+              e.preventDefault();
+
+              const card = form.closest('.product-card');
+              const data = new FormData(form); // incluye __RequestVerificationToken
+              try {
+                const res = await fetch(form.action, {
+                  method: 'POST',
+                  headers: { 'X-Requested-With': 'XMLHttpRequest' }, // marca como AJAX
+                  body: data
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const json = await res.json();
+
+                // El controlador actual devuelve { esFavorito: false } cuando lo quitas
+                if (json && (json.esFavorito === false || json.ok === true)) {
+                  // Animación y remover card
+                  card.classList.add('fade-out');
+                  setTimeout(() => {
+                    card.remove();
+                    actualizarContadorFavoritos();
+                  }, 160);
+                  toast('Producto quitado de favoritos.');
+                } else {
+                  toast('No se pudo actualizar tus favoritos.');
+                }
+              } catch (err) {
+                console.error(err);
+                toast('Error al quitar de favoritos.');
+              }
+            });
+          });
+
+          function actualizarContadorFavoritos() {
+            const grid = document.querySelector('.catalog-grid');
+            const count = grid ? grid.querySelectorAll('.product-card').length : 0;
+
+            const counter = document.querySelector('.text-muted.small strong');
+            if (counter) counter.textContent = count;
+
+            if (count === 0 && grid) {
+              const empty = document.createElement('div');
+              empty.className = 'text-center py-5';
+              empty.innerHTML = `
+                <i class="fa-regular fa-heart fa-3x text-secondary mb-3"></i>
+                <h5 class="mb-2">No has agregado productos a favoritos aún</h5>
+                <a href="/Compras/Catalogo" class="btn btn-primary mt-2">
+                  <i class="fa-solid fa-bag-shopping me-2"></i>Explorar productos
+                </a>`;
+              grid.replaceWith(empty);
+            }
+          }
+
+          function toast(msg) {
+            if (window.$ && $.fn.toast) { $('body').toast({ message: msg }); }
+            else { alert(msg); }
+          }
+        });
+    </script>
+
+    <style>
+        .product-card.fade-out {
+            opacity: 0;
+            transform: translateY(5px);
+            transition: all .15s ease;
+        }
+    </style>
+}

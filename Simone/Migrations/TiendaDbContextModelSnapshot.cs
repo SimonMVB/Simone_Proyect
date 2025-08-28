@@ -342,16 +342,11 @@ namespace Simone.Migrations
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ProductoID1")
-                        .HasColumnType("int");
-
                     b.HasKey("CarritoDetalleID");
 
                     b.HasIndex("CarritoID");
 
                     b.HasIndex("ProductoID");
-
-                    b.HasIndex("ProductoID1");
 
                     b.ToTable("CarritoDetalle");
                 });
@@ -1435,14 +1430,10 @@ namespace Simone.Migrations
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Producto", "Producto")
-                        .WithMany()
+                        .WithMany("CarritoDetalles")
                         .HasForeignKey("ProductoID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Simone.Models.Producto", null)
-                        .WithMany("CarritoDetalles")
-                        .HasForeignKey("ProductoID1");
 
                     b.Navigation("Carrito");
 

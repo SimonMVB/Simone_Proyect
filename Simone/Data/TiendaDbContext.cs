@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System; // Necesario para Type en mapeos y DateTime
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Simone.Models;
@@ -12,13 +13,12 @@ namespace Simone.Data
         {
         }
 
-        // ✅ Tablas del sistema
+        // ✅ Tablas del sistema / Identity
         public DbSet<Usuario> Usuarios { get; set; }
 
         // ✅ Tablas del dominio
-        public virtual ICollection<ActividadUsuario> Actividades { get; set; }
-
-        public DbSet<LogIniciosSesion> LogIniciosSesiones { get; set; }
+        public DbSet<ActividadUsuario> ActividadesUsuarios { get; set; }
+        public DbSet<LogIniciosSesion> LogIniciosSesion { get; set; }
         public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
         public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
         public DbSet<LogActividad> LogsActividad { get; set; }
@@ -41,45 +41,62 @@ namespace Simone.Data
         public DbSet<Gastos> Gastos { get; set; }
         public DbSet<HistorialPrecios> HistorialPrecios { get; set; }
         public DbSet<ImagenesProductos> ImagenesProductos { get; set; }
-        public DbSet<LogIniciosSesion> LogIniciosSesion { get; set; }
         public DbSet<MovimientosInventario> MovimientosInventario { get; set; }
         public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<Producto> Productos { get; set; }
         public DbSet<ProgramasFidelizacion> ProgramasFidelizacion { get; set; }
         public DbSet<Proveedores> Proveedores { get; set; }
-        public DbSet<Reseñas> Reseñas { get; set; }
+        public DbSet<Reseñas> Reseñas { get; set; } // Mantiene el nombre del modelo con ñ
         public DbSet<Subcategorias> Subcategorias { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
 
-        public DbSet<ActividadUsuario> ActividadesUsuarios { get; set; }
-        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Claves primarias compuestas
-            modelBuilder.Entity<ClientesProgramas>().HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
-            modelBuilder.Entity<CuponesUsados>().HasKey(cu => new { cu.ClienteID, cu.PromocionID });
+            // ------------------------------------------------------------
+            // 1) Claves primarias compuestas (N:M)
+            // ------------------------------------------------------------
+            modelBuilder.Entity<ClientesProgramas>()
+                .HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
 
-            // Relaciones de Producto
+            modelBuilder.Entity<CuponesUsados>()
+                .HasKey(cu => new { cu.ClienteID, cu.PromocionID });
 
-            // 🚫 Evitar múltiples cascadas en CarritoDetalle
-            // ✅ Evitar múltiples cascadas en CarritoDetalle
+            // ------------------------------------------------------------
+            // 2) Reglas de negocio: evitar duplicados con índices únicos
+            //    - Un producto solo una vez por Carrito
+            //    - Un producto solo una vez por Usuario en Favoritos
+            // ------------------------------------------------------------
             modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Carrito)
-                .WithMany(c => c.CarritoDetalles)  // ← Este nombre sí existe
-                .HasForeignKey(cd => cd.CarritoID)
-                .OnDelete(DeleteBehavior.Restrict);  // o .NoAction()
+                .HasIndex(cd => new { cd.CarritoID, cd.ProductoID })
+                .IsUnique();
 
+            modelBuilder.Entity<Favorito>()
+                .HasIndex(f => new { f.UsuarioId, f.ProductoId })
+                .IsUnique();
+
+            // ------------------------------------------------------------
+            // 3) Relaciones y DeleteBehavior explícitos
+            //    (evitar cascadas peligrosas, mantener históricos)
+            // ------------------------------------------------------------
+
+            // CarritoDetalle → Producto (Restrict)
             modelBuilder.Entity<CarritoDetalle>()
                 .HasOne(cd => cd.Producto)
-                .WithMany()
+                .WithMany(p => p.CarritoDetalles)
                 .HasForeignKey(cd => cd.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // CarritoDetalle → Carrito (Restrict)
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Carrito)
+                .WithMany(c => c.CarritoDetalles)
+                .HasForeignKey(cd => cd.CarritoID)
+                .OnDelete(DeleteBehavior.Restrict);
 
-
+            // Producto → Proveedor/Subcategoria/Categoria (Restrict)
             modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
@@ -92,14 +109,13 @@ namespace Simone.Data
                 .HasForeignKey(p => p.SubcategoriaID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Subcategoría con categoría
             modelBuilder.Entity<Subcategorias>()
                 .HasOne(s => s.Categoria)
                 .WithMany(c => c.Subcategoria)
                 .HasForeignKey(s => s.CategoriaID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Reseñas con cliente y producto
+            // Reseñas → Cliente/Producto (Restrict)
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Cliente)
                 .WithMany(c => c.Reseñas)
@@ -112,26 +128,7 @@ namespace Simone.Data
                 .HasForeignKey(r => r.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            //Relación Usuario → Rol(solo si tienes clase Rol)
-            //  modelBuilder.Entity<Usuario>()
-            //      .HasOne(u => u.Rol)
-            //      .WithMany(r => r.Usuarios)
-            //      .HasForeignKey(u => u.RolID);
-
-            // Cupones usados
-            modelBuilder.Entity<CuponesUsados>()
-                .HasOne(cu => cu.Cliente)
-                .WithMany(c => c.CuponesUsados)
-                .HasForeignKey(cu => cu.ClienteID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<CuponesUsados>()
-                .HasOne(cu => cu.Promocion)
-                .WithMany(p => p.CuponesUsados)
-                .HasForeignKey(cu => cu.PromocionID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // DetalleVentas
+            // DetalleVentas → Venta/Producto (Restrict)
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Venta)
                 .WithMany(v => v.DetalleVentas)
@@ -144,20 +141,24 @@ namespace Simone.Data
                 .HasForeignKey(dv => dv.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Favorito → Usuario (Restrict)
             modelBuilder.Entity<Favorito>()
-            .HasOne(f => f.Usuario)
-            .WithMany()
-            .HasForeignKey(f => f.UsuarioId)
-            .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(f => f.Usuario)
+                .WithMany() // sin navegación inversa en Usuario
+                .HasForeignKey(f => f.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Explicitly configure the foreign key relationship
+            // Ventas → Cliente (Restrict) (sin navegación en modelo Ventas)
             modelBuilder.Entity<Ventas>()
-                .HasOne(v => v.Clientes)  // Navigation property
-                .WithMany()  // No inverse navigation property on the Cliente model
-                .HasForeignKey(v => v.ClienteID)  // The foreign key property
-                .OnDelete(DeleteBehavior.Restrict);  // Optional, depending on your deletion behavior
+                .HasOne<Cliente>()          // especifica el tipo relacionado
+                .WithMany()                 // sin navegación inversa en Cliente
+                .HasForeignKey(v => v.ClienteID)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Tipos DECIMAL para campos financieros
+            // ------------------------------------------------------------
+            // 4) Estandarizar DECIMAL(18,2) en campos financieros
+            //    (añadimos Ventas.Total a la lista)
+            // ------------------------------------------------------------
             var decimalProps = new (Type entity, string[] props)[]
             {
                 (typeof(Comisiones), new[] { "MontoComision", "PorcentajeComision" }),
@@ -172,30 +173,51 @@ namespace Simone.Data
                 (typeof(Producto), new[] { "PrecioCompra", "PrecioVenta" }),
                 (typeof(ProgramasFidelizacion), new[] { "Descuento" }),
                 (typeof(Promocion), new[] { "Descuento" }),
+                (typeof(Ventas), new[] { "Total" }), // ← añadido
             };
 
             foreach (var (entity, props) in decimalProps)
             {
                 foreach (var prop in props)
                 {
-                    modelBuilder.Entity(entity).Property(prop).HasColumnType("decimal(18,2)");
+                    modelBuilder.Entity(entity)
+                                .Property(prop)
+                                .HasColumnType("decimal(18,2)");
                 }
             }
 
-            // Configuración especial: LogIniciosSesion
+            // ------------------------------------------------------------
+            // 5) Defaults en BD para timestamps (robustez fuera de la app)
+            // ------------------------------------------------------------
+            modelBuilder.Entity<Favorito>()
+                .Property(f => f.FechaGuardado)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            modelBuilder.Entity<CarritoDetalle>()
+                .Property(cd => cd.FechaAgregado)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            modelBuilder.Entity<Cliente>()
+                .Property(c => c.FechaRegistro)
+                .HasDefaultValueSql("GETDATE()"); // Usa GETUTCDATE() si quieres todo en UTC
+
+            // ------------------------------------------------------------
+            // 6) Configuración específica de logs/auditoría
+            // ------------------------------------------------------------
             modelBuilder.Entity<LogIniciosSesion>(entity =>
             {
                 entity.HasKey(l => l.LogID);
                 entity.Property(l => l.Usuario).IsRequired().HasMaxLength(150);
                 entity.Property(l => l.FechaInicio).HasColumnType("datetime");
                 entity.Property(l => l.Exitoso).IsRequired(false);
+                // (Opcional futuro) FK nullable a UsuarioId si decides vincularlo
             });
-            modelBuilder.Entity<ActividadUsuario>()
-         .HasOne(a => a.Usuario)          // Actividad tiene un Usuario
-         .WithMany(u => u.Actividades)     // Usuario tiene muchas Actividades
-         .HasForeignKey(a => a.UsuarioId)  // Clave foránea
-         .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<ActividadUsuario>()
+                .HasOne(a => a.Usuario)
+                .WithMany(u => u.Actividades) // navegación definida en Usuario
+                .HasForeignKey(a => a.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

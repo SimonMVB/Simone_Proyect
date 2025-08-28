@@ -1,13 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Simone.Models;
-using Simone.ViewModels;
 using Simone.Data;
+using Simone.Models;
 using Simone.Services;
+using Simone.ViewModels;
 using System;
-using System.Threading.Tasks;
 using System.Linq;
+using System.Threading.Tasks;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
+
 
 namespace Simone.Controllers
 {
@@ -49,95 +52,107 @@ namespace Simone.Controllers
         /// Redirige al Home si el usuario ya está autenticado.
         /// </summary>
         /// <returns>Vista de inicio de sesión o redirección al Home si ya está autenticado.</returns>
-        [HttpGet]
-        public IActionResult Login()
+
+// GET: /Cuenta/Login
+[HttpGet]
+    [AllowAnonymous]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public IActionResult Login()
+    {
+        // Si ya está autenticado, no muestres el login otra vez
+        if (User?.Identity?.IsAuthenticated == true)
+            return RedirectToAction("Index", "Home");
+
+        // (Opcional) ID de solicitud si lo usas en la vista
+        ViewData["RequestID"] = Guid.NewGuid().ToString();
+        return View();
+    }
+
+    // POST: /Cuenta/Login
+    [HttpPost]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> Login(LoginViewModel model)
+    {
+        if (!ModelState.IsValid)
+            return View(model);
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+
+        if (user == null)
         {
-            // Verifica si el usuario ya está autenticado
-            if (User.Identity.IsAuthenticated)
-            {
-                return RedirectToAction("Index", "Home");
-            }
-
-            // Genera un ID único para la solicitud de inicio de sesión
-            ViewData["RequestID"] = Guid.NewGuid().ToString();
-            return View();
-        }
-
-        /// <summary>
-        /// Acción POST que maneja el inicio de sesión de un usuario.
-        /// Verifica las credenciales y redirige según el rol del usuario.
-        /// </summary>
-        /// <param name="model">Modelo de inicio de sesión que contiene el correo y la contraseña del usuario.</param>
-        /// <returns>Redirige a la vista correspondiente si el inicio de sesión es exitoso o muestra un mensaje de error.</returns>
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(LoginViewModel model)
-        {
-            if (!ModelState.IsValid)
-                return View(model);
-
-            var user = await _userManager.FindByEmailAsync(model.Email);
-
-            if (user == null)
-            {
-                _logger.LogWarning("Intento con usuario no registrado: {Email}", model.Email);
-                TempData["MensajeError"] = "Correo o contraseña incorrectos.";
-                return View(model);
-            }
-
-            if (!user.Activo)
-            {
-                _logger.LogWarning("Usuario inactivo: {Email}", model.Email);
-                TempData["MensajeError"] = "Tu cuenta está desactivada. Contacta con soporte.";
-                return View(model);
-            }
-
-            // 🧠 Refresca el estado del usuario desde la base de datos
-            await _context.Entry(user).ReloadAsync();
-
-            // 🧪 Usa el email (como UserName) si no cambiaste el campo UserName manualmente
-            var result = await _signInManager.PasswordSignInAsync(user.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
-
-            if (result.Succeeded)
-            {
-                _logger.LogInformation("Inicio de sesión exitoso: {Email}", model.Email);
-                await RegistrarLog(model.Email, true);
-                await _logService.Registrar($"Inicio de sesión exitoso para {model.Email}");
-                return RedirectToAction("Index", "Home");
-            }
-
-            if (result.IsLockedOut)
-            {
-                _logger.LogWarning("Usuario bloqueado por intentos fallidos: {Email}", model.Email);
-                TempData["MensajeError"] = "Tu cuenta ha sido bloqueada por múltiples intentos fallidos. Intenta más tarde.";
-                await RegistrarLog(model.Email, false);
-                return View("Lockout");
-            }
-
-            if (result.IsNotAllowed)
-            {
-                _logger.LogWarning("Login no permitido para: {Email}", model.Email);
-                TempData["MensajeError"] = "Tu cuenta no está habilitada para iniciar sesión.";
-                return View(model);
-            }
-
-            _logger.LogWarning("Contraseña incorrecta: {Email}", model.Email);
+            _logger.LogWarning("Intento con usuario no registrado: {Email}", model.Email);
             TempData["MensajeError"] = "Correo o contraseña incorrectos.";
-            await RegistrarLog(model.Email, false);
-            await _logService.Registrar($"Intento de inicio de sesión fallido para {model.Email}");
             return View(model);
         }
 
+        if (!user.Activo)
+        {
+            _logger.LogWarning("Usuario inactivo: {Email}", model.Email);
+            TempData["MensajeError"] = "Tu cuenta está desactivada. Contacta con soporte.";
+            return View(model);
+        }
+
+        // Limpia cualquier cookie/estado previo del sign-in (clave para evitar el bucle)
+        await _signInManager.SignOutAsync();
+
+        // Autentica por UserName (en tu registro: UserName = Email)
+        var result = await _signInManager.PasswordSignInAsync(
+            user.UserName ?? user.Email,
+            model.Password,
+            model.RememberMe,
+            lockoutOnFailure: true
+        );
+
+        if (result.Succeeded)
+        {
+            _logger.LogInformation("Inicio de sesión exitoso: {Email}", model.Email);
+            await RegistrarLog(model.Email, true);
+            if (_logService != null) await _logService.Registrar($"Inicio de sesión exitoso para {model.Email}");
+            return RedirectToAction("Index", "Home");
+        }
+
+        if (result.IsLockedOut)
+        {
+            _logger.LogWarning("Usuario bloqueado por intentos fallidos: {Email}", model.Email);
+            TempData["MensajeError"] = "Tu cuenta ha sido bloqueada por múltiples intentos fallidos. Intenta más tarde.";
+            await RegistrarLog(model.Email, false);
+            return View("Lockout");
+        }
+
+        if (result.IsNotAllowed)
+        {
+            _logger.LogWarning("Login no permitido para: {Email}", model.Email);
+            TempData["MensajeError"] = "Tu cuenta no está habilitada para iniciar sesión.";
+            return View(model);
+        }
+
+        if (result.RequiresTwoFactor)
+        {
+            TempData["MensajeError"] = "Se requiere un segundo factor de autenticación.";
+            return View(model);
+        }
+
+        _logger.LogWarning("Contraseña incorrecta: {Email}", model.Email);
+        TempData["MensajeError"] = "Correo o contraseña incorrectos.";
+        await RegistrarLog(model.Email, false);
+        if (_logService != null) await _logService.Registrar($"Intento de inicio de sesión fallido para {model.Email}");
+        return View(model);
+    }
 
 
 
-        /// <summary>
-        /// Registra los intentos de inicio de sesión en la base de datos.
-        /// </summary>
-        /// <param name="email">El correo del usuario que intentó iniciar sesión.</param>
-        /// <param name="exitoso">Indica si el inicio de sesión fue exitoso.</param>
-        /// <returns>Un task que completa la operación de guardar el log en la base de datos.</returns>
-        private async Task RegistrarLog(string email, bool exitoso)
+
+
+
+    /// <summary>
+    /// Registra los intentos de inicio de sesión en la base de datos.
+    /// </summary>
+    /// <param name="email">El correo del usuario que intentó iniciar sesión.</param>
+    /// <param name="exitoso">Indica si el inicio de sesión fue exitoso.</param>
+    /// <returns>Un task que completa la operación de guardar el log en la base de datos.</returns>
+    private async Task RegistrarLog(string email, bool exitoso)
         {
             var log = new LogIniciosSesion
             {
@@ -326,48 +341,53 @@ namespace Simone.Controllers
         public IActionResult OlvidePassword() => View();
 
         [HttpGet]
-        public IActionResult CambiarDireccion() => View();
+        [Authorize]
+        public async Task<IActionResult> CambiarDireccion(string? returnUrl = null)
+        {
+            var u = await _userManager.GetUserAsync(User);
+            if (u == null) return RedirectToAction("Login");
+
+            ViewBag.ReturnUrl = returnUrl; // para volver a la pantalla que te llamó (checkout, perfil, etc.)
+            return View(u);                // enviamos el propio Usuario a la vista
+        }
+
 
         /// <summary>
         /// Acción POST que guarda la nueva dirección del usuario.
         /// </summary>
         [HttpPost]
-        public IActionResult GuardarDireccion(string direccionReferencia, string latitud, string longitud)
-        {
-            ViewBag.UserDireccion = direccionReferencia;
-            TempData["MensajeExito"] = "Dirección guardada correctamente.";
-            return RedirectToAction("Index", "Home");
-        }
-
-        [HttpPost]
+        [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CambiarPassword(CambiarPasswordViewModel model)
+        public async Task<IActionResult> GuardarDireccion(
+            string? id,              // se ignora: siempre actualizamos el usuario autenticado
+            string? direccion,
+            string? ciudad,
+            string? provincia,
+            string? referencia,
+            string? telefono,
+            string? returnUrl)
         {
-            if (!ModelState.IsValid)
-                return View("MiPerfil", model); // Asegúrate de tener vista MiPerfil compatible
+            var u = await _userManager.GetUserAsync(User);
+            if (u == null) return RedirectToAction("Login");
 
-            var usuario = await _userManager.GetUserAsync(User);
-            if (usuario == null)
-            {
-                TempData["MensajeError"] = "Usuario no encontrado.";
-                return RedirectToAction("Login");
-            }
+            u.Direccion = string.IsNullOrWhiteSpace(direccion) ? null : direccion.Trim();
+            u.Ciudad = string.IsNullOrWhiteSpace(ciudad) ? null : ciudad.Trim();
+            u.Provincia = string.IsNullOrWhiteSpace(provincia) ? null : provincia.Trim();
+            u.Referencia = string.IsNullOrWhiteSpace(referencia) ? null : referencia.Trim();
+            u.Telefono = string.IsNullOrWhiteSpace(telefono) ? null : telefono.Trim();
 
-            var cambio = await _userManager.ChangePasswordAsync(usuario, model.CurrentPassword, model.NewPassword);
-            if (cambio.Succeeded)
-            {
-                await _logService.Registrar($"Cambió su contraseña: {usuario.Email}");
-                TempData["MensajeExito"] = "Contraseña actualizada correctamente.";
-                return RedirectToAction("MiPerfil");
-            }
+            _context.Update(u);
+            await _context.SaveChangesAsync();
+            if (_logService != null) await _logService.Registrar($"Actualizó dirección de envío: {u.Email}");
 
-            foreach (var error in cambio.Errors)
-            {
-                ModelState.AddModelError(string.Empty, error.Description);
-            }
+            TempData["MensajeExito"] = "Dirección guardada correctamente.";
 
-            return View("MiPerfil", model); // Vuelve a la misma vista con errores
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction("Perfil");
         }
+
 
 
         /// <summary>

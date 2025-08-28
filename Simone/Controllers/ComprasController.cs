@@ -206,62 +206,83 @@ namespace Simone.Controllers
         }
 
         /// <summary>
-        /// Acción para añadir un producto al carrito del usuario.
+        /// Añadir un producto al carrito (soporta AJAX y POST normal).
         /// </summary>
-        /// <param name="model">Modelo que contiene los detalles del producto y la cantidad a añadir</param>
-        /// <returns>Redirige a la última página o al catálogo si el producto se añade correctamente</returns>
         [HttpPost]
-        public async Task<IActionResult> AnadirAlCarrito(CatalogoViewModel model)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AnadirAlCarrito([Bind("ProductoID,Cantidad")] CatalogoViewModel model, CancellationToken ct = default)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
+                if (EsAjax()) return Json(new { ok = false, error = "Debes iniciar sesión." });
                 TempData["MensajeError"] = "Debes iniciar sesión para añadir productos al carrito.";
-                return RedirectToAction("Login", "Cuenta"); // Redirige al login si el usuario no está autenticado
+                return RedirectToAction("Login", "Cuenta");
             }
+
+            // Normaliza cantidad
+            if (model.Cantidad <= 0) model.Cantidad = 1;
 
             var producto = await _productos.GetByIdAsync(model.ProductoID);
             if (producto == null)
             {
-                TempData["MensajeError"] = "Producto no encontrado";
-                return View("Invalido"); // Si el producto no se encuentra
+                if (EsAjax()) return Json(new { ok = false, error = "Producto no encontrado." });
+                TempData["MensajeError"] = "Producto no encontrado.";
+                return RedirectToReferrerOr("Catalogo");
             }
 
-            // Obtiene la cantidad existente de este producto en el carrito del usuario
+            // Asegura carrito
             var carrito = await _carrito.GetByClienteIdAsync(user.Id);
-            var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+            if (carrito == null)
+            {
+                await _carrito.AddAsync(user);
+                carrito = await _carrito.GetByClienteIdAsync(user.Id);
+            }
 
-            // Calcula la cantidad total del producto en el carrito
-            var cantidadEnCarrito = carritoDetalles
-                .Where(c => c.ProductoID == model.ProductoID)
-                .Sum(c => c.Cantidad);
+            // Carga detalles actuales
+            var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+            var cantidadEnCarrito = detalles.Where(c => c.ProductoID == model.ProductoID).Sum(c => c.Cantidad);
 
-            // Valida si la cantidad solicitada excede el stock disponible
+            // Valida stock total solicitado (lo que ya hay + lo que piden)
             if (cantidadEnCarrito + model.Cantidad > producto.Stock)
             {
-                TempData["MensajeError"] = "La cantidad de producto requerido supera el stock disponible.";
-                return RedirectToAction("Catalogo", "Compras"); // Redirige al catálogo si excede el stock
+                var msg = "La cantidad solicitada supera el stock disponible.";
+                if (EsAjax()) return Json(new { ok = false, error = msg, stock = producto.Stock, enCarrito = cantidadEnCarrito });
+                TempData["MensajeError"] = msg;
+                return RedirectToReferrerOr("Catalogo");
             }
 
-            // Si el producto se añade correctamente al carrito
-            var success = await _carrito.AnadirProducto(producto, user, model.Cantidad);
-            if (success)
+            // Añadir
+            var ok = await _carrito.AnadirProducto(producto, user, model.Cantidad);
+            if (!ok)
             {
-                TempData["MensajeExito"] = "Producto añadido al carrito con éxito.";
-                return RedirectToAction("Catalogo", "Compras"); // Redirige al catálogo si el producto se añade correctamente
+                if (EsAjax()) return Json(new { ok = false, error = "No se pudo añadir al carrito." });
+                TempData["MensajeError"] = "No se pudo añadir el producto al carrito.";
+                return RedirectToReferrerOr("Catalogo");
             }
-            else
-            {
-                TempData["MensajeError"] = "No se pudo añadir el producto al carrito";
-                return View("Invalido"); // Maneja el fallo
-            }
+
+            // Nuevo contador de ítems
+            var count = await _context.CarritoDetalle
+                .Where(cd => cd.CarritoID == carrito.CarritoID)
+                .SumAsync(cd => cd.Cantidad, ct);
+
+            if (EsAjax()) return Json(new { ok = true, count });
+
+            TempData["MensajeExito"] = "Producto añadido al carrito con éxito.";
+            return RedirectToReferrerOr("Catalogo");
         }
 
-        /// <summary>
-        /// Acción para eliminar un artículo del carrito.
-        /// </summary>
-        /// <param name="carritoDetalleID">ID del artículo en el carrito a eliminar</param>
-        /// <returns>Redirige a la vista del catálogo después de la eliminación</returns>
+        // Helpers en el mismo controlador
+        private bool EsAjax() =>
+            string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+        private IActionResult RedirectToReferrerOr(string action, string controller = "Compras")
+        {
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
+            return RedirectToAction(action, controller);
+        }
+
         [HttpPost]
         public async Task<IActionResult> EliminarArticulo(int carritoDetalleID)
         {
@@ -303,49 +324,63 @@ namespace Simone.Controllers
         /// </summary>
         /// <returns>Redirige a una página de éxito si la compra es exitosa</returns>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarCompra()
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
                 TempData["MensajeError"] = "Debes iniciar sesión para confirmar la compra.";
-                return RedirectToAction("Login", "Cuenta"); // Redirige a login si el usuario no está autenticado
+                return RedirectToAction("Login", "Cuenta");
             }
 
             var carrito = await _carrito.GetByClienteIdAsync(user.Id);
-            var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-
-            // Verifica si hay artículos en el carrito
-            if (!carritoDetalles.Any())
+            if (carrito == null)
             {
                 TempData["MensajeError"] = "Tu carrito está vacío.";
-                return RedirectToAction("CompraError", "Compras"); // Si no hay artículos, redirige a la página de error
+                return RedirectToAction("Resumen");
             }
 
-            // Verifica si el usuario tiene dirección
-            if (string.IsNullOrEmpty(user.Direccion))
+            var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+            if (carritoDetalles == null || !carritoDetalles.Any())
+            {
+                TempData["MensajeError"] = "Tu carrito está vacío.";
+                return RedirectToAction("Resumen");
+            }
+
+            // Si no tiene dirección, permanece en Resumen con datos cargados
+            if (string.IsNullOrWhiteSpace(user.Direccion))
             {
                 ViewBag.HasAddress = false;
-                return View("Resumen"); // Si no tiene dirección, se queda en la página de resumen
+                ViewBag.CarritoDetalles = carritoDetalles;
+                ViewBag.TotalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
+                TempData["MensajeError"] = "Agrega una dirección para continuar con la compra.";
+                return View("Resumen", user);
             }
 
             try
             {
-                var result = await _carrito.ProcessCartDetails(carrito.CarritoID, user); // Procesa los detalles del carrito
-                if (result)
+                var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
+
+                if (ok)
                 {
-                    await _carrito.AddAsync(user); // Crea un nuevo carrito para el usuario
+                    // crea un carrito nuevo y limpio para siguientes compras
+                    await _carrito.AddAsync(user);
+                    TempData["MensajeExito"] = "Compra realizada con éxito.";
+                    return RedirectToAction("CompraExito", "Compras");
                 }
 
-                TempData["MensajeExito"] = "Compra realizada con éxito.";
-                return RedirectToAction("CompraExito", "Compras"); // Redirige a la página de éxito
+                // Si el servicio devolvió false, regresamos a Resumen (no a Exito)
+                TempData["MensajeError"] = "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
+                return RedirectToAction("Resumen");
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Error al procesar el pedido: {ex.Message}"); // Registra cualquier error
+                _logger.LogError(ex, "Error al procesar el pedido");
                 TempData["MensajeError"] = "Hubo un error al procesar tu pedido.";
-                return RedirectToAction("CompraError", "Compras"); // Redirige a la página de error en caso de fallo
+                return RedirectToAction("CompraError", "Compras");
             }
         }
+
     }
 }

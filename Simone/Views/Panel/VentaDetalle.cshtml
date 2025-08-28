@@ -1,0 +1,220 @@
+@model Simone.ViewModels.Reportes.VentaDetalleVM
+@using System.Globalization
+@{
+    ViewData["Title"] = "Detalle de venta";
+    var culture = new CultureInfo("es-EC");
+
+    string Safe(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
+
+    // Dirección del perfil (fallback)
+    var dirPerfil = string.IsNullOrWhiteSpace(Model.Direccion) ? null : Model.Direccion;
+    var telPerfil = string.IsNullOrWhiteSpace(Model.Telefono) ? null : Model.Telefono;
+
+    // Elegir la dirección usada en la compra:
+    // 1) la última registrada ANTES o EN la fecha de la venta
+    // 2) si no hay, la última que tenga el cliente
+    var dirUsada = (Model.Direcciones ?? Enumerable.Empty<Simone.ViewModels.Reportes.DireccionVM>())
+                    .Where(d => d.FechaRegistro <= Model.Fecha)
+                    .OrderByDescending(d => d.FechaRegistro)
+                    .FirstOrDefault()
+                ?? (Model.Direcciones ?? Enumerable.Empty<Simone.ViewModels.Reportes.DireccionVM>())
+                    .OrderByDescending(d => d.FechaRegistro)
+                    .FirstOrDefault();
+
+    // Resto de direcciones (si quieres listarlas aparte)
+    var otrasDirecciones = (Model.Direcciones ?? Enumerable.Empty<Simone.ViewModels.Reportes.DireccionVM>())
+                            .Where(d => dirUsada == null || d.DireccionID != dirUsada.DireccionID)
+                            .OrderByDescending(d => d.FechaRegistro)
+                            .ToList();
+
+    var yaEnviado = string.Equals(Model.Estado, "Enviado", StringComparison.OrdinalIgnoreCase);
+}
+
+<div class="container-xl py-4">
+    <a asp-action="Reportes" asp-controller="Panel" class="btn btn-link mb-3">
+        ← Volver a compradores
+    </a>
+
+    <div class="row g-3">
+        <!-- Persona -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Información de la persona</h5>
+                    <div><strong>Nombre:</strong> @Safe(Model.Nombre)</div>
+                    <div><strong>Email:</strong> @Safe(Model.Email)</div>
+                    <div><strong>Teléfono:</strong> @Safe(Model.Telefono)</div>
+                    <div><strong>Dirección (perfil):</strong> @Safe(Model.Direccion)</div>
+
+                    <hr />
+                    <div><strong>Venta #</strong> @Model.VentaID</div>
+                    <div><strong>Fecha:</strong> @Model.Fecha.ToString("dd/MM/yyyy HH:mm")</div>
+                    <div><strong>Método de pago:</strong> @Safe(Model.MetodoPago)</div>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                        <strong>Estado:</strong>
+                        <span class="badge @(yaEnviado ? "bg-success" : "bg-secondary")">
+                            @Safe(Model.Estado)
+                        </span>
+                    </div>
+
+                    <div class="mt-3">
+                        <form method="post"
+                              asp-action="MarcarEnviada"
+                              asp-controller="Panel"
+                              class="d-inline js-mark-shipped">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@Model.VentaID" />
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-success"
+                                    @(yaEnviado ? "disabled" : null)>
+                                <i class="fa-solid fa-truck-fast me-1"></i> Marcar como enviado
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dirección usada en la compra -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Dirección de envío usada</h5>
+
+                    @if (dirUsada != null)
+                    {
+                        var ciudad = string.IsNullOrWhiteSpace(dirUsada.Ciudad) ? null : dirUsada.Ciudad;
+                        var estado = string.IsNullOrWhiteSpace(dirUsada.EstadoProvincia) ? null : dirUsada.EstadoProvincia;
+                        var cp = string.IsNullOrWhiteSpace(dirUsada.CodigoPostal) ? null : dirUsada.CodigoPostal;
+                        var linea2 = string.Join(", ", new[] { ciudad, estado }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                        <div class="border rounded p-3">
+                            <div class="fw-bold">@Safe(dirUsada.Calle)</div>
+                            @if (!string.IsNullOrWhiteSpace(linea2) || !string.IsNullOrWhiteSpace(cp))
+                            {
+                                <div class="text-muted small">
+                                    @linea2 @(string.IsNullOrWhiteSpace(cp) ? "" : $"({cp})")
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(dirUsada.TelefonoContacto))
+                            {
+                                <div class="text-muted small">Tel: @dirUsada.TelefonoContacto</div>
+                            }
+                            <div class="text-muted small">Registrada: @dirUsada.FechaRegistro.ToString("dd/MM/yyyy")</div>
+                        </div>
+                    }
+                    else if (!string.IsNullOrWhiteSpace(dirPerfil) || !string.IsNullOrWhiteSpace(telPerfil))
+                    {
+                        <div class="border rounded p-3">
+                            <div class="fw-bold">Sin direcciones guardadas</div>
+                            <div class="text-muted small mb-2">Se usó la dirección del perfil en el momento de la compra.</div>
+                            @if (!string.IsNullOrWhiteSpace(dirPerfil))
+                            {
+                                <div>@dirPerfil</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(telPerfil))
+                            {
+                                <div class="text-muted small">Tel: @telPerfil</div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">No hay información de dirección para esta venta.</div>
+                    }
+
+                    @if (otrasDirecciones.Any())
+                    {
+                        <hr />
+                        <h6 class="text-muted mb-2">Otras direcciones del cliente</h6>
+                        <ul class="list-group list-group-flush">
+                            @foreach (var d in otrasDirecciones)
+                            {
+                                var ciudad2 = string.IsNullOrWhiteSpace(d.Ciudad) ? null : d.Ciudad;
+                                var estado2 = string.IsNullOrWhiteSpace(d.EstadoProvincia) ? null : d.EstadoProvincia;
+                                var cp2 = string.IsNullOrWhiteSpace(d.CodigoPostal) ? null : d.CodigoPostal;
+                                var linea22 = string.Join(", ", new[] { ciudad2, estado2 }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                                <li class="list-group-item">
+                                    <div class="fw-semibold">@Safe(d.Calle)</div>
+                                    @if (!string.IsNullOrWhiteSpace(linea22) || !string.IsNullOrWhiteSpace(cp2))
+                                    {
+                                        <div class="text-muted small">
+                                            @linea22 @(string.IsNullOrWhiteSpace(cp2) ? "" : $"({cp2})")
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(d.TelefonoContacto))
+                                    {
+                                        <div class="text-muted small">Tel: @d.TelefonoContacto</div>
+                                    }
+                                    <div class="text-muted small">Registrada: @d.FechaRegistro.ToString("dd/MM/yyyy")</div>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @{
+                        var returnUrl = Context.Request?.Path + Context.Request?.QueryString;
+                    }
+                    <a asp-controller="Cuenta"
+                       asp-action="CambiarDireccion"
+                       asp-route-returnUrl="@returnUrl"
+                       class="btn btn-outline-primary w-100 mt-3">
+                        <i class="fa-regular fa-pen-to-square me-1"></i>Editar dirección del perfil
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Productos -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Productos</h5>
+                    @if (Model.Detalles == null || !Model.Detalles.Any())
+                    {
+                        <div class="text-muted">Sin detalles.</div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var d in Model.Detalles)
+                            {
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>@d.Producto <span class="text-muted">× @d.Cantidad</span></span>
+                                    <span>@d.Subtotal.ToString("C", culture)</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    <hr />
+                    <div class="d-flex justify-content-between">
+                        <strong>Total</strong>
+                        <strong>@Model.Total.ToString("C", culture)</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const form = document.querySelector('.js-mark-shipped');
+          if (!form) return;
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const res = await fetch(form.action, {
+              method:'POST',
+              headers:{ 'X-Requested-With':'XMLHttpRequest' },
+              body: new FormData(form)
+            });
+            if (res.ok) {
+              const json = await res.json();
+              if (json.ok) location.reload();
+            }
+          });
+        });
+    </script>
+}

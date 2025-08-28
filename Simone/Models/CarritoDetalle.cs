@@ -32,7 +32,7 @@ namespace Simone.Models
         /// Identificador del producto.
         /// </summary>
         [Required(ErrorMessage = "El ProductoID es obligatorio.")]
-        [ForeignKey(nameof(Producto))]
+        
         public int ProductoID { get; set; }
 
         /// <summary>

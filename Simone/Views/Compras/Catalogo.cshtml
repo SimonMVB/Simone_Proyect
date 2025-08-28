@@ -1,6 +1,14 @@
 @model CatalogoViewModel
 
 @{
+    /*
+      Esta vista se construye a partir del código proporcionado por el usuario y se
+      ha estilizado para ofrecer una apariencia más moderna y pulida. Se mantiene
+      toda la funcionalidad de filtrado y navegación pero se mejoran los colores,
+      las sombras y la disposición de los elementos para una experiencia visual
+      más agradable.  Se han conservado las variables y la lógica Razor original.
+    */
+
     string BuildUrl(int? categoriaID, List<int> subcategoriaIDs, int pageNumber, int pageSize)
     {
         var query = new List<string>();
@@ -20,7 +28,8 @@
 
 <div class="catalog-container">
     <!-- Sidebar Categorias y Subcategorias -->
-    <div class="catalog-sidebar">
+    <aside class="catalog-sidebar">
+        <!-- Sección de categorías -->
         <div class="sidebar-section">
             <div class="sidebar-header">
                 <i class="fas fa-list"></i> Categorías
@@ -40,7 +49,7 @@
                         <div class="form-option">
                             <input class="form-check-input" type="radio" name="categoriaID" value="@cat.CategoriaID"
                                    id="cat-@cat.CategoriaID" onchange="this.form.submit()"
-                            @(cat.CategoriaID == Model.SelectedCategoriaID ? "checked" : "")>
+                                   @(cat.CategoriaID == Model.SelectedCategoriaID ? "checked" : "")>
                             <label class="form-check-label" for="cat-@cat.CategoriaID">
                                 <span class="checkmark"></span>
                                 <span class="option-text">@cat.Nombre</span>
@@ -53,6 +62,7 @@
 
         @if (Model.SelectedCategoriaID.HasValue)
         {
+            <!-- Sección de subcategorías -->
             <div class="sidebar-section">
                 <div class="sidebar-header">
                     <i class="fas fa-tags"></i> Subcategorías
@@ -66,7 +76,7 @@
                                 <input class="form-check-input" type="checkbox" name="subcategoriaIDs"
                                        value="@subcat.SubcategoriaID" id="subcat-@subcat.SubcategoriaID"
                                        onchange="document.getElementById('subcatForm').submit()"
-                                @(Model.SelectedSubcategoriaIDs.Contains(subcat.SubcategoriaID) ? "checked" : "")>
+                                       @(Model.SelectedSubcategoriaIDs.Contains(subcat.SubcategoriaID) ? "checked" : "")>
                                 <label class="form-check-label" for="subcat-@subcat.SubcategoriaID">
                                     <span class="checkmark"></span>
                                     <span class="option-text">@subcat.NombreSubcategoria</span>
@@ -77,20 +87,12 @@
                 </div>
             </div>
         }
-
-        @* <div class="sidebar-promo">
-            <div class="promo-content">
-                <span class="promo-text">Nueva Colección</span>
-                <span class="promo-highlight">Otoño 2023</span>
-                <button class="promo-btn">Ver más</button>
-            </div>
-        </div> *@
-    </div>
+    </aside>
 
     <!-- Productos -->
-    <div class="catalog-products">
-        <div class="products-header">
-            <h2>@(Model.SelectedCategoriaID.HasValue ? Model.Categorias.First(c => c.CategoriaID == Model.SelectedCategoriaID).Nombre : "Todos los productos")</h2>
+    <section class="catalog-products">
+        <header class="products-header">
+            <h2>@(Model.SelectedCategoriaID.HasValue? Model.Categorias.First(c => c.CategoriaID == Model.SelectedCategoriaID).Nombre : "Todos los productos")</h2>
             <div class="sort-options">
                 <select class="form-select">
                     <option>Ordenar por</option>
@@ -100,12 +102,12 @@
                     <option>Más vendidos</option>
                 </select>
             </div>
-        </div>
+        </header>
 
         <div class="products-grid">
             @foreach (var p in Model.Productos)
             {
-                <div class="product-card">
+                <article class="product-card">
                     <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
                         <div class="product-image-container">
                             <img src="@p.ImagenPath" class="product-image" alt="@p.Nombre">
@@ -152,9 +154,7 @@
                             <i class="fas fa-times-circle"></i> No hay stock
                         </button>
                     }
-                </div>
-
-
+                </article>
             }
         </div>
 
@@ -178,34 +178,26 @@
                 </ul>
             </nav>
         </div>
-    </div>
+    </section>
 </div>
 
 <style>
-    .out-of-stock-badge {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        background-color: #f44336;
-        color: white;
-        padding: 3px 8px;
-        border-radius: 3px;
-        font-size: 12px;
-        font-weight: 600;
-        z-index: 1;
-    }
+    /* Variables de color mejoradas */
     :root {
-        --primary-dark: #1A1A1A; /* Negro */
+        --primary-dark: #1A1A1A; /* Negro profundo */
         --primary-light: #FFFFFF; /* Blanco */
-        --accent-purple: #4B0082; /* Morado oscuro */
+        --accent-purple: #6A0DAD; /* Morado profundo */
+        --accent-purple-light: #8c45c7; /* Morado claro usado en hover */
         --accent-gold: #D4AF37; /* Dorado */
-        --light-gray: #F5F5F5;
-        --medium-gray: #E0E0E0;
-        --dark-gray: #333333;
-        --text-color: #333333;
-        --text-light: #777777;
+        --light-gray: #FAFAFA; /* Fondo general suave */
+        --medium-gray: #E6E6E6; /* Bordes y divisiones suaves */
+        --dark-gray: #333333; /* Texto principal */
+        --text-color: #333333; /* Texto base */
+        --text-light: #777777; /* Texto secundario */
+        --shadow-color: rgba(0, 0, 0, 0.08); /* Sombras suaves */
     }
 
+    /* Reset y tipografía */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -216,33 +208,35 @@
     body {
         background-color: var(--light-gray);
         color: var(--text-color);
+        line-height: 1.45;
     }
 
+    /* Contenedor principal */
     .catalog-container {
         display: flex;
-        max-width: 1400px;
-        margin: 30px auto;
-        padding: 0 15px;
-        gap: 20px;
+        max-width: 1440px;
+        margin: 40px auto;
+        padding: 0 20px;
+        gap: 30px;
     }
 
-    /* Sidebar Styles */
+    /* Sidebar */
     .catalog-sidebar {
-        flex: 0 0 250px;
+        flex: 0 0 260px;
     }
 
     .sidebar-section {
         background-color: var(--primary-light);
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        margin-bottom: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px var(--shadow-color);
+        margin-bottom: 25px;
         overflow: hidden;
     }
 
     .sidebar-header {
-        background-color: var(--primary-dark);
+        background: linear-gradient(90deg, var(--accent-purple) 0%, var(--accent-purple-light) 100%);
         color: var(--primary-light);
-        padding: 15px;
+        padding: 16px;
         font-weight: 600;
         font-size: 16px;
         display: flex;
@@ -255,11 +249,12 @@
         }
 
     .sidebar-body {
-        padding: 15px;
+        padding: 18px;
     }
 
+    /* Opciones de formulario */
     .form-option {
-        margin-bottom: 12px;
+        margin-bottom: 15px;
         position: relative;
     }
 
@@ -277,9 +272,10 @@
         display: flex;
         align-items: center;
         cursor: pointer;
-        font-size: 14px;
+        font-size: 15px;
         color: var(--text-color);
-        transition: all 0.2s;
+        transition: color 0.2s;
+        user-select: none;
     }
 
         .form-check-label:hover {
@@ -288,13 +284,13 @@
 
     .checkmark {
         position: relative;
-        height: 18px;
-        width: 18px;
+        height: 20px;
+        width: 20px;
         background-color: var(--light-gray);
-        border: 1px solid var(--medium-gray);
-        margin-right: 10px;
-        border-radius: 3px;
-        transition: all 0.2s;
+        border: 2px solid var(--medium-gray);
+        margin-right: 12px;
+        border-radius: 4px;
+        transition: all 0.25s;
     }
 
     .form-check-input[type="radio"] + .checkmark {
@@ -309,8 +305,8 @@
     .form-check-input[type="radio"]:checked ~ .checkmark::after {
         content: "";
         position: absolute;
-        top: 4px;
-        left: 4px;
+        top: 5px;
+        left: 5px;
         width: 8px;
         height: 8px;
         border-radius: 50%;
@@ -326,59 +322,14 @@
         left: 50%;
         transform: translate(-50%, -50%);
         color: var(--primary-light);
-        font-size: 10px;
+        font-size: 12px;
     }
 
     .option-text {
         flex: 1;
     }
 
-    /* Promo Section */
-    .sidebar-promo {
-        background: linear-gradient(135deg, var(--accent-purple), #2E0854);
-        border-radius: 8px;
-        padding: 20px;
-        color: var(--primary-light);
-        text-align: center;
-        margin-top: 20px;
-    }
-
-    .promo-content {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .promo-text {
-        font-size: 14px;
-        opacity: 0.9;
-    }
-
-    .promo-highlight {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--accent-gold);
-    }
-
-    .promo-btn {
-        background-color: var(--accent-gold);
-        color: var(--primary-dark);
-        border: none;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 14px;
-        cursor: pointer;
-        margin-top: 10px;
-        transition: all 0.3s;
-    }
-
-        .promo-btn:hover {
-            background-color: var(--primary-light);
-            transform: translateY(-2px);
-        }
-
-    /* Products Section */
+    /* Productos */
     .catalog-products {
         flex: 1;
     }
@@ -387,50 +338,52 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 25px;
+        margin-bottom: 30px;
     }
 
         .products-header h2 {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 700;
             color: var(--primary-dark);
         }
 
     .sort-options .form-select {
         border: 1px solid var(--medium-gray);
-        border-radius: 20px;
-        padding: 8px 15px;
-        font-size: 14px;
+        border-radius: 25px;
+        padding: 9px 20px;
+        font-size: 15px;
         color: var(--text-color);
         cursor: pointer;
         outline: none;
-        width: 200px;
+        width: 220px;
+        background-color: var(--primary-light);
+        transition: border 0.25s;
     }
 
         .sort-options .form-select:focus {
             border-color: var(--accent-purple);
         }
 
-    /* Products Grid */
+    /* Grid de productos */
     .products-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 25px;
     }
 
-    /* Product Card */
+    /* Tarjeta de producto */
     .product-card {
         background-color: var(--primary-light);
-        border-radius: 8px;
+        border-radius: 14px;
         overflow: hidden;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px var(--shadow-color);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
         position: relative;
     }
 
         .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-6px);
+            box-shadow: 0 10px 20px var(--shadow-color);
         }
 
     .product-link {
@@ -456,17 +409,30 @@
     }
 
     .product-card:hover .product-image {
-        transform: scale(1.05);
+        transform: scale(1.07);
     }
 
     .product-badge {
         position: absolute;
-        top: 10px;
-        left: 10px;
+        top: 12px;
+        left: 12px;
         background-color: var(--accent-gold);
         color: var(--primary-dark);
-        padding: 3px 8px;
-        border-radius: 3px;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+        z-index: 1;
+    }
+
+    .out-of-stock-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background-color: #e74c3c;
+        color: var(--primary-light);
+        padding: 4px 10px;
+        border-radius: 4px;
         font-size: 12px;
         font-weight: 600;
         z-index: 1;
@@ -477,45 +443,40 @@
         border: none;
         cursor: pointer;
         position: absolute;
-        top: 10px;
-        right: 10px;
-        width: 34px;
-        height: 34px;
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.3s ease;
+        transition: background-color 0.3s ease;
         z-index: 2;
     }
+
+        .wishlist-btn:hover {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
 
         .wishlist-btn.active i {
             animation: pulse 0.4s ease;
         }
 
-    .product-card:hover .wishlist-btn {
-        opacity: 1;
-    }
-
-    .wishlist-btn:hover {
-        background-color: var(--primary-light);
-        color: var(--accent-purple);
-    }
-
-    .wishlist-btn i {
-        font-size: 16px;
-        color: #D4AF37;
-        transition: transform 0.3s ease;
-    }
+        .wishlist-btn i {
+            font-size: 18px;
+            color: var(--accent-gold);
+            transition: transform 0.3s ease;
+        }
 
     .product-info {
-        padding: 15px;
+        padding: 16px;
     }
 
     .product-title {
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 6px;
         color: var(--text-color);
         white-space: nowrap;
         overflow: hidden;
@@ -523,60 +484,69 @@
     }
 
     .product-price {
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 700;
         color: var(--accent-purple);
-        margin-bottom: 10px;
+        margin-bottom: 12px;
     }
 
     .product-colors {
         display: flex;
-        gap: 5px;
-        margin-bottom: 10px;
+        gap: 6px;
+        margin-bottom: 12px;
     }
 
     .color-option {
-        width: 15px;
-        height: 15px;
+        width: 18px;
+        height: 18px;
         border-radius: 50%;
         border: 1px solid var(--medium-gray);
         cursor: pointer;
+        transition: transform 0.2s;
     }
+
+        .color-option:hover {
+            transform: scale(1.1);
+        }
 
     .add-to-cart-btn {
         width: 100%;
-        padding: 10px;
+        padding: 12px;
         background-color: var(--primary-dark);
         color: var(--primary-light);
         border: none;
         font-weight: 600;
         font-size: 14px;
         cursor: pointer;
-        transition: all 0.3s;
+        transition: background-color 0.3s;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
+        border-bottom-left-radius: 14px;
+        border-bottom-right-radius: 14px;
     }
 
         .add-to-cart-btn:hover {
             background-color: var(--accent-purple);
         }
 
-        .add-to-cart-btn i {
-            font-size: 14px;
+        .add-to-cart-btn[disabled] {
+            background-color: #c3c3c3;
+            color: #f5f5f5;
+            cursor: not-allowed;
         }
 
-    /* Pagination */
+    /* Paginación */
     .pagination-container {
-        margin-top: 40px;
+        margin-top: 50px;
         display: flex;
         justify-content: center;
     }
 
     .pagination {
         display: flex;
-        gap: 5px;
+        gap: 6px;
     }
 
     .page-item {
@@ -585,17 +555,20 @@
 
     .page-link {
         display: block;
-        padding: 8px 15px;
+        padding: 10px 18px;
         background-color: var(--primary-light);
         color: var(--text-color);
         border: 1px solid var(--medium-gray);
-        border-radius: 4px;
+        border-radius: 6px;
         text-decoration: none;
         transition: all 0.3s;
+        font-size: 14px;
     }
 
         .page-link:hover {
             background-color: var(--light-gray);
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
         }
 
     .page-item.active .page-link {
@@ -614,11 +587,15 @@
 
     .catalog-sidebar {
         flex: 1;
-        margin-bottom: 30px;
+        margin-bottom: 35px;
     }
 
     .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+
+    .sort-options .form-select {
+        width: 180px;
     }
 
     }
@@ -637,8 +614,8 @@
     }
 
     .products-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 15px;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 16px;
     }
 
     }
@@ -661,7 +638,7 @@
     }
 </style>
 
-<!-- Font Awesome for icons -->
+<!-- Iconos Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
 <!-- Google Fonts -->
@@ -672,11 +649,9 @@
         document.querySelectorAll('.wishlist-form').forEach(form => {
             form.addEventListener('submit', function (e) {
                 e.preventDefault();
-
                 const formData = new FormData(this);
                 const btn = this.querySelector('button');
                 const icon = btn.querySelector('i');
-
                 fetch(this.action, {
                     method: 'POST',
                     body: formData
@@ -687,7 +662,7 @@
                         icon.classList.remove('far');
                         icon.classList.add('fas');
                         btn.title = "Eliminar de favoritos";
-                        btn.classList.add('active'); // animación
+                        btn.classList.add('active');
                     } else {
                         icon.classList.remove('fas');
                         icon.classList.add('far');
