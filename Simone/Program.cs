@@ -26,6 +26,7 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30); // Establece el tiempo de inactividad antes de expirar la sesión
     options.Cookie.HttpOnly = true;  // Hace la cookie solo accesible vía HTTP, lo que mejora la seguridad
     options.Cookie.IsEssential = true;  // Marca la cookie como esencial para la aplicación
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
 // 2.2. Agregar HttpContextAccessor para poder acceder al contexto HTTP en otros servicios
@@ -38,11 +39,15 @@ builder.Services.AddDbContext<TiendaDbContext>(options =>
 // 2.4. Configuración de Identity para la gestión de usuarios y roles, con opciones de seguridad de contraseñas
 builder.Services.AddIdentity<Usuario, Roles>(options =>
 {
+    options.Lockout.MaxFailedAccessAttempts = 5;
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+    options.Lockout.AllowedForNewUsers = true;
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
+    options.SignIn.RequireConfirmedEmail = false;
 })
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();

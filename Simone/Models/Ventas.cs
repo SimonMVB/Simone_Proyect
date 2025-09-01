@@ -24,8 +24,9 @@ namespace Simone.Models
         public string MetodoPago { get; set; }
 
         [Required]
-        [Column(TypeName = "decimal(10,2)")]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Total { get; set; }
+
 
         // SOLO ESTA colección, SIN "DetallesVenta" object
         public virtual ICollection<DetalleVentas> DetalleVentas { get; set; }

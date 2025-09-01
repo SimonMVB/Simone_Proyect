@@ -123,59 +123,69 @@ namespace Simone.Services
                 .ToListAsync();
 
         public async Task<bool> AnadirProducto(Producto producto, Usuario usuario, int cantidad)
+{
+    if (producto == null) throw new ArgumentNullException(nameof(producto));
+    if (usuario == null) throw new ArgumentNullException(nameof(usuario));
+    if (cantidad <= 0) throw new ArgumentException("La cantidad debe ser mayor que cero", nameof(cantidad));
+
+    try
+    {
+        var userCarrito = await _context.Carrito
+            .FirstOrDefaultAsync(c => c.ClienteID == usuario.Id && c.EstadoCarrito != EstadoCerrado);
+
+        if (userCarrito == null)
         {
-            if (producto == null) throw new ArgumentNullException(nameof(producto));
-            if (usuario == null) throw new ArgumentNullException(nameof(usuario));
-            if (cantidad <= 0) throw new ArgumentException("La cantidad debe ser mayor que cero", nameof(cantidad));
-
-            try
-            {
-                var userCarrito = await _context.Carrito
-                    .FirstOrDefaultAsync(c => c.ClienteID == usuario.Id && c.EstadoCarrito != EstadoCerrado);
-
-                if (userCarrito == null)
-                {
-                    if (!await AddAsync(usuario)) return false;
-                    userCarrito = await GetByClienteIdAsync(usuario.Id);
-                }
-
-                var userCarritoDetalle = await _context.CarritoDetalle
-                    .FirstOrDefaultAsync(cd => cd.ProductoID == producto.ProductoID && cd.CarritoID == userCarrito.CarritoID);
-
-                if (userCarritoDetalle != null)
-                {
-                    userCarritoDetalle.Cantidad += cantidad;
-                    _context.CarritoDetalle.Update(userCarritoDetalle);
-                }
-                else
-                {
-                    var detalle = new CarritoDetalle
-                    {
-                        CarritoID = userCarrito.CarritoID,
-                        ProductoID = producto.ProductoID,
-                        Cantidad = cantidad,
-                        Precio = producto.PrecioVenta,
-                        FechaAgregado = DateTime.UtcNow,
-                    };
-
-                    await _context.CarritoDetalle.AddAsync(detalle);
-                }
-
-                if (userCarrito.EstadoCarrito == EstadoVacio)
-                {
-                    userCarrito.EstadoCarrito = EstadoEnUso;
-                    _context.Carrito.Update(userCarrito);
-                }
-
-                return await _context.SaveChangesAsync() > 0;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al añadir producto {ProductoId} al carrito del usuario {UsuarioId}", 
-                    producto.ProductoID, usuario.Id);
-                return false;
-            }
+            if (!await AddAsync(usuario)) return false;
+            userCarrito = await GetByClienteIdAsync(usuario.Id);
         }
+
+        // ⬇️ UPSERT para respetar UX única (CarritoID, ProductoID)
+        var existente = await _context.CarritoDetalle
+            .FirstOrDefaultAsync(cd => cd.CarritoID == userCarrito.CarritoID && cd.ProductoID == producto.ProductoID);
+
+        if (existente is null)
+        {
+            var detalle = new CarritoDetalle
+            {
+                CarritoID = userCarrito.CarritoID,
+                ProductoID = producto.ProductoID,
+                Cantidad = cantidad,
+                Precio = producto.PrecioVenta,
+                // FechaAgregado: ahora tiene default en BD (GETUTCDATE), no es obligatorio setearlo aquí
+            };
+            await _context.CarritoDetalle.AddAsync(detalle);
+        }
+        else
+        {
+            existente.Cantidad += cantidad;
+            _context.CarritoDetalle.Update(existente);
+        }
+
+        if (userCarrito.EstadoCarrito == EstadoVacio)
+        {
+            userCarrito.EstadoCarrito = EstadoEnUso;
+            _context.Carrito.Update(userCarrito);
+        }
+
+        return await _context.SaveChangesAsync() > 0;
+    }
+    catch (DbUpdateException ex)
+    {
+        _logger.LogError(ex, "Constraint violation al añadir {ProductoId} en carrito de {UsuarioId}", producto.ProductoID, usuario.Id);
+        // Reintento: recargar y sumar (por si fue condición de carrera)
+        var carrito = await GetByClienteIdAsync(usuario.Id);
+        var existente = await _context.CarritoDetalle
+            .FirstOrDefaultAsync(cd => cd.CarritoID == carrito.CarritoID && cd.ProductoID == producto.ProductoID);
+        if (existente != null)
+        {
+            existente.Cantidad += cantidad;
+            _context.CarritoDetalle.Update(existente);
+            return await _context.SaveChangesAsync() > 0;
+        }
+        return false;
+    }
+}
+
 
         public async Task<bool> BorrarProductoCarrito(int id)
         {

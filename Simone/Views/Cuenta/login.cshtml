@@ -29,13 +29,16 @@
             <!-- Errores del modelo -->
             <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
-            <form asp-action="Login" method="post" id="formLogin">
+            <form asp-action="Login" method="post" id="formLogin" novalidate>
                 @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] ?? "")" />
+
                 <div class="mb-3">
                     <label asp-for="Email" class="form-label">Correo electrónico</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                        <input asp-for="Email" class="form-control" placeholder="usuario@correo.com" />
+                        <input asp-for="Email" type="email" class="form-control"
+                               placeholder="usuario@correo.com" autocomplete="username" />
                     </div>
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
@@ -44,7 +47,8 @@
                     <label asp-for="Password" class="form-label">Contraseña</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+                        <input asp-for="Password" type="password" class="form-control"
+                               placeholder="••••••••" autocomplete="current-password" />
                     </div>
                     <span asp-validation-for="Password" class="text-danger small"></span>
                 </div>
@@ -75,52 +79,62 @@
     </div>
 </div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        (function () {
-            const tryInit = () => {
-                const form = document.getElementById("formLogin");
-                const btn = document.getElementById("btnLogin");
-                if (!form || !btn) return;
+<script>
+    (function () {
+        function handleSubmit(e) {
+            const form = e.currentTarget;
+            const btn = document.getElementById("btnLogin");
+            if (!form || !btn) return;
 
+            // Solo deshabilitar si el formulario es válido
+            if (form.checkValidity()) {
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <span class="spinner-border spinner-border-sm text-light-pink me-2"
+                          style="border-color:#f4a7c1;border-right-color:transparent;"></span>
+                    Ingresando...
+                `;
+            }
+        }
+
+        function resetLoginButton() {
+            const btn = document.getElementById("btnLogin");
+            if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = `
                     <div class="login-text">
                         <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
                     </div>
                 `;
+            }
+        }
 
-                form.removeEventListener('submit', handleSubmit);
-                form.addEventListener("submit", handleSubmit);
-            };
+        function wire() {
+            const form = document.getElementById("formLogin");
+            if (!form) return;
 
-            const handleSubmit = function (e) {
-                const btn = document.getElementById("btnLogin");
-                const validationSummary = document.querySelector(".validation-summary-errors, .text-danger");
-                const hasClientErrors = validationSummary && validationSummary.innerText.trim() !== "";
+            // Restaurar botón al cargar la página
+            resetLoginButton();
 
-                if (!hasClientErrors) {
-                    btn.disabled = true;
-                    btn.innerHTML = `
-                        <span class="spinner-border spinner-border-sm text-light-pink me-2"
-                              style="border-color: #f4a7c1; border-right-color: transparent;"></span>
-                        Ingresando...
-                    `;
-                } else {
-                    btn.disabled = false;
-                    btn.innerHTML = `
-                        <div class="login-text">
-                            <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
-                        </div>
-                    `;
-                }
-            };
+            // Remover evento previo y agregar nuevo
+            form.removeEventListener("submit", handleSubmit);
+            form.addEventListener("submit", handleSubmit);
+        }
 
-            tryInit();
-        })();
-    </script>
-}
+        // Resetear el botón cuando hay mensajes de error (después de postback)
+        document.addEventListener("DOMContentLoaded", function() {
+            wire();
+
+            // Si hay mensajes de error, asegurar que el botón esté habilitado
+            if (document.querySelector('.alert-danger')) {
+                resetLoginButton();
+            }
+        });
+
+        window.addEventListener("pageshow", wire);
+    })();
+</script>
+
 
 
 

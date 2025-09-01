@@ -74,20 +74,33 @@ namespace Simone.Services
         {
             try
             {
-                var producto = await _context.Productos.FindAsync(id); // Buscar la producto de manera asíncrona
-                if (producto != null)
+                var producto = await _context.Productos.FindAsync(id);
+                if (producto == null) return false;
+
+                // Chequeos mínimos de dependencias (agrega los que uses)
+                bool tieneDependencias =
+                    await _context.DetalleVentas.AnyAsync(d => d.ProductoID == id) ||
+                    await _context.DetallesPedido.AnyAsync(d => d.ProductoID == id) ||
+                    await _context.CarritoDetalle.AnyAsync(d => d.ProductoID == id) ||
+                    await _context.Reseñas.AnyAsync(r => r.ProductoID == id);
+
+                if (tieneDependencias)
                 {
-                    _context.Productos.Remove(producto); // Eliminar producto
-                    await _context.SaveChangesAsync(); // Guardar cambios de manera asíncrona
-                    return true; // Retorna true si el producto se elimina correctamente
+                    // TODO: opcional: marcar estado "Inactivo" si agregas SoftDelete al modelo
+                    return false;
                 }
-                return false; // Retorna false si no se encuentra el producto
+
+                _context.Productos.Remove(producto);
+                await _context.SaveChangesAsync();
+                return true;
             }
-            catch
+            catch (DbUpdateException ex)
             {
-                return false; // Retorna false si hubo algún error
+                // Log y fallback
+                return false;
             }
         }
+
 
         public async Task<List<Producto>> GetByCategoryID(int categoriaID)
         {
