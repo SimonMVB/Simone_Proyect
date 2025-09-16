@@ -1,20 +1,24 @@
-﻿@{
+﻿@model IEnumerable<Simone.Models.Producto>
+@using System.Globalization
+@{
     ViewData["Title"] = "Inicio";
+    var culture = new CultureInfo("es-EC");
 }
 
-
-<!-- Banner Principal Mejorado -->
+<!-- Banner principal -->
 <div class="container-fluid px-0">
-    <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+    <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel" aria-label="Promociones principales">
         <div class="carousel-inner">
             <div class="carousel-item active position-relative">
-                <img src="~/images/Home/vestidos_home.jpg" class="d-block w-100 banner-img" alt="Vestidos Elegantes">
+                <img src="~/images/Home/vestidos_home.jpg" asp-append-version="true"
+                     class="d-block w-100 banner-img" alt="Colección de vestidos" />
                 <div class="carousel-caption d-flex flex-column justify-content-center align-items-center h-100">
                     <h1 class="display-4 fw-bold text-white text-shadow mb-3 animate__animated animate__fadeInDown">
                         Descubre Nuestra Colección de Vestidos
                     </h1>
-                    <a href="/Categorias/Vestidos" class="btn btn-lg btn-light shadow animate__animated animate__fadeInUp">
-                        Compra ahora
+                    <a asp-controller="Categorias" asp-action="Vestidos"
+                       class="btn btn-lg btn-light shadow animate__animated animate__fadeInUp">
+                        Ver vestidos
                     </a>
                 </div>
             </div>
@@ -22,41 +26,154 @@
     </div>
 </div>
 
-<!-- 🔥 Promoción destacada -->
-<div class="container-fluid text-white text-center py-5" style="background: linear-gradient(135deg, #000000, #1a1a1a); animation: fadeIn 1s ease-in;">
+<!-- Promoción destacada -->
+<div class="container-fluid text-white text-center py-5"
+     style="background: linear-gradient(135deg, #000000, #1a1a1a); animation: fadeIn 0.9s ease-in;">
     <div class="container py-4">
-        <h1 class="display-4 fw-bold mb-3">Body's irresistibles</h1>
-        <p class="lead mb-4">¡Llévate el segundo body con <span class="text-warning">envío gratis!</span></p>
-        <a href="/Categorias/Bodys" class="btn btn-warning btn-lg px-4 shadow-sm">
-            <i class="shopping bag icon"></i> Comprar ahora
+        <h2 class="fw-bold mb-2">Body's irresistibles</h2>
+        <p class="lead mb-4">¡Llévate el segundo body con <span class="text-warning">envío gratis</span>!</p>
+        <a asp-controller="Categorias" asp-action="Bodys" class="btn btn-warning btn-lg px-4 shadow-sm">
+            <i class="fa-solid fa-bag-shopping me-2"></i> Comprar ahora
         </a>
     </div>
 </div>
 
-<!-- Sección de Productos Destacados -->
-<div class="container mt-5">
-    <h3 class="fw-bold">Destacados:</h3>
-    <div class="row">
-        @foreach (var producto in Model)
-        {
-            <div class="col-md-3 mb-4">
-                <div class="card border-0 h-100">
-                    <img src="@Url.Content("~/img/" + (string.IsNullOrEmpty(producto.ImagenPath) ? "placeholder.png" : producto.ImagenPath))"
-                         class="card-img-top"
-                         alt="@producto.Nombre">
-                    <div class="card-body text-center">
-                        <p class="card-text">@producto.Nombre</p>
-                        <p class="fw-bold">@producto.PrecioVenta.ToString("C")</p>
-                    </div>
-                </div>
-            </div>
-        }
+<!-- Categorías rápidas -->
+<section class="container my-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h3 class="fw-bold m-0">Explora por categoría</h3>
+        
     </div>
-</div>
 
+    <div class="row g-3 g-lg-4">
+        <!-- Blusas -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Blusas" class="cat-card">
+                <img src="~/images/Categorias_slider/blusas.png" class="cat-img" alt="Blusas" loading="lazy" />
+                <span class="cat-title">Blusas</span>
+            </a>
+        </div>
+        <!-- Tops -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Tops" class="cat-card">
+                <img src="~/images/Categorias_slider/tops.png" class="cat-img" alt="Tops" loading="lazy" />
+                <span class="cat-title">Tops</span>
+            </a>
+        </div>
+        <!-- Body's -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Bodys" class="cat-card">
+                <img src="~/images/Categorias_slider/Bodys.png" class="cat-img" alt="Body's" loading="lazy" />
+                <span class="cat-title">Body's</span>
+            </a>
+        </div>
+        <!-- Trajes de baño -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="TrajeDeBaño" class="cat-card">
+                <img src="~/images/Categorias_slider/Traje_de_bano.png" class="cat-img" alt="Trajes de baño" loading="lazy" />
+                <span class="cat-title">Trajes de Baño</span>
+            </a>
+        </div>
+        <!-- Conjuntos -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Conjuntos" class="cat-card">
+                <img src="~/images/Categorias_slider/conjuntos.png" class="cat-img" alt="Conjuntos" loading="lazy" />
+                <span class="cat-title">Conjuntos</span>
+            </a>
+        </div>
+        <!-- Vestidos -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Vestidos" class="cat-card">
+                <img src="~/images/Categorias_slider/vestidos.png" class="cat-img" alt="Vestidos" loading="lazy" />
+                <span class="cat-title">Vestidos</span>
+            </a>
+        </div>
+        <!-- Faldas -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Faldas" class="cat-card">
+                <img src="~/images/Categorias_slider/faldas.png" class="cat-img" alt="Faldas" loading="lazy" />
+                <span class="cat-title">Faldas</span>
+            </a>
+        </div>
+        <!-- Pantalones -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Pantalones" class="cat-card">
+                <img src="~/images/Categorias_slider/Pantalones.png" class="cat-img" alt="Pantalones" loading="lazy" />
+                <span class="cat-title">Pantalones</span>
+            </a>
+        </div>
+        <!-- Jeans -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Jeans" class="cat-card">
+                <img src="~/images/Categorias_slider/Jeans.png" class="cat-img" alt="Jeans" loading="lazy" />
+                <span class="cat-title">Jeans</span>
+            </a>
+        </div>
+        <!-- Bolsas -->
+        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+            <a asp-controller="Categorias" asp-action="Bolsas" class="cat-card">
+                <img src="~/images/Categorias_slider/bolsas.png" class="cat-img" alt="Bolsas" loading="lazy" />
+                <span class="cat-title">Bolsas</span>
+            </a>
+        </div>
+    </div>
+</section>
 
-<!-- Animación suave -->
+<!-- Productos destacados -->
+<section class="container mb-5">
+    <div class="d-flex justify-content-between align-items-end mb-3">
+        <h3 class="fw-bold m-0">Destacados</h3>
+        <a asp-controller="Compras" asp-action="Catalogo" class="btn btn-outline-dark btn-sm">
+            Ver catálogo
+        </a>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="text-center text-muted py-5">
+            <i class="fa-regular fa-face-smile-beam fa-2x mb-2"></i>
+            <p class="m-0">Pronto añadiremos productos destacados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var producto in Model)
+            {
+                var agotado = producto.Stock <= 0;
+                <div class="col-6 col-md-4 col-lg-3 mb-4">
+                    <article class="card product-card h-100 border-0 shadow-sm">
+                        <div class="position-relative">
+                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID">
+                                <img src="@(string.IsNullOrWhiteSpace(producto.ImagenPath) ? "/images/Categorias_slider/ver_todo.png" : producto.ImagenPath)"
+                                     alt="@producto.Nombre"
+                                     class="card-img-top product-img"
+                                     loading="lazy" decoding="async"
+                                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';" />
+                            </a>
+                            @if (agotado)
+                            {
+                                <span class="badge bg-danger position-absolute top-0 start-0 m-2">Sin stock</span>
+                            }
+                        </div>
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-truncate mb-1" title="@producto.Nombre">@producto.Nombre</h6>
+                            <div class="fw-bold">@producto.PrecioVenta.ToString("C", culture)</div>
+                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID"
+                               class="btn btn-dark btn-sm mt-2">
+                                <i class="fa-solid fa-eye me-2"></i> Ver detalle
+                            </a>
+                        </div>
+                    </article>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<!-- Estilos -->
 <style>
+    /* Razor necesita @@ para imprimir @@keyframes */
     @@keyframes fadeIn {
         from
 
@@ -73,7 +190,7 @@
     }
 
     .banner-img {
-        height: 500px;
+        height: 520px;
         object-fit: cover;
         filter: brightness(75%);
     }
@@ -82,4 +199,42 @@
         text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
     }
 
+    /* Categorías */
+    .cat-card {
+        display: block;
+        text-decoration: none;
+        color: inherit;
+        text-align: center;
+        transition: transform .15s ease, box-shadow .15s ease;
+    }
+
+        .cat-card:hover {
+            transform: translateY(-2px);
+        }
+
+    .cat-img {
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 4px 18px rgba(0,0,0,.08);
+    }
+
+    .cat-title {
+        display: block;
+        margin-top: .5rem;
+        font-weight: 600;
+    }
+
+    /* Productos */
+    .product-img {
+        height: 240px;
+        object-fit: cover;
+        border-top-left-radius: .5rem;
+        border-top-right-radius: .5rem;
+    }
+
+    .product-card:hover {
+        box-shadow: 0 10px 28px rgba(0,0,0,.12);
+    }
 </style>

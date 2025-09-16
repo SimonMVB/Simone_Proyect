@@ -3,53 +3,91 @@
 @{
     ViewData["Title"] = "Compradores / Ventas";
     var culture = new CultureInfo("es-EC");
+
+    string Safe(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
+    string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var p = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (p.Length == 1) return p[0].Substring(0, 1).ToUpperInvariant();
+        return (p[0].Substring(0, 1) + p[1].Substring(0, 1)).ToUpperInvariant();
+    }
+    string BadgeClass(string? estado)
+    {
+        estado = (estado ?? "").ToLowerInvariant();
+        if (estado.Contains("env")) return "bg-success";
+        if (estado.Contains("pend")) return "bg-warning text-dark";
+        if (estado.Contains("canc") || estado.Contains("dev")) return "bg-danger";
+        return "bg-secondary";
+    }
 }
 
 <div class="container-xl py-4">
-    <h2 class="fw-bold mb-3">Compradores</h2>
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h2 class="fw-bold m-0">Compradores</h2>
+        <div class="text-muted small">Total registros: <strong>@(Model?.Count ?? 0)</strong></div>
+    </div>
 
     @if (Model == null || !Model.Any())
     {
-        <div class="alert alert-info">No hay ventas registradas.</div>
+        <div class="alert alert-info shadow-sm">No hay ventas registradas.</div>
     }
     else
     {
-        <div class="list-group shadow-sm">
+        <div class="list-group shadow-sm rounded-3">
             @foreach (var v in Model)
             {
-                var badge = v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true
-                ? "bg-success"
-                : "bg-secondary";
+                var badge = BadgeClass(v.Estado);
 
-                <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between gap-3">
-                    <div class="d-flex align-items-start gap-3 flex-grow-1">
-                        <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width:44px;height:44px;">
-                            <i class="fa-solid fa-user"></i>
+                <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between gap-3 comp-row">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                        <div class="avatar-wrap">
+                            @if (!string.IsNullOrWhiteSpace(v.FotoPerfil))
+                            {
+                                <img src="@v.FotoPerfil"
+                                     class="avatar-img"
+                                     alt="Foto de @v.Nombre"
+                                     onerror="this.onerror=null;this.classList.add('d-none');this.nextElementSibling.classList.remove('d-none');" />
+                            }
+                            <div class="avatar-initials @(string.IsNullOrWhiteSpace(v.FotoPerfil) ? "" : "d-none")">
+                                @Initials(v.Nombre)
+                            </div>
                         </div>
-                        <div>
-                            <div class="fw-bold">
-                                <a asp-action="VentaDetalle" asp-controller="Panel" asp-route-id="@v.VentaID" class="text-decoration-none">
-                                    @v.Nombre
+
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <a asp-action="VentaDetalle" asp-controller="Panel" asp-route-id="@v.VentaID" class="fw-semibold link-dark text-truncate text-decoration-none">
+                                    @Safe(v.Nombre)
                                 </a>
-                                <span class="badge @badge ms-2">@v.Estado</span>
+                                <span class="badge @badge align-middle">@Safe(v.Estado)</span>
+                            </div>
+                            <div class="text-muted small text-truncate">
+                                <i class="fa-regular fa-envelope me-1"></i>@Safe(v.Email)
+                                <span class="mx-1">·</span>
+                                <i class="fa-solid fa-phone me-1"></i>@Safe(v.Telefono)
                             </div>
                             <div class="text-muted small">
-                                @v.Email · @v.Telefono
-                                <span class="ms-2">| @v.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
-                                <span class="ms-2">| @v.MetodoPago</span>
+                                <i class="fa-regular fa-calendar me-1"></i>@v.Fecha.ToString("dd/MM/yyyy HH:mm")
+                                <span class="mx-1">·</span>
+                                <i class="fa-solid fa-money-check-dollar me-1"></i>@Safe(v.MetodoPago)
                             </div>
                         </div>
                     </div>
 
                     <div class="text-end">
-                        <div class="fw-bolder">@v.Total.ToString("C", culture)</div>
-                        <form method="post" asp-action="MarcarEnviada" asp-controller="Panel" class="d-inline-block ms-2 js-mark-shipped">
+                        <div class="fw-bold fs-6">@v.Total.ToString("C", culture)</div>
+
+                        <form method="post" asp-action="MarcarEnviada" asp-controller="Panel" class="d-inline-block ms-2 js-mark-shipped" data-id="@v.VentaID">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@v.VentaID" />
-                            <button type="submit" class="btn btn-sm btn-outline-success" title="Marcar como enviado">
+                            <button type="submit" class="btn btn-sm btn-outline-success btn-ship" title="Marcar como enviado" @(v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true ? "disabled" : null)>
                                 <i class="fa-solid fa-truck-fast me-1"></i> Enviado
                             </button>
                         </form>
+
+                        <a asp-action="VentaDetalle" asp-controller="Panel" asp-route-id="@v.VentaID" class="btn btn-sm btn-outline-primary ms-1">
+                            <i class="fa-regular fa-eye me-1"></i> Ver
+                        </a>
                     </div>
                 </div>
             }
@@ -57,22 +95,88 @@
     }
 </div>
 
+<style>
+    .list-group-item.comp-row {
+        transition: all .2s ease;
+        border: 0;
+        border-bottom: 1px solid #eef1f5
+    }
+
+        .list-group-item.comp-row:last-child {
+            border-bottom: 0
+        }
+
+        .list-group-item.comp-row:hover {
+            background: #fafbff
+        }
+
+    .avatar-wrap {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 48px
+    }
+
+    .avatar-img {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+        display: block;
+        box-shadow: 0 0 0 2px #fff, 0 1px 6px rgba(0,0,0,.1)
+    }
+
+    .avatar-initials {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: #2d3748;
+        background: linear-gradient(135deg,#e9efff,#d6e4ff);
+        border: 1px solid #e3e8ff;
+        box-shadow: 0 1px 6px rgba(0,0,0,.05)
+    }
+
+    @@media (max-width:768px) {
+        .btn-ship
+
+    {
+        margin-top: .5rem
+    }
+
+    }
+</style>
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', () => {
           document.querySelectorAll('form.js-mark-shipped').forEach(f => {
             f.addEventListener('submit', async (e) => {
               e.preventDefault();
-              const row = f.closest('.list-group-item');
+              const row = f.closest('.comp-row');
               const badge = row.querySelector('.badge');
-              const data = new FormData(f);
-              const res = await fetch(f.action, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:data });
-              if(res.ok){
-                const json = await res.json();
-                if(json.ok){
-                  badge.textContent = json.estado;
-                  badge.className = 'badge bg-success ms-2';
+              const btn = f.querySelector('.btn-ship');
+              const prev = btn.innerHTML;
+
+              btn.disabled = true;
+              btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Enviando...';
+
+              try{
+                const res = await fetch(f.action, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:new FormData(f) });
+                if(res.ok){
+                  let json=null; try{ json = await res.json(); }catch{}
+                  // Optimista: si responde 200, reflejamos
+                  badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
+                  badge.className = 'badge bg-success';
+                  btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Enviado';
+                } else {
+                  btn.disabled = false; btn.innerHTML = prev; alert('No se pudo marcar como enviado.');
                 }
+              }catch{
+                btn.disabled = false; btn.innerHTML = prev; alert('Error de red.');
               }
             });
           });

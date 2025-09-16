@@ -3,7 +3,9 @@ using System.Collections.Generic;
 
 namespace Simone.ViewModels.Reportes
 {
-    // Resumen para la lista (compradores/ventas)
+    /// <summary>
+    /// Resumen para la lista (compradores/ventas).
+    /// </summary>
     public class CompradorResumenVM
     {
         public int VentaID { get; set; }
@@ -15,9 +17,14 @@ namespace Simone.ViewModels.Reportes
         public string Estado { get; set; } = "";
         public string MetodoPago { get; set; } = "";
         public decimal Total { get; set; }
+
+        // Foto de perfil (desde AspNetUsers) para el listado de compradores
+        public string? FotoPerfil { get; set; }
     }
 
-    // Ítems de la venta
+    /// <summary>
+    /// Ítem (línea) de la venta.
+    /// </summary>
     public class DetalleFilaVM
     {
         public string Producto { get; set; } = "";
@@ -25,9 +32,22 @@ namespace Simone.ViewModels.Reportes
         public decimal Subtotal { get; set; }
     }
 
-    // Detalle de una venta + persona + envío
+    /// <summary>
+    /// Detalle completo de la venta + persona + envío + pago.
+    /// </summary>
     public class VentaDetalleVM
     {
+        // Pago / depósito
+        public string? Banco { get; set; }             // p.ej. "Banco Pichincha"
+        public string? Depositante { get; set; }       // nombre de quien deposita
+        public string? ComprobanteUrl { get; set; }    // ruta/URL del comprobante (imagen o PDF)
+
+        // Fallback desde perfil Identity (cuando no hay dirección guardada en la fecha de la venta)
+        public string? PerfilCiudad { get; set; }
+        public string? PerfilProvincia { get; set; }
+        public string? PerfilReferencia { get; set; }
+
+        // Datos de la venta
         public int VentaID { get; set; }
         public DateTime Fecha { get; set; }
         public string Estado { get; set; } = "";
@@ -42,12 +62,15 @@ namespace Simone.ViewModels.Reportes
         public string? Direccion { get; set; }
 
         // Envío (direcciones guardadas del cliente)
-        public List<DireccionVM> Direcciones { get; set; } = new();
+        public List<DireccionVM> Direcciones { get; set; } = new List<DireccionVM>();
 
         // Productos vendidos en esa venta
-        public List<DetalleFilaVM> Detalles { get; set; } = new();
+        public List<DetalleFilaVM> Detalles { get; set; } = new List<DetalleFilaVM>();
     }
 
+    /// <summary>
+    /// Dirección del cliente (histórica).
+    /// </summary>
     public class DireccionVM
     {
         public int DireccionID { get; set; }
