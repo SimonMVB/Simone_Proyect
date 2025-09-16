@@ -357,7 +357,21 @@ namespace Simone.Controllers
                 TempData["MensajeError"] = "Agrega una dirección para continuar con la compra.";
                 return View("Resumen", user);
             }
+            // --- AÑADIR ESTE BLOQUE ---
+            var faltantes = carritoDetalles
+                .Where(d => d.Producto != null && d.Producto.Stock < d.Cantidad)
+                .ToList();
 
+            if (faltantes.Any())
+            {
+                ViewBag.HasAddress = true;
+                ViewBag.CarritoDetalles = carritoDetalles;
+                ViewBag.TotalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
+                TempData["MensajeError"] = "Stock insuficiente para: " +
+                    string.Join(", ", faltantes.Select(f =>
+                        $"{f.Producto.Nombre} (disp: {f.Producto.Stock}, pediste: {f.Cantidad})"));
+                return View("Resumen", user);
+            }
             try
             {
                 var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
@@ -373,6 +387,19 @@ namespace Simone.Controllers
                 // Si el servicio devolvió false, regresamos a Resumen (no a Exito)
                 TempData["MensajeError"] = "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
                 return RedirectToAction("Resumen");
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Mensajes “amigables”: stock insuficiente, carrito vacío, admin no encontrado, etc.
+                _logger.LogWarning(ex, "Validación al confirmar compra");
+
+                var carritoDetallesView = await _carrito.LoadCartDetails(carrito.CarritoID);
+                ViewBag.HasAddress = true;
+                ViewBag.CarritoDetalles = carritoDetallesView;
+                ViewBag.TotalCompra = carritoDetallesView.Sum(cd => cd.Precio * cd.Cantidad);
+
+                TempData["MensajeError"] = ex.Message;
+                return View("Resumen", user);
             }
             catch (Exception ex)
             {
