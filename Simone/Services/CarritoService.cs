@@ -8,9 +8,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
 using System;
 
-
-
-
 namespace Simone.Services
 {
     public interface ICarritoService
@@ -20,7 +17,13 @@ namespace Simone.Services
         Task<Carrito> GetByIdAsync(int id);
         Task<bool> UpdateAsync(Carrito carrito);
         Task<bool> DeleteAsync(int id);
+
+        // ⇨ Nuevo nombre correcto
+        Task<Carrito> GetByUsuarioIdAsync(string usuarioId);
+
+        // ⇨ Compatibilidad (legacy). Idealmente elimina este método en tu código.
         Task<Carrito> GetByClienteIdAsync(string clienteID);
+
         Task<List<CarritoDetalle>> LoadCartDetails(int carritoID);
         Task<bool> AnadirProducto(Producto producto, Usuario usuario, int cantidad);
         Task<bool> BorrarProductoCarrito(int id);
@@ -32,14 +35,15 @@ namespace Simone.Services
         private readonly TiendaDbContext _context;
         private readonly ILogger<CarritoService> _logger;
         private readonly UserManager<Usuario> _userManager;
+
         private const string AdminEmail = "admin@tienda.com";
         private const string EstadoCerrado = "Cerrado";
         private const string EstadoEnUso = "En Uso";
         private const string EstadoVacio = "Vacio";
 
         public CarritoService(
-            TiendaDbContext context, 
-            ILogger<CarritoService> logger, 
+            TiendaDbContext context,
+            ILogger<CarritoService> logger,
             UserManager<Usuario> userManager)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -55,7 +59,7 @@ namespace Simone.Services
             {
                 var carrito = new Carrito
                 {
-                    ClienteID = usuario.Id,
+                    UsuarioId = usuario.Id,       // ← reemplaza ClienteID
                     FechaCreacion = DateTime.UtcNow,
                     EstadoCarrito = EstadoVacio
                 };
@@ -70,10 +74,10 @@ namespace Simone.Services
             }
         }
 
-        public async Task<List<Carrito>> GetAllAsync() => 
+        public async Task<List<Carrito>> GetAllAsync() =>
             await _context.Carrito.AsNoTracking().ToListAsync();
 
-        public async Task<Carrito> GetByIdAsync(int id) => 
+        public async Task<Carrito> GetByIdAsync(int id) =>
             await _context.Carrito.AsNoTracking().FirstOrDefaultAsync(c => c.CarritoID == id);
 
         public async Task<bool> UpdateAsync(Carrito carrito)
@@ -109,15 +113,20 @@ namespace Simone.Services
             }
         }
 
-        public async Task<Carrito> GetByClienteIdAsync(string clienteID)
+        // ===== Nuevo método correcto =====
+        public async Task<Carrito> GetByUsuarioIdAsync(string usuarioId)
         {
-            if (string.IsNullOrWhiteSpace(clienteID))
-                throw new ArgumentException("ClienteID no puede estar vacío", nameof(clienteID));
+            if (string.IsNullOrWhiteSpace(usuarioId))
+                throw new ArgumentException("UsuarioId no puede estar vacío", nameof(usuarioId));
 
             return await _context.Carrito
                 .AsNoTracking()
-                .FirstOrDefaultAsync(c => c.ClienteID == clienteID && c.EstadoCarrito != EstadoCerrado);
+                .FirstOrDefaultAsync(c => c.UsuarioId == usuarioId && c.EstadoCarrito != EstadoCerrado);
         }
+
+        // ===== Wrapper de compatibilidad (legacy) =====
+        public Task<Carrito> GetByClienteIdAsync(string clienteID) =>
+            GetByUsuarioIdAsync(clienteID);
 
         public async Task<List<CarritoDetalle>> LoadCartDetails(int carritoID) =>
             await _context.CarritoDetalle
@@ -135,12 +144,12 @@ namespace Simone.Services
             try
             {
                 var userCarrito = await _context.Carrito
-                    .FirstOrDefaultAsync(c => c.ClienteID == usuario.Id && c.EstadoCarrito != EstadoCerrado);
+                    .FirstOrDefaultAsync(c => c.UsuarioId == usuario.Id && c.EstadoCarrito != EstadoCerrado);
 
                 if (userCarrito == null)
                 {
                     if (!await AddAsync(usuario)) return false;
-                    userCarrito = await GetByClienteIdAsync(usuario.Id);
+                    userCarrito = await GetByUsuarioIdAsync(usuario.Id);
                 }
 
                 var existente = await _context.CarritoDetalle
@@ -184,9 +193,12 @@ namespace Simone.Services
                 _logger.LogError(ex, "Constraint violation al añadir {ProductoId} en carrito de {UsuarioId}", producto.ProductoID, usuario.Id);
 
                 // Reintento simple: recargar y sumar (por posible condición de carrera)
-                var carrito = await GetByClienteIdAsync(usuario.Id);
+                var carrito = await GetByUsuarioIdAsync(usuario.Id);
+                if (carrito == null) return false;
+
                 var existente = await _context.CarritoDetalle
                     .FirstOrDefaultAsync(cd => cd.CarritoID == carrito.CarritoID && cd.ProductoID == producto.ProductoID);
+
                 if (existente != null)
                 {
                     var totalSolicitado = existente.Cantidad + cantidad;
@@ -198,9 +210,11 @@ namespace Simone.Services
                     _context.CarritoDetalle.Update(existente);
                     return await _context.SaveChangesAsync() > 0;
                 }
+
                 return false;
             }
         }
+
         public async Task<bool> BorrarProductoCarrito(int id)
         {
             try
@@ -218,11 +232,14 @@ namespace Simone.Services
             }
         }
 
-        public async Task<bool> ProcessCartDetails(int carritoID, Usuario user)
+       
+
+public async Task<bool> ProcessCartDetails(int carritoID, Usuario user)
         {
             if (user == null) throw new ArgumentNullException(nameof(user));
+            if (!user.Activo) throw new InvalidOperationException("Tu cuenta está desactivada.");
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
@@ -238,29 +255,12 @@ namespace Simone.Services
                     throw new InvalidOperationException(msgVacio);
                 }
 
-                // Asegurar que el cliente exista (auto-creación si no existe)
-                var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == user.Email);
-                if (cliente == null)
-                {
-                    _logger.LogWarning("No se encontró cliente con email {Email}. Se creará automáticamente.", user.Email);
-
-                    cliente = new Cliente
-                    {
-                        Nombre = string.IsNullOrWhiteSpace(user.NombreCompleto) ? user.Email : user.NombreCompleto,
-                        Email = user.Email,
-                        Telefono = string.IsNullOrWhiteSpace(user.PhoneNumber) ? user.Telefono : user.PhoneNumber,
-                        Direccion = user.Direccion ?? string.Empty,
-                        FechaRegistro = DateTime.UtcNow
-                    };
-
-                    await _context.Clientes.AddAsync(cliente);
-                    await _context.SaveChangesAsync(); // genera ClienteID
-                    _logger.LogInformation("Cliente creado: {ClienteId} para {Email}", cliente.ClienteID, user.Email);
-                }
-
                 // Validar stock
                 foreach (var detalle in carritoDetalles)
                 {
+                    if (detalle.Producto == null)
+                        throw new InvalidOperationException($"Producto {detalle.ProductoID} inexistente.");
+
                     if (detalle.Producto.Stock < detalle.Cantidad)
                     {
                         var msg = $"Stock insuficiente para '{detalle.Producto.Nombre}': disp {detalle.Producto.Stock}, solicitado {detalle.Cantidad}";
@@ -280,24 +280,22 @@ namespace Simone.Services
                         Cantidad = detalle.Cantidad,
                         TipoMovimiento = "Salida",
                         FechaMovimiento = DateTime.UtcNow,
-                        Descripcion = "Venta - Compra realizada en carrito"
+                        Descripcion = $"Venta - Carrito #{carritoID}"
                     });
                 }
 
                 // Vendedor responsable (admin por defecto)
                 var admin = await _userManager.Users.FirstOrDefaultAsync(u => u.Email == AdminEmail);
                 if (admin == null)
-                {
                     throw new InvalidOperationException($"No se encontró el usuario administrador '{AdminEmail}'.");
-                }
 
-                // Crear venta
+                // Crear venta (ahora enlazada a Usuario)
                 var venta = new Ventas
                 {
                     EmpleadoID = admin.Id,
                     Estado = "Completada",
-                    ClienteID = cliente.ClienteID,
-                    Clientes = cliente,
+                    UsuarioId = user.Id,
+                    Usuario = user,
                     FechaVenta = DateTime.UtcNow,
                     MetodoPago = "Transferencia",
                     Total = carritoDetalles.Sum(cd => cd.Cantidad * cd.Precio)
@@ -315,6 +313,7 @@ namespace Simone.Services
                     Subtotal = detalle.Cantidad * detalle.Precio,
                     FechaCreacion = DateTime.UtcNow
                 }).ToList();
+
                 await _context.DetalleVentas.AddRangeAsync(detallesVenta);
 
                 // Cerrar carrito y limpiar detalles
@@ -333,7 +332,7 @@ namespace Simone.Services
             catch (InvalidOperationException)
             {
                 await transaction.RollbackAsync();
-                throw; // el controlador mostrará el mensaje exacto al usuario
+                throw;
             }
             catch (Exception ex)
             {
@@ -342,6 +341,5 @@ namespace Simone.Services
                 return false;
             }
         }
-
     }
 }

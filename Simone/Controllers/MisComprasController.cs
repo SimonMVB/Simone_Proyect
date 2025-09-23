@@ -33,17 +33,11 @@ namespace Simone.Controllers
                 return RedirectToAction("Login", "Cuenta");
             }
 
-            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == user.Email);
-            if (cliente == null)
-            {
-                TempData["MensajeError"] = "No se encontró información de cliente vinculada a tu cuenta.";
-                return RedirectToAction("Index", "Home");
-            }
-
             var ventas = await _context.Ventas
-                .Where(v => v.ClienteID == cliente.ClienteID)
+                .AsNoTracking()
+                .Where(v => v.UsuarioId == user.Id)
                 .Include(v => v.DetalleVentas)
-                .ThenInclude(dv => dv.Producto)
+                    .ThenInclude(dv => dv.Producto)
                 .OrderByDescending(v => v.FechaVenta)
                 .ToListAsync();
 
@@ -62,17 +56,11 @@ namespace Simone.Controllers
                 return RedirectToAction("Login", "Cuenta");
             }
 
-            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == user.Email);
-            if (cliente == null)
-            {
-                TempData["MensajeError"] = "No se encontró información de cliente vinculada a tu cuenta.";
-                return RedirectToAction("Index", "Home");
-            }
-
             var venta = await _context.Ventas
+                .AsNoTracking()
                 .Include(v => v.DetalleVentas)
                     .ThenInclude(dv => dv.Producto)
-                .FirstOrDefaultAsync(v => v.VentaID == id && v.ClienteID == cliente.ClienteID);
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == user.Id);
 
             if (venta == null)
             {

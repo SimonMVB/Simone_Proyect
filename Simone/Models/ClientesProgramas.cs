@@ -5,30 +5,26 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Simone.Models
 {
     /// <summary>
-    /// Representa la relación de fidelización entre un cliente y un programa.
+    /// Relación de fidelización entre un usuario y un programa.
     /// </summary>
     public class ClientesProgramas
     {
-        [Key, Column(Order = 1)]
-        public int ClienteID { get; set; }
+        // Clave compuesta: UsuarioId + ProgramaID
+        [Key, Column(Order = 0)]
+        [Required]
+        public string UsuarioId { get; set; } = default!;
 
-        [Key, Column(Order = 2)]
+        [Key, Column(Order = 1)]
+        [Required]
         public int ProgramaID { get; set; }
 
-        /// <summary>
-        /// Fecha en la que el cliente se unió al programa.
-        /// </summary>
+        /// <summary>Fecha en la que el usuario se unió al programa.</summary>
         public DateTime? FechaInicio { get; set; }
 
-        /// <summary>
-        /// Cliente relacionado con el programa.
-        /// </summary>
-        [ForeignKey(nameof(ClienteID))]
-        public virtual Cliente Cliente { get; set; } = null!;
+        // Navegaciones
+        [ForeignKey(nameof(UsuarioId))]
+        public virtual Usuario Usuario { get; set; } = null!;
 
-        /// <summary>
-        /// Programa de fidelización relacionado.
-        /// </summary>
         [ForeignKey(nameof(ProgramaID))]
         public virtual ProgramasFidelizacion Programa { get; set; } = null!;
     }

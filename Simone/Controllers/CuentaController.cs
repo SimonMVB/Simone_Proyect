@@ -17,8 +17,12 @@ using Simone.ViewModels;
 
 namespace Simone.Controllers
 {
+    [AutoValidateAntiforgeryToken]
     public class CuentaController : Controller
     {
+        private static readonly string[] _extPermitidas = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        private const long _maxImagenBytes = 5 * 1024 * 1024; // 5MB
+
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
         private readonly RoleManager<Roles> _roleManager;
@@ -45,15 +49,15 @@ namespace Simone.Controllers
             _logService = logService;
         }
 
-        // GET: /Cuenta/Login
+        // ======= LOGIN =======
+
         [HttpGet]
         [AllowAnonymous]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> Login(string? returnUrl = null, CancellationToken ct = default)
         {
-            // Limpia cookie externa (clave para evitar bucles después de fallos)
+            // Limpia cualquier cookie de autenticación externa
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-            await _signInManager.SignOutAsync();
 
             if (User?.Identity?.IsAuthenticated == true)
                 return RedirectToAction("Index", "Home");
@@ -63,14 +67,11 @@ namespace Simone.Controllers
             return View();
         }
 
-        // POST: /Cuenta/Login
         [HttpPost]
         [AllowAnonymous]
-        [ValidateAntiForgeryToken]
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null, CancellationToken ct = default)
         {
-            // Mantener ViewData en todos los casos de retorno a la vista
             ViewData["ReturnUrl"] = returnUrl;
             ViewData["RequestID"] = Guid.NewGuid().ToString();
 
@@ -80,20 +81,20 @@ namespace Simone.Controllers
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user is null)
             {
-                _logger.LogWarning("Intento con usuario no registrado: {Email}", model.Email);
+                _logger.LogWarning("Intento de login con email no registrado: {Email}", model.Email);
                 TempData["MensajeError"] = "Correo o contraseña incorrectos.";
                 await RegistrarLog(model.Email, false, ct);
+                if (_logService != null) await _logService.Registrar($"Login FAIL {model.Email} (no existe)");
                 return View(model);
             }
 
             if (!user.Activo)
             {
-                _logger.LogWarning("Usuario inactivo: {Email}", model.Email);
+                _logger.LogWarning("Login de usuario inactivo: {Email}", model.Email);
                 TempData["MensajeError"] = "Tu cuenta está desactivada. Contacta con soporte.";
                 return View(model);
             }
 
-            // NO limpiar cookies aquí - solo se debe hacer en el GET
             var result = await _signInManager.PasswordSignInAsync(
                 user.UserName ?? user.Email,
                 model.Password,
@@ -104,14 +105,12 @@ namespace Simone.Controllers
             if (result.Succeeded)
             {
                 await _userManager.ResetAccessFailedCountAsync(user);
-                _logger.LogInformation("Inicio de sesión exitoso: {Email}", model.Email);
+                _logger.LogInformation("Login OK: {Email}", model.Email);
                 await RegistrarLog(model.Email, true, ct);
+                if (_logService != null) await _logService.Registrar($"Login OK {model.Email}");
 
-                // Limpiar cookies solo después de login exitoso
+                // Limpia cookie externa residual
                 await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-
-                if (_logService != null)
-                    await _logService.Registrar($"Login OK {model.Email}");
 
                 if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                     return Redirect(returnUrl);
@@ -121,7 +120,7 @@ namespace Simone.Controllers
 
             if (result.IsLockedOut)
             {
-                _logger.LogWarning("Usuario bloqueado por intentos fallidos: {Email}", model.Email);
+                _logger.LogWarning("Cuenta bloqueada por intentos fallidos: {Email}", model.Email);
                 TempData["MensajeError"] = "Cuenta bloqueada por múltiples intentos fallidos. Intenta más tarde.";
                 await RegistrarLog(model.Email, false, ct);
                 return View("Lockout");
@@ -143,13 +142,13 @@ namespace Simone.Controllers
             _logger.LogWarning("Credenciales inválidas para {Email}", model.Email);
             TempData["MensajeError"] = "Correo o contraseña incorrectos.";
             await RegistrarLog(model.Email, false, ct);
-
-            if (_logService != null)
-                await _logService.Registrar($"Login FAIL {model.Email}");
+            if (_logService != null) await _logService.Registrar($"Login FAIL {model.Email}");
 
             return View(model);
         }
-        // Registro
+
+        // ======= REGISTRO =======
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult Registrar()
@@ -161,48 +160,46 @@ namespace Simone.Controllers
 
         [HttpPost]
         [AllowAnonymous]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Registrar(RegistroViewModel model, CancellationToken ct = default)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            var rol = await _roleManager.FindByNameAsync("Cliente"); // puede ser null si aún no seed-easte
+            // Evita registro duplicado
+            var existente = await _userManager.FindByEmailAsync(model.Email);
+            if (existente != null)
+            {
+                ModelState.AddModelError(nameof(model.Email), "Este correo ya está registrado.");
+                return View(model);
+            }
+
+            var rolCliente = await _roleManager.FindByNameAsync("Cliente"); // puede ser null si aún no seed-easte
             var usuario = new Usuario
             {
                 NombreCompleto = model.Nombre,
                 Email = model.Email,
                 UserName = model.Email,
-                EmailConfirmed = true,      // según tu política
+                EmailConfirmed = true, // Ajusta según tu política
                 FechaRegistro = DateTime.UtcNow,
                 Activo = true,
-                RolID = rol?.Id,   // evita NRE si rol no existe aún
-                Direccion = model.Direccion,
-                Telefono = model.Telefono,
-                Referencia = model.Referencia,
+                RolID = rolCliente?.Id,
+                Direccion = string.IsNullOrWhiteSpace(model.Direccion) ? null : model.Direccion.Trim(),
+                Telefono = string.IsNullOrWhiteSpace(model.Telefono) ? null : model.Telefono.Trim(),
+                Referencia = string.IsNullOrWhiteSpace(model.Referencia) ? null : model.Referencia.Trim(),
+                Ciudad = string.IsNullOrWhiteSpace(model.Ciudad) ? null : model.Ciudad.Trim(),
+                Provincia = string.IsNullOrWhiteSpace(model.Provincia) ? null : model.Provincia.Trim(),
             };
 
             var result = await _userManager.CreateAsync(usuario, model.Password);
             if (result.Succeeded)
             {
-                if (rol != null) await _userManager.AddToRoleAsync(usuario, "Cliente");
+                if (rolCliente != null) await _userManager.AddToRoleAsync(usuario, "Cliente");
                 await _carritoManager.AddAsync(usuario);
 
-                var cliente = new Cliente
-                {
-                    Nombre = usuario.NombreCompleto ?? usuario.UserName ?? "Sin nombre",
-                    Email = usuario.Email,
-                    Telefono = usuario.Telefono,
-                    Direccion = usuario.Direccion,
-                    FechaRegistro = DateTime.UtcNow
-                };
-
-                _context.Clientes.Add(cliente);
-                await _context.SaveChangesAsync(ct);
-
                 _logger.LogInformation("Usuario registrado: {Email}", model.Email);
-                await _signInManager.SignInAsync(usuario, isPersistent: false);
                 if (_logService != null) await _logService.Registrar($"Nuevo registro {usuario.Email}");
+
+                await _signInManager.SignInAsync(usuario, isPersistent: false);
                 return RedirectToAction("Index", "Home");
             }
 
@@ -215,9 +212,9 @@ namespace Simone.Controllers
             return View(model);
         }
 
-        // Logout
+        // ======= LOGOUT =======
+
         [HttpPost]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout(CancellationToken ct)
         {
             await _signInManager.SignOutAsync();
@@ -227,7 +224,8 @@ namespace Simone.Controllers
             return RedirectToAction("Login", "Cuenta");
         }
 
-        // Perfil (GET)
+        // ======= PERFIL =======
+
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> Perfil(CancellationToken ct)
@@ -244,41 +242,63 @@ namespace Simone.Controllers
             return View(usuario);
         }
 
-        // Perfil (POST) – actualizar datos + imagen
         [HttpPost]
         [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ActualizarPerfil(Usuario usuario, IFormFile? ImagenPerfil, CancellationToken ct)
+        public async Task<IActionResult> ActualizarPerfil(
+            [FromForm] Usuario usuario,
+            IFormFile? ImagenPerfil,
+            [FromForm] bool? EliminarFoto,
+            CancellationToken ct)
         {
             var usuarioDb = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == usuario.Id, ct);
             if (usuarioDb == null) return NotFound();
 
-            // Upload seguro
+            // Eliminar foto si el usuario lo solicitó
+            if (EliminarFoto == true && !string.IsNullOrEmpty(usuarioDb.FotoPerfil))
+            {
+                TryDeleteProfileImage(usuarioDb.FotoPerfil);
+                usuarioDb.FotoPerfil = null;
+            }
+
+            // Subida segura de nueva imagen
             if (ImagenPerfil != null && ImagenPerfil.Length > 0)
             {
-                if (ImagenPerfil.Length > 2_000_000)
+                if (ImagenPerfil.Length > _maxImagenBytes)
                 {
-                    TempData["MensajeError"] = "La imagen supera 2MB.";
-                    return RedirectToAction("Perfil");
+                    TempData["MensajeError"] = "La imagen supera el tamaño máximo (5MB).";
+                    return RedirectToAction(nameof(Perfil));
                 }
 
                 var ext = Path.GetExtension(ImagenPerfil.FileName).ToLowerInvariant();
-                var permitidas = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-                if (!permitidas.Contains(ext))
+                if (!_extPermitidas.Contains(ext) || string.IsNullOrWhiteSpace(ImagenPerfil.ContentType) || !ImagenPerfil.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 {
                     TempData["MensajeError"] = "Formato de imagen no permitido.";
-                    return RedirectToAction("Perfil");
+                    return RedirectToAction(nameof(Perfil));
                 }
 
-                var rutaCarpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "Perfiles");
-                Directory.CreateDirectory(rutaCarpeta);
+                // Carpeta destino
+                var carpeta = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "Perfiles");
+                Directory.CreateDirectory(carpeta);
+
+                // Borra anterior si existe
+                if (!string.IsNullOrEmpty(usuarioDb.FotoPerfil))
+                    TryDeleteProfileImage(usuarioDb.FotoPerfil);
 
                 var nombreArchivo = $"{Guid.NewGuid():N}{ext}";
-                var rutaCompleta = Path.Combine(rutaCarpeta, nombreArchivo);
-                await using (var stream = new FileStream(rutaCompleta, FileMode.Create))
-                    await ImagenPerfil.CopyToAsync(stream, ct);
+                var rutaFisica = Path.Combine(carpeta, nombreArchivo);
 
-                usuarioDb.FotoPerfil = "/images/Perfiles/" + nombreArchivo;
+                try
+                {
+                    await using var stream = new FileStream(rutaFisica, FileMode.Create);
+                    await ImagenPerfil.CopyToAsync(stream, ct);
+                    usuarioDb.FotoPerfil = "/images/Perfiles/" + nombreArchivo;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error guardando imagen de perfil");
+                    TempData["MensajeError"] = "No se pudo guardar la imagen.";
+                    return RedirectToAction(nameof(Perfil));
+                }
             }
 
             // Solo campos permitidos
@@ -293,15 +313,16 @@ namespace Simone.Controllers
             if (!res.Succeeded)
             {
                 TempData["MensajeError"] = string.Join("; ", res.Errors.Select(e => e.Description));
-                return RedirectToAction("Perfil");
+                return RedirectToAction(nameof(Perfil));
             }
 
             if (_logService != null) await _logService.Registrar($"Actualizó su perfil: {usuarioDb.Email}");
             TempData["MensajeExito"] = "Perfil actualizado correctamente.";
-            return RedirectToAction("Perfil");
+            return RedirectToAction(nameof(Perfil));
         }
 
-        // Dirección de envío (GET)
+        // ======= DIRECCIÓN DE ENVÍO =======
+
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> CambiarDireccion(string? returnUrl = null, CancellationToken ct = default)
@@ -313,12 +334,10 @@ namespace Simone.Controllers
             return View(u);
         }
 
-        // Dirección de envío (POST)
         [HttpPost]
         [Authorize]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> GuardarDireccion(
-            string? id, string? direccion, string? ciudad, string? provincia,
+            string? direccion, string? ciudad, string? provincia,
             string? referencia, string? telefono, string? returnUrl, CancellationToken ct)
         {
             var u = await _userManager.GetUserAsync(User);
@@ -334,7 +353,7 @@ namespace Simone.Controllers
             if (!res.Succeeded)
             {
                 TempData["MensajeError"] = string.Join("; ", res.Errors.Select(e => e.Description));
-                return RedirectToAction("Perfil");
+                return RedirectToAction(nameof(Perfil));
             }
 
             if (_logService != null) await _logService.Registrar($"Actualizó dirección de envío: {u.Email}");
@@ -343,17 +362,17 @@ namespace Simone.Controllers
             if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
                 return Redirect(returnUrl);
 
-            return RedirectToAction("Perfil");
+            return RedirectToAction(nameof(Perfil));
         }
 
-        // Olvidé la contraseña
+        // ======= OLVIDÉ LA CONTRASEÑA =======
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult OlvidePassword() => View();
 
         [HttpPost]
         [AllowAnonymous]
-        [ValidateAntiForgeryToken]
         public async Task<IActionResult> OlvidePassword(ForgotPasswordViewModel model, CancellationToken ct = default)
         {
             if (!ModelState.IsValid)
@@ -363,7 +382,7 @@ namespace Simone.Controllers
             if (user == null || !(await _userManager.IsEmailConfirmedAsync(user)))
             {
                 TempData["MensajeExito"] = "Si el correo existe, se ha enviado un enlace de recuperación.";
-                return RedirectToAction("Login");
+                return RedirectToAction(nameof(Login));
             }
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
@@ -373,11 +392,46 @@ namespace Simone.Controllers
             _logger.LogInformation("Solicitud de recuperación para {Email}", user.Email);
             if (_logService != null) await _logService.Registrar($"Reset password solicitado {user.Email}");
 
+            // Aquí iría el envío del correo con callbackUrl.
             TempData["MensajeExito"] = "Te hemos enviado un enlace de recuperación (revisa tu correo).";
-            return RedirectToAction("Login");
+            return RedirectToAction(nameof(Login));
         }
 
-        // --- Helper de logging de inicios de sesión ---
+        // ======= CAMBIAR CONTRASEÑA (AJAX, sin redirecciones) =======
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> CambiarPassword([FromForm] string CurrentPassword, [FromForm] string NewPassword, [FromForm] string ConfirmPassword)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user is null) return Unauthorized(new { error = "Sesión expirada. Ingresa nuevamente." });
+
+            if (string.IsNullOrWhiteSpace(CurrentPassword) ||
+                string.IsNullOrWhiteSpace(NewPassword) ||
+                string.IsNullOrWhiteSpace(ConfirmPassword))
+                return BadRequest(new { error = "Todos los campos son obligatorios." });
+
+            if (NewPassword != ConfirmPassword)
+                return BadRequest(new { error = "Las contraseñas no coinciden." });
+
+            // Validación de política de contraseñas
+            foreach (var v in _userManager.PasswordValidators)
+            {
+                var vr = await v.ValidateAsync(_userManager, user, NewPassword);
+                if (!vr.Succeeded)
+                    return BadRequest(new { errors = vr.Errors.Select(e => e.Description).ToArray() });
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, CurrentPassword, NewPassword);
+            if (!result.Succeeded)
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description).ToArray() });
+
+            if (_logService != null) await _logService.Registrar($"Password cambiado: {user.Email}");
+            return Ok(new { ok = true, message = "Contraseña actualizada correctamente." });
+        }
+
+        // ======= HELPERS =======
+
         private async Task RegistrarLog(string email, bool exitoso, CancellationToken ct)
         {
             var log = new LogIniciosSesion
@@ -391,6 +445,25 @@ namespace Simone.Controllers
             };
             _context.LogIniciosSesion.Add(log);
             await _context.SaveChangesAsync(ct);
+        }
+
+        private void TryDeleteProfileImage(string? relativePath)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(relativePath)) return;
+                // Solo archivos dentro de /images/Perfiles
+                if (!relativePath.Replace('\\', '/').StartsWith("/images/Perfiles/", StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                if (System.IO.File.Exists(fullPath))
+                    System.IO.File.Delete(fullPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo eliminar la imagen anterior del perfil.");
+            }
         }
     }
 }

@@ -12,10 +12,7 @@ namespace Simone.Models
         // Constructores
         public Roles() : base() { }
 
-        public Roles(string roleName, string descripcion) : base(roleName)
-        {
-            Descripcion = descripcion;
-        }
+        public Roles(string name, string? descripcion) : base(name) => Descripcion = descripcion;
 
         // Variables adicionales
         [Required, StringLength(100)]

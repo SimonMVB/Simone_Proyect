@@ -1,6 +1,25 @@
 ﻿@model IEnumerable<Simone.Models.Pedido>
+@using System.Globalization
 @{
     ViewData["Title"] = "Gestión de Pedidos";
+
+    var pedidos = Model?.ToList() ?? new List<Simone.Models.Pedido>();
+    var totalPedidos = pedidos.Count;
+    var entregados = pedidos.Count(p => (p.EstadoPedido ?? "").Equals("Entregado", StringComparison.OrdinalIgnoreCase));
+    var totalMonto = pedidos.Sum(p => p.Total);
+
+    Func<string, string> estadoColor = estado => (estado ?? string.Empty).Trim().ToLower() switch
+    {
+        "entregado" => "green",
+        "enviado" => "blue",
+        "en proceso" => "yellow",
+        "pendiente" => "grey",
+        "cancelado" => "red",
+        _ => "grey"
+    };
+
+    var q = Context.Request.Query["q"].ToString();
+    var estado = Context.Request.Query["estado"].ToString();
 }
 
 <div class="ui container mt-5">
@@ -15,9 +34,58 @@
 
         <div class="ui divider"></div>
 
-        @if (Model != null && Model.Any())
+        <!-- Filtros (GET) -->
+        <form method="get" class="ui form">
+            <div class="fields">
+                <div class="six wide field">
+                    <label>Buscar (cliente, email)</label>
+                    <div class="ui icon input">
+                        <input type="text" name="q" value="@q" placeholder="Ej. María, maria@correo.com">
+                        <i class="search icon"></i>
+                    </div>
+                </div>
+                <div class="four wide field">
+                    <label>Estado</label>
+                    <select class="ui dropdown" name="estado">
+                        <option value="">Todos</option>
+                        @foreach (var opt in new[] { "Pendiente", "En proceso", "Enviado", "Entregado", "Cancelado" })
+                        {
+                            <option value="@opt" selected="@(estado == opt ? "selected" : null)">@opt</option>
+                        }
+                    </select>
+                </div>
+                <div class="six wide field" style="display:flex;align-items:flex-end;gap:.5rem;">
+                    <button class="ui primary button" type="submit">
+                        <i class="filter icon"></i> Filtrar
+                    </button>
+                    <a class="ui button" href="@Url.Action("Index", "Pedidos")">
+                        <i class="undo icon"></i> Limpiar
+                    </a>
+                </div>
+            </div>
+        </form>
+
+        <!-- KPIs -->
+        <div class="ui three statistics" style="margin-top:1rem;">
+            <div class="statistic">
+                <div class="value">@totalPedidos</div>
+                <div class="label">Pedidos</div>
+            </div>
+            <div class="statistic">
+                <div class="value">@entregados</div>
+                <div class="label">Entregados</div>
+            </div>
+            <div class="statistic">
+                <div class="value">@string.Format(CultureInfo.CreateSpecificCulture("es-EC"), "{0:C2}", totalMonto)</div>
+                <div class="label">Total</div>
+            </div>
+        </div>
+
+        <div class="ui divider"></div>
+
+        @if (pedidos.Any())
         {
-            <table class="ui celled striped selectable table">
+            <table class="ui celled striped selectable stackable table">
                 <thead class="full-width">
                     <tr>
                         <th>ID</th>
@@ -25,27 +93,43 @@
                         <th>Fecha del Pedido</th>
                         <th>Estado</th>
                         <th>Total</th>
-                        <th>Acciones</th>
+                        <th style="width:140px;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var pedido in Model)
+                    @foreach (var pedido in pedidos)
                     {
+                        var usuarioNombre = pedido.Usuario?.NombreCompleto ?? "(sin usuario)";
+                        var usuarioEmail = pedido.Usuario?.Email;
+                        var estadoLbl = pedido.EstadoPedido ?? "Pendiente";
+                        var color = estadoColor(estadoLbl);
                         <tr>
                             <td>@pedido.PedidoID</td>
-                            <td>@pedido.Cliente.Nombre</td> <!-- Corregí "Mombre" a "Nombre" -->
-                            <td>@pedido.FechaPedido.ToString("dd/MM/yyyy")</td> <!-- Correcto -->
                             <td>
-                                <div class="ui @((pedido.EstadoPedido == "Entregado") ? "green" : (pedido.EstadoPedido == "En proceso") ? "yellow" : "red") label">
-                                    @pedido.EstadoPedido
+                                <div class="content">
+                                    <div class="header">@usuarioNombre</div>
+                                    @if (!string.IsNullOrWhiteSpace(usuarioEmail))
+                                    {
+                                        <div class="description"><i class="mail icon"></i> @usuarioEmail</div>
+                                    }
                                 </div>
                             </td>
-                            <td>$@pedido.Total.ToString("F2")</td>
+                            <td>@pedido.FechaPedido.ToString("dd/MM/yyyy")</td>
                             <td>
-                                <a class="ui icon blue button" title="Ver Detalle">
+                                <div class="ui @color label">@estadoLbl</div>
+                            </td>
+                            <td>
+                                @string.Format(CultureInfo.CreateSpecificCulture("es-EC"), "{0:C2}", pedido.Total)
+                            </td>
+                            <td>
+                                <a class="ui icon blue button"
+                                   asp-controller="Pedidos"
+                                   asp-action="Detalle"
+                                   asp-route-id="@pedido.PedidoID"
+                                   title="Ver detalle">
                                     <i class="eye icon"></i>
                                 </a>
-                                <button class="ui icon basic grey button disabled" title="Editar (no disponible)">
+                                <button type="button" class="ui icon basic grey button disabled" title="Editar (no disponible)">
                                     <i class="edit outline icon"></i>
                                 </button>
                             </td>

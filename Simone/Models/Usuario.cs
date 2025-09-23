@@ -1,42 +1,64 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     public class Usuario : IdentityUser
     {
+        // -------- Perfil / contacto --------
         [Required, StringLength(100)]
         public string NombreCompleto { get; set; } = string.Empty;
 
-        [Phone]
-        public string Telefono { get; set; } = string.Empty;
+        // Identity ya tiene PhoneNumber; este campo es opcional para tu UI
+        [Phone, StringLength(20)]
+        public string? Telefono { get; set; }
 
+        [StringLength(300)]
+        public string? FotoPerfil { get; set; }
+
+        public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
+        public bool Activo { get; set; } = true;
+
+        [Required]
+        public string RolID { get; set; } = string.Empty;
+
+        // -------- Información de envío --------
         [StringLength(200)]
         public string? Direccion { get; set; }
 
-        [StringLength(200)]
-        public string? Referencia { get; set; }
-
-        public string? FotoPerfil { get; set; }
-
-        public DateTime FechaRegistro { get; set; } = DateTime.Now;
-
-        public bool Activo { get; set; } = true;
-
-        // Relación Roles
-        [Required]
-        public string RolID { get; set; }
         [StringLength(100)]
         public string? Ciudad { get; set; }
 
         [StringLength(100)]
         public string? Provincia { get; set; }
 
-        // Relaciones (opcional)
+        [StringLength(20)]
+        public string? CodigoPostal { get; set; }
+
+        [StringLength(200)]
+        public string? Referencia { get; set; }
+
+        [StringLength(150)]                 // ← SQL: NVARCHAR(150)
+        public string? NombreContactoEnvio { get; set; }
+
+        [StringLength(1000)]               // ← SQL: NVARCHAR(1000)
+        public string? InstruccionesEnvio { get; set; }
+
+        // -------- Pago por depósito / transferencia --------
+        [StringLength(150)]
+        public string? NombreDepositante { get; set; }
+
+        [StringLength(300)]
+        public string? FotoComprobanteDeposito { get; set; }
+
+        // -------- Relaciones existentes --------
         public virtual ICollection<ActividadUsuario> Actividades { get; set; }
+            = new HashSet<ActividadUsuario>();
+
         public virtual ICollection<LogIniciosSesion> LogsInicioSesion { get; set; }
+            = new HashSet<LogIniciosSesion>();
 
     }
 }

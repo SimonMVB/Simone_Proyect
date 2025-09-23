@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Simone.Data.Migrations
+namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate_20250828 : Migration
+    public partial class _0001 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -33,15 +33,20 @@ namespace Simone.Data.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     NombreCompleto = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Telefono = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Direccion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Referencia = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    FotoPerfil = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Telefono = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    FotoPerfil = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     FechaRegistro = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Activo = table.Column<bool>(type: "bit", nullable: false),
                     RolID = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Direccion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Ciudad = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Provincia = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CodigoPostal = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Referencia = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    NombreContactoEnvio = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    InstruccionesEnvio = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    NombreDepositante = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    FotoComprobanteDeposito = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -86,23 +91,6 @@ namespace Simone.Data.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Categorias", x => x.CategoriaID);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Clientes",
-                columns: table => new
-                {
-                    ClienteID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Telefono = table.Column<string>(type: "nvarchar(15)", maxLength: 15, nullable: false),
-                    Direccion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    FechaRegistro = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETDATE()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Clientes", x => x.ClienteID);
                 });
 
             migrationBuilder.CreateTable(
@@ -375,6 +363,59 @@ namespace Simone.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Pedidos",
+                columns: table => new
+                {
+                    PedidoID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FechaPedido = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EstadoPedido = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    MetodoEnvio = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    DireccionEnvio = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Pedidos", x => x.PedidoID);
+                    table.ForeignKey(
+                        name: "FK_Pedidos_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Ventas",
+                columns: table => new
+                {
+                    VentaID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EmpleadoID = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Estado = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
+                    FechaVenta = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    MetodoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Ventas", x => x.VentaID);
+                    table.ForeignKey(
+                        name: "FK_Ventas_AspNetUsers_EmpleadoID",
+                        column: x => x.EmpleadoID,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_Ventas_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Subcategorias",
                 columns: table => new
                 {
@@ -395,107 +436,22 @@ namespace Simone.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "DireccionesCliente",
-                columns: table => new
-                {
-                    DireccionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
-                    Calle = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Ciudad = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    EstadoProvincia = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CodigoPostal = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TelefonoContacto = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FechaRegistro = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DireccionesCliente", x => x.DireccionID);
-                    table.ForeignKey(
-                        name: "FK_DireccionesCliente_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Pedidos",
-                columns: table => new
-                {
-                    PedidoID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
-                    FechaPedido = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    EstadoPedido = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    MetodoEnvio = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DireccionEnvio = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Pedidos", x => x.PedidoID);
-                    table.ForeignKey(
-                        name: "FK_Pedidos_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Ventas",
-                columns: table => new
-                {
-                    VentaID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EmpleadoID = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Estado = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
-                    ClientesClienteID = table.Column<int>(type: "int", nullable: false),
-                    FechaVenta = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    MetodoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Ventas", x => x.VentaID);
-                    table.ForeignKey(
-                        name: "FK_Ventas_AspNetUsers_EmpleadoID",
-                        column: x => x.EmpleadoID,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Ventas_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Ventas_Clientes_ClientesClienteID",
-                        column: x => x.ClientesClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ClientesProgramas",
                 columns: table => new
                 {
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     ProgramaID = table.Column<int>(type: "int", nullable: false),
-                    FechaInicio = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    FechaInicio = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ProgramasFidelizacionProgramaID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ClientesProgramas", x => new { x.ClienteID, x.ProgramaID });
+                    table.PrimaryKey("PK_ClientesProgramas", x => new { x.UsuarioId, x.ProgramaID });
                     table.ForeignKey(
-                        name: "FK_ClientesProgramas_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
+                        name: "FK_ClientesProgramas_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ClientesProgramas_ProgramasFidelizacion_ProgramaID",
@@ -503,24 +459,29 @@ namespace Simone.Data.Migrations
                         principalTable: "ProgramasFidelizacion",
                         principalColumn: "ProgramaID",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ClientesProgramas_ProgramasFidelizacion_ProgramasFidelizacionProgramaID",
+                        column: x => x.ProgramasFidelizacionProgramaID,
+                        principalTable: "ProgramasFidelizacion",
+                        principalColumn: "ProgramaID");
                 });
 
             migrationBuilder.CreateTable(
                 name: "CuponesUsados",
                 columns: table => new
                 {
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     PromocionID = table.Column<int>(type: "int", nullable: false),
-                    FechaUso = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    FechaUso = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CuponesUsados", x => new { x.ClienteID, x.PromocionID });
+                    table.PrimaryKey("PK_CuponesUsados", x => new { x.UsuarioId, x.PromocionID });
                     table.ForeignKey(
-                        name: "FK_CuponesUsados_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
+                        name: "FK_CuponesUsados_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CuponesUsados_Promociones_PromocionID",
@@ -597,6 +558,36 @@ namespace Simone.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Comisiones",
+                columns: table => new
+                {
+                    ComisionID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    VentaID = table.Column<int>(type: "int", nullable: false),
+                    EmpleadoID = table.Column<int>(type: "int", nullable: false),
+                    PorcentajeComision = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MontoComision = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    FechaGeneracion = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Pagada = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Comisiones", x => x.ComisionID);
+                    table.ForeignKey(
+                        name: "FK_Comisiones_Empleados_EmpleadoID",
+                        column: x => x.EmpleadoID,
+                        principalTable: "Empleados",
+                        principalColumn: "EmpleadoID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Comisiones_Ventas_VentaID",
+                        column: x => x.VentaID,
+                        principalTable: "Ventas",
+                        principalColumn: "VentaID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Productos",
                 columns: table => new
                 {
@@ -644,36 +635,6 @@ namespace Simone.Data.Migrations
                         principalTable: "Subcategorias",
                         principalColumn: "SubcategoriaID",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Comisiones",
-                columns: table => new
-                {
-                    ComisionID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    VentaID = table.Column<int>(type: "int", nullable: false),
-                    EmpleadoID = table.Column<int>(type: "int", nullable: false),
-                    PorcentajeComision = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    MontoComision = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    FechaGeneracion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Pagada = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Comisiones", x => x.ComisionID);
-                    table.ForeignKey(
-                        name: "FK_Comisiones_Empleados_EmpleadoID",
-                        column: x => x.EmpleadoID,
-                        principalTable: "Empleados",
-                        principalColumn: "EmpleadoID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Comisiones_Ventas_VentaID",
-                        column: x => x.VentaID,
-                        principalTable: "Ventas",
-                        principalColumn: "VentaID",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -915,19 +876,19 @@ namespace Simone.Data.Migrations
                     ReseñaID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductoID = table.Column<int>(type: "int", nullable: false),
-                    ClienteID = table.Column<int>(type: "int", nullable: false),
-                    Calificacion = table.Column<int>(type: "int", nullable: true),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Calificacion = table.Column<int>(type: "int", nullable: false),
                     Comentario = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    FechaReseña = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    Fecha = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Reseñas", x => x.ReseñaID);
                     table.ForeignKey(
-                        name: "FK_Reseñas_Clientes_ClienteID",
-                        column: x => x.ClienteID,
-                        principalTable: "Clientes",
-                        principalColumn: "ClienteID",
+                        name: "FK_Reseñas_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Reseñas_Productos_ProductoID",
@@ -1036,6 +997,11 @@ namespace Simone.Data.Migrations
                 column: "ProgramaID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ClientesProgramas_ProgramasFidelizacionProgramaID",
+                table: "ClientesProgramas",
+                column: "ProgramasFidelizacionProgramaID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comisiones_EmpleadoID",
                 table: "Comisiones",
                 column: "EmpleadoID");
@@ -1091,11 +1057,6 @@ namespace Simone.Data.Migrations
                 column: "DetalleVentaID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DireccionesCliente_ClienteID",
-                table: "DireccionesCliente",
-                column: "ClienteID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Empleados_RolID",
                 table: "Empleados",
                 column: "RolID");
@@ -1142,9 +1103,9 @@ namespace Simone.Data.Migrations
                 column: "ProductoID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Pedidos_ClienteID",
+                name: "IX_Pedidos_UsuarioId",
                 table: "Pedidos",
-                column: "ClienteID");
+                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Productos_CategoriaID",
@@ -1167,14 +1128,14 @@ namespace Simone.Data.Migrations
                 column: "VendedorID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Reseñas_ClienteID",
-                table: "Reseñas",
-                column: "ClienteID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Reseñas_ProductoID",
                 table: "Reseñas",
                 column: "ProductoID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Reseñas_UsuarioId",
+                table: "Reseñas",
+                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Subcategorias_CategoriaID",
@@ -1182,19 +1143,14 @@ namespace Simone.Data.Migrations
                 column: "CategoriaID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Ventas_ClienteID",
-                table: "Ventas",
-                column: "ClienteID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Ventas_ClientesClienteID",
-                table: "Ventas",
-                column: "ClientesClienteID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Ventas_EmpleadoID",
                 table: "Ventas",
                 column: "EmpleadoID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Ventas_UsuarioId",
+                table: "Ventas",
+                column: "UsuarioId");
         }
 
         /// <inheritdoc />
@@ -1247,9 +1203,6 @@ namespace Simone.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "Devoluciones");
-
-            migrationBuilder.DropTable(
-                name: "DireccionesCliente");
 
             migrationBuilder.DropTable(
                 name: "Favoritos");
@@ -1313,9 +1266,6 @@ namespace Simone.Data.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
-                name: "Clientes");
 
             migrationBuilder.DropTable(
                 name: "Categorias");

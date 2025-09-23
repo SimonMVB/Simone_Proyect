@@ -1,14 +1,18 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
 using Simone.Data;
-using Simone.Extensions;
 using Simone.Models;
 using Simone.Services;
-using System.Security.Claims;
-using Microsoft.Extensions.Logging;
-using System.Linq;
-using System.Threading.Tasks;
+using Simone.Extensions; // si defines helpers/extensiones aquí
 
 namespace Simone.Controllers
 {
@@ -35,41 +39,36 @@ namespace Simone.Controllers
             _productos = productos;
             _categorias = categorias;
             _subcategorias = subcategorias;
+            _carrito = carrito;
             _userManager = user;
             _logger = logger;
-            _carrito = carrito;
         }
 
         /// <summary>
-        /// Acción para mostrar el catálogo de productos con opciones de paginación y filtrado por categorías y subcategorías.
+        /// Catálogo con filtros y paginación.
         /// </summary>
-        /// <param name="categoriaID">ID de la categoría seleccionada (opcional)</param>
-        /// <param name="subcategoriaIDs">Array de IDs de subcategorías seleccionadas (opcional)</param>
-        /// <param name="pageNumber">Número de página para la paginación</param>
-        /// <param name="pageSize">Cantidad de productos por página</param>
-        /// <returns>Vista del catálogo con productos filtrados y paginados</returns>
         [HttpGet]
-        public async Task<IActionResult> Catalogo(int? categoriaID, int[] subcategoriaIDs, int pageNumber = 1, int pageSize = 20)
+        public async Task<IActionResult> Catalogo(int? categoriaID, int[]? subcategoriaIDs, int pageNumber = 1, int pageSize = 20)
         {
             var categorias = await _categorias.GetAllAsync();
             var subcategorias = categoriaID.HasValue
                 ? await _subcategorias.GetByCategoriaIdAsync(categoriaID.Value)
                 : new List<Subcategorias>();
 
-            IQueryable<Producto> query = _context.Productos;
+            IQueryable<Producto> query = _context.Productos.AsNoTracking();
 
             if (categoriaID.HasValue)
                 query = query.Where(p => p.CategoriaID == categoriaID.Value);
 
-            if (subcategoriaIDs != null && subcategoriaIDs.Length > 0)
-                query = query.Where(p => subcategoriaIDs.Contains(p.SubcategoriaID));
+            if (subcategoriaIDs is { Length: > 0 })
+                query = query.Where(p => subcategoriaIDs!.Contains(p.SubcategoriaID));
 
             var totalProducts = await query.CountAsync();
 
             var productos = await query
-                .OrderBy(p => p.Nombre) // Ordena por nombre del producto
-                .Skip((pageNumber - 1) * pageSize) // Salta los productos de las páginas anteriores
-                .Take(pageSize) // Toma solo los productos de la página actual
+                .OrderBy(p => p.Nombre)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
             var model = new CatalogoViewModel
@@ -83,130 +82,23 @@ namespace Simone.Controllers
                 PageSize = pageSize,
                 TotalProducts = totalProducts,
                 ProductoIDsFavoritos = new List<int>()
-
             };
-            if (User.Identity.IsAuthenticated)
+
+            // Marcar favoritos si está autenticado
+            if (User.Identity?.IsAuthenticated == true)
             {
-                var userId = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+                var userId = _userManager.GetUserId(User);
                 model.ProductoIDsFavoritos = await _context.Favoritos
                     .Where(f => f.UsuarioId == userId)
                     .Select(f => f.ProductoId)
                     .ToListAsync();
             }
+
             return View(model);
         }
 
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcesarCompra(CompraViewModel model)
-        {
-            // Validación del modelo (por si usas campos adicionales)
-            if (!ModelState.IsValid)
-            {
-                // Vuelve a cargar los datos necesarios para la vista Resumen
-                var user = await _userManager.GetUserAsync(User);
-                if (user == null)
-                {
-                    TempData["MensajeError"] = "Debes iniciar sesión para confirmar la compra.";
-                    return RedirectToAction("Login", "Cuenta");
-                }
-
-                var carrito = await _carrito.GetByClienteIdAsync(user.Id);
-                var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-                decimal totalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
-
-                ViewBag.CarritoDetalles = carritoDetalles;
-                ViewBag.TotalCompra = totalCompra;
-                ViewBag.HasAddress = !string.IsNullOrEmpty(user.Direccion);
-
-                // Devuelve la vista resumen con los datos cargados y el modelo actual
-                return View("Resumen", user);
-            }
-
-            // Usuario autenticado
-            var currentUser = await _userManager.GetUserAsync(User);
-            if (currentUser == null)
-            {
-                TempData["MensajeError"] = "Debes iniciar sesión para confirmar la compra.";
-                return RedirectToAction("Login", "Cuenta");
-            }
-
-            // Verifica el carrito
-            var carritoUser = await _carrito.GetByClienteIdAsync(currentUser.Id);
-            var carritoDetallesUser = await _carrito.LoadCartDetails(carritoUser.CarritoID);
-            if (!carritoDetallesUser.Any())
-            {
-                TempData["MensajeError"] = "Tu carrito está vacío.";
-                return RedirectToAction("CompraError", "Compras");
-            }
-
-            // Verifica que tenga dirección
-            if (string.IsNullOrEmpty(currentUser.Direccion))
-            {
-                TempData["MensajeError"] = "Debes registrar una dirección de envío antes de finalizar la compra.";
-                return RedirectToAction("Resumen", "Compras");
-            }
-
-            try
-            {
-                // Procesa el carrito y registra la compra (ajusta según tu lógica)
-                var result = await _carrito.ProcessCartDetails(carritoUser.CarritoID, currentUser);
-                if (result)
-                {
-                    await _carrito.AddAsync(currentUser); // Crea un nuevo carrito vacío después de la compra
-                }
-
-                TempData["MensajeExito"] = "Compra realizada con éxito.";
-                return RedirectToAction("CompraExito", "Compras");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Error al procesar el pedido: {ex.Message}");
-                TempData["MensajeError"] = "Hubo un error al procesar tu pedido.";
-                return RedirectToAction("CompraError", "Compras");
-            }
-        }
-
-
-
-
-
-        public IActionResult CompraError()
-        {
-            return View();
-        }
-
-        // Acción que muestra la página de éxito tras finalizar la compra
-        public IActionResult CompraExito()
-        {
-            return View();
-        }
-
         /// <summary>
-        /// Acción para mostrar los detalles de un producto específico.
-        /// </summary>
-        /// <param name="productoID">ID del producto a mostrar</param>
-        /// <returns>Vista con los detalles del producto</returns>
-        [HttpGet]
-        public async Task<IActionResult> VerProducto(int productoID)
-        {
-            var producto = await _productos.GetByIdAsync(productoID);
-            if (producto != null)
-            {
-                ViewBag.Producto = producto;
-                return View();
-            }
-            else
-            {
-                // Mejorar la respuesta cuando el producto no existe
-                TempData["MensajeError"] = "El producto solicitado no está disponible.";
-                return RedirectToAction("Catalogo", "Compras"); // Redirigir al catálogo si el producto no existe
-            }
-        }
-
-        /// <summary>
-        /// Añadir un producto al carrito (soporta AJAX y POST normal).
+        /// Añadir un producto al carrito (AJAX o POST normal).
         /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -220,7 +112,6 @@ namespace Simone.Controllers
                 return RedirectToAction("Login", "Cuenta");
             }
 
-            // Normaliza cantidad
             if (model.Cantidad <= 0) model.Cantidad = 1;
 
             var producto = await _productos.GetByIdAsync(model.ProductoID);
@@ -231,7 +122,7 @@ namespace Simone.Controllers
                 return RedirectToReferrerOr("Catalogo");
             }
 
-            // Asegura carrito
+            // Asegurar carrito
             var carrito = await _carrito.GetByClienteIdAsync(user.Id);
             if (carrito == null)
             {
@@ -239,11 +130,10 @@ namespace Simone.Controllers
                 carrito = await _carrito.GetByClienteIdAsync(user.Id);
             }
 
-            // Carga detalles actuales
+            // Stock: lo que hay + lo que se pide
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
             var cantidadEnCarrito = detalles.Where(c => c.ProductoID == model.ProductoID).Sum(c => c.Cantidad);
 
-            // Valida stock total solicitado (lo que ya hay + lo que piden)
             if (cantidadEnCarrito + model.Cantidad > producto.Stock)
             {
                 var msg = "La cantidad solicitada supera el stock disponible.";
@@ -252,7 +142,6 @@ namespace Simone.Controllers
                 return RedirectToReferrerOr("Catalogo");
             }
 
-            // Añadir
             var ok = await _carrito.AnadirProducto(producto, user, model.Cantidad);
             if (!ok)
             {
@@ -272,29 +161,18 @@ namespace Simone.Controllers
             return RedirectToReferrerOr("Catalogo");
         }
 
-        // Helpers en el mismo controlador
-        private bool EsAjax() =>
-            string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-
-        private IActionResult RedirectToReferrerOr(string action, string controller = "Compras")
-        {
-            var referer = Request.Headers["Referer"].ToString();
-            if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
-            return RedirectToAction(action, controller);
-        }
-
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarArticulo(int carritoDetalleID)
         {
-            await _carrito.BorrarProductoCarrito(carritoDetalleID); // Elimina el artículo del carrito
+            await _carrito.BorrarProductoCarrito(carritoDetalleID);
             TempData["MensajeExito"] = "Producto eliminado del carrito con éxito.";
-            return RedirectToAction("Catalogo", "Compras"); // Redirige a la vista del catálogo
+            return RedirectToAction("Catalogo");
         }
 
         /// <summary>
-        /// Acción para mostrar el resumen del carrito.
+        /// Resumen del carrito antes de comprar.
         /// </summary>
-        /// <returns>Vista con los detalles del carrito y el total</returns>
         [HttpGet]
         public async Task<IActionResult> Resumen()
         {
@@ -302,27 +180,32 @@ namespace Simone.Controllers
             if (user == null)
             {
                 TempData["MensajeError"] = "Debes iniciar sesión para ver el resumen de tu carrito.";
-                return RedirectToAction("Login", "Cuenta"); // Redirige a login si el usuario no está autenticado
+                return RedirectToAction("Login", "Cuenta");
             }
 
-            var carrito = await _carrito.GetByClienteIdAsync(user.Id);
+            // Asegurar carrito
+            var carrito = await _carrito.GetByClienteIdAsync(user.Id)
+                         ?? (await _carrito.AddAsync(user) ? await _carrito.GetByClienteIdAsync(user.Id) : null);
+
+            if (carrito == null)
+            {
+                TempData["MensajeError"] = "No fue posible obtener tu carrito.";
+                return RedirectToAction("Catalogo");
+            }
+
             var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            decimal totalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad); // Calcula el total de la compra
+            var totalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
 
-            var address = user.Direccion; // Obtiene la dirección del usuario
-
-            // Establece datos para ser mostrados en la vista
             ViewBag.CarritoDetalles = carritoDetalles;
             ViewBag.TotalCompra = totalCompra;
-            ViewBag.HasAddress = !string.IsNullOrEmpty(address); // Verifica si el usuario tiene dirección
+            ViewBag.HasAddress = !string.IsNullOrWhiteSpace(user.Direccion);
 
-            return View(user); // Devuelve la vista con los datos del usuario
+            return View(user);
         }
 
         /// <summary>
-        /// Acción para confirmar la compra y finalizar el pedido.
+        /// Confirmar compra (registra Venta + Detalles, descuenta stock y cierra carrito).
         /// </summary>
-        /// <returns>Redirige a una página de éxito si la compra es exitosa</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarCompra()
@@ -338,17 +221,17 @@ namespace Simone.Controllers
             if (carrito == null)
             {
                 TempData["MensajeError"] = "Tu carrito está vacío.";
-                return RedirectToAction("Resumen");
+                return RedirectToAction(nameof(Resumen));
             }
 
             var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
             if (carritoDetalles == null || !carritoDetalles.Any())
             {
                 TempData["MensajeError"] = "Tu carrito está vacío.";
-                return RedirectToAction("Resumen");
+                return RedirectToAction(nameof(Resumen));
             }
 
-            // Si no tiene dirección, permanece en Resumen con datos cargados
+            // Requiere dirección
             if (string.IsNullOrWhiteSpace(user.Direccion))
             {
                 ViewBag.HasAddress = false;
@@ -357,7 +240,8 @@ namespace Simone.Controllers
                 TempData["MensajeError"] = "Agrega una dirección para continuar con la compra.";
                 return View("Resumen", user);
             }
-            // --- AÑADIR ESTE BLOQUE ---
+
+            // Validación de stock (previa)
             var faltantes = carritoDetalles
                 .Where(d => d.Producto != null && d.Producto.Stock < d.Cantidad)
                 .ToList();
@@ -368,29 +252,42 @@ namespace Simone.Controllers
                 ViewBag.CarritoDetalles = carritoDetalles;
                 ViewBag.TotalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
                 TempData["MensajeError"] = "Stock insuficiente para: " +
-                    string.Join(", ", faltantes.Select(f =>
-                        $"{f.Producto.Nombre} (disp: {f.Producto.Stock}, pediste: {f.Cantidad})"));
+                    string.Join(", ", faltantes.Select(f => $"{f.Producto!.Nombre} (disp: {f.Producto.Stock}, pediste: {f.Cantidad})"));
                 return View("Resumen", user);
             }
+
             try
             {
+                // Registra venta, descuenta stock y cierra carrito
                 var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
 
                 if (ok)
                 {
-                    // crea un carrito nuevo y limpio para siguientes compras
+                    // Obtén el ID de la venta creada (la más reciente del usuario)
+                    var ventaId = await _context.Ventas
+                        .Where(v => v.UsuarioId == user.Id)
+                        .OrderByDescending(v => v.FechaVenta)
+                        .Select(v => v.VentaID)
+                        .FirstOrDefaultAsync();
+
+                    // Prepara un carrito nuevo y vacío para futuras compras
                     await _carrito.AddAsync(user);
-                    TempData["MensajeExito"] = "Compra realizada con éxito.";
-                    return RedirectToAction("CompraExito", "Compras");
+
+                    TempData["MensajeExito"] = "¡Gracias por tu compra!";
+                    // Redirige a la página de éxito con el número de referencia real
+                    if (ventaId > 0)
+                        return RedirectToAction(nameof(CompraExito), new { id = ventaId });
+
+                    // Fallback: si por alguna razón no se logró obtener el id
+                    return RedirectToAction("Index", "MisCompras");
                 }
 
-                // Si el servicio devolvió false, regresamos a Resumen (no a Exito)
                 TempData["MensajeError"] = "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
-                return RedirectToAction("Resumen");
+                return RedirectToAction(nameof(Resumen));
             }
             catch (InvalidOperationException ex)
             {
-                // Mensajes “amigables”: stock insuficiente, carrito vacío, admin no encontrado, etc.
+                // Validaciones del service (stock cambió, carrito vacío, etc.)
                 _logger.LogWarning(ex, "Validación al confirmar compra");
 
                 var carritoDetallesView = await _carrito.LoadCartDetails(carrito.CarritoID);
@@ -405,9 +302,94 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al procesar el pedido");
                 TempData["MensajeError"] = "Hubo un error al procesar tu pedido.";
-                return RedirectToAction("CompraError", "Compras");
+                return RedirectToAction(nameof(CompraError));
             }
         }
 
+        // ----------------- Pantallas de resultado -----------------
+
+        // Vista de éxito: muestra el resumen y el número de referencia (VentaID)
+        [HttpGet]
+        public async Task<IActionResult> CompraExito(int id)
+        {
+            // Cargamos la venta por seguridad (y por si quieres mostrar datos en la vista)
+            var uid = _userManager.GetUserId(User);
+            var venta = await _context.Ventas
+                .AsNoTracking()
+                .Include(v => v.Usuario)
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid);
+
+            if (venta == null)
+                return RedirectToAction("Index", "Home");
+
+            // Si tu vista está tipada a Ventas:
+            return View(venta);
+
+            // Si prefieres usar ViewBag (y la vista no es tipada):
+            // ViewBag.VentaId = id;
+            // return View();
+        }
+
+        [HttpGet]
+        public IActionResult CompraError() => View();
+
+        // ----------------- Helpers -----------------
+        private bool EsAjax() =>
+            string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+        private IActionResult RedirectToReferrerOr(string action, string controller = "Compras")
+        {
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
+            return RedirectToAction(action, controller);
+        }
+
+        // ----------------- Descargar comprobante -----------------
+
+        [HttpGet]
+        public async Task<IActionResult> Comprobante(int id)
+        {
+            var uid = _userManager.GetUserId(User);
+            var venta = await _context.Ventas
+                .Include(v => v.Usuario)
+                .Include(v => v.DetalleVentas).ThenInclude(d => d.Producto)
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid);
+
+            if (venta == null) return NotFound();
+
+            var html = $@"
+<!DOCTYPE html><html><head><meta charset='utf-8'>
+<style>
+ body {{ font-family: Arial, Helvetica, sans-serif; }}
+ h1 {{ font-size:20px;margin:0 0 8px }}
+ table {{ width:100%;border-collapse:collapse;margin-top:12px }}
+ th,td {{ border:1px solid #ddd;padding:8px;font-size:12px }}
+ th {{ background:#f3f4f6;text-align:left }}
+ .r {{ text-align:right }}
+ .muted {{ color:#6b7280;font-size:12px }}
+</style></head><body>
+<h1>Comprobante de compra</h1>
+<div class='muted'>Referencia: #{venta.VentaID} · Fecha: {venta.FechaVenta:dd/MM/yyyy HH:mm}</div>
+<div class='muted'>Cliente: {venta.Usuario?.NombreCompleto} · Email: {venta.Usuario?.Email}</div>
+
+<table>
+<thead><tr><th>Producto</th><th class='r'>Cant.</th><th class='r'>Precio</th><th class='r'>Subtotal</th></tr></thead>
+<tbody>
+{string.Join("", venta.DetalleVentas.Select(d =>
+            $"<tr><td>{d.Producto?.Nombre}</td><td class='r'>{d.Cantidad}</td><td class='r'>{d.PrecioUnitario:C2}</td><td class='r'>{d.Subtotal:C2}</td></tr>"
+        ))}
+</tbody>
+<tfoot>
+<tr><th colspan='3' class='r'>Total</th><th class='r'>{venta.Total:C2}</th></tr>
+</tfoot>
+</table>
+
+<p class='muted'>Método de pago: {venta.MetodoPago ?? "N/D"} · Estado: {venta.Estado ?? "N/D"}</p>
+</body></html>";
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(html);
+            var fileName = $"comprobante-{venta.VentaID}.html";
+            return File(bytes, "text/html", fileName); // fuerza descarga
+        }
     }
 }

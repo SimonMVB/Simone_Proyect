@@ -1,196 +1,189 @@
 ﻿@model Simone.ViewModels.LoginViewModel
-
 @{
-    ViewData["Title"] = "Iniciar Sesión";
+    ViewData["Title"] = "Iniciar sesión";
     Layout = "~/Views/Shared/_LayoutCuenta.cshtml";
+    var returnUrl = (string?)ViewData["ReturnUrl"] ?? "";
 }
 
-<div class="container mt-5" style="max-width: 400px;">
-    <div class="card shadow-sm rounded-3">
-        <div class="card-header login-header text-center">
-            <h4 class="mb-0"><i class="fa-solid fa-right-to-bracket me-2"></i>Iniciar Sesión</h4>
+<div class="container py-5" style="max-width: 520px;">
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="card-header text-center border-0 p-4" style="background: linear-gradient(135deg,#f9d5ec,#f4a7c1);">
+            <h4 class="mb-0 text-white">
+                <i class="fa-solid fa-right-to-bracket me-2"></i> Iniciar sesión
+            </h4>
         </div>
 
-        <div class="card-body">
-            <!-- Mensajes de TempData -->
-            @if (TempData["MensajeError"] != null)
+        <div class="card-body p-4">
+
+            @* Alertas *@
+            @if (TempData["MensajeError"] is string err && !string.IsNullOrWhiteSpace(err))
             {
-                <div class="alert alert-danger">
-                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["MensajeError"]
+                <div class="alert alert-danger d-flex align-items-start" role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-2 mt-1"></i>
+                    <div>@err</div>
                 </div>
             }
-            @if (TempData["MensajeExito"] != null)
+            @if (TempData["MensajeExito"] is string ok && !string.IsNullOrWhiteSpace(ok))
             {
-                <div class="alert alert-success">
-                    <i class="fa-solid fa-circle-check me-2"></i> @TempData["MensajeExito"]
+                <div class="alert alert-success d-flex align-items-start" role="alert">
+                    <i class="fa-solid fa-circle-check me-2 mt-1"></i>
+                    <div>@ok</div>
                 </div>
             }
 
-            <!-- Errores del modelo -->
             <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
             <form asp-action="Login" method="post" id="formLogin" novalidate>
                 @Html.AntiForgeryToken()
-                <input type="hidden" name="returnUrl" value="@(ViewData["ReturnUrl"] ?? "")" />
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                <input type="hidden" name="RequestID" value="@ViewData["RequestID"]" />
 
+                <!-- Email -->
                 <div class="mb-3">
                     <label asp-for="Email" class="form-label">Correo electrónico</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                        <input asp-for="Email" type="email" class="form-control"
-                               placeholder="usuario@correo.com" autocomplete="username" />
+                        <input asp-for="Email"
+                               type="email"
+                               class="form-control"
+                               placeholder="usuario@correo.com"
+                               inputmode="email"
+                               autocomplete="username"
+                               required />
                     </div>
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
 
-                <div class="mb-3">
+                <!-- Password -->
+                <div class="mb-1">
                     <label asp-for="Password" class="form-label">Contraseña</label>
-                    <div class="input-group">
+                    <div class="input-group" id="grpPwd">
                         <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="Password" type="password" class="form-control"
-                               placeholder="••••••••" autocomplete="current-password" />
+                        <input asp-for="Password"
+                               type="password"
+                               class="form-control"
+                               placeholder="••••••••"
+                               autocomplete="current-password"
+                               required />
+                        <button class="btn btn-outline-secondary" type="button" id="btnTogglePwd" title="Mostrar/ocultar">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
+                    </div>
+                    <div id="capsWarn" class="form-text text-warning d-none">
+                        <i class="fa-solid fa-unlock-keyhole me-1"></i> Bloq Mayús está activado.
                     </div>
                     <span asp-validation-for="Password" class="text-danger small"></span>
                 </div>
 
-                <div class="form-check mb-3">
-                    <input asp-for="RememberMe" class="form-check-input" />
-                    <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
+                <!-- Remember / Forgot -->
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div class="form-check">
+                        <input asp-for="RememberMe" class="form-check-input" />
+                        <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
+                    </div>
+                    <div>
+                        <a asp-controller="Cuenta" asp-action="OlvidoPassword" class="link-secondary small">
+                            ¿Olvidaste tu contraseña?
+                        </a>
+                    </div>
                 </div>
 
-                <!-- Input escondido para el RequestID -->
-                <input type="hidden" name="RequestID" value="@ViewData["RequestID"]" />
-
-                <!-- Botón personalizado -->
-                <button type="submit" class="login-button w-100" id="btnLogin">
-                    <div class="login-text">
-                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
-                    </div>
+                <!-- Botón -->
+                <button type="submit" class="btn w-100 py-2 fw-semibold text-white" id="btnLogin"
+                        style="background-color:#f4a7c1; border-color:#f4a7c1;">
+                    <span class="me-2"><i class="fa-solid fa-arrow-right-to-bracket"></i></span> Ingresar
                 </button>
             </form>
         </div>
 
-        <div class="card-footer text-center small">
+        <div class="card-footer text-center small bg-white">
             ¿No tienes una cuenta?
-            <a asp-controller="Cuenta" asp-action="Registrar" style="color:#f4a7c1; font-weight:600;">
+            <a asp-controller="Cuenta" asp-action="Registrar" class="fw-semibold" style="color:#f4a7c1;">
                 Regístrate aquí
             </a>
         </div>
     </div>
 </div>
 
-<script>
-    (function () {
-        function handleSubmit(e) {
-            const form = e.currentTarget;
-            const btn = document.getElementById("btnLogin");
-            if (!form || !btn) return;
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            const form = document.getElementById('formLogin');
+            const btn  = document.getElementById('btnLogin');
+            const pwd  = document.getElementById('@Html.IdFor(m => m.Password)');
+            const toggle = document.getElementById('btnTogglePwd');
+            const capsWarn = document.getElementById('capsWarn');
 
-            // Solo deshabilitar si el formulario es válido
-            if (form.checkValidity()) {
+            // Mostrar/ocultar contraseña
+            toggle?.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isPwd = pwd.getAttribute('type') === 'password';
+                pwd.setAttribute('type', isPwd ? 'text' : 'password');
+                const i = toggle.querySelector('i');
+                i.classList.toggle('fa-eye');
+                i.classList.toggle('fa-eye-slash');
+            });
+
+            // Detector de CapsLock
+            const handleCaps = (evt) => {
+                const caps = evt.getModifierState && evt.getModifierState('CapsLock');
+                capsWarn.classList.toggle('d-none', !caps);
+            };
+            ['keyup','keydown'].forEach(ev => pwd.addEventListener(ev, handleCaps));
+
+            // Habilitar/deshabilitar por validez
+            const toggleSubmit = () => {
+                let valid = form.checkValidity();
+                if (window.jQuery && $.validator && $(form).data('validator')) {
+                    valid = valid && $(form).valid();
+                }
+                btn.disabled = !valid;
+            };
+
+            // Validación en vivo
+            ['input','change','keyup','blur'].forEach(evt => {
+                form.addEventListener(evt, toggleSubmit, true);
+            });
+
+            // Estado inicial
+            toggleSubmit();
+
+            // Evitar doble envío
+            form.addEventListener('submit', function () {
+                if (window.jQuery && $.validator && !$(form).valid()) return;
                 btn.disabled = true;
-                btn.innerHTML = `
-                    <span class="spinner-border spinner-border-sm text-light-pink me-2"
-                          style="border-color:#f4a7c1;border-right-color:transparent;"></span>
-                    Ingresando...
-                `;
-            }
-        }
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Ingresando...';
+            }, { once: true });
 
-        function resetLoginButton() {
-            const btn = document.getElementById("btnLogin");
-            if (btn) {
+            // Rehabilitar al navegar atrás
+            window.addEventListener('pageshow', () => {
                 btn.disabled = false;
-                btn.innerHTML = `
-                    <div class="login-text">
-                        <i class="fa-solid fa-arrow-right-to-bracket me-2"></i> Ingresar
-                    </div>
-                `;
+                btn.innerHTML = '<span class="me-2"><i class="fa-solid fa-arrow-right-to-bracket"></i></span> Ingresar';
+            });
+        })();
+    </script>
+
+    <style>
+        .input-group-text {
+            background: #fff;
+        }
+
+        .form-control:focus {
+            border-color: #f4a7c1;
+            box-shadow: 0 0 0 .25rem rgba(244,167,193,.25);
+        }
+
+        .btn:disabled {
+            opacity: .65;
+        }
+
+        a.link-secondary {
+            text-decoration: none;
+        }
+
+            a.link-secondary:hover {
+                text-decoration: underline;
             }
-        }
-
-        function wire() {
-            const form = document.getElementById("formLogin");
-            if (!form) return;
-
-            // Restaurar botón al cargar la página
-            resetLoginButton();
-
-            // Remover evento previo y agregar nuevo
-            form.removeEventListener("submit", handleSubmit);
-            form.addEventListener("submit", handleSubmit);
-        }
-
-        // Resetear el botón cuando hay mensajes de error (después de postback)
-        document.addEventListener("DOMContentLoaded", function() {
-            wire();
-
-            // Si hay mensajes de error, asegurar que el botón esté habilitado
-            if (document.querySelector('.alert-danger')) {
-                resetLoginButton();
-            }
-        });
-
-        window.addEventListener("pageshow", wire);
-    })();
-</script>
-
-
-
-
-<style>
-    .login-header {
-        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
-        color: white;
-        border-top-left-radius: 0.5rem;
-        border-top-right-radius: 0.5rem;
-        padding: 1rem;
-        box-shadow: inset 0 -2px 4px rgba(0,0,0,0.1);
-        font-weight: 600;
-    }
-
-    
-    .login-button {
-        background: linear-gradient(135deg, #f9d5ec, #f4a7c1);
-        border: none;
-        border-radius: 30px;
-        padding: 0.75em 1.5em;
-        color: #fff;
-        font-weight: 600;
-        font-size: 16px;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        transition: all 0.3s ease-in-out;
-        box-shadow: 0 8px 20px rgba(244, 167, 193, 0.4);
-    }
-
-        .login-button:hover {
-            background: linear-gradient(135deg, #f4a7c1, #f9d5ec);
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(244, 167, 193, 0.6);
-        }
-
-        .login-button:active {
-            transform: scale(0.97);
-            box-shadow: 0 5px 15px rgba(244, 167, 193, 0.5);
-        }
-
-    .login-text {
-        font-weight: 600;
-        font-size: 16px;
-        color: #ffffff;
-        display: flex;
-        align-items: center;
-        transition: transform 0.2s ease-in-out;
-    }
-
-    .login-button:hover .login-text {
-        transform: scale(0.97);
-    }
-
-    .text-light-pink {
-        color: #f4a7c1 !important;
-    }
-</style>
+    </style>
+}

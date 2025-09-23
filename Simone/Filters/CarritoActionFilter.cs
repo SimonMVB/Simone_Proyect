@@ -1,15 +1,12 @@
-using Simone.Models;
-using Simone.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using Simone.Models;                     // Para acceder al modelo de Usuario y Carrito
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Mvc.Filters;  // Para implementar el filtro de acción
+using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.EntityFrameworkCore;
+using Simone.Data;
+using Simone.Models;
 
 public class CarritoActionFilter : IAsyncActionFilter
 {
@@ -24,73 +21,69 @@ public class CarritoActionFilter : IAsyncActionFilter
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
     {
-        var user = await _userManager.GetUserAsync(context.HttpContext.User);
-        if (user != null)
+        var usuario = await _userManager.GetUserAsync(context.HttpContext.User);
+        if (usuario != null)
         {
-            // Retrieve the cart items for the current user
+            // Carga el carrito no cerrado del usuario (centralizado en UsuarioId)
             var carritoDetalles = await _context.CarritoDetalle
-                .Where(c => c.Carrito.ClienteID == user.Id)
-                .Where(c => c.Carrito.EstadoCarrito != "Cerrado")
-                .Include(cd => cd.Carrito)  // Eagerly load the related Carrito
-                .Include(cd => cd.Producto) // Eagerly load the related Producto
+                .Include(cd => cd.Carrito)
+                .Include(cd => cd.Producto)
+                .Where(cd => cd.Carrito.UsuarioId == usuario.Id)
+                .Where(cd => cd.Carrito.EstadoCarrito != "Cerrado")
                 .ToListAsync();
 
             int itemCount = 0;
-            bool itemsUpdated = false; // Flag to track if any items were updated
-            List<CarritoDetalle> itemsToRemove = new List<CarritoDetalle>(); // List to track items to remove
+            bool cantidadesAjustadas = false;
+            var itemsAEliminar = new List<CarritoDetalle>();
 
             foreach (var item in carritoDetalles)
             {
-                // Check if the product quantity exceeds stock
+                // Si el producto no existe o no tiene stock, marcar para eliminar
+                if (item.Producto == null || item.Producto.Stock <= 0)
+                {
+                    itemsAEliminar.Add(item);
+                    continue;
+                }
+
+                // Ajustar cantidad si excede el stock disponible
                 if (item.Cantidad > item.Producto.Stock)
                 {
-                    // If the quantity exceeds the stock, update the quantity in the cart
                     item.Cantidad = item.Producto.Stock;
-
-                    // Mark that the items were updated
-                    itemsUpdated = true;
+                    cantidadesAjustadas = true;
                 }
 
-                // Check if the stock is zero and remove the item from the cart if so
-                if (item.Producto.Stock == 0)
-                {
-                    itemsToRemove.Add(item); // Add the item to the removal list
-                }
-                else
-                {
-                    // Update the total item count
-                    itemCount += item.Cantidad;
-                }
+                itemCount += item.Cantidad;
             }
 
-            // If any items were updated, save the changes to the database
-            if (itemsUpdated)
+            // Guardar ajustes de cantidades
+            if (cantidadesAjustadas)
             {
                 await _context.SaveChangesAsync();
-
-                // Set the message in TempData for the view
-                context.HttpContext.Items["CartMessage"] = "Algunos elementos han sido retirados de su carrito por cambios en su disponibilidad.";
+                context.HttpContext.Items["CartMessage"] = "Algunos productos ajustaron su cantidad por cambios de stock.";
             }
 
-            // Remove items from the cart if their stock is zero
-            if (itemsToRemove.Any())
+            // Eliminar ítems sin stock
+            if (itemsAEliminar.Count > 0)
             {
-                _context.CarritoDetalle.RemoveRange(itemsToRemove);
+                _context.CarritoDetalle.RemoveRange(itemsAEliminar);
                 await _context.SaveChangesAsync();
 
-                // Set the message in TempData for the view
-                context.HttpContext.Items["CartMessage"] = "Algunos productos han sido eliminados del carrito debido a que ya no están disponibles en stock.";
+                // Reflejar eliminación en memoria y recalc del conteo
+                foreach (var x in itemsAEliminar)
+                    carritoDetalles.Remove(x);
+
+                itemCount = carritoDetalles.Sum(d => d.Cantidad);
+
+                // Si ya había mensaje por ajustes, se sobrescribirá por el de eliminación (más relevante)
+                context.HttpContext.Items["CartMessage"] = "Algunos productos se eliminaron del carrito por falta de stock.";
             }
 
-            // Set the "Carrito" value for the view
+            // Exponer a la vista
             context.HttpContext.Items["Carrito"] = carritoDetalles;
-
-            // Set the cart item count in HttpContext
             context.HttpContext.Items["CartCount"] = itemCount;
         }
 
-        // Proceed with the next action
+        // Continuar con la ejecución de la acción
         await next();
     }
-
 }

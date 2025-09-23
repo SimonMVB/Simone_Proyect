@@ -8,35 +8,19 @@ using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Configuración de la cadena de conexión a la base de datos desde appsettings.json
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("La cadena de conexión a la base de datos no está configurada.");
-}
-// 2.5. Servicios adicionales necesarios para la lógica de negocio
+// 1) Cadena de conexión
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' no está configurada.");
 
-
-
-// 2. Configuración de los servicios de la aplicación
-
-// 2.1. Configuración del servicio de sesión con opciones de seguridad y persistencia
-builder.Services.AddSession(options =>
-{
-    options.IdleTimeout = TimeSpan.FromMinutes(30); // Establece el tiempo de inactividad antes de expirar la sesión
-    options.Cookie.HttpOnly = true;  // Hace la cookie solo accesible vía HTTP, lo que mejora la seguridad
-    options.Cookie.IsEssential = true;  // Marca la cookie como esencial para la aplicación
-    options.Cookie.SameSite = SameSiteMode.Lax;
-});
-
-// 2.2. Agregar HttpContextAccessor para poder acceder al contexto HTTP en otros servicios
-builder.Services.AddHttpContextAccessor();
-
-// 2.3. Configuración de la base de datos con SQL Server
+// 2) DB + Identity
 builder.Services.AddDbContext<TiendaDbContext>(options =>
-    options.UseSqlServer(connectionString)); // Establece la conexión a la base de datos
+    options.UseSqlServer(
+        connectionString,
+        sql => sql.MigrationsAssembly(typeof(TiendaDbContext).Assembly.FullName)   // <- asegura dónde están las migraciones
+    )
+);
 
-// 2.4. Configuración de Identity para la gestión de usuarios y roles, con opciones de seguridad de contraseñas
+
 builder.Services.AddIdentity<Usuario, Roles>(options =>
 {
     options.Lockout.MaxFailedAccessAttempts = 5;
@@ -52,64 +36,66 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();
 
-// 2.5. Servicios adicionales necesarios para la lógica de negocio
-builder.Services.AddScoped<RoleManager<Roles>>();  // Gestionar roles de usuario
-builder.Services.AddScoped<CategoriasService>();  // Servicio para la gestión de categorías
-builder.Services.AddScoped<SubcategoriasService>();  // Servicio para la gestión de subcategorías
-builder.Services.AddScoped<ProveedorService>();  // Servicio para la gestión de proveedores
-builder.Services.AddScoped<ProductosService>();  // Servicio para la gestión de productos
-builder.Services.AddScoped<CarritoService>();  // Servicio para la gestión de carrito de compras
-builder.Services.AddScoped<DatabaseSeeder>(); // Servicio para añadir elementos a la base de datos en el inicio 
-builder.Services.AddScoped<LogService>();
-// Servicio para la gestión de logs
-// 2.6. Configuración de la cookie de autenticación para definir las rutas de Login y Acceso Denegado
-builder.Services.ConfigureApplicationCookie(options =>
+// 3) Sesión, HttpContext y cookies
+builder.Services.AddSession(options =>
 {
-    options.LoginPath = "/Cuenta/Login";  // Ruta para la página de inicio de sesión
-    options.AccessDeniedPath = "/Cuenta/AccesoDenegado";  // Ruta para la página de acceso denegado
-    options.LogoutPath = "/Cuenta/Logout";  // Ruta para cerrar sesión
-    options.SlidingExpiration = true;  // Habilita la expiración deslizante de la sesión
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);  // Duración de la sesión
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-// 2.7. Agregar soporte para controladores con vistas
+builder.Services.AddHttpContextAccessor();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Cuenta/Login";
+    options.AccessDeniedPath = "/Cuenta/AccesoDenegado";
+    options.LogoutPath = "/Cuenta/Logout";
+    options.SlidingExpiration = true;
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+});
+
+// 4) Servicios de dominio
+builder.Services.AddScoped<CategoriasService>();
+builder.Services.AddScoped<SubcategoriasService>();
+builder.Services.AddScoped<ProveedorService>();
+builder.Services.AddScoped<ProductosService>();
+builder.Services.AddScoped<CarritoService>();
+builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<LogService>();
+builder.Services.AddScoped<CarritoActionFilter>(); // 👍
+
+// 5) MVC + filtro global
 builder.Services.AddControllersWithViews(options =>
 {
-    // Registrar el filtro de acción global que maneja la lógica del carrito
     options.Filters.Add<CarritoActionFilter>();
 });
 
 var app = builder.Build();
 
-// 3. Configuración del pipeline de middleware
-
-// 3.1. Configuración de manejo de errores y HSTS (Strict Transport Security) según el entorno
+// 6) Pipeline
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Home/Error");  // Redirige a una página de error en caso de excepciones
-    app.UseHsts();  // Forza el uso de HTTPS en entornos de producción
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
 }
 
-// 3.2. Configuración de HTTPS y archivos estáticos
-app.UseHttpsRedirection();  // Redirige todo el tráfico HTTP hacia HTTPS
-app.UseStaticFiles();  // Sirve los archivos estáticos como imágenes, CSS y JS
+app.UseHttpsRedirection();
+app.UseStaticFiles();
 
-// 3.3. Configuración de enrutamiento
-app.UseRouting();  // Habilita el enrutamiento en la aplicación
+app.UseRouting();
 
-// 3.4. Agregar el middleware de sesión
-app.UseSession();  // Permite el almacenamiento de datos entre solicitudes
+app.UseSession();
 
-// 3.5. Configuración de autenticación y autorización
-app.UseAuthentication();  // Middleware de autenticación
-app.UseAuthorization();  // Middleware de autorización
+app.UseAuthentication();
+app.UseAuthorization();
 
-// 3.6. Definir las rutas para los controladores
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");  // Ruta predeterminada de los controladores
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// 4. Creación inicial de roles y usuario administrador (esto solo ocurre una vez al iniciar la aplicación)
+// 7) Seed inicial (roles, admin, datos base)
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -117,10 +103,13 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // Crear roles y administrador
         await CrearRolesYAdmin(services, logger);
 
-        // Llamar al seeder para agregar categorías y subcategorías
+        var db = services.GetRequiredService<TiendaDbContext>();
+        await db.Database.MigrateAsync();
+
+        await CrearRolesYAdmin(services, logger);
+
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
 
@@ -128,76 +117,65 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        logger.LogError($"Error al inicializar datos: {ex.Message}");
+        logger.LogError(ex, "Error al inicializar datos.");
     }
 }
 
-// 5. Ejecutar la aplicación
+
 app.Run();
 
-// 6. Método asíncrono para crear roles y el usuario administrador por defecto si no existen
-async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
+// ----- Helpers -----
+static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
 {
-    var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();  // Para gestionar los roles
-    var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();  // Para gestionar los usuarios
+    var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
+    var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();
 
-    // Roles predeterminados a crear
     string[] roles = { "Administrador", "Vendedor", "Cliente" };
     string[] descripcion = { "Administrador del sistema", "Vendedor del sistema", "Cliente del sistema" };
 
     for (var i = 0; i < roles.Length; i++)
     {
-        bool roleExists = await roleManager.RoleExistsAsync(roles[i]);
-        if (!roleExists)
+        if (!await roleManager.RoleExistsAsync(roles[i]))
         {
-            var role = new Roles(roles[i], descripcion[i]);
-            var result = await roleManager.CreateAsync(role);  // Crear el rol
-            if (result.Succeeded)
+            var create = await roleManager.CreateAsync(new Roles(roles[i], descripcion[i]));
+            if (!create.Succeeded)
             {
-                logger.LogInformation($"Rol {roles[i]} creado con éxito.");
+                var errores = string.Join(", ", create.Errors.Select(e => e.Description));
+                logger.LogError("Error al crear el rol {Rol}: {Err}", roles[i], errores);
             }
-            else
-            {
-                var errores = string.Join(", ", result.Errors.Select(e => e.Description));  // Si hay errores, se loguean
-                logger.LogError($"Error al crear el rol {roles[i]}: {errores}");
-            }
-        }
-        else
-        {
-            logger.LogInformation($"El rol {roles[i]} ya existe.");
         }
     }
 
-    // Crear un usuario administrador por defecto si no existe
-    string adminEmail = "admin@tienda.com";
-    string adminPassword = "Admin123!";
-    var adminRole = await roleManager.FindByNameAsync("Administrador");
-    var adminRoleID = adminRole?.Id;
+    var adminEmail = "admin@tienda.com";
+    var adminPassword = "Admin123!";
     var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+
     if (existingAdmin == null)
     {
+        var adminRole = await roleManager.FindByNameAsync("Administrador");
+
         var adminUser = new Usuario
         {
             UserName = adminEmail,
             Email = adminEmail,
             NombreCompleto = "Administrador General",
             EmailConfirmed = true,
-            RolID = adminRoleID,
-            Direccion = "NAN",  // Valores predeterminados
+            RolID = adminRole?.Id ?? string.Empty,
+            Direccion = "NAN",
             Telefono = "NAN",
             Referencia = "NAN",
         };
 
-        var result = await userManager.CreateAsync(adminUser, adminPassword);  // Crear el usuario administrador
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
         if (result.Succeeded)
         {
-            await userManager.AddToRoleAsync(adminUser, "Administrador");  // Asignar el rol de Administrador
+            await userManager.AddToRoleAsync(adminUser, "Administrador");
             logger.LogInformation("Administrador creado con éxito.");
         }
         else
         {
-            var errores = string.Join(", ", result.Errors.Select(e => e.Description));  // Log de errores
-            logger.LogError($"Error al crear el administrador: {errores}");
+            var errores = string.Join(", ", result.Errors.Select(e => e.Description));
+            logger.LogError("Error al crear el admin: {Err}", errores);
         }
     }
 }

@@ -1,4 +1,4 @@
-@model List<Simone.ViewModels.Reportes.CompradorResumenVM>
+@model IEnumerable<Simone.ViewModels.Reportes.CompradorResumenVM>
 @using System.Globalization
 @{
     ViewData["Title"] = "Compradores / Ventas";
@@ -25,7 +25,7 @@
 <div class="container-xl py-4">
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
         <h2 class="fw-bold m-0">Compradores</h2>
-        <div class="text-muted small">Total registros: <strong>@(Model?.Count ?? 0)</strong></div>
+        <div class="text-muted small">Total registros: <strong>@(Model?.Count() ?? 0)</strong></div>
     </div>
 
     @if (Model == null || !Model.Any())
@@ -56,7 +56,9 @@
 
                         <div class="min-w-0">
                             <div class="d-flex align-items-center flex-wrap gap-2">
-                                <a asp-action="VentaDetalle" asp-controller="Panel" asp-route-id="@v.VentaID" class="fw-semibold link-dark text-truncate text-decoration-none">
+                                <a asp-route="Panel_VentaDetalle"
+                                   asp-route-id="@v.VentaID"
+                                   class="fw-semibold link-dark text-truncate text-decoration-none">
                                     @Safe(v.Nombre)
                                 </a>
                                 <span class="badge @badge align-middle">@Safe(v.Estado)</span>
@@ -77,15 +79,23 @@
                     <div class="text-end">
                         <div class="fw-bold fs-6">@v.Total.ToString("C", culture)</div>
 
-                        <form method="post" asp-action="MarcarEnviada" asp-controller="Panel" class="d-inline-block ms-2 js-mark-shipped" data-id="@v.VentaID">
+                        <form method="post"
+                              asp-route="Panel_MarcarEnviada"
+                              class="d-inline-block ms-2 js-mark-shipped"
+                              data-id="@v.VentaID">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@v.VentaID" />
-                            <button type="submit" class="btn btn-sm btn-outline-success btn-ship" title="Marcar como enviado" @(v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true ? "disabled" : null)>
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-success btn-ship"
+                                    title="Marcar como enviado"
+                                    @(v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true ? "disabled" : null)>
                                 <i class="fa-solid fa-truck-fast me-1"></i> Enviado
                             </button>
                         </form>
 
-                        <a asp-action="VentaDetalle" asp-controller="Panel" asp-route-id="@v.VentaID" class="btn btn-sm btn-outline-primary ms-1">
+                        <a asp-route="Panel_VentaDetalle"
+                           asp-route-id="@v.VentaID"
+                           class="btn btn-sm btn-outline-primary ms-1">
                             <i class="fa-regular fa-eye me-1"></i> Ver
                         </a>
                     </div>
@@ -141,12 +151,9 @@
     }
 
     @@media (max-width:768px) {
-        .btn-ship
-
-    {
-        margin-top: .5rem
-    }
-
+        .btn-ship {
+            margin-top: .5rem
+        }
     }
 </style>
 
@@ -165,18 +172,23 @@
               btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Enviando...';
 
               try{
-                const res = await fetch(f.action, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:new FormData(f) });
+                const res = await fetch(f.action, {
+                  method:'POST',
+                  headers:{ 'X-Requested-With':'XMLHttpRequest' },
+                  body:new FormData(f) // incluye __RequestVerificationToken
+                });
                 if(res.ok){
                   let json=null; try{ json = await res.json(); }catch{}
-                  // Optimista: si responde 200, reflejamos
                   badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
                   badge.className = 'badge bg-success';
                   btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Enviado';
                 } else {
-                  btn.disabled = false; btn.innerHTML = prev; alert('No se pudo marcar como enviado.');
+                  btn.disabled = false; btn.innerHTML = prev;
+                  alert('No se pudo marcar como enviado.');
                 }
               }catch{
-                btn.disabled = false; btn.innerHTML = prev; alert('Error de red.');
+                btn.disabled = false; btn.innerHTML = prev;
+                alert('Error de red.');
               }
             });
           });

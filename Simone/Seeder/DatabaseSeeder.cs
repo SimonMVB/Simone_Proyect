@@ -1,7 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Simone.Data;
 using Simone.Models;
-using Microsoft.AspNetCore.Identity;
 
 public class DatabaseSeeder
 {
@@ -16,45 +20,31 @@ public class DatabaseSeeder
 
     public async Task SeedCategoriesAndSubcategoriesAsync()
     {
-        // Seed Categories and update if necessary
         await SeedCategoriesAsync();
-
-        // Seed Subcategories and update if necessary
         await SeedSubcategoriesAsync();
-
-        // Seed the admin user, carrito and carritodetalles
         await SeedAdminCarritoAsync();
     }
 
     private async Task SeedCategoriesAsync()
     {
-        var categorias = new List<Categorias>
+        var categorias = new[]
         {
-            new Categorias { Nombre = "Blusas" },
-            new Categorias { Nombre = "Tops" },
-            new Categorias { Nombre = "Body's" },
-            new Categorias { Nombre = "Trajes de Baño" },
-            new Categorias { Nombre = "Conjuntos" },
-            new Categorias { Nombre = "Vestidos" },
-            new Categorias { Nombre = "Faldas" },
-            new Categorias { Nombre = "Pantalones" },
-            new Categorias { Nombre = "Jeans" },
-            new Categorias { Nombre = "Bolsas" }
+            "Blusas","Tops","Body's","Trajes de Baño","Conjuntos",
+            "Vestidos","Faldas","Pantalones","Jeans","Bolsas"
         };
 
-        foreach (var categoria in categorias)
+        foreach (var nombre in categorias)
         {
-            var existingCategory = await _context.Categorias
-                .FirstOrDefaultAsync(c => c.Nombre == categoria.Nombre);
-
-            if (existingCategory == null)
+            var existente = await _context.Categorias.FirstOrDefaultAsync(c => c.Nombre == nombre);
+            if (existente == null)
             {
-                await _context.Categorias.AddAsync(categoria);
+                await _context.Categorias.AddAsync(new Categorias { Nombre = nombre });
             }
             else
             {
-                existingCategory.Nombre = categoria.Nombre;
-                _context.Categorias.Update(existingCategory);
+                // Si algún día cambias visualmente nombres (tildes/espacios), lo sincroniza
+                existente.Nombre = nombre;
+                _context.Categorias.Update(existente);
             }
         }
 
@@ -63,49 +53,76 @@ public class DatabaseSeeder
 
     private async Task SeedSubcategoriesAsync()
     {
-        var subcategorias = new List<Subcategorias>
+        // Mapea subcategorías a la categoría por NOMBRE (no asumimos IDs fijos)
+        var subcategoriasPorCategoria = new Dictionary<string, List<string>>
         {
-            new Subcategorias { NombreSubcategoria = "Manga larga", CategoriaID = 1 },
-            new Subcategorias { NombreSubcategoria = "Manga corta", CategoriaID = 1 },
-            // Add all other subcategories here...
+            { "Blusas", new List<string> { "Manga larga", "Manga corta" } },
+            // Agrega aquí las demás subcategorías por categoría...
+            // { "Vestidos", new List<string> { "Casual", "Fiesta" } },
         };
 
-        foreach (var subcategoria in subcategorias)
+        foreach (var kvp in subcategoriasPorCategoria)
         {
-            var existingSubcategory = await _context.Subcategorias
-                .FirstOrDefaultAsync(sc => sc.NombreSubcategoria == subcategoria.NombreSubcategoria
-                                            && sc.CategoriaID == subcategoria.CategoriaID);
+            var categoriaNombre = kvp.Key;
+            var subcats = kvp.Value;
 
-            if (existingSubcategory == null)
+            var categoriaId = await _context.Categorias
+                .Where(c => c.Nombre == categoriaNombre)
+                .Select(c => c.CategoriaID)
+                .FirstOrDefaultAsync();
+
+            // Si no existe la categoría (algo falló arriba), continúa con la siguiente
+            if (categoriaId == 0) continue;
+
+            foreach (var subcatNombre in subcats)
             {
-                await _context.Subcategorias.AddAsync(subcategoria);
-            }
-            else
-            {
-                existingSubcategory.NombreSubcategoria = subcategoria.NombreSubcategoria;
-                _context.Subcategorias.Update(existingSubcategory);
+                var existente = await _context.Subcategorias
+                    .FirstOrDefaultAsync(sc => sc.NombreSubcategoria == subcatNombre &&
+                                               sc.CategoriaID == categoriaId);
+
+                if (existente == null)
+                {
+                    await _context.Subcategorias.AddAsync(new Subcategorias
+                    {
+                        CategoriaID = categoriaId,
+                        NombreSubcategoria = subcatNombre
+                    });
+                }
+                else
+                {
+                    existente.NombreSubcategoria = subcatNombre;
+                    _context.Subcategorias.Update(existente);
+                }
             }
         }
 
         await _context.SaveChangesAsync();
     }
 
-    // This method will create the admin carrito and carrito detalles
+    // Crea un carrito para el admin solo si no tiene uno "abierto" (no cerrado)
     private async Task SeedAdminCarritoAsync()
     {
-
         var adminUser = await _userManager.Users.FirstOrDefaultAsync(u => u.UserName == "admin@tienda.com");
+        if (adminUser == null)
+        {
+            // Si no existe el admin, no hacemos nada aquí.
+            // (Opcional) Crear admin por seed inicial en otro método.
+            return;
+        }
 
-        // Create the carrito (shopping cart) for the admin user
+        var carritoExistente = await _context.Carrito
+            .FirstOrDefaultAsync(c => c.UsuarioId == adminUser.Id && c.EstadoCarrito != "Cerrado");
+
+        if (carritoExistente != null) return; // ya tiene carrito activo
+
         var adminCarrito = new Carrito
         {
-            ClienteID = adminUser.Id,  // Link to the admin user
-            FechaCreacion = DateTime.Now,
-            EstadoCarrito = "Abierto"
+            UsuarioId = adminUser.Id,      // ← centralizado en Usuario
+            FechaCreacion = DateTime.UtcNow,
+            EstadoCarrito = "Vacio"        // usa el estado de tu dominio
         };
 
         _context.Carrito.Add(adminCarrito);
         await _context.SaveChangesAsync();
-
     }
 }

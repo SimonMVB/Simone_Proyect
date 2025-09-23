@@ -26,7 +26,6 @@ namespace Simone.Data
         public DbSet<CarritoDetalle> CarritoDetalle { get; set; }
         public DbSet<CatalogoEstados> CatalogoEstados { get; set; }
         public DbSet<Categorias> Categorias { get; set; }
-        public DbSet<Cliente> Clientes { get; set; }
         public DbSet<Promocion> Promociones { get; set; }
         public DbSet<ClientesProgramas> ClientesProgramas { get; set; }
         public DbSet<Comisiones> Comisiones { get; set; }
@@ -36,7 +35,6 @@ namespace Simone.Data
         public DbSet<DetallesPedido> DetallesPedido { get; set; }
         public DbSet<DetalleVentas> DetalleVentas { get; set; }
         public DbSet<Devoluciones> Devoluciones { get; set; }
-        public DbSet<DireccionesCliente> DireccionesCliente { get; set; }
         public DbSet<Empleados> Empleados { get; set; }
         public DbSet<Gastos> Gastos { get; set; }
         public DbSet<HistorialPrecios> HistorialPrecios { get; set; }
@@ -56,18 +54,41 @@ namespace Simone.Data
             base.OnModelCreating(modelBuilder);
 
             // ------------------------------------------------------------
-            // 1) Claves primarias compuestas (N:M)
+            // 1) Claves primarias compuestas (N:M) + FKs
             // ------------------------------------------------------------
-            modelBuilder.Entity<ClientesProgramas>()
-                .HasKey(cp => new { cp.ClienteID, cp.ProgramaID });
+            modelBuilder.Entity<ClientesProgramas>(entity =>
+            {
+                entity.HasKey(cp => new { cp.UsuarioId, cp.ProgramaID });
 
-            modelBuilder.Entity<CuponesUsados>()
-                .HasKey(cu => new { cu.ClienteID, cu.PromocionID });
+                entity.HasOne(cp => cp.Usuario)
+                      .WithMany() // o .WithMany(u => u.ClientesProgramas) si expones colección
+                      .HasForeignKey(cp => cp.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(cp => cp.Programa)
+                      .WithMany() // o .WithMany(p => p.Clientes) si expones colección
+                      .HasForeignKey(cp => cp.ProgramaID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<CuponesUsados>(entity =>
+            {
+                entity.HasKey(cu => new { cu.UsuarioId, cu.PromocionID });
+
+                entity.HasOne(cu => cu.Usuario)
+                      .WithMany() // o .WithMany(u => u.CuponesUsados) si expones colección
+                      .HasForeignKey(cu => cu.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // si tienes navegación a Promocion, puedes explicitarla también:
+                // entity.HasOne(cu => cu.Promocion)
+                //       .WithMany()
+                //       .HasForeignKey(cu => cu.PromocionID)
+                //       .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // ------------------------------------------------------------
-            // 2) Reglas de negocio: evitar duplicados con índices únicos
-            //    - Un producto solo una vez por Carrito
-            //    - Un producto solo una vez por Usuario en Favoritos
+            // 2) Índices únicos de negocio
             // ------------------------------------------------------------
             modelBuilder.Entity<CarritoDetalle>()
                 .HasIndex(cd => new { cd.CarritoID, cd.ProductoID })
@@ -78,9 +99,17 @@ namespace Simone.Data
                 .IsUnique();
 
             // ------------------------------------------------------------
-            // 3) Relaciones y DeleteBehavior explícitos
-            //    (evitar cascadas peligrosas, mantener históricos)
+            // 3) Relaciones + DeleteBehavior
             // ------------------------------------------------------------
+
+            // Carrito → Usuario
+            modelBuilder.Entity<Carrito>(entity =>
+            {
+                entity.HasOne(c => c.Usuario)
+                      .WithMany() // o .WithMany(u => u.Carritos)
+                      .HasForeignKey(c => c.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // CarritoDetalle → Producto (Restrict)
             modelBuilder.Entity<CarritoDetalle>()
@@ -115,11 +144,11 @@ namespace Simone.Data
                 .HasForeignKey(s => s.CategoriaID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Reseñas → Cliente/Producto (Restrict)
+            // Reseñas → Usuario/Producto (Restrict)
             modelBuilder.Entity<Reseñas>()
-                .HasOne(r => r.Cliente)
-                .WithMany(c => c.Reseñas)
-                .HasForeignKey(r => r.ClienteID)
+                .HasOne(r => r.Usuario)
+                .WithMany()
+                .HasForeignKey(r => r.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Reseñas>()
@@ -144,36 +173,42 @@ namespace Simone.Data
             // Favorito → Usuario (Restrict)
             modelBuilder.Entity<Favorito>()
                 .HasOne(f => f.Usuario)
-                .WithMany() // sin navegación inversa en Usuario
+                .WithMany()
                 .HasForeignKey(f => f.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Ventas → Cliente (Restrict) (sin navegación en modelo Ventas)
+            // Ventas → Usuario (Restrict)
             modelBuilder.Entity<Ventas>()
-                .HasOne<Cliente>()          // especifica el tipo relacionado
-                .WithMany()                 // sin navegación inversa en Cliente
-                .HasForeignKey(v => v.ClienteID)
+                .HasOne(v => v.Usuario)
+                .WithMany() // o .WithMany(u => u.Ventas)
+                .HasForeignKey(v => v.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Pedido → Usuario (si usas Pedido)
+            modelBuilder.Entity<Pedido>()
+                .HasOne(p => p.Usuario)
+                .WithMany() // o .WithMany(u => u.Pedidos)
+                .HasForeignKey(p => p.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ------------------------------------------------------------
             // 4) Estandarizar DECIMAL(18,2) en campos financieros
-            //    (añadimos Ventas.Total a la lista)
             // ------------------------------------------------------------
             var decimalProps = new (Type entity, string[] props)[]
             {
-                (typeof(Comisiones), new[] { "MontoComision", "PorcentajeComision" }),
-                (typeof(Compras), new[] { "Total" }),
-                (typeof(DetalleVentas), new[] { "Descuento", "PrecioUnitario", "Subtotal" }),
-                (typeof(DetallesCompra), new[] { "PrecioUnitario", "Subtotal" }),
-                (typeof(DetallesPedido), new[] { "PrecioUnitario", "Subtotal" }),
-                (typeof(Empleados), new[] { "Salario" }),
-                (typeof(Gastos), new[] { "Monto" }),
-                (typeof(HistorialPrecios), new[] { "PrecioAnterior", "PrecioNuevo" }),
-                (typeof(Pedido), new[] { "Total" }),
-                (typeof(Producto), new[] { "PrecioCompra", "PrecioVenta" }),
+                (typeof(Comisiones),            new[] { "MontoComision", "PorcentajeComision" }),
+                (typeof(Compras),               new[] { "Total" }),
+                (typeof(DetalleVentas),         new[] { "Descuento", "PrecioUnitario", "Subtotal" }),
+                (typeof(DetallesCompra),        new[] { "PrecioUnitario", "Subtotal" }),
+                (typeof(DetallesPedido),        new[] { "PrecioUnitario", "Subtotal" }),
+                (typeof(Empleados),             new[] { "Salario" }),
+                (typeof(Gastos),                new[] { "Monto" }),
+                (typeof(HistorialPrecios),      new[] { "PrecioAnterior", "PrecioNuevo" }),
+                (typeof(Pedido),                new[] { "Total" }),
+                (typeof(Producto),              new[] { "PrecioCompra", "PrecioVenta" }),
                 (typeof(ProgramasFidelizacion), new[] { "Descuento" }),
-                (typeof(Promocion), new[] { "Descuento" }),
-                (typeof(Ventas), new[] { "Total" }), // ← añadido
+                (typeof(Promocion),             new[] { "Descuento" }),
+                (typeof(Ventas),                new[] { "Total" }),
             };
 
             foreach (var (entity, props) in decimalProps)
@@ -187,7 +222,7 @@ namespace Simone.Data
             }
 
             // ------------------------------------------------------------
-            // 5) Defaults en BD para timestamps (robustez fuera de la app)
+            // 5) Defaults en BD para timestamps
             // ------------------------------------------------------------
             modelBuilder.Entity<Favorito>()
                 .Property(f => f.FechaGuardado)
@@ -197,12 +232,8 @@ namespace Simone.Data
                 .Property(cd => cd.FechaAgregado)
                 .HasDefaultValueSql("GETUTCDATE()");
 
-            modelBuilder.Entity<Cliente>()
-                .Property(c => c.FechaRegistro)
-                .HasDefaultValueSql("GETDATE()"); // Usa GETUTCDATE() si quieres todo en UTC
-
             // ------------------------------------------------------------
-            // 6) Configuración específica de logs/auditoría
+            // 6) Logs / auditoría
             // ------------------------------------------------------------
             modelBuilder.Entity<LogIniciosSesion>(entity =>
             {
@@ -210,12 +241,11 @@ namespace Simone.Data
                 entity.Property(l => l.Usuario).IsRequired().HasMaxLength(150);
                 entity.Property(l => l.FechaInicio).HasColumnType("datetime");
                 entity.Property(l => l.Exitoso).IsRequired(false);
-                // (Opcional futuro) FK nullable a UsuarioId si decides vincularlo
             });
 
             modelBuilder.Entity<ActividadUsuario>()
                 .HasOne(a => a.Usuario)
-                .WithMany(u => u.Actividades) // navegación definida en Usuario
+                .WithMany(u => u.Actividades)
                 .HasForeignKey(a => a.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
         }

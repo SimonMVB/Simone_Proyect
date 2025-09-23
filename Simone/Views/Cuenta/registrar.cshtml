@@ -1,42 +1,51 @@
 ﻿@model Simone.ViewModels.RegistroViewModel
-
 @{
     ViewData["Title"] = "Registro";
     Layout = "~/Views/Shared/_LayoutCuenta.cshtml";
 }
 
-<div class="container mt-5" style="max-width: 500px;">
-    <div class="card shadow-sm rounded-3">
-        <div class="card-header login-header text-center">
-            <h4 class="mb-0"><i class="fa-solid fa-user-plus me-2"></i>Crear una cuenta</h4>
+<div class="container py-5" style="max-width: 560px;">
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+        <div class="card-header text-center border-0 p-4" style="background: linear-gradient(135deg,#f7cadb,#f4a7c1);">
+            <h4 class="mb-0 text-white">
+                <i class="fa-solid fa-user-plus me-2"></i> Crear una cuenta
+            </h4>
         </div>
 
-        <div class="card-body">
+        <div class="card-body p-4">
 
-            <!-- Mensajes de TempData -->
-            @if (TempData["MensajeError"] != null)
+            @* mensajes *@
+            @if (TempData["MensajeError"] is string err && !string.IsNullOrWhiteSpace(err))
             {
-                <div class="alert alert-danger">
-                    <i class="fa-solid fa-circle-exclamation me-2"></i> @TempData["MensajeError"]
+                <div class="alert alert-danger d-flex align-items-start" role="alert">
+                    <i class="fa-solid fa-circle-exclamation me-2 mt-1"></i>
+                    <div>@err</div>
                 </div>
             }
-            @if (TempData["MensajeExito"] != null)
+            @if (TempData["MensajeExito"] is string ok && !string.IsNullOrWhiteSpace(ok))
             {
-                <div class="alert alert-success">
-                    <i class="fa-solid fa-circle-check me-2"></i> @TempData["MensajeExito"]
+                <div class="alert alert-success d-flex align-items-start" role="alert">
+                    <i class="fa-solid fa-circle-check me-2 mt-1"></i>
+                    <div>@ok</div>
                 </div>
             }
 
-            <!-- Errores del modelo -->
+            @* errores del modelo *@
             <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
 
             <form asp-action="Registrar" method="post" id="formRegistro" novalidate>
+                @Html.AntiForgeryToken()
+
                 <!-- Nombre -->
                 <div class="mb-3">
                     <label asp-for="Nombre" class="form-label">Nombre completo</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                        <input asp-for="Nombre" class="form-control" placeholder="Nombre completo" />
+                        <input asp-for="Nombre"
+                               class="form-control"
+                               placeholder="Nombre y apellidos"
+                               autocomplete="name"
+                               required />
                     </div>
                     <span asp-validation-for="Nombre" class="text-danger small"></span>
                 </div>
@@ -46,7 +55,12 @@
                     <label asp-for="Email" class="form-label">Correo electrónico</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                        <input asp-for="Email" class="form-control" placeholder="correo@ejemplo.com" />
+                        <input asp-for="Email"
+                               class="form-control"
+                               placeholder="correo@ejemplo.com"
+                               inputmode="email"
+                               autocomplete="email"
+                               required />
                     </div>
                     <span asp-validation-for="Email" class="text-danger small"></span>
                 </div>
@@ -56,8 +70,16 @@
                     <label asp-for="Telefono" class="form-label">Número de celular</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
-                        <input asp-for="Telefono" class="form-control" placeholder="0999999999" />
+                        <input asp-for="Telefono"
+                               class="form-control"
+                               placeholder="0999999999"
+                               inputmode="numeric"
+                               pattern="^\d{9,10}$"
+                               maxlength="10"
+                               autocomplete="tel-national"
+                               aria-describedby="telHelp" />
                     </div>
+                    <div id="telHelp" class="form-text">Solo dígitos, 9–10 caracteres.</div>
                     <span asp-validation-for="Telefono" class="text-danger small"></span>
                 </div>
 
@@ -66,7 +88,10 @@
                     <label asp-for="Direccion" class="form-label">Dirección</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-location-dot"></i></span>
-                        <input asp-for="Direccion" class="form-control" placeholder="Ej. Calle principal y 2da" />
+                        <input asp-for="Direccion"
+                               class="form-control"
+                               placeholder="Calle principal y Nro."
+                               autocomplete="street-address" />
                     </div>
                     <span asp-validation-for="Direccion" class="text-danger small"></span>
                 </div>
@@ -76,7 +101,10 @@
                     <label asp-for="Ciudad" class="form-label">Ciudad</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-city"></i></span>
-                        <input asp-for="Ciudad" class="form-control" placeholder="Ej. Quito" />
+                        <input asp-for="Ciudad"
+                               class="form-control"
+                               placeholder="Quito"
+                               autocomplete="address-level2" />
                     </div>
                     <span asp-validation-for="Ciudad" class="text-danger small"></span>
                 </div>
@@ -86,7 +114,10 @@
                     <label asp-for="Provincia" class="form-label">Provincia</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-map"></i></span>
-                        <input asp-for="Provincia" class="form-control" placeholder="Ej. Pichincha" />
+                        <input asp-for="Provincia"
+                               class="form-control"
+                               placeholder="Pichincha"
+                               autocomplete="address-level1" />
                     </div>
                     <span asp-validation-for="Provincia" class="text-danger small"></span>
                 </div>
@@ -96,43 +127,67 @@
                     <label asp-for="Referencia" class="form-label">Referencia (opcional)</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fa-solid fa-map-pin"></i></span>
-                        <input asp-for="Referencia" class="form-control" placeholder="Ej. Casa blanca con portón azul" />
+                        <input asp-for="Referencia"
+                               class="form-control"
+                               placeholder="Casa blanca con portón azul" />
                     </div>
                     <span asp-validation-for="Referencia" class="text-danger small"></span>
                 </div>
 
                 <!-- Contraseña -->
-                <div class="mb-3">
+                <div class="mb-2">
                     <label asp-for="Password" class="form-label">Contraseña</label>
-                    <div class="input-group">
+                    <div class="input-group" data-pass>
                         <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="Password" type="password" class="form-control" placeholder="••••••••" />
+                        <input asp-for="Password"
+                               type="password"
+                               class="form-control"
+                               placeholder="••••••••"
+                               autocomplete="new-password"
+                               aria-describedby="pwdHelp"
+                               required />
+                        <button class="btn btn-outline-secondary" type="button" data-pass-toggle title="Mostrar/ocultar">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
                     </div>
-                    <span asp-validation-for="Password" class="text-danger small"></span>
+                    <div class="progress mt-2" style="height:6px;">
+                        <div class="progress-bar" role="progressbar" style="width:0%" id="pwdMeter"></div>
+                    </div>
+                    <small id="pwdHelp" class="form-text text-muted">
+                        Usa 8+ caracteres, mayúsculas, minúsculas, números y símbolos.
+                    </small>
+                    <span asp-validation-for="Password" class="text-danger small d-block"></span>
                 </div>
 
                 <!-- Confirmar Contraseña -->
                 <div class="mb-3">
-                    <label asp-for="ConfirmPassword" class="form-label">Confirmar Contraseña</label>
-                    <div class="input-group">
+                    <label asp-for="ConfirmPassword" class="form-label">Confirmar contraseña</label>
+                    <div class="input-group" data-pass2>
                         <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="ConfirmPassword" type="password" class="form-control" placeholder="••••••••" />
+                        <input asp-for="ConfirmPassword"
+                               type="password"
+                               class="form-control"
+                               placeholder="••••••••"
+                               autocomplete="new-password"
+                               required />
+                        <button class="btn btn-outline-secondary" type="button" data-pass2-toggle title="Mostrar/ocultar">
+                            <i class="fa-regular fa-eye"></i>
+                        </button>
                     </div>
                     <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
                 </div>
 
-                <!-- Botón personalizado -->
-                <button type="submit" class="login-button w-100" id="btnRegistrar" disabled>
-                    <div class="login-text">
-                        <i class="fa-solid fa-user-plus me-2"></i>Registrarme
-                    </div>
+                <!-- Botón -->
+                <button type="submit" class="btn w-100 py-2 fw-semibold text-white" id="btnRegistrar"
+                        style="background-color:#f4a7c1; border-color:#f4a7c1;">
+                    <span class="me-2"><i class="fa-solid fa-user-plus"></i></span> Registrarme
                 </button>
             </form>
         </div>
 
-        <div class="card-footer text-center small">
+        <div class="card-footer text-center small bg-white">
             ¿Ya tienes una cuenta?
-            <a asp-controller="Cuenta" asp-action="Login" style="color:#f4a7c1; font-weight:600;">
+            <a asp-controller="Cuenta" asp-action="Login" class="fw-semibold" style="color:#f4a7c1;">
                 Inicia sesión aquí
             </a>
         </div>
@@ -142,19 +197,102 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        const form = document.getElementById("formRegistro");
-        const btn = document.getElementById("btnRegistrar");
+        (function () {
+            const form = document.getElementById('formRegistro');
+            const btn  = document.getElementById('btnRegistrar');
+            const tel  = document.getElementById('@Html.IdFor(m => m.Telefono)');
+            const pwd  = document.getElementById('@Html.IdFor(m => m.Password)');
+            const pwd2 = document.getElementById('@Html.IdFor(m => m.ConfirmPassword)');
+            const meter= document.getElementById('pwdMeter');
 
-        $(document).ready(function () {
-            $(form).on('input change', function () {
-                btn.disabled = !$(form).valid();
+            // Habilitar/deshabilitar por validez
+            const toggleSubmit = () => {
+                // usa checkValidity (HTML5) + jQuery unobtrusive si está presente
+                let valid = form.checkValidity();
+                if (window.jQuery && $.validator && $(form).data('validator')) {
+                    valid = valid && $(form).valid();
+                }
+                btn.disabled = !valid;
+            };
+
+            // Solo dígitos en teléfono
+            if (tel) {
+                tel.addEventListener('input', () => {
+                    tel.value = tel.value.replace(/\D+/g, '').slice(0, 10);
+                });
+            }
+
+            // Medidor de contraseña
+            function scorePassword(v) {
+                let s = 0;
+                if (!v) return 0;
+                if (v.length >= 8) s += 20;
+                if (/[a-z]/.test(v)) s += 20;
+                if (/[A-Z]/.test(v)) s += 20;
+                if (/\d/.test(v))   s += 20;
+                if (/[^A-Za-z0-9]/.test(v)) s += 20;
+                return Math.min(s, 100);
+            }
+            function updateMeter() {
+                const s = scorePassword(pwd.value);
+                meter.style.width = s + '%';
+                meter.className = 'progress-bar';
+                if (s < 40) meter.classList.add('bg-danger');
+                else if (s < 70) meter.classList.add('bg-warning');
+                else meter.classList.add('bg-success');
+            }
+
+            // Mostrar/ocultar contraseña
+            const toggleType = (input, btn) => {
+                const isPwd = input.getAttribute('type') === 'password';
+                input.setAttribute('type', isPwd ? 'text' : 'password');
+                const icon = btn.querySelector('i');
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            };
+            document.querySelector('[data-pass-toggle]')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleType(pwd, e.currentTarget);
             });
-            $.validator.unobtrusive.parse(form);
-        });
+            document.querySelector('[data-pass2-toggle]')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleType(pwd2, e.currentTarget);
+            });
 
-        form.addEventListener("submit", function () {
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm text-light-pink me-2" style="border-color: #f4a7c1; border-right-color: transparent;"></span>Registrando...';
-        });
+            // Validación en vivo
+            ['input', 'change', 'keyup', 'blur'].forEach(evt => {
+                form.addEventListener(evt, () => {
+                    updateMeter();
+                    toggleSubmit();
+                }, true);
+            });
+
+            // Estado inicial
+            updateMeter();
+            toggleSubmit();
+
+            // Evita doble envío
+            form.addEventListener('submit', function () {
+                if (window.jQuery && $.validator && !$(form).valid()) return;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Registrando...';
+            }, { once: true });
+        })();
     </script>
+
+    <style>
+        /* Detalles visuales sutiles */
+        .input-group-text {
+            background: #fff;
+        }
+
+        .form-control:focus {
+            border-color: #f4a7c1;
+            box-shadow: 0 0 0 .25rem rgba(244,167,193,.25);
+        }
+
+        .btn:disabled {
+            opacity: .65;
+        }
+    </style>
 }

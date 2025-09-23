@@ -161,73 +161,69 @@ namespace Simone.Controllers
 
         // Confirmar compra
         [HttpPost]
-        public async Task<IActionResult> ConfirmarCompra(int carritoID)
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmarCompra(int carritoID) // el parámetro es opcional si no lo usas
         {
             var carrito = ObtenerCarrito();
             if (carrito == null || !carrito.Any())
             {
-                TempData["MensajeError"] = "Tu carrito est� vac�o.";
+                TempData["MensajeError"] = "Tu carrito está vacío.";
                 return RedirectToAction("VerCarrito");
             }
 
-            var cliente = await _userManager.GetUserAsync(User);
-
-            if (cliente == null)
+            var usuario = await _userManager.GetUserAsync(User);
+            if (usuario == null)
             {
                 TempData["MensajeError"] = "Debes iniciar sesión para confirmar tu compra.";
                 return RedirectToAction("VerCarrito");
             }
 
-            // Buscar en tabla Cliente (tu modelo personalizado) por el Email
-            var clienteDB = await _context.Clientes.FirstOrDefaultAsync(c => c.Email == cliente.Email);
-
-            if (clienteDB == null)
-            {
-                TempData["MensajeError"] = "Tu cuenta no está registrada como cliente.";
-                return RedirectToAction("VerCarrito");
-            }
-
+            // Ya no buscamos en Clientes: usamos directamente el Usuario autenticado
             var cupon = ObtenerCupon();
             decimal total = carrito.Sum(c => c.Total);
-            decimal descuento = cupon?.Descuento ?? 0;
+            decimal descuento = cupon?.Descuento ?? 0m;
             decimal totalFinal = total - descuento;
+            if (totalFinal < 0) totalFinal = 0;
 
             var venta = new Ventas
             {
-                ClienteID = clienteDB.ClienteID, // 👍 ClienteID es tipo int
-                FechaVenta = DateTime.Now,
+                UsuarioId = usuario.Id,          // << clave: ahora enlaza a Usuario
+                FechaVenta = DateTime.UtcNow,
+                Estado = "Completada",        // o "Pendiente" según tu flujo
+                MetodoPago = "Transferencia",     // o el método elegido por el usuario
                 Total = totalFinal
             };
-
 
             _context.Ventas.Add(venta);
             await _context.SaveChangesAsync();
 
-            foreach (var item in carrito)
+            // Detalles
+            var detalles = carrito.Select(item => new DetalleVentas
             {
-                _context.DetalleVentas.Add(new DetalleVentas
-                {
-                    VentaID = venta.VentaID,
-                    ProductoID = item.ProductoID,
-                    Cantidad = item.Cantidad,
-                    PrecioUnitario = item.Precio,
-                    Subtotal = item.Total
-                });
-            }
-
+                VentaID = venta.VentaID,
+                ProductoID = item.ProductoID,
+                Cantidad = item.Cantidad,
+                PrecioUnitario = item.Precio,
+                Descuento = 0,
+                Subtotal = item.Total,
+                FechaCreacion = DateTime.UtcNow
+            });
+            await _context.DetalleVentas.AddRangeAsync(detalles);
             await _context.SaveChangesAsync();
 
-            _httpContextAccessor.HttpContext.Session.Remove("Carrito");
-            _httpContextAccessor.HttpContext.Session.Remove("Cupon");
+            // Limpiar sesión
+            _httpContextAccessor.HttpContext?.Session.Remove("Carrito");
+            _httpContextAccessor.HttpContext?.Session.Remove("Cupon");
 
-            TempData["MensajeExito"] = "�Gracias por tu compra!";
+            TempData["MensajeExito"] = "¡Gracias por tu compra!";
             return RedirectToAction("ConfirmacionCompra", new { id = venta.VentaID });
         }
 
-        // P�gina de confirmaci�n
+        // Página de confirmación
         public IActionResult ConfirmacionCompra(int id)
         {
             return View(id);
         }
+
     }
 }

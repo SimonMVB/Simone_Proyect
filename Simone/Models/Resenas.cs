@@ -6,19 +6,17 @@ namespace Simone.Models
 {
     public class Reseñas
     {
-        [Key]
-        public int ReseñaID { get; set; }
+        [Key] public int ReseñaID { get; set; }
 
-        public int ProductoID { get; set; }
-        public int ClienteID { get; set; }
-        public int? Calificacion { get; set; }
+        [Required] public int ProductoID { get; set; }
+        [ForeignKey(nameof(ProductoID))] public Producto Producto { get; set; } = null!;
+
+        // ---- Cambiado a Usuario ----
+        [Required] public string UsuarioId { get; set; } = default!;
+        [ForeignKey(nameof(UsuarioId))] public Usuario Usuario { get; set; } = null!;
+
+        public int Calificacion { get; set; }
         public string? Comentario { get; set; }
-        public DateTime? FechaReseña { get; set; }
-
-        [ForeignKey("ProductoID")]
-        public Producto Producto { get; set; }  // ✅ Asegurar que está bien definido
-
-        [ForeignKey("ClienteID")]
-        public Cliente Cliente { get; set; }  // ✅ Asegurar que no es un "object"
+        public DateTime Fecha { get; set; } = DateTime.UtcNow;
     }
 }
