@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
-using Simone.ViewModels.Reportes;
 using System;
 using System.Diagnostics;
 using System.Linq;

@@ -1,37 +1,170 @@
-﻿@model Simone.Models.Pedido
+﻿@model Simone.Models.Ventas
+@using System.Globalization
+
 @{
-    ViewData["Title"] = $"Detalle de Pedido #{Model.PedidoID}";
+    ViewData["Title"] = $"Detalle de Venta #{Model.VentaID}";
+    var culture = new CultureInfo("es-EC");
+
+    // Mapea estado → badge Bootstrap
+    Func<string?, string> EstadoBadge = e =>
+    {
+        if (string.IsNullOrWhiteSpace(e)) return "text-bg-secondary";
+        var s = e.Trim().ToLowerInvariant();
+        if (s.Contains("pend")) return "text-bg-secondary";           // pendiente
+        if (s.Contains("proc") || s.Contains("pago")) return "text-bg-warning"; // procesando/pago
+        if (s.Contains("desp") || s.Contains("env")) return "text-bg-primary";  // despachando/enviado
+        if (s.Contains("entr") || s.Contains("compl")) return "text-bg-success";// entregado/completada
+        if (s.Contains("canc")) return "text-bg-danger";               // cancelado
+        return "text-bg-secondary";
+    };
+
+    // Intentos no intrusivos para depositante y foto de depósito (opcional/si existen)
+    var depositante = Model?.GetType().GetProperty("DepositanteNombre")?.GetValue(Model, null)?.ToString();
+    depositante ??= Model?.GetType().GetProperty("NombreDepositante")?.GetValue(Model, null)?.ToString();
+    var urlComprobante = Model?.GetType().GetProperty("ComprobanteImagenUrl")?.GetValue(Model, null)?.ToString();
+    urlComprobante ??= Model?.GetType().GetProperty("ComprobanteUrl")?.GetValue(Model, null)?.ToString();
 }
 
-<h3>Pedido #@Model.PedidoID</h3>
-<p><b>Fecha:</b> @Model.FechaPedido.ToString("dd/MM/yyyy")</p>
-<p><b>Estado:</b> <span class="badge bg-secondary">@Model.EstadoPedido</span></p>
-<p><b>Dirección:</b> @Model.DireccionEnvio</p>
-<p><b>Método de Envío:</b> @Model.MetodoEnvio</p>
+<style>
+    /* Estilos locales (mueve a site.css si quieres) */
+    .card-soft {
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 8px 26px rgba(50,50,93,.08),0 6px 16px rgba(0,0,0,.06);
+    }
 
-<h4>Productos</h4>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Precio Unitario</th>
-            <th>Subtotal</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var det in Model.DetallesPedido)
+    .kv {
+        color: #6c757d;
+        font-size: .85rem;
+    }
+
+    .table-rounded {
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    }
+
+    .thead-brand th {
+        background: linear-gradient(90deg,#1f6feb,#1168f2);
+        color: #fff;
+        border: none;
+    }
+
+    .img-proof {
+        border-radius: .75rem;
+        max-height: 320px;
+        object-fit: contain;
+        background: #f8f9fa;
+    }
+
+    .badge.rounded-pill {
+        padding: .5rem .7rem;
+    }
+</style>
+
+<div class="container py-4" style="max-width: 980px;">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <h2 class="mb-0">Venta #@Model.VentaID</h2>
+        <span class="badge rounded-pill @EstadoBadge(Model.Estado)">@Model.Estado</span>
+    </div>
+    <p class="kv mb-4">Fecha: <strong>@Model.FechaVenta.ToString("dd/MM/yyyy")</strong></p>
+
+    <div class="row g-3 mb-4">
+        <!-- Resumen -->
+        <div class="col-12 col-lg-8">
+            <div class="card card-soft">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-4">
+                            <div class="kv">Método de pago</div>
+                            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.MetodoPago) ? Model.MetodoPago : "—")</div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="kv">Total</div>
+                            <div class="fw-bold fs-5">@Model.Total.ToString("C", culture)</div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="kv">Depositante</div>
+                            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comprobante (opcional) -->
+        <div class="col-12 col-lg-4">
+            <div class="card card-soft">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="kv">Comprobante de depósito</div>
+                        @if (!string.IsNullOrWhiteSpace(urlComprobante))
+                        {
+                            <a href="@urlComprobante" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-box-arrow-up-right"></i> Abrir
+                            </a>
+                        }
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(urlComprobante))
+                    {
+                        <a href="@urlComprobante" target="_blank" title="Ver comprobante">
+                            <img class="w-100 img-proof" src="@urlComprobante" alt="Comprobante de depósito de la venta @Model.VentaID" />
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted small" style="padding:1.5rem;">
+                            <i class="bi bi-image" style="font-size:1.4rem;"></i>
+                            <div>No hay imagen de comprobante</div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Productos -->
+    <div class="table-responsive table-rounded mb-3">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="thead-brand">
+                <tr>
+                    <th>Producto</th>
+                    <th class="text-end">Cantidad</th>
+                    <th class="text-end">Precio Unit.</th>
+                    <th class="text-end">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var det in Model.DetalleVentas)
+                {
+                    var sub = det.Subtotal.HasValue ? det.Subtotal.Value
+                    : (det.PrecioUnitario * det.Cantidad) - (det.Descuento ?? 0m);
+                    <tr>
+                        <td>@det.Producto?.Nombre</td>
+                        <td class="text-end">@det.Cantidad</td>
+                        <td class="text-end">@det.PrecioUnitario.ToString("C", culture)</td>
+                        <td class="text-end">@sub.ToString("C", culture)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-flex justify-content-end">
+        <div class="fs-5 fw-bold">Total: @Model.Total.ToString("C", culture)</div>
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+        <a class="btn btn-outline-secondary" href="@Url.Action("Index", "MisCompras")">
+            <i class="bi bi-arrow-left"></i> Volver a mis compras
+        </a>
+        @* Ejemplo: botón para descargar comprobante si hay URL *@
+        @if (!string.IsNullOrWhiteSpace(urlComprobante))
         {
-            <tr>
-                <td>@det.Producto.Nombre</td>
-                <td>@det.Cantidad</td>
-                <td>@(det.PrecioUnitario.ToString("C"))</td>
-                <td>@(det.Subtotal.HasValue? det.Subtotal.Value.ToString("C") : "$0.00")</td>
-            </tr>
+            <a class="btn btn-primary" href="@urlComprobante" target="_blank">
+                <i class="bi bi-download"></i> Descargar comprobante
+            </a>
         }
-    </tbody>
-
-
-
-</table>
-<p class="fw-bold fs-5">Total: @Model.Total.ToString("C")</p>
+    </div>
+</div>

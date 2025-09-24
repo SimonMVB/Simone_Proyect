@@ -1,74 +1,244 @@
 ﻿@model List<Simone.Models.Ventas>
+@using System.Globalization
+
 @{
     ViewData["Title"] = "Mis Compras";
-    Func<string, string> EstadoColor = estado =>
+
+    // === helpers ===
+    Func<string?, string> EstadoBadge = estado =>
     {
-        if (estado == null) return "grey";
-        switch (estado.ToLower())
-        {
-            case "procesando pago": return "yellow";
-            case "despachando": return "blue";
-            case "entregado": return "green";
-            case "completada": return "green";
-            case "cancelado": return "red";
-            default: return "grey";
-        }
+        if (string.IsNullOrWhiteSpace(estado)) return "text-bg-secondary";
+        var e = estado.Trim().ToLowerInvariant();
+        if (e.Contains("pend")) return "text-bg-secondary";           // pendiente
+        if (e.Contains("proc") || e.Contains("pago")) return "text-bg-warning"; // procesando/pago
+        if (e.Contains("desp") || e.Contains("env")) return "text-bg-primary";  // despachando/enviado
+        if (e.Contains("entr") || e.Contains("compl")) return "text-bg-success"; // entregado/completada
+        if (e.Contains("canc")) return "text-bg-danger";               // cancelado
+        return "text-bg-secondary";
     };
-    var culture = new System.Globalization.CultureInfo("es-EC");
+
+    var culture = new CultureInfo("es-EC");
+    var compras = Model ?? new List<Simone.Models.Ventas>();
+    var totalCompras = compras.Count;
+    var totalGastado = compras.Sum(v => v.Total);
+    var ticketPromedio = totalCompras > 0 ? totalGastado / totalCompras : 0m;
+    var ultimaCompra = compras.OrderByDescending(v => v.FechaVenta).FirstOrDefault()?.FechaVenta;
+    var metodoMasUsado = compras
+        .Where(v => !string.IsNullOrWhiteSpace(v.MetodoPago))
+        .GroupBy(v => v.MetodoPago!.Trim())
+        .OrderByDescending(g => g.Count())
+        .FirstOrDefault()?.Key ?? "—";
+
+    // Estados únicos para filtro
+    var estados = compras
+        .Select(v => v.Estado)
+        .Where(s => !string.IsNullOrWhiteSpace(s))
+        .Select(s => s!.Trim())
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(s => s)
+        .ToList();
 }
 
-<div class="ui container" style="margin-top: 60px; max-width: 900px;">
-    <h2 class="ui header">
-        <i class="shopping bag icon"></i> Mis Compras
-    </h2>
+<style>
+    /* ======= Estilos locales (llevar a site.css si prefieres) ======= */
+    .page-title {
+        font-weight: 800;
+        letter-spacing: .2px;
+    }
 
-    @if (TempData["MensajeError"] != null)
+    .subtle {
+        color: #6c757d;
+    }
+
+    .card-stat {
+        border: 0;
+        border-radius: 1rem;
+        box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    }
+
+        .card-stat .value {
+            font-size: 1.35rem;
+            font-weight: 800;
+        }
+
+    .table-rounded {
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 8px 28px rgba(50,50,93,.08), 0 6px 16px rgba(0,0,0,.06);
+    }
+
+    .thead-brand th {
+        background: linear-gradient(90deg,#1f6feb,#1168f2);
+        color: #fff;
+        font-weight: 700;
+        border: none;
+    }
+
+    .badge.rounded-pill {
+        padding: .45rem .65rem;
+    }
+
+    .toolbar {
+        position: sticky;
+        top: 64px;
+        z-index: 2;
+        backdrop-filter: blur(6px);
+        border-radius: .75rem;
+        border: 1px solid #e9ecef;
+    }
+
+    .input-icon {
+        position: relative;
+    }
+
+        .input-icon > i {
+            position: absolute;
+            left: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+
+        .input-icon > input {
+            padding-left: 2.2rem;
+        }
+
+    .empty-state {
+        border: 1px dashed #cfd4da;
+        border-radius: .75rem;
+        padding: 1.25rem;
+        background: #f8f9fa;
+    }
+
+    .table-nowrap td, .table-nowrap th {
+        white-space: nowrap;
+    }
+</style>
+
+<div class="container py-4" style="max-width: 1080px;">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <h2 class="page-title mb-0">Mis Compras</h2>
+        <span class="badge text-bg-primary rounded-pill">Historial</span>
+    </div>
+    <p class="subtle mb-4">Pedidos y compras realizadas con tu cuenta.</p>
+
+    @if (TempData["MensajeError"] is string msg && !string.IsNullOrWhiteSpace(msg))
     {
-        <div class="ui negative message" style="margin-top:1em;">
-            <i class="exclamation circle icon"></i> @TempData["MensajeError"]
+        <div class="alert alert-danger d-flex align-items-center" role="alert">
+            <i class="bi bi-exclamation-triangle me-2"></i> @msg
         </div>
     }
 
-    @if (Model == null || !Model.Any())
+    <!-- KPI cards -->
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-md-3">
+            <div class="card card-stat">
+                <div class="card-body">
+                    <div class="subtle text-uppercase small mb-1">Compras</div>
+                    <div class="value">@totalCompras</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card card-stat">
+                <div class="card-body">
+                    <div class="subtle text-uppercase small mb-1">Total gastado</div>
+                    <div class="value">@totalGastado.ToString("C", culture)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card card-stat">
+                <div class="card-body">
+                    <div class="subtle text-uppercase small mb-1">Ticket promedio</div>
+                    <div class="value">@ticketPromedio.ToString("C", culture)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card card-stat">
+                <div class="card-body">
+                    <div class="subtle text-uppercase small mb-1">Última compra</div>
+                    <div class="value">@((ultimaCompra?.ToString("dd/MM/yyyy")) ?? "—")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar filtros -->
+    <div class="toolbar bg-white p-3 mb-3">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-6">
+                <div class="input-icon">
+                    <i class="bi bi-search"></i>
+                    <input id="txtFiltro" class="form-control" type="text"
+                           placeholder="Buscar por #venta, fecha, método de pago, estado o total..." />
+                </div>
+            </div>
+            <div class="col-8 col-md-3">
+                <select id="selEstado" class="form-select">
+                    <option value="">Todos los estados</option>
+                    @foreach (var e in estados)
+                    {
+                        <option value="@e">@e</option>
+                    }
+                </select>
+            </div>
+            <div class="col-4 col-md-3 d-flex gap-2 justify-content-end">
+                <button id="btnLimpiar" class="btn btn-outline-secondary">
+                    <i class="bi bi-eraser"></i> Limpiar
+                </button>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-3 mt-2 small">
+            <span class="subtle">Resultados: <strong id="badgeResultados">@totalCompras</strong></span>
+            <span class="subtle">Total filtrado: <strong id="badgeTotalFiltrado">@totalGastado.ToString("C", culture)</strong></span>
+        </div>
+    </div>
+
+    @if (!compras.Any())
     {
-        <div class="ui warning message" style="margin-top:2em;">
-            <i class="info circle icon"></i>
-            No tienes compras registradas aún. Cuando realices tu primer pedido, aparecerá aquí.
+        <div class="empty-state d-flex align-items-center gap-2">
+            <i class="bi bi-info-circle"></i>
+            Aún no tienes compras. Cuando realices tu primer pedido, aparecerá aquí.
         </div>
     }
     else
     {
-        <div class="ui segment" style="margin-top:1.5em;">
-            <table class="ui celled striped table">
-                <thead>
+        <div class="table-responsive table-rounded">
+            <table id="tablaCompras" class="table table-hover align-middle table-nowrap mb-0">
+                <thead class="thead-brand">
                     <tr>
-                        <th># Venta</th>
-                        <th>Fecha</th>
-                        <th>Total</th>
-                        <th>Estado</th>
-                        <th>Método de Pago</th>
-                        <th>Detalle</th>
+                        <th style="width:110px;"># VENTA</th>
+                        <th style="width:140px;">FECHA</th>
+                        <th style="width:140px;">TOTAL</th>
+                        <th style="width:180px;">ESTADO</th>
+                        <th>MÉTODO DE PAGO</th>
+                        <th class="text-center" style="width:110px;">DETALLE</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var venta in Model)
+                    @foreach (var v in compras.OrderByDescending(x => x.FechaVenta))
                     {
+                        var badge = EstadoBadge(v.Estado);
+                        var esReciente = (DateTime.UtcNow - v.FechaVenta.ToUniversalTime()).TotalHours <= 48;
+
                         <tr>
-                            <td>@venta.VentaID</td>
-                            <td>@venta.FechaVenta.ToString("dd/MM/yyyy")</td>
-                            <td style="font-weight:500;">
-                                @venta.Total.ToString("C", culture)
-                            </td>
+                            <td>#@v.VentaID</td>
+                            <td>@v.FechaVenta.ToString("dd/MM/yyyy")</td>
+                            <td class="fw-bold" data-total="@v.Total">@v.Total.ToString("C", culture)</td>
                             <td>
-                                <span class="ui @EstadoColor(venta.Estado) label">
-                                    @venta.Estado
-                                </span>
+                                <span class="badge rounded-pill @badge me-1 estado-texto">@(!string.IsNullOrWhiteSpace(v.Estado) ? v.Estado : "—")</span>
+                                @if (esReciente)
+                                {
+                                    <span class="badge rounded-pill text-bg-info">Nuevo</span>
+                                }
                             </td>
-                            <td>@venta.MetodoPago</td>
-                            <td>
-                                <a href="@Url.Action("Detalle", "MisCompras", new { id = venta.VentaID })"
-                                   class="ui icon mini blue button" title="Ver detalles">
-                                    <i class="eye icon"></i>
+                            <td class="pago-texto">@(!string.IsNullOrWhiteSpace(v.MetodoPago) ? v.MetodoPago : "—")</td>
+                            <td class="text-center">
+                                <a class="btn btn-sm btn-primary" title="Ver detalles"
+                                   href="@Url.Action("Detalle", "MisCompras", new { id = v.VentaID })">
+                                    <i class="bi bi-eye"></i> Ver
                                 </a>
                             </td>
                         </tr>
@@ -77,9 +247,60 @@
             </table>
         </div>
     }
-    <div style="margin-top:2em;">
-        <a href="@Url.Action("Index", "Home")" class="ui green button">
-            <i class="home icon"></i> Volver al inicio
+
+    <div class="mt-4">
+        <a class="btn btn-success" href="@Url.Action("Index", "Home")">
+            <i class="bi bi-house"></i> Volver al inicio
         </a>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const $ = s => document.querySelector(s);
+            const $$ = s => Array.from(document.querySelectorAll(s));
+            const nf = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
+
+            const txt = $('#txtFiltro');
+            const sel = $('#selEstado');
+            const btn = $('#btnLimpiar');
+            const tbody = $('#tablaCompras')?.querySelector('tbody');
+            const badgeResultados = $('#badgeResultados');
+            const badgeTotal = $('#badgeTotalFiltrado');
+
+            function norm(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+
+            function aplicar(){
+                if(!tbody) return;
+                const q = norm(txt?.value || '');
+                const estado = norm(sel?.value || '');
+                let visibles = 0;
+                let total = 0;
+
+                for (const tr of tbody.rows){
+                    const texto = norm(tr.innerText);
+                    const estCell = tr.querySelector('.estado-texto')?.textContent || '';
+                    const pasaTexto = q === '' || texto.includes(q);
+                    const pasaEstado = estado === '' || norm(estCell) === estado;
+
+                    const show = pasaTexto && pasaEstado;
+                    tr.style.display = show ? '' : 'none';
+                    if (show){
+                        visibles++;
+                        const t = parseFloat(tr.querySelector('[data-total]')?.getAttribute('data-total') || '0');
+                        total += isNaN(t) ? 0 : t;
+                    }
+                }
+                if (badgeResultados) badgeResultados.textContent = visibles.toString();
+                if (badgeTotal) badgeTotal.textContent = nf.format(total);
+            }
+
+            txt?.addEventListener('input', aplicar);
+            sel?.addEventListener('change', aplicar);
+            btn?.addEventListener('click', (e)=>{ e.preventDefault(); if(txt) txt.value=''; if(sel) sel.value=''; aplicar(); });
+
+            aplicar(); // inicial
+        })();
+    </script>
+}

@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Simone.Data;
 using Simone.Models;
+using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Simone.Controllers
@@ -22,35 +24,54 @@ namespace Simone.Controllers
         }
 
         /// <summary>
-        /// Muestra el historial de ventas del usuario autenticado
+        /// Historial de compras del usuario autenticado (con paginación opcional).
         /// </summary>
-        public async Task<IActionResult> Index()
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 15, CancellationToken ct = default)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
             {
                 TempData["MensajeError"] = "Debes iniciar sesión para ver tus compras.";
                 return RedirectToAction("Login", "Cuenta");
             }
 
-            var ventas = await _context.Ventas
+            // Saneamos paginación
+            if (page < 1) page = 1;
+            if (pageSize < 5) pageSize = 5;
+            if (pageSize > 50) pageSize = 50;
+
+            // Para el listado no necesitamos los detalles -> consulta más liviana
+            var baseQuery = _context.Ventas
                 .AsNoTracking()
-                .Where(v => v.UsuarioId == user.Id)
-                .Include(v => v.DetalleVentas)
-                    .ThenInclude(dv => dv.Producto)
-                .OrderByDescending(v => v.FechaVenta)
-                .ToListAsync();
+                .Where(v => v.UsuarioId == userId)
+                .OrderByDescending(v => v.FechaVenta);
+
+            var total = await baseQuery.CountAsync(ct);
+
+            var ventas = await baseQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(ct);
+
+            // Paginación para la vista (si decides mostrar controles)
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.Total = total;
 
             return View(ventas);
         }
 
         /// <summary>
-        /// Muestra el detalle de una venta específica del usuario autenticado
+        /// Detalle de una compra del usuario autenticado.
         /// </summary>
-        public async Task<IActionResult> Detalle(int id)
+        [HttpGet]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+        public async Task<IActionResult> Detalle(int id, CancellationToken ct = default)
         {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
             {
                 TempData["MensajeError"] = "Debes iniciar sesión para ver el detalle.";
                 return RedirectToAction("Login", "Cuenta");
@@ -58,17 +79,24 @@ namespace Simone.Controllers
 
             var venta = await _context.Ventas
                 .AsNoTracking()
+                .Where(v => v.VentaID == id && v.UsuarioId == userId) // seguridad: solo propias
                 .Include(v => v.DetalleVentas)
                     .ThenInclude(dv => dv.Producto)
-                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == user.Id);
+#if NET5_0_OR_GREATER
+                .AsSplitQuery()
+#endif
+                .FirstOrDefaultAsync(ct);
 
             if (venta == null)
             {
-                TempData["MensajeError"] = "No se encontró la venta solicitada.";
-                return RedirectToAction("Index");
+                TempData["MensajeError"] = "No se encontró la compra solicitada.";
+                return RedirectToAction(nameof(Index));
             }
 
             return View(venta);
         }
+
+
+
     }
 }
