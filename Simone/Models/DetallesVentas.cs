@@ -31,4 +31,6 @@ public class DetalleVentas
 
     [NotMapped]
     public decimal SubtotalCalculado => (PrecioUnitario * Cantidad) - (Descuento ?? 0);
+
+    public ICollection<Devoluciones> Devoluciones { get; set; } = new List<Devoluciones>();
 }

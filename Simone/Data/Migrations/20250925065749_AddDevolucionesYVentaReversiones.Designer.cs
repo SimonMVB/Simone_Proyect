@@ -9,11 +9,11 @@ using Simone.Data;
 
 #nullable disable
 
-namespace Simone.Migrations
+namespace Simone.Data.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20250923031052_0001")]
-    partial class _0001
+    [Migration("20250925065749_AddDevolucionesYVentaReversiones")]
+    partial class AddDevolucionesYVentaReversiones
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -584,7 +584,8 @@ namespace Simone.Migrations
 
                     b.Property<string>("Motivo")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("DevolucionID");
 
@@ -1263,6 +1264,38 @@ namespace Simone.Migrations
                     b.ToTable("Ventas");
                 });
 
+            modelBuilder.Entity("VentaReversion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AdminId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Motivo")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Nota")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("VentaID")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AdminId");
+
+                    b.HasIndex("VentaID");
+
+                    b.ToTable("VentaReversiones");
+                });
+
             modelBuilder.Entity("Simone.Models.Roles", b =>
                 {
                     b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");
@@ -1519,7 +1552,7 @@ namespace Simone.Migrations
             modelBuilder.Entity("Simone.Models.Devoluciones", b =>
                 {
                     b.HasOne("DetalleVentas", "DetalleVenta")
-                        .WithMany()
+                        .WithMany("Devoluciones")
                         .HasForeignKey("DetalleVentaID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1708,6 +1741,28 @@ namespace Simone.Migrations
                     b.Navigation("Empleado");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("VentaReversion", b =>
+                {
+                    b.HasOne("Simone.Models.Usuario", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId");
+
+                    b.HasOne("Simone.Models.Ventas", "Venta")
+                        .WithMany()
+                        .HasForeignKey("VentaID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Admin");
+
+                    b.Navigation("Venta");
+                });
+
+            modelBuilder.Entity("DetalleVentas", b =>
+                {
+                    b.Navigation("Devoluciones");
                 });
 
             modelBuilder.Entity("Simone.Models.Carrito", b =>

@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
-using Simone.Extensions; // si defines helpers/extensiones aquí
 
 namespace Simone.Controllers
 {
@@ -44,9 +43,9 @@ namespace Simone.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Catálogo con filtros y paginación.
-        /// </summary>
+        // -----------------------------------------------------------
+        // CATÁLOGO
+        // -----------------------------------------------------------
         [HttpGet]
         public async Task<IActionResult> Catalogo(int? categoriaID, int[]? subcategoriaIDs, int pageNumber = 1, int pageSize = 20)
         {
@@ -97,9 +96,51 @@ namespace Simone.Controllers
             return View(model);
         }
 
-        /// <summary>
-        /// Añadir un producto al carrito (AJAX o POST normal).
-        /// </summary>
+        // -----------------------------------------------------------
+        // DETALLE DE PRODUCTO + RELACIONADOS
+        // /Compras/VerProducto?productoID=1
+        // (también acepta /p/{id}/{slug?})
+        // -----------------------------------------------------------
+        [HttpGet]
+        [Route("/p/{productoID:int}/{slug?}")]
+        public async Task<IActionResult> VerProducto(int productoID)
+        {
+            if (productoID <= 0)
+                return RedirectToAction(nameof(Catalogo));
+
+            var producto = await _context.Productos
+                .AsNoTracking()
+                .Include(p => p.Categoria)
+                .Include(p => p.Subcategoria)
+                .FirstOrDefaultAsync(p => p.ProductoID == productoID);
+
+            if (producto == null)
+            {
+                TempData["MensajeError"] = "Producto no encontrado.";
+                return RedirectToAction(nameof(Catalogo));
+            }
+
+            // Relacionados: misma subcategoría; si no hay, por categoría
+            var relacionadosQuery = _context.Productos.AsNoTracking()
+                .Where(p => p.ProductoID != producto.ProductoID);
+
+            if (producto.SubcategoriaID != 0)
+                relacionadosQuery = relacionadosQuery.Where(p => p.SubcategoriaID == producto.SubcategoriaID);
+            else if (producto.CategoriaID != 0)
+                relacionadosQuery = relacionadosQuery.Where(p => p.CategoriaID == producto.CategoriaID);
+
+            ViewBag.Relacionados = await relacionadosQuery
+                .OrderByDescending(p => p.FechaAgregado)
+                .ThenBy(p => p.Nombre)
+                .Take(8)
+                .ToListAsync();
+
+            return View(producto); // Views/Compras/VerProducto.cshtml
+        }
+
+        // -----------------------------------------------------------
+        // CARRITO: AÑADIR (POST normal o AJAX)
+        // -----------------------------------------------------------
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirAlCarrito([Bind("ProductoID,Cantidad")] CatalogoViewModel model, CancellationToken ct = default)
@@ -107,7 +148,7 @@ namespace Simone.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
-                if (EsAjax()) return Json(new { ok = false, error = "Debes iniciar sesión." });
+                if (EsAjax()) return Json(new { ok = false, needLogin = true, error = "Debes iniciar sesión." });
                 TempData["MensajeError"] = "Debes iniciar sesión para añadir productos al carrito.";
                 return RedirectToAction("Login", "Cuenta");
             }
@@ -130,7 +171,7 @@ namespace Simone.Controllers
                 carrito = await _carrito.GetByClienteIdAsync(user.Id);
             }
 
-            // Stock: lo que hay + lo que se pide
+            // Stock: lo que hay ya en el carrito + lo solicitado ahora
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
             var cantidadEnCarrito = detalles.Where(c => c.ProductoID == model.ProductoID).Sum(c => c.Cantidad);
 
@@ -161,6 +202,47 @@ namespace Simone.Controllers
             return RedirectToReferrerOr("Catalogo");
         }
 
+        // Cambiar cantidad de un ítem del carrito (útil si lo usas en vistas futuras)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarCantidad(int carritoDetalleID, int cantidad, CancellationToken ct = default)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            if (cantidad <= 0) cantidad = 1;
+
+            var detalle = await _context.CarritoDetalle
+                .Include(cd => cd.Carrito)
+                .Include(cd => cd.Producto)
+                .FirstOrDefaultAsync(cd => cd.CarritoDetalleID == carritoDetalleID, ct);
+
+            if (detalle == null || detalle.Carrito?.UsuarioId != user.Id)
+                return NotFound();
+
+            if (detalle.Producto == null) return NotFound();
+
+            if (cantidad > detalle.Producto.Stock)
+            {
+                var msg = "La cantidad supera el stock disponible.";
+                if (EsAjax()) return Json(new { ok = false, error = msg, stock = detalle.Producto.Stock });
+                TempData["MensajeError"] = msg;
+                return RedirectToReferrerOr("Resumen");
+            }
+
+            detalle.Cantidad = cantidad;
+            await _context.SaveChangesAsync(ct);
+
+            if (EsAjax())
+            {
+                var subtotal = detalle.Cantidad * detalle.Precio;
+                return Json(new { ok = true, subtotal });
+            }
+
+            TempData["MensajeExito"] = "Cantidad actualizada.";
+            return RedirectToReferrerOr("Resumen");
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarArticulo(int carritoDetalleID)
@@ -170,9 +252,64 @@ namespace Simone.Controllers
             return RedirectToAction("Catalogo");
         }
 
-        /// <summary>
-        /// Resumen del carrito antes de comprar.
-        /// </summary>
+        // Info mínima del carrito para actualizar el badge del header
+        [HttpGet]
+        public async Task<IActionResult> CartInfo(CancellationToken ct)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return Json(new { count = 0, subtotal = 0m });
+
+            var carrito = await _carrito.GetByClienteIdAsync(user.Id);
+            if (carrito == null) return Json(new { count = 0, subtotal = 0m });
+
+            var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+            var count = detalles.Sum(d => d.Cantidad);
+            var subtotal = detalles.Sum(d => d.Cantidad * d.Precio);
+
+            return Json(new { count, subtotal });
+        }
+
+        // -----------------------------------------------------------
+        // FAVORITOS (ruta usada en la vista: /Favoritos/Toggle/{id})
+        // Si ya tienes un FavoritosController, puedes omitir esto.
+        // -----------------------------------------------------------
+        [HttpPost("Favoritos/Toggle/{id:int}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleFavorito(int id, CancellationToken ct = default)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return EsAjax() ? Json(new { ok = false, needLogin = true }) : Unauthorized();
+
+            var prodExists = await _context.Productos.AsNoTracking().AnyAsync(p => p.ProductoID == id, ct);
+            if (!prodExists) return Json(new { ok = false, error = "Producto no encontrado" });
+
+            var fav = await _context.Favoritos.FirstOrDefaultAsync(f => f.UsuarioId == user.Id && f.ProductoId == id, ct);
+            bool esFavorito;
+
+            if (fav == null)
+            {
+                _context.Favoritos.Add(new Favorito
+                {
+                    UsuarioId = user.Id,
+                    ProductoId = id,
+                    FechaGuardado = DateTime.UtcNow
+                });
+                esFavorito = true;
+            }
+            else
+            {
+                _context.Favoritos.Remove(fav);
+                esFavorito = false;
+            }
+
+            await _context.SaveChangesAsync(ct);
+            return Json(new { ok = true, esFavorito });
+        }
+
+        // -----------------------------------------------------------
+        // RESUMEN / CHECKOUT
+        // -----------------------------------------------------------
         [HttpGet]
         public async Task<IActionResult> Resumen()
         {
@@ -203,9 +340,6 @@ namespace Simone.Controllers
             return View(user);
         }
 
-        /// <summary>
-        /// Confirmar compra (registra Venta + Detalles, descuenta stock y cierra carrito).
-        /// </summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarCompra()
@@ -263,22 +397,18 @@ namespace Simone.Controllers
 
                 if (ok)
                 {
-                    // Obtén el ID de la venta creada (la más reciente del usuario)
+                    // ID de la venta creada (la más reciente del usuario)
                     var ventaId = await _context.Ventas
                         .Where(v => v.UsuarioId == user.Id)
                         .OrderByDescending(v => v.FechaVenta)
                         .Select(v => v.VentaID)
                         .FirstOrDefaultAsync();
 
-                    // Prepara un carrito nuevo y vacío para futuras compras
+                    // Prepara un carrito nuevo y vacío
                     await _carrito.AddAsync(user);
 
                     TempData["MensajeExito"] = "¡Gracias por tu compra!";
-                    // Redirige a la página de éxito con el número de referencia real
-                    if (ventaId > 0)
-                        return RedirectToAction(nameof(CompraExito), new { id = ventaId });
-
-                    // Fallback: si por alguna razón no se logró obtener el id
+                    if (ventaId > 0) return RedirectToAction(nameof(CompraExito), new { id = ventaId });
                     return RedirectToAction("Index", "MisCompras");
                 }
 
@@ -287,7 +417,6 @@ namespace Simone.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                // Validaciones del service (stock cambió, carrito vacío, etc.)
                 _logger.LogWarning(ex, "Validación al confirmar compra");
 
                 var carritoDetallesView = await _carrito.LoadCartDetails(carrito.CarritoID);
@@ -306,13 +435,12 @@ namespace Simone.Controllers
             }
         }
 
-        // ----------------- Pantallas de resultado -----------------
-
-        // Vista de éxito: muestra el resumen y el número de referencia (VentaID)
+        // -----------------------------------------------------------
+        // PANTALLAS RESULTADO
+        // -----------------------------------------------------------
         [HttpGet]
         public async Task<IActionResult> CompraExito(int id)
         {
-            // Cargamos la venta por seguridad (y por si quieres mostrar datos en la vista)
             var uid = _userManager.GetUserId(User);
             var venta = await _context.Ventas
                 .AsNoTracking()
@@ -322,30 +450,15 @@ namespace Simone.Controllers
             if (venta == null)
                 return RedirectToAction("Index", "Home");
 
-            // Si tu vista está tipada a Ventas:
             return View(venta);
-
-            // Si prefieres usar ViewBag (y la vista no es tipada):
-            // ViewBag.VentaId = id;
-            // return View();
         }
 
         [HttpGet]
         public IActionResult CompraError() => View();
 
-        // ----------------- Helpers -----------------
-        private bool EsAjax() =>
-            string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
-
-        private IActionResult RedirectToReferrerOr(string action, string controller = "Compras")
-        {
-            var referer = Request.Headers["Referer"].ToString();
-            if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
-            return RedirectToAction(action, controller);
-        }
-
-        // ----------------- Descargar comprobante -----------------
-
+        // -----------------------------------------------------------
+        // DESCARGAR COMPROBANTE
+        // -----------------------------------------------------------
         [HttpGet]
         public async Task<IActionResult> Comprobante(int id)
         {
@@ -389,7 +502,20 @@ namespace Simone.Controllers
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(html);
             var fileName = $"comprobante-{venta.VentaID}.html";
-            return File(bytes, "text/html", fileName); // fuerza descarga
+            return File(bytes, "text/html", fileName);
+        }
+
+        // -----------------------------------------------------------
+        // HELPERS
+        // -----------------------------------------------------------
+        private bool EsAjax() =>
+            string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
+
+        private IActionResult RedirectToReferrerOr(string action, string controller = "Compras")
+        {
+            var referer = Request.Headers["Referer"].ToString();
+            if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
+            return RedirectToAction(action, controller);
         }
     }
 }

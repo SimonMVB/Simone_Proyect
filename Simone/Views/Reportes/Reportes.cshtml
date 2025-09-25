@@ -1,113 +1,14 @@
 @model IEnumerable<Simone.ViewModels.Reportes.CompradorResumenVM>
 @using System.Globalization
+
 @{
     ViewData["Title"] = "Compradores / Ventas";
     var culture = new CultureInfo("es-EC");
-
-    string Safe(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
-    string Initials(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-        var p = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (p.Length == 1) return p[0].Substring(0, 1).ToUpperInvariant();
-        return (p[0].Substring(0, 1) + p[1].Substring(0, 1)).ToUpperInvariant();
-    }
-    string BadgeClass(string? estado)
-    {
-        estado = (estado ?? "").ToLowerInvariant();
-        if (estado.Contains("env")) return "bg-success";
-        if (estado.Contains("pend")) return "bg-warning text-dark";
-        if (estado.Contains("canc") || estado.Contains("dev")) return "bg-danger";
-        return "bg-secondary";
-    }
 }
-
-<div class="container-xl py-4">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-        <h2 class="fw-bold m-0">Compradores</h2>
-        <div class="text-muted small">Total registros: <strong>@(Model?.Count() ?? 0)</strong></div>
-    </div>
-
-    @if (Model == null || !Model.Any())
-    {
-        <div class="alert alert-info shadow-sm">No hay ventas registradas.</div>
-    }
-    else
-    {
-        <div class="list-group shadow-sm rounded-3">
-            @foreach (var v in Model)
-            {
-                var badge = BadgeClass(v.Estado);
-
-                <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between gap-3 comp-row">
-                    <div class="d-flex align-items-center gap-3 flex-grow-1">
-                        <div class="avatar-wrap">
-                            @if (!string.IsNullOrWhiteSpace(v.FotoPerfil))
-                            {
-                                <img src="@v.FotoPerfil"
-                                     class="avatar-img"
-                                     alt="Foto de @v.Nombre"
-                                     onerror="this.onerror=null;this.classList.add('d-none');this.nextElementSibling.classList.remove('d-none');" />
-                            }
-                            <div class="avatar-initials @(string.IsNullOrWhiteSpace(v.FotoPerfil) ? "" : "d-none")">
-                                @Initials(v.Nombre)
-                            </div>
-                        </div>
-
-                        <div class="min-w-0">
-                            <div class="d-flex align-items-center flex-wrap gap-2">
-                                <a asp-route="Panel_VentaDetalle"
-                                   asp-route-id="@v.VentaID"
-                                   class="fw-semibold link-dark text-truncate text-decoration-none">
-                                    @Safe(v.Nombre)
-                                </a>
-                                <span class="badge @badge align-middle">@Safe(v.Estado)</span>
-                            </div>
-                            <div class="text-muted small text-truncate">
-                                <i class="fa-regular fa-envelope me-1"></i>@Safe(v.Email)
-                                <span class="mx-1">·</span>
-                                <i class="fa-solid fa-phone me-1"></i>@Safe(v.Telefono)
-                            </div>
-                            <div class="text-muted small">
-                                <i class="fa-regular fa-calendar me-1"></i>@v.Fecha.ToString("dd/MM/yyyy HH:mm")
-                                <span class="mx-1">·</span>
-                                <i class="fa-solid fa-money-check-dollar me-1"></i>@Safe(v.MetodoPago)
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="text-end">
-                        <div class="fw-bold fs-6">@v.Total.ToString("C", culture)</div>
-
-                        <form method="post"
-                              asp-route="Panel_MarcarEnviada"
-                              class="d-inline-block ms-2 js-mark-shipped"
-                              data-id="@v.VentaID">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@v.VentaID" />
-                            <button type="submit"
-                                    class="btn btn-sm btn-outline-success btn-ship"
-                                    title="Marcar como enviado"
-                                    @(v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true ? "disabled" : null)>
-                                <i class="fa-solid fa-truck-fast me-1"></i> Enviado
-                            </button>
-                        </form>
-
-                        <a asp-route="Panel_VentaDetalle"
-                           asp-route-id="@v.VentaID"
-                           class="btn btn-sm btn-outline-primary ms-1">
-                            <i class="fa-regular fa-eye me-1"></i> Ver
-                        </a>
-                    </div>
-                </div>
-            }
-        </div>
-    }
-</div>
 
 <style>
     .list-group-item.comp-row {
-        transition: all .2s ease;
+        transition: .2s;
         border: 0;
         border-bottom: 1px solid #eef1f5
     }
@@ -133,7 +34,7 @@
         border-radius: 50%;
         object-fit: cover;
         display: block;
-        box-shadow: 0 0 0 2px #fff, 0 1px 6px rgba(0,0,0,.1)
+        box-shadow: 0 0 0 2px #fff,0 1px 6px rgba(0,0,0,.1)
     }
 
     .avatar-initials {
@@ -150,48 +51,281 @@
         box-shadow: 0 1px 6px rgba(0,0,0,.05)
     }
 
-    @@media (max-width:768px) {
-        .btn-ship {
-            margin-top: .5rem
-        }
+    .modal-backdrop.show {
+        opacity: .35
     }
+
+    @* si necesitas responsive para el botón, ponlo en tu CSS global para evitar @media aquí *@
 </style>
+
+<div class="container-xl py-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h2 class="fw-bold m-0">Compradores</h2>
+        <div class="text-muted small">Total registros: <strong>@(Model?.Count() ?? 0)</strong></div>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info shadow-sm">No hay ventas registradas.</div>
+    }
+    else
+    {
+        <div class="list-group shadow-sm rounded-3">
+            @foreach (var v in Model)
+            {
+                string Safe(string? s) => string.IsNullOrWhiteSpace(s) ? "—" : s!;
+                string initials;
+                {
+                    var name = v.Nombre ?? "";
+                    var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    initials = parts.Length switch
+                    {
+                        0 => "?",
+                        1 => parts[0].Substring(0, 1).ToUpperInvariant(),
+                        _ => (parts[0].Substring(0, 1) + parts[1].Substring(0, 1)).ToUpperInvariant()
+                    };
+                }
+                var estadoLower = (v.Estado ?? "").ToLowerInvariant();
+                var badgeClass =
+                estadoLower.Contains("env") ? "bg-success" :
+                (estadoLower.Contains("pend") ? "bg-warning text-dark" :
+                (estadoLower.Contains("canc") || estadoLower.Contains("dev") ? "bg-danger" : "bg-secondary"));
+
+                <div class="list-group-item list-group-item-action d-flex align-items-center justify-content-between gap-3 comp-row"
+                     data-venta-id="@v.VentaID">
+                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                        <div class="avatar-wrap">
+                            @if (!string.IsNullOrWhiteSpace(v.FotoPerfil))
+                            {
+                                <img src="@v.FotoPerfil"
+                                     class="avatar-img"
+                                     alt="Foto de @v.Nombre"
+                                     onerror="this.onerror=null;this.classList.add('d-none');this.nextElementSibling.classList.remove('d-none');" />
+                            }
+                            <div class="avatar-initials @(string.IsNullOrWhiteSpace(v.FotoPerfil) ? "" : "d-none")">
+                                @initials
+                            </div>
+                        </div>
+
+                        <div class="min-w-0">
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <a asp-route="Panel_VentaDetalle"
+                                   asp-route-id="@v.VentaID"
+                                   class="fw-semibold link-dark text-truncate text-decoration-none">
+                                    @Safe(v.Nombre)
+                                </a>
+                                <span class="badge @badgeClass align-middle estado-badge">@Safe(v.Estado)</span>
+                            </div>
+                            <div class="text-muted small text-truncate">
+                                <i class="fa-regular fa-envelope me-1"></i>@Safe(v.Email)
+                                <span class="mx-1">·</span>
+                                <i class="fa-solid fa-phone me-1"></i>@Safe(v.Telefono)
+                            </div>
+                            <div class="text-muted small">
+                                <i class="fa-regular fa-calendar me-1"></i>@v.Fecha.ToString("dd/MM/yyyy HH:mm")
+                                <span class="mx-1">·</span>
+                                <i class="fa-solid fa-money-check-dollar me-1"></i>@Safe(v.MetodoPago)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <div class="fw-bold fs-6">@v.Total.ToString("C", culture)</div>
+
+                        <!-- Marcar Enviado -->
+                        <form method="post"
+                              asp-route="Panel_MarcarEnviada"
+                              class="d-inline-block ms-2 js-mark-shipped"
+                              data-id="@v.VentaID">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@v.VentaID" />
+                            <button type="submit"
+                                    class="btn btn-sm btn-outline-success btn-ship"
+                                    title="Marcar como enviado"
+                                    @(v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true ? "disabled" : null)>
+                                <i class="fa-solid fa-truck-fast me-1"></i> Enviado
+                            </button>
+                        </form>
+
+                        <!-- Ver -->
+                        <a asp-route="Panel_VentaDetalle"
+                           asp-route-id="@v.VentaID"
+                           class="btn btn-sm btn-outline-primary ms-1">
+                            <i class="fa-regular fa-eye me-1"></i> Ver
+                        </a>
+
+                        <!-- Reportar / Revertir -->
+                        <button type="button"
+                                class="btn btn-sm btn-outline-danger ms-1 btn-report"
+                                title="Reportar problema / Revertir venta"
+                                data-bs-toggle="modal"
+                                data-bs-target="#reportModal"
+                                data-id="@v.VentaID"
+                                data-nombre="@Safe(v.Nombre)"
+                                data-total="@v.Total.ToString("C", culture)">
+                            <i class="fa-solid fa-flag me-1"></i> Reportar
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal Reporte/Reversión -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa-solid fa-flag me-2 text-danger"></i>Reportar venta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small mb-3" id="repVentaInfo"></div>
+
+                <form id="reportForm" method="post" asp-action="ReportarVenta" asp-controller="Reportes">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="ventaId" id="repVentaId" />
+
+                    <div class="mb-2">
+                        <label class="form-label">Motivo</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="motivo" id="motivo1" value="deposito_falso" checked>
+                            <label class="form-check-label" for="motivo1">Depósito falso</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="motivo" id="motivo2" value="devolucion">
+                            <label class="form-check-label" for="motivo2">Devolución</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="motivo" id="motivo3" value="otro">
+                            <label class="form-check-label" for="motivo3">Otro</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label" for="repNota">Detalle / Nota (opcional)</label>
+                        <textarea name="nota" id="repNota" rows="3" class="form-control" placeholder="Explica brevemente el problema..."></textarea>
+                    </div>
+                </form>
+
+                <div class="small text-muted">
+                    Al revertir, el <strong>stock será repuesto</strong> y la venta quedará marcada como
+                    <em>Cancelada (revertida)</em>.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" form="reportForm" class="btn btn-danger" id="repSubmit">
+                    <i class="fa-solid fa-rotate-left me-1"></i> Revertir venta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 @section Scripts {
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-          document.querySelectorAll('form.js-mark-shipped').forEach(f => {
-            f.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              const row = f.closest('.comp-row');
-              const badge = row.querySelector('.badge');
-              const btn = f.querySelector('.btn-ship');
-              const prev = btn.innerHTML;
+        (function () {
+          // --- carga Bootstrap JS si no está disponible (evita "pantalla oscura") ---
+          function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
+          function ensureBootstrap(callback){
+            if(window.bootstrap && bootstrap.Modal){ callback(); return; }
+            const s=document.createElement('script');
+            s.src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js';
+            s.defer=true; s.onload=callback; document.body.appendChild(s);
+          }
 
-              btn.disabled = true;
-              btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Enviando...';
+          onReady(function(){
+            ensureBootstrap(wireUp);
+          });
+
+          function wireUp(){
+            // ----- Marcar Enviado (AJAX) -----
+            document.querySelectorAll('form.js-mark-shipped').forEach(function(f){
+              f.addEventListener('submit', async function(e){
+                e.preventDefault();
+                const row = f.closest('.comp-row');
+                const badge = row.querySelector('.estado-badge');
+                const btn = f.querySelector('.btn-ship');
+                const prev = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Enviando...';
+
+                try{
+                  const res = await fetch(f.action, {
+                    method:'POST',
+                    headers:{'X-Requested-With':'XMLHttpRequest'},
+                    body: new FormData(f) // incluye el antiforgery
+                  });
+                  if(res.ok){
+                    let json=null; try{ json=await res.json(); }catch{}
+                    badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
+                    badge.className   = 'badge bg-success estado-badge';
+                    btn.innerHTML     = '<i class="fa-solid fa-check me-1"></i> Enviado';
+                  }else{
+                    btn.disabled=false; btn.innerHTML=prev;
+                    alert('No se pudo marcar como enviado.');
+                  }
+                }catch{
+                  btn.disabled=false; btn.innerHTML=prev;
+                  alert('Error de red.');
+                }
+              });
+            });
+
+            // ----- Modal: rellenar datos al abrir -----
+            const modalEl = document.getElementById('reportModal');
+            modalEl.addEventListener('show.bs.modal', function (ev) {
+              const btn = ev.relatedTarget;
+              const id = btn.getAttribute('data-id');
+              const nombre = btn.getAttribute('data-nombre') || '';
+              const total = btn.getAttribute('data-total') || '';
+
+              const repForm = document.getElementById('reportForm');
+              repForm.reset();
+              document.getElementById('motivo1').checked = true;
+              document.getElementById('repVentaId').value = id;
+              document.getElementById('repVentaInfo').textContent = `Venta #${id} · ${nombre} · Total ${total}`;
+            });
+
+            // ----- Envío AJAX del reporte -----
+            const repForm   = document.getElementById('reportForm');
+            const repSubmit = document.getElementById('repSubmit');
+            repForm.addEventListener('submit', async function(e){
+              e.preventDefault();
+              const data = new FormData(repForm);
+              const prev = repSubmit.innerHTML;
+              repSubmit.disabled = true;
+              repSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Procesando...';
 
               try{
-                const res = await fetch(f.action, {
-                  method:'POST',
-                  headers:{ 'X-Requested-With':'XMLHttpRequest' },
-                  body:new FormData(f) // incluye __RequestVerificationToken
-                });
-                if(res.ok){
-                  let json=null; try{ json = await res.json(); }catch{}
-                  badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
-                  badge.className = 'badge bg-success';
-                  btn.innerHTML = '<i class="fa-solid fa-check me-1"></i> Enviado';
-                } else {
-                  btn.disabled = false; btn.innerHTML = prev;
-                  alert('No se pudo marcar como enviado.');
+                const res  = await fetch(repForm.action, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:data });
+                const json = await res.json().catch(()=>null);
+
+                if(res.ok && json && json.ok){
+                  const id = data.get('ventaId');
+                  const row = document.querySelector(`.comp-row[data-venta-id="${id}"]`);
+                  if(row){
+                    const badge = row.querySelector('.estado-badge');
+                    badge.textContent = 'Cancelada (revertida)';
+                    badge.className = 'badge bg-danger estado-badge';
+                    const shipBtn = row.querySelector('.btn-ship'); if(shipBtn) shipBtn.disabled = true;
+                    const repBtn  = row.querySelector('.btn-report'); if(repBtn){ repBtn.disabled = true; repBtn.classList.add('disabled'); }
+                  }
+                  const bsModal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+                  if(bsModal) bsModal.hide();
+                }else{
+                  alert((json && json.error) ? json.error : 'No se pudo revertir la venta.');
                 }
               }catch{
-                btn.disabled = false; btn.innerHTML = prev;
                 alert('Error de red.');
+              }finally{
+                repSubmit.disabled = false;
+                repSubmit.innerHTML = prev;
               }
             });
-          });
-        });
+          }
+        })();
     </script>
 }

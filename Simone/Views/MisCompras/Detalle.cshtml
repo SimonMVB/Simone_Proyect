@@ -5,166 +5,515 @@
     ViewData["Title"] = $"Detalle de Venta #{Model.VentaID}";
     var culture = new CultureInfo("es-EC");
 
-    // Mapea estado → badge Bootstrap
-    Func<string?, string> EstadoBadge = e =>
+    // Mapea estado → badge Bootstrap con iconos
+    Func<string, (string, string)> EstadoInfo = e =>
     {
-        if (string.IsNullOrWhiteSpace(e)) return "text-bg-secondary";
+        if (string.IsNullOrWhiteSpace(e)) return ("text-bg-secondary", "bi-question-circle");
         var s = e.Trim().ToLowerInvariant();
-        if (s.Contains("pend")) return "text-bg-secondary";           // pendiente
-        if (s.Contains("proc") || s.Contains("pago")) return "text-bg-warning"; // procesando/pago
-        if (s.Contains("desp") || s.Contains("env")) return "text-bg-primary";  // despachando/enviado
-        if (s.Contains("entr") || s.Contains("compl")) return "text-bg-success";// entregado/completada
-        if (s.Contains("canc")) return "text-bg-danger";               // cancelado
-        return "text-bg-secondary";
+        if (s.Contains("pend")) return ("text-bg-secondary", "bi-clock");           // pendiente
+        if (s.Contains("proc") || s.Contains("pago")) return ("text-bg-warning", "bi-arrow-repeat"); // procesando/pago
+        if (s.Contains("desp") || s.Contains("env")) return ("text-bg-primary", "bi-truck");  // despachando/enviado
+        if (s.Contains("entr") || s.Contains("compl")) return ("text-bg-success", "bi-check-circle");// entregado/completada
+        if (s.Contains("canc")) return ("text-bg-danger", "bi-x-circle");               // cancelado
+        return ("text-bg-secondary", "bi-question-circle");
     };
 
-    // Intentos no intrusivos para depositante y foto de depósito (opcional/si existen)
+    var estadoInfo = EstadoInfo(Model.Estado ?? "");
+
+    // Intentos no intrusivos para datos opcionales
     var depositante = Model?.GetType().GetProperty("DepositanteNombre")?.GetValue(Model, null)?.ToString();
     depositante ??= Model?.GetType().GetProperty("NombreDepositante")?.GetValue(Model, null)?.ToString();
     var urlComprobante = Model?.GetType().GetProperty("ComprobanteImagenUrl")?.GetValue(Model, null)?.ToString();
     urlComprobante ??= Model?.GetType().GetProperty("ComprobanteUrl")?.GetValue(Model, null)?.ToString();
+
+    // Calcular totales
+    var subtotal = Model.DetalleVentas.Sum(d => d.PrecioUnitario * d.Cantidad);
+    var descuentos = Model.DetalleVentas.Sum(d => d.Descuento ?? 0m);
 }
 
-<style>
-    /* Estilos locales (mueve a site.css si quieres) */
-    .card-soft {
-        border: 0;
-        border-radius: 1rem;
-        box-shadow: 0 8px 26px rgba(50,50,93,.08),0 6px 16px rgba(0,0,0,.06);
-    }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1f6feb;
+            --primary-light: #e8f0fe;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --gray-light: #f8f9fa;
+            --border-radius: 12px;
+            --shadow-soft: 0 8px 26px rgba(50,50,93,.08), 0 6px 16px rgba(0,0,0,.06);
+            --shadow-hover: 0 15px 35px rgba(50,50,93,.1), 0 5px 15px rgba(0,0,0,.07);
+        }
 
-    .kv {
-        color: #6c757d;
-        font-size: .85rem;
-    }
+        body {
+            background-color: #f5f7fb;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #333;
+        }
 
-    .table-rounded {
-        border-radius: 1rem;
-        overflow: hidden;
-        box-shadow: 0 6px 18px rgba(0,0,0,.06);
-    }
+        .card-soft {
+            border: 0;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
 
-    .thead-brand th {
-        background: linear-gradient(90deg,#1f6feb,#1168f2);
-        color: #fff;
-        border: none;
-    }
+            .card-soft:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--shadow-hover);
+            }
 
-    .img-proof {
-        border-radius: .75rem;
-        max-height: 320px;
-        object-fit: contain;
-        background: #f8f9fa;
-    }
+        .kv {
+            color: #6c757d;
+            font-size: .85rem;
+            font-weight: 500;
+        }
 
-    .badge.rounded-pill {
-        padding: .5rem .7rem;
-    }
-</style>
+        .table-rounded {
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-soft);
+        }
 
-<div class="container py-4" style="max-width: 980px;">
-    <div class="d-flex align-items-center gap-2 mb-1">
-        <h2 class="mb-0">Venta #@Model.VentaID</h2>
-        <span class="badge rounded-pill @EstadoBadge(Model.Estado)">@Model.Estado</span>
-    </div>
-    <p class="kv mb-4">Fecha: <strong>@Model.FechaVenta.ToString("dd/MM/yyyy")</strong></p>
+        .thead-brand th {
+            background: linear-gradient(90deg, var(--primary-color), #1168f2);
+            color: #fff;
+            border: none;
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+        }
 
-    <div class="row g-3 mb-4">
-        <!-- Resumen -->
-        <div class="col-12 col-lg-8">
-            <div class="card card-soft">
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-6 col-md-4">
-                            <div class="kv">Método de pago</div>
-                            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.MetodoPago) ? Model.MetodoPago : "—")</div>
-                        </div>
-                        <div class="col-6 col-md-4">
-                            <div class="kv">Total</div>
-                            <div class="fw-bold fs-5">@Model.Total.ToString("C", culture)</div>
-                        </div>
-                        <div class="col-12 col-md-4">
-                            <div class="kv">Depositante</div>
-                            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")</div>
+        .table > tbody > tr > td {
+            padding: 1rem 1.25rem;
+            vertical-align: middle;
+            border-color: #f0f0f0;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(31, 111, 235, 0.03);
+        }
+
+        .img-proof {
+            border-radius: calc(var(--border-radius) - 4px);
+            max-height: 320px;
+            object-fit: contain;
+            background: var(--gray-light);
+            transition: transform 0.3s;
+        }
+
+            .img-proof:hover {
+                transform: scale(1.02);
+            }
+
+        .badge.rounded-pill {
+            padding: .5rem .75rem;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .status-timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+            .status-timeline::before {
+                content: '';
+                position: absolute;
+                left: 0.75rem;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #e9ecef;
+            }
+
+        .status-step {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+            .status-step:last-child {
+                margin-bottom: 0;
+            }
+
+            .status-step::before {
+                content: '';
+                position: absolute;
+                left: -1.65rem;
+                top: 0.25rem;
+                width: 0.75rem;
+                height: 0.75rem;
+                border-radius: 50%;
+                background: #adb5bd;
+                z-index: 1;
+            }
+
+            .status-step.active::before {
+                background: var(--primary-color);
+                box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
+            }
+
+            .status-step.completed::before {
+                background: var(--success-color);
+            }
+
+            .status-step.problem::before {
+                background: var(--danger-color);
+            }
+
+        .btn-soft-primary {
+            background-color: var(--primary-light);
+            color: var(--primary-color);
+            border: 1px solid rgba(31, 111, 235, 0.2);
+        }
+
+            .btn-soft-primary:hover {
+                background-color: rgba(31, 111, 235, 0.1);
+                color: var(--primary-color);
+                border-color: rgba(31, 111, 235, 0.3);
+            }
+
+        .total-display {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+        }
+
+        .empty-state {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+
+            .empty-state i {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
+
+        .print-only {
+            display: none;
+        }
+
+        @@media print {
+            .no-print
+
+        {
+            display: none !important;
+        }
+
+        .print-only {
+            display: block;
+        }
+
+        body {
+            background: white;
+        }
+
+        .card-soft {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
+
+        }
+
+        @@media (max-width: 768px) {
+            .container
+
+        {
+            padding-left: 15px;
+            padding-right: 15px;
+        }
+
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+
+        .thead-brand th {
+            padding: 0.75rem 0.5rem;
+        }
+
+        .table > tbody > tr > td {
+            padding: 0.75rem 0.5rem;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4" style="max-width: 1200px;">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <h2 class="mb-0">Venta #@Model.VentaID</h2>
+                    <span class="badge rounded-pill @estadoInfo.Item1">
+                        <i class="bi @estadoInfo.Item2 me-1"></i>@Model.Estado
+                    </span>
+                </div>
+                <p class="kv mb-0">Fecha: <strong>@Model.FechaVenta.ToString("dd/MM/yyyy")</strong> | Hora: <strong>@Model.FechaVenta.ToString("HH:mm")</strong></p>
+            </div>
+            <div class="d-flex gap-2 no-print">
+                <button class="btn btn-outline-primary" onclick="window.print()">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+                <a class="btn btn-soft-primary" href="@Url.Action("Index", "MisCompras")">
+                    <i class="bi bi-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+
+        <div class="print-only mb-3">
+            <h4>Comprobante de Venta #@Model.VentaID</h4>
+            <p>Fecha: @Model.FechaVenta.ToString("dd/MM/yyyy HH:mm")</p>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <!-- Información de la venta -->
+            <div class="col-12 col-lg-8">
+                <div class="card card-soft h-100">
+                    <div class="card-header bg-transparent border-bottom-0 pb-0">
+                        <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2"></i>Información de la venta</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6 col-md-4">
+                                <div class="kv">Método de pago</div>
+                                <div class="fw-semibold d-flex align-items-center gap-2">
+                                    @if (!string.IsNullOrWhiteSpace(Model.MetodoPago))
+                                    {
+                                        <i class="bi
+                                                @(Model.MetodoPago.ToLower().Contains("tarjeta") ? "bi-credit-card" :
+                                                                                       Model.MetodoPago.ToLower().Contains("efectivo") ? "bi-cash" :
+                                                                                       Model.MetodoPago.ToLower().Contains("transfer") ? "bi-bank" : "bi-wallet")">
+                                    </i>
+                                    @Model.MetodoPago
+                                                                        }
+                                    else
+                                    {
+                                        <span>—</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="kv">Estado</div>
+                                <div>
+                                    <span class="badge rounded-pill @estadoInfo.Item1">
+                                        <i class="bi @estadoInfo.Item2 me-1"></i>@Model.Estado
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="kv">Depositante</div>
+                                <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")</div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="kv">Subtotal</div>
+                                <div class="fw-semibold">@subtotal.ToString("C", culture)</div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="kv">Descuentos</div>
+                                <div class="fw-semibold text-danger">-@descuentos.ToString("C", culture)</div>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <div class="kv">Total</div>
+                                <div class="fw-bold fs-5 text-primary">@Model.Total.ToString("C", culture)</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Comprobante (opcional) -->
-        <div class="col-12 col-lg-4">
-            <div class="card card-soft">
-                <div class="card-body">
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="kv">Comprobante de depósito</div>
+            <!-- Comprobante de pago -->
+            <div class="col-12 col-lg-4">
+                <div class="card card-soft h-100">
+                    <div class="card-header bg-transparent border-bottom-0 pb-0 d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0"><i class="bi bi-receipt me-2"></i>Comprobante</h5>
                         @if (!string.IsNullOrWhiteSpace(urlComprobante))
                         {
-                            <a href="@urlComprobante" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-box-arrow-up-right"></i> Abrir
-                            </a>
+                            <div class="btn-group">
+                                <a href="@urlComprobante" target="_blank" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-box-arrow-up-right"></i>
+                                </a>
+                                <a href="@urlComprobante" download="comprobante-venta-@Model.VentaID" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </div>
                         }
                     </div>
+                    <div class="card-body d-flex flex-column">
+                        @if (!string.IsNullOrWhiteSpace(urlComprobante))
+                        {
+                            <a href="@urlComprobante" target="_blank" title="Ver comprobante en tamaño completo" class="flex-grow-1 d-flex align-items-center justify-content-center">
+                                <img class="img-fluid img-proof" src="@urlComprobante" alt="Comprobante de depósito de la venta @Model.VentaID" />
+                            </a>
+                            <div class="mt-2 text-center small text-muted">
+                                Haga clic en la imagen para ampliar
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-state flex-grow-1 d-flex flex-column align-items-center justify-content-center">
+                                <i class="bi bi-image"></i>
+                                <div>No hay comprobante adjunto</div>
+                                <small class="text-muted mt-1">El vendedor no ha subido un comprobante</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                    @if (!string.IsNullOrWhiteSpace(urlComprobante))
-                    {
-                        <a href="@urlComprobante" target="_blank" title="Ver comprobante">
-                            <img class="w-100 img-proof" src="@urlComprobante" alt="Comprobante de depósito de la venta @Model.VentaID" />
-                        </a>
+        <!-- Productos -->
+        <div class="card card-soft mb-4">
+            <div class="card-header bg-transparent border-bottom-0 pb-0">
+                <h5 class="card-title mb-0"><i class="bi bi-cart me-2"></i>Productos (@Model.DetalleVentas.Count)</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive table-rounded">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="thead-brand">
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Cantidad</th>
+                                <th class="text-end">Precio Unit.</th>
+                                <th class="text-end">Descuento</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var det in Model.DetalleVentas)
+                            {
+                                var sub = det.Subtotal.HasValue ? det.Subtotal.Value
+                                : (det.PrecioUnitario * det.Cantidad) - (det.Descuento ?? 0m);
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-grow-1">
+                                                <div class="fw-medium">@det.Producto?.Nombre</div>
+                                                @if (!string.IsNullOrEmpty(det.Producto?.Descripcion))
+                                                {
+                                                    <small class="text-muted">@det.Producto.Descripcion</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">@det.Cantidad</td>
+                                    <td class="text-end">@det.PrecioUnitario.ToString("C", culture)</td>
+                                    <td class="text-end text-danger">@((det.Descuento ?? 0m).ToString("C", culture))</td>
+                                    <td class="text-end fw-semibold">@sub.ToString("C", culture)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resumen de totales -->
+        <div class="row justify-content-end">
+            <div class="col-12 col-md-6 col-lg-5">
+                <div class="total-display">
+                    <div class="row g-2">
+                        <div class="col-8">Subtotal:</div>
+                        <div class="col-4 text-end">@subtotal.ToString("C", culture)</div>
+
+                        <div class="col-8">Descuentos:</div>
+                        <div class="col-4 text-end text-danger">-@descuentos.ToString("C", culture)</div>
+
+                        <hr class="my-2">
+
+                        <div class="col-8 fw-bold fs-5">Total:</div>
+                        <div class="col-4 text-end fw-bold fs-5 text-primary">@Model.Total.ToString("C", culture)</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline de estado (solo para pantallas grandes) -->
+        <div class="card card-soft mt-4 d-none d-lg-block">
+            <div class="card-header bg-transparent border-bottom-0 pb-0">
+                <h5 class="card-title mb-0"><i class="bi bi-clock-history me-2"></i>Progreso de la venta</h5>
+            </div>
+            <div class="card-body">
+                <div class="status-timeline">
+                    @{
+                        var estados = new[] { "Pendiente", "Procesando", "Despachando", "Entregado" };
+                        var estadoActual = Model.Estado?.ToLower() ?? "";
+                        var estadoIndex = estadoActual.Contains("pend") ? 0 :
+                        estadoActual.Contains("proc") || estadoActual.Contains("pago") ? 1 :
+                        estadoActual.Contains("desp") || estadoActual.Contains("env") ? 2 :
+                        estadoActual.Contains("entr") || estadoActual.Contains("compl") ? 3 : -1;
                     }
-                    else
+
+                    @for (int i = 0; i < estados.Length; i++)
                     {
-                        <div class="text-center text-muted small" style="padding:1.5rem;">
-                            <i class="bi bi-image" style="font-size:1.4rem;"></i>
-                            <div>No hay imagen de comprobante</div>
+                        var stepClass = i < estadoIndex ? "completed" :
+                        i == estadoIndex ? "active" : "";
+
+                        <div class="status-step @stepClass">
+                            <div class="fw-medium">@estados[i]</div>
+                            <small class="text-muted">
+                                @if (i < estadoIndex)
+                                {
+                                    <i class="bi bi-check-circle text-success me-1"></i>
+                                    <span>Completado</span>
+                                }
+                                else if (i == estadoIndex)
+                                {
+                                    <span>En progreso</span>
+                                }
+                                else
+                                {
+                                    <span>Pendiente</span>
+                                }
+                            </small>
                         </div>
                     }
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Productos -->
-    <div class="table-responsive table-rounded mb-3">
-        <table class="table table-hover align-middle mb-0">
-            <thead class="thead-brand">
-                <tr>
-                    <th>Producto</th>
-                    <th class="text-end">Cantidad</th>
-                    <th class="text-end">Precio Unit.</th>
-                    <th class="text-end">Subtotal</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var det in Model.DetalleVentas)
-                {
-                    var sub = det.Subtotal.HasValue ? det.Subtotal.Value
-                    : (det.PrecioUnitario * det.Cantidad) - (det.Descuento ?? 0m);
-                    <tr>
-                        <td>@det.Producto?.Nombre</td>
-                        <td class="text-end">@det.Cantidad</td>
-                        <td class="text-end">@det.PrecioUnitario.ToString("C", culture)</td>
-                        <td class="text-end">@sub.ToString("C", culture)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-    <div class="d-flex justify-content-end">
-        <div class="fs-5 fw-bold">Total: @Model.Total.ToString("C", culture)</div>
-    </div>
-
-    <div class="mt-4 d-flex gap-2">
-        <a class="btn btn-outline-secondary" href="@Url.Action("Index", "MisCompras")">
-            <i class="bi bi-arrow-left"></i> Volver a mis compras
-        </a>
-        @* Ejemplo: botón para descargar comprobante si hay URL *@
-        @if (!string.IsNullOrWhiteSpace(urlComprobante))
-        {
-            <a class="btn btn-primary" href="@urlComprobante" target="_blank">
-                <i class="bi bi-download"></i> Descargar comprobante
+        <!-- Acciones -->
+        <div class="d-flex gap-2 mt-4 no-print">
+            <a class="btn btn-outline-secondary" href="@Url.Action("Index", "MisCompras")">
+                <i class="bi bi-arrow-left"></i> Volver a mis compras
             </a>
-        }
+            @if (!string.IsNullOrWhiteSpace(urlComprobante))
+            {
+                <a class="btn btn-primary" href="@urlComprobante" download="comprobante-venta-@Model.VentaID">
+                    <i class="bi bi-download"></i> Descargar comprobante
+                </a>
+            }
+            <button class="btn btn-outline-primary ms-auto" onclick="window.print()">
+                <i class="bi bi-printer"></i> Imprimir
+            </button>
+        </div>
     </div>
-</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Efecto de carga suave para las imágenes
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('img');
+            images.forEach(img => {
+                if (img.complete) {
+                    img.style.opacity = 1;
+                } else {
+                    img.style.opacity = 0;
+                    img.addEventListener('load', function() {
+                        this.style.transition = 'opacity 0.3s';
+                        this.style.opacity = 1;
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

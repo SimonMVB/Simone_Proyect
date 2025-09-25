@@ -1,5 +1,4 @@
 @model Simone.Models.Usuario
-
 @using System.Globalization
 @{
     ViewData["Title"] = "Resumen de Compra";
@@ -12,556 +11,600 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resumen de Compra - Simone Store</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #3498db;
-            --success: #2ecc71;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --dark: #2c3e50;
-            --light: #f8f9fa;
+            --primary: #e8b4b8;
+            --primary-dark: #d99a9f;
+            --secondary: #f8f1f1;
+            --accent: #a49393;
+            --text: #3d3d3d;
+            --text-light: #7a7a7a;
+            --success: #8fc4b4;
+            --border: #e8e8e8;
+            --shadow: 0 10px 30px rgba(0,0,0,.08);
+            --radius: 16px
         }
 
         body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #fefefe;
+            font-family: 'Montserrat',sans-serif;
+            color: var(--text);
+            line-height: 1.6
         }
 
-        .summary-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+        .banner-section {
+            background: linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);
+            color: #fff;
+            padding: 40px 0;
+            margin-bottom: 40px;
+            text-align: center;
+            border-radius: 0 0 var(--radius) var(--radius)
+        }
+
+        .banner-title {
+            font-family: 'Playfair Display',serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 10px
+        }
+
+        .banner-subtitle {
+            font-size: 1.1rem;
+            opacity: .9;
+            max-width: 600px;
+            margin: 0 auto
+        }
+
+        .summary-card {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
             overflow: hidden;
+            margin-bottom: 25px;
+            border: 1px solid var(--border)
         }
 
-        .header-banner {
-            background: linear-gradient(135deg, #3498db, #1a5276);
-            color: white;
+        .summary-header {
+            background: var(--secondary);
             padding: 20px;
-            margin-bottom: 25px;
-            border-radius: 0 0 12px 12px;
+            border-bottom: 1px solid var(--border)
         }
+
+        .summary-title {
+            font-family: 'Playfair Display',serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            align-items: center
+        }
+
+            .summary-title i {
+                margin-right: 10px;
+                color: var(--primary)
+            }
+
+        .summary-body {
+            padding: 25px
+        }
+
+        .product-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border)
+        }
+
+            .product-item:last-child {
+                border-bottom: none
+            }
 
         .product-img {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             object-fit: cover;
-            border-radius: 6px;
-            border: 1px solid #eaeaea;
+            border-radius: 10px;
+            margin-right: 15px;
+            border: 1px solid var(--border)
         }
+
+        .product-info {
+            flex: 1
+        }
+
+        .product-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text)
+        }
+
+        .product-details {
+            font-size: .9rem;
+            color: var(--text-light)
+        }
+
+        .product-price {
+            font-weight: 600;
+            color: var(--text);
+            text-align: right
+        }
+
+        .total-section {
+            background: var(--secondary);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-top: 20px
+        }
+
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--border)
+        }
+
+            .total-line:last-child {
+                border-bottom: none;
+                font-weight: 700;
+                font-size: 1.2rem;
+                color: var(--primary);
+                margin-top: 10px;
+                padding-top: 15px;
+                border-top: 1px solid var(--border)
+            }
+
+        .btn-primary-custom {
+            background: var(--primary);
+            border: none;
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: .3s;
+            text-transform: uppercase;
+            letter-spacing: .5px
+        }
+
+            .btn-primary-custom:hover {
+                background: var(--primary-dark);
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(232,180,184,.4)
+            }
 
         .payment-method {
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            padding: 15px;
-            border-radius: 8px;
+            transition: .3s;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
             cursor: pointer;
+            background: #fff
         }
 
-        .payment-method:hover, 
-        .payment-method.active {
-            border-color: var(--primary);
-            background-color: rgba(52, 152, 219, 0.05);
-        }
-
-        .payment-method.active .method-icon {
-            color: var(--primary);
-        }
+            .payment-method:hover, .payment-method.active {
+                border-color: var(--primary);
+                background-color: rgba(232,180,184,.05);
+                transform: translateY(-3px);
+                box-shadow: var(--shadow)
+            }
 
         .method-icon {
-            font-size: 1.8rem;
+            font-size: 2rem;
             margin-bottom: 10px;
-        }
-
-        .bank-logo {
-            height: 40px;
-            margin-right: 10px;
+            color: var(--text-light)
         }
 
         .bank-card {
-            transition: all 0.3s ease;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            transition: .2s;
+            border: 2px solid var(--border);
+            border-radius: 10px;
             padding: 15px;
             margin-bottom: 15px;
             cursor: pointer;
+            background: #fff
         }
 
-        .bank-card:hover, 
-        .bank-card.selected {
-            border-color: var(--primary);
-            background-color: rgba(52, 152, 219, 0.05);
-        }
+            .bank-card:hover, .bank-card.selected {
+                border-color: var(--primary);
+                background-color: rgba(232,180,184,.05)
+            }
 
-        .bank-card.selected {
-            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.2);
-        }
+            .bank-card.selected {
+                box-shadow: 0 4px 12px rgba(232,180,184,.2)
+            }
 
-        .total-box {
-            background-color: #f8f9fa;
-            border-left: 4px solid var(--primary);
-            border-radius: 0 8px 8px 0;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-        }
-
-        .btn-primary {
-            background-color: var(--primary);
-            border-color: var(--primary);
-        }
-
-        .btn-primary:hover {
-            background-color: #2980b9;
-            border-color: #2980b9;
-        }
-
-        .btn-success {
-            background-color: var(--success);
-            border-color: var(--success);
-            padding: 12px 30px;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .btn-success:hover {
-            background-color: #27ae60;
-            border-color: #27ae60;
-        }
-
-        .sticky-summary {
-            position: sticky;
-            top: 20px;
-        }
-
-        .progress-bar {
-            height: 8px;
-            background-color: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-            margin: 20px 0;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 75%;
-            background: linear-gradient(90deg, #3498db, #2ecc71);
-            border-radius: 4px;
+        .bank-logo {
+            height: 35px;
+            margin-right: 15px;
+            border-radius: 5px
         }
 
         .step-indicator {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 25px;
+            margin-bottom: 40px;
+            position: relative
         }
 
         .step {
             text-align: center;
             flex: 1;
             position: relative;
+            z-index: 2
         }
 
         .step-number {
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            background-color: #e0e0e0;
-            color: #7f8c8d;
+            background: #eee;
+            color: var(--text-light);
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 10px;
             font-weight: bold;
-            z-index: 2;
-            position: relative;
+            font-size: 1.1rem
         }
 
         .step.active .step-number {
-            background-color: var(--primary);
-            color: white;
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(232,180,184,.4)
         }
 
         .step.completed .step-number {
-            background-color: var(--success);
-            color: white;
+            background: var(--success);
+            color: #fff
         }
 
         .step-title {
-            font-size: 0.9rem;
-            color: #7f8c8d;
+            font-size: .9rem;
+            color: var(--text-light);
+            font-weight: 500
         }
 
         .step.active .step-title {
-            color: var(--dark);
-            font-weight: 500;
+            color: var(--text);
+            font-weight: 600
         }
 
-        .step:not(:last-child):after {
-            content: '';
+        .step:not(:last-child)::after {
+            content: "";
             position: absolute;
-            top: 15px;
+            top: 20px;
             left: 60%;
             width: 80%;
             height: 2px;
-            background-color: #e0e0e0;
-            z-index: 1;
+            background: #e9e9e9;
+            z-index: 1
         }
 
-        .step.completed:after {
-            background-color: var(--success);
+        .step.completed::after {
+            background: var(--success)
         }
 
-        @@media (max-width: 768px) {
+        .form-control {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 15px;
+            transition: .3s
+        }
+
+            .form-control:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(232,180,184,.2)
+            }
+
+        .sticky-summary {
+            position: sticky;
+            top: 80px
+        }
+
+        @@media (max-width:768px) {
             .sticky-summary {
                 position: relative;
-                top: 0;
+                top: 0
+            }
+
+            .banner-title {
+                font-size: 2rem
+            }
+
+            .step:not(:last-child)::after {
+                display: none
             }
 
             .step-title {
-                font-size: 0.75rem;
+                font-size: .8rem
             }
         }
+
+        .whatsapp-btn {
+            background: #25D366;
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 20px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            transition: .3s;
+            text-decoration: none
+        }
+
+            .whatsapp-btn:hover {
+                background: #128C7E;
+                color: #fff;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(37,211,102,.4)
+            }
+
+            .whatsapp-btn i {
+                margin-right: 8px;
+                font-size: 1.2rem
+            }
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <!-- Progress indicator -->
+    <!-- Banner Superior -->
+    <div class="banner-section">
+        <div class="container">
+            <h1 class="banner-title">Finaliza Tu Compra</h1>
+            <p class="banner-subtitle">Revisa los detalles de tu pedido y selecciona tu método de pago preferido</p>
+        </div>
+    </div>
+
+    <div class="container pb-5">
+        <!-- Progreso -->
         <div class="step-indicator">
-            <div class="step completed">
-                <div class="step-number">1</div>
-                <div class="step-title">Carrito</div>
-            </div>
-            <div class="step completed">
-                <div class="step-number">2</div>
-                <div class="step-title">Envío</div>
-            </div>
-            <div class="step active">
-                <div class="step-number">3</div>
-                <div class="step-title">Pago</div>
-            </div>
-            <div class="step">
-                <div class="step-number">4</div>
-                <div class="step-title">Confirmación</div>
-            </div>
-        </div>
-
-        <div class="header-banner text-center">
-            <h1><i class="fas fa-shopping-cart me-2"></i>Resumen de tu Compra</h1>
-            <p>Revisa tus productos y completa tu pago</p>
-        </div>
-
-        <div class="summary-container p-4 mb-4">
-            <h3 class="mb-3"><i class="fas fa-box-open me-2"></i>Artículos en tu carrito</h3>
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th>Imagen</th>
-                            <th>Cantidad</th>
-                            <th>Precio Unitario</th>
-                            <th>Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (ViewBag.CarritoDetalles != null)
-                        {
-                            @foreach (var item in ViewBag.CarritoDetalles)
-                            {
-                                <tr>
-                                    <td>@item.Producto.Nombre</td>
-                                    <td>
-                                        <img src="@item.Producto.ImagenPath" alt="@item.Producto.Nombre" class="product-img">
-                                    </td>
-                                    <td>@item.Cantidad</td>
-                                    <td>@item.Precio.ToString("C", culture)</td>
-                                    <td>@item.Total.ToString("C", culture)</td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="5" class="text-center">Tu carrito está vacío.</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+            <div class="step completed"><div class="step-number">1</div><div class="step-title">Carrito</div></div>
+            <div class="step completed"><div class="step-number">2</div><div class="step-title">Envío</div></div>
+            <div class="step active"><div class="step-number">3</div><div class="step-title">Pago</div></div>
+            <div class="step"><div class="step-number">4</div><div class="step-title">Confirmación</div></div>
         </div>
 
         <div class="row g-4">
-            <!-- Left: Dirección y Métodos de pago -->
-            <div class="col-lg-8">
-                <div class="summary-container p-4 mb-4">
-                    <h3 class="mb-3"><i class="fas fa-map-marker-alt me-2"></i>Dirección de Envío</h3>
-                    @if (ViewBag.HasAddress)
-                    {
-                        <div class="card shadow-sm p-4">
-                            <h5><i class="fa fa-map-marker-alt me-2 text-primary"></i> Dirección de Envío</h5>
-                            <strong>Administrador General</strong>
-
-                            <p class="mb-1">
-                                @(string.IsNullOrWhiteSpace(Model.Direccion) ? "Sin dirección" : Model.Direccion)
-                            </p>
-                            <p class="mb-1">
-                                @(string.IsNullOrWhiteSpace(Model.Ciudad) ? "Sin ciudad" : Model.Ciudad),
-                                @(string.IsNullOrWhiteSpace(Model.Provincia) ? "Sin provincia" : Model.Provincia)
-                            </p>
-                            <p class="mb-1">
-                                Teléfono: @(string.IsNullOrWhiteSpace(Model.Telefono) ? "Sin número" : Model.Telefono)
-                            </p>
-
-                            <a href="/Usuarios/Editar" class="btn btn-outline-primary mt-2">
-                                <i class="fa fa-pen-to-square me-1"></i> Editar
-                            </a>
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="mb-2 text-danger">Para continuar, necesitas agregar una dirección de envío.</p>
-                        <a href="@Url.Action("AgregarDireccion", "Cuenta")" class="btn btn-primary">Agregar Dirección</a>
-                    }
-                </div>
-
-                <!-- Payment Methods -->
-                <div class="summary-container p-4">
-                    <h3 class="mb-4"><i class="fas fa-credit-card me-2"></i>Formas de Pago</h3>
-
-                    <!-- Payment Method Selection -->
-                    <div class="row mb-4">
-                        <div class="col-md-4 mb-3">
-                            <div class="payment-method text-center" data-method="card">
-                                <i class="fas fa-credit-card method-icon"></i>
-                                <h5>Tarjeta (próximamente)</h5>
-                                <p class="small">Crédito/Débito</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="payment-method text-center active" data-method="deposit">
-                                <i class="fas fa-university method-icon text-primary"></i>
-                                <h5>Depósito</h5>
-                                <p class="small">Transferencia Bancaria</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="payment-method text-center" data-method="paypal">
-                                <i class="fab fa-paypal method-icon"></i>
-                                <h5>PayPal (próximamente)</h5>
-                                <p class="small">Pago en línea</p>
-                            </div>
-                        </div>
+            <!-- IZQUIERDA: Dirección + Pago -->
+            <div class="col-12 col-lg-8 order-lg-1">
+                <!-- Dirección de Envío -->
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <h3 class="summary-title"><i class="fas fa-map-marker-alt"></i> Dirección de Envío</h3>
                     </div>
-
-                    <!-- Card Payment Form -->
-                    <form id="form-card" class="payment-form d-none">
-                        <h5 class="mb-3"><i class="fas fa-credit-card me-2"></i>Detalles de Tarjeta</h5>
-                        <div class="mb-3">
-                            <label for="cardNumber" class="form-label">Número de tarjeta</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-credit-card"></i></span>
-                                <input type="text" class="form-control" id="cardNumber" placeholder="XXXX XXXX XXXX XXXX" maxlength="19">
+                    <div class="summary-body">
+                        @if (ViewBag.HasAddress)
+                        {
+                            <div class="p-3" style="background:#f9f9f9;border-radius:10px;">
+                                <h5 class="mb-1 d-flex align-items-center gap-2 text-primary">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    @(string.IsNullOrWhiteSpace(Model.NombreCompleto) ? "Administrador General" : Model.NombreCompleto)
+                                </h5>
+                                <p class="mb-1"><i class="fas fa-home me-2"></i>@(string.IsNullOrWhiteSpace(Model.Direccion) ? "Sin dirección especificada" : Model.Direccion)</p>
+                                <p class="mb-1">
+                                    <i class="fas fa-city me-2"></i>
+                                    @(string.IsNullOrWhiteSpace(Model.Ciudad) ? "Sin ciudad" : Model.Ciudad),
+                                    @(string.IsNullOrWhiteSpace(Model.Provincia) ? "Sin provincia" : Model.Provincia)
+                                </p>
+                                <p class="mb-0"><i class="fas fa-phone me-2"></i>@(string.IsNullOrWhiteSpace(Model.Telefono) ? "Sin número de teléfono" : Model.Telefono)</p>
+                                <a href="/Cuenta/Perfil" class="btn btn-outline-primary btn-sm mt-2">
+                                    <i class="fas fa-pen-to-square me-1"></i> Editar Dirección
+                                </a>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4">
+                                <p class="mb-2 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Para continuar con la compra, necesitas agregar una dirección de envío.</p>
+                                <a href="@Url.Action("AgregarDireccion", "Cuenta")" class="btn btn-primary">Agregar Dirección</a>
+                            </div>
+                        }
+                    </div>
+                </div> <!-- ✅ cierre del primer .summary-card (Dirección) -->
+                <!-- Métodos de Pago -->
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <h3 class="summary-title"><i class="fas fa-credit-card"></i> Método de Pago</h3>
+                    </div>
+                    <div class="summary-body">
+                        <div class="row mb-4">
+                            <div class="col-md-4 mb-3">
+                                <div class="payment-method text-center" data-method="card">
+                                    <i class="fas fa-credit-card method-icon"></i>
+                                    <h5>Tarjeta</h5>
+                                    <p class="small text-muted">Próximamente</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="payment-method text-center active" data-method="deposit">
+                                    <i class="fas fa-university method-icon"></i>
+                                    <h5>Depósito</h5>
+                                    <p class="small text-muted">Transferencia Bancaria</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="payment-method text-center" data-method="paypal">
+                                    <i class="fab fa-paypal method-icon"></i>
+                                    <h5>PayPal</h5>
+                                    <p class="small text-muted">Próximamente</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label for="expirationDate" class="form-label">Expiración</label>
+
+                        <!-- Formulario Depósito -->
+                        <div id="form-deposit" class="payment-form">
+                            <div class="alert alert-light border">
+                                <h5 class="d-flex align-items-center"><i class="fas fa-info-circle me-2 text-primary"></i> Instrucciones de Pago</h5>
+                                <ol class="mb-0 mt-2">
+                                    <li>Selecciona tu banco de preferencia</li>
+                                    <li>Realiza la transferencia a nuestra cuenta</li>
+                                    <li>Sube el comprobante de pago</li>
+                                    <li>Recibirás la confirmación en 24 horas</li>
+                                </ol>
+                            </div>
+
+                            <!-- Selección de Banco -->
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">Selecciona tu banco</label>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <div class="bank-card" data-bank="pichincha">
+                                            <div class="d-flex align-items-center">
+                                                <img src="/images/Bancos/pichincha.webp" alt="Banco Pichincha" class="bank-logo">
+                                                <h6 class="mb-0">Banco Pichincha</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="bank-card" data-bank="guayaquil">
+                                            <div class="d-flex align-items-center">
+                                                <img src="/images/Bancos/guayaquil.png" alt="Banco Guayaquil" class="bank-logo">
+                                                <h6 class="mb-0">Banco Guayaquil</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="bank-card" data-bank="pacifico">
+                                            <div class="d-flex align-items-center">
+                                                <img src="/images/Bancos/pacifico.png" alt="Banco del Pacífico" class="bank-logo">
+                                                <h6 class="mb-0">Banco del Pacífico</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <div class="bank-card" data-bank="jep">
+                                            <div class="d-flex align-items-center">
+                                                <img src="/images/Bancos/jep.png" alt="Banco JEP" class="bank-logo">
+                                                <h6 class="mb-0">Banco JEP</h6>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Detalles Cuenta -->
+                            <div id="bank-details" class="mb-4 d-none">
+                                <h5 class="d-flex align-items-center"><i class="fas fa-university me-2"></i> Detalles de la Cuenta</h5>
+                                <div class="p-3 border rounded" style="background:#f0f9ff;">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1"><strong>Banco: </strong><span id="bank-name">-</span></p>
+                                            <p class="mb-1"><strong>Número de cuenta: </strong><span id="account-number">-</span></p>
+                                            <p class="mb-1"><strong>Tipo: </strong><span id="account-type">-</span></p>
+                                            <p class="mb-1"><strong>Titular: </strong>Simon Vanegas</p>
+                                            <p class="mb-0"><strong>RUC: </strong>1790123456001</p>
+                                        </div>
+                                        <i class="fas fa-building fa-2x text-primary opacity-75"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Campos -->
+                            <div class="mb-3">
+                                <label for="depositName" class="form-label">Nombre de quien deposita</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
-                                    <input type="text" class="form-control" id="expirationDate" placeholder="MM/AA" maxlength="5">
+                                    <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
+                                    <input type="text" class="form-control" id="depositName" name="Depositante" form="form-finalizar" placeholder="Ingresa tu nombre completo" required>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <label for="cvv" class="form-label">CVV</label>
+
+                            <div class="mb-4">
+                                <label for="depositReceipt" class="form-label">Comprobante de pago</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                    <input type="password" class="form-control" id="cvv" placeholder="XXX" maxlength="4">
+                                    <input type="file" class="form-control" id="depositReceipt" name="Comprobante" form="form-finalizar" accept="image/*,.pdf" required>
                                 </div>
+                                <div class="form-text text-muted">Formatos aceptados: JPG, PNG, PDF (tamaño máximo: 5MB)</div>
                             </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="cardName" class="form-label">Nombre en la tarjeta</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" id="cardName" placeholder="Nombre completo">
-                            </div>
-                        </div>
-                    </form>
 
-                    <!-- Deposit Payment Form -->
-                    <form id="form-deposit" class="payment-form">
-                        <h5 class="mb-4"><i class="fas fa-university me-2"></i>Depósito Bancario</h5>
-
-                        <div class="alert alert-primary">
-                            <h5><i class="fas fa-info-circle me-2"></i>Instrucciones</h5>
-                            <ol>
-                                <li>Selecciona tu banco</li>
-                                <li>Realiza la transferencia a nuestra cuenta</li>
-                                <li>Sube tu comprobante</li>
-                                <li>Recibirás confirmación en 24 horas</li>
-                            </ol>
-                        </div>
-
-                        <!-- Bank Selection -->
-                        <div class="mb-4">
-                            <label class="form-label">Selecciona tu banco</label>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="pichincha">
-                                        <div class="d-flex align-items-center">
-                                            <img src="/images/Bancos/pichincha.webp" alt="Banco Pichincha" class="bank-logo">
-                                            <h6 class="mb-0">Banco Pichincha</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="guayaquil">
-                                        <div class="d-flex align-items-center">
-                                            <img src="/images/Bancos/guayaquil.png" alt="Banco Guayaquil" class="bank-logo">
-                                            <h6 class="mb-0">Banco Guayaquil</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="pacifico">
-                                        <div class="d-flex align-items-center">
-                                            <img src="/images/Bancos/pacifico.png" alt="Banco del Pacífico" class="bank-logo">
-                                            <h6 class="mb-0">Banco del Pacífico</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="bank-card" data-bank="jep">
-                                        <div class="d-flex align-items-center">
-                                            <img src="/images/Bancos/jeb.png" alt="Banco JEP" class="bank-logo">
-                                            <h6 class="mb-0">Banco JEP</h6>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bank Account Details -->
-                        <div id="bank-details" class="mb-4 d-none">
-                            <h5><i class="fas fa-university me-2"></i>Detalles de la cuenta</h5>
-                            <div class="alert alert-success">
-                                <div class="d-flex justify-content-between align-items-center">
+                            <!-- WhatsApp -->
+                            <div class="alert alert-info border">
+                                <div class="d-flex align-items-center">
+                                    <i class="fab fa-whatsapp fa-lg me-3"></i>
                                     <div>
-                                        <p class="mb-1"><strong>Banco: <span id="bank-name">-</span></strong></p>
-                                        <p class="mb-1">Número de cuenta: <span id="account-number">-</span></p>
-                                        <p class="mb-1">Tipo: <span id="account-type">-</span></p>
-                                        <p class="mb-1">Titular: Simon Vanegas</p>
-                                        <p class="mb-0">RUC: 1790123456001</p>
+                                        <strong>¿Tienes dudas?</strong> Envíanos tu comprobante por WhatsApp:
+                                        <a href="https://wa.me/593987654321" target="_blank" class="whatsapp-btn ms-2 mt-2">
+                                            <i class="fab fa-whatsapp"></i> 098 765 4321
+                                        </a>
                                     </div>
-                                    <i class="fas fa-building fa-3x text-success"></i>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Deposit Form -->
-                        <div class="mb-3">
-                            <label for="depositName" class="form-label">Nombre de quien deposita</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user"></i></span>
-                                <input type="text" class="form-control" id="depositName" placeholder="Nombre completo" required>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="depositReceipt" class="form-label">Adjuntar comprobante</label>
-                            <div class="input-group">
-                                <input type="file" class="form-control" id="depositReceipt" accept="image/*,.pdf" required>
-                            </div>
-                            <div class="form-text">Formatos aceptados: JPG, PNG, PDF (máx. 5MB)</div>
-                        </div>
-                        <div class="alert alert-info mt-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Envíe su comprobante al WhatsApp:</strong>
-                            <a href="https://wa.me/593987654321" target="_blank" class="alert-link">
-                                <i class="fab fa-whatsapp me-1"></i>098 765 4321
-                            </a>
-                        </div>
-                    </form>
-
-                    <!-- PayPal Payment Form -->
-                    <form id="form-paypal" class="payment-form d-none">
-                        <h5 class="mb-3"><i class="fab fa-paypal me-2"></i>Pago con PayPal</h5>
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                            Serás redirigido a PayPal para completar el pago de manera segura.
-                        </div>
-                        <div class="text-center py-4">
-                            <img src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_37x23.jpg" alt="PayPal" class="mb-3">
-                            <button type="button" class="btn btn-primary btn-lg">
-                                <i class="fab fa-paypal me-2"></i>Pagar con PayPal
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                        </div> <!-- /form-deposit -->
+                    </div> <!-- /summary-body -->
+                </div> <!-- /summary-card (Pago) -->
             </div>
 
-            <!-- Right: Resumen de compra -->
-            <div class="col-lg-4">
+            <!-- DERECHA: Tu pedido + Finalizar -->
+            <div class="col-12 col-lg-4 order-lg-2">
                 <div class="sticky-summary">
-                    <div class="summary-container p-4">
-                        <h3 class="mb-4"><i class="fas fa-receipt me-2"></i>Resumen de Compra</h3>
-                        <div class="total-box">
-                            <div class="d-flex justify-content-between">
-                                <span>Subtotal:</span>
-                                <span>@ViewBag.TotalCompra.ToString("C", culture)</span>
-                            </div>
+                    <div class="summary-card">
+                        <div class="summary-header">
+                            <h3 class="summary-title"><i class="fas fa-shopping-bag"></i> Tu Pedido</h3>
                         </div>
-                        <div class="total-box">
-                            <div class="d-flex justify-content-between">
-                                <span>Servicio (5%):</span>
-                                <span>@serviceFee.ToString("C", culture)</span>
+                        <div class="summary-body">
+                            @if (ViewBag.CarritoDetalles != null)
+                            {
+                                foreach (var item in ViewBag.CarritoDetalles)
+                                {
+                                    <div class="product-item">
+                                        <img src="@item.Producto.ImagenPath" alt="@item.Producto.Nombre" class="product-img">
+                                        <div class="product-info">
+                                            <div class="product-name">@item.Producto.Nombre</div>
+                                            <div class="product-details">Cantidad: @item.Cantidad</div>
+                                        </div>
+                                        <div class="product-price">@((item.Precio * item.Cantidad).ToString("C", culture))</div>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="text-center py-4">
+                                    <i class="fas fa-shopping-cart fa-2x text-muted mb-3"></i>
+                                    <p class="text-muted">No hay productos en tu carrito</p>
+                                </div>
+                            }
+
+                            <div class="total-section">
+                                <div class="total-line"><span>Subtotal:</span><span>@ViewBag.TotalCompra.ToString("C", culture)</span></div>
+                                <div class="total-line"><span>Servicio (5%):</span><span>@serviceFee.ToString("C", culture)</span></div>
+                                <div class="total-line"><span>Impuestos (15%):</span><span>@taxFee.ToString("C", culture)</span></div>
+                                <div class="total-line"><span>Total:</span><span class="fw-bold" style="color:var(--primary);">@grandTotal.ToString("C", culture)</span></div>
                             </div>
-                        </div>
-                        <div class="total-box">
-                            <div class="d-flex justify-content-between">
-                                <span>Impuestos (15%):</span>
-                                <span>@taxFee.ToString("C", culture)</span>
+
+                            <div class="text-center mt-3">
+                                <small class="text-muted d-flex align-items-center justify-content-center">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Ecuador.svg/320px-Flag_of_Ecuador.svg.png" alt="Ecuador" height="16" class="me-2">
+                                    Todos los precios en dólares estadounidenses (USD)
+                                </small>
                             </div>
-                        </div>
-                        <div class="total-box bg-light">
-                            <div class="d-flex justify-content-between fw-bold fs-5">
-                                <span>Total a pagar:</span>
-                                <span class="text-success">@grandTotal.ToString("C", culture)</span>
-                            </div>
-                        </div>
-                        <div class="mt-4 text-center">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Ecuador.svg/320px-Flag_of_Ecuador.svg.png" alt="Ecuador" height="30" class="me-2">
-                            <small class="text-muted">Todos los precios en dólares estadounidenses (USD)</small>
                         </div>
                     </div>
 
-                    <!-- Finalizar Compra Form -->
-                    <form id="form-finalizar" asp-controller="Compras" asp-action="ConfirmarCompra" method="post" class="mt-3">
+                    <!-- Finalizar compra -->
+                    <form id="form-finalizar" asp-controller="Compras" asp-action="ConfirmarCompra" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
                         <input type="hidden" id="MetodoPagoInput" name="MetodoPago" value="Deposito" />
                         <input type="hidden" id="BancoSeleccionado" name="BancoSeleccionado" value="" />
-                        <button type="submit" class="btn btn-success btn-lg w-100">
-                            <i class="fas fa-check-circle me-2"></i>Finalizar Pago
+                        <button type="submit" class="btn btn-primary-custom w-100 py-3">
+                            <i class="fas fa-lock me-2"></i> Finalizar Compra
                         </button>
                     </form>
                 </div>
             </div>
-        </div>
-    </div>
+        </div> <!-- /row -->
+    </div> <!-- /container -->
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Selección de métodos de pago y formularios
+            // Métodos de pago
             const paymentMethods = document.querySelectorAll('.payment-method');
             const paymentForms = document.querySelectorAll('.payment-form');
 
@@ -569,63 +612,42 @@
                 method.addEventListener('click', function () {
                     const methodName = this.dataset.method;
 
-                    // Bloquear Tarjeta y PayPal con mensaje "próximamente"
                     if (methodName === 'card' || methodName === 'paypal') {
-                        if (window.Swal) {
-                            Swal.fire({
-                                icon: 'info',
-                                title: '¡Próximamente!',
-                                text: `El método de pago "${methodName === 'card' ? 'Tarjeta' : 'PayPal'}" estará disponible muy pronto. Por favor, elige "Depósito".`,
-                                confirmButtonText: 'Entendido',
-                                confirmButtonColor: '#3498db'
-                            });
-                        } else {
-                            alert(`El método de pago "${methodName === 'card' ? 'Tarjeta' : 'PayPal'}" estará disponible muy pronto. Por favor, elige "Depósito".`);
-                        }
+                        Swal.fire({
+                            icon: 'info',
+                            title: '¡Próximamente!',
+                            text: `El método de pago "${methodName === 'card' ? 'Tarjeta' : 'PayPal'}" estará disponible muy pronto. Por favor, elige "Depósito".`,
+                            confirmButtonText: 'Entendido',
+                            confirmButtonColor: '#e8b4b8'
+                        });
                         return;
                     }
 
-                    // Selecciona método Depósito normalmente
                     paymentMethods.forEach(m => m.classList.remove('active'));
                     this.classList.add('active');
-                    paymentForms.forEach(form => form.classList.add('d-none'));
+                    paymentForms.forEach(f => f.classList.add('d-none'));
                     document.getElementById(`form-${methodName}`).classList.remove('d-none');
 
-                    document.getElementById('MetodoPagoInput').value =
-                        methodName.charAt(0).toUpperCase() + methodName.slice(1);
+                    document.getElementById('MetodoPagoInput').value = 'Deposito';
                 });
             });
 
-            // Selección de banco para depósito
+            // Bancos
             const bankCards = document.querySelectorAll('.bank-card');
             const bankDetails = document.getElementById('bank-details');
             const bankAccounts = {
-                pichincha: {
-                    name: "Banco Pichincha",
-                    account: "2210704773",
-                    type: "Cuenta ahorro"
-                },
-                guayaquil: {
-                    name: "Banco Guayaquil",
-                    account: "0044139354",
-                    type: "Cuenta de Ahorros"
-                },
-                pacifico: {
-                    name: "Banco del Pacífico",
-                    account: "1122334455",
-                    type: "Cuenta Corriente"
-                },
-                jep: {
-                    name: "Banco JEP",
-                    account: "5566778899",
-                    type: "Cuenta de Ahorros"
-                }
+                pichincha:{name:"Banco Pichincha",account:"2210704773",type:"Cuenta de Ahorros"},
+                guayaquil:{name:"Banco Guayaquil",account:"0044139354",type:"Cuenta de Ahorros"},
+                pacifico:{name:"Banco del Pacífico",account:"1122334455",type:"Cuenta Corriente"},
+                jep:{name:"Banco JEP",account:"5566778899",type:"Cuenta de Ahorros"}
             };
-            bankCards.forEach(card => {
-                card.addEventListener('click', function() {
+
+            bankCards.forEach(card=>{
+                card.addEventListener('click', function(){
                     bankCards.forEach(c => c.classList.remove('selected'));
                     this.classList.add('selected');
                     bankDetails.classList.remove('d-none');
+
                     const bankId = this.dataset.bank;
                     document.getElementById('bank-name').textContent = bankAccounts[bankId].name;
                     document.getElementById('account-number').textContent = bankAccounts[bankId].account;
@@ -634,132 +656,48 @@
                 });
             });
 
-            // Formatear número de tarjeta
-            const cardNumberInput = document.getElementById('cardNumber');
-            if (cardNumberInput) {
-                cardNumberInput.addEventListener('input', function() {
-                    let value = this.value.replace(/\D/g, '');
-                    value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-                    this.value = value.substring(0, 19);
-                });
-            }
-
-            // Formatear fecha de expiración
-            const expDateInput = document.getElementById('expirationDate');
-            if (expDateInput) {
-                expDateInput.addEventListener('input', function() {
-                    let value = this.value.replace(/\D/g, '');
-                    if (value.length > 2) {
-                        value = value.substring(0, 2) + '/' + value.substring(2, 4);
-                    }
-                    this.value = value.substring(0, 5);
-                });
-            }
-
-            // Validación y bloqueo en submit
+            // Validación
             const finalizarForm = document.getElementById('form-finalizar');
             finalizarForm.addEventListener('submit', function (e) {
                 const metodo = document.getElementById('MetodoPagoInput').value.toLowerCase();
-
-                if (metodo === 'tarjeta' || metodo === 'paypal') {
-                    e.preventDefault();
-                    if (window.Swal) {
-                        Swal.fire({
-                            icon: 'info',
-                            title: '¡Próximamente!',
-                            text: `El método de pago "${metodo === 'tarjeta' ? 'Tarjeta' : 'PayPal'}" estará disponible muy pronto. Por favor, elige "Depósito".`,
-                            confirmButtonText: 'Entendido',
-                            confirmButtonColor: '#3498db'
-                        });
-                    } else {
-                        alert(`El método de pago "${metodo}" aún no está disponible. Por favor, elige "Depósito".`);
-                    }
-                    return;
-                }
-
                 if (metodo === 'deposito') {
-                    const nombre = document.getElementById('depositName').value.trim();
-                    const archivo = document.getElementById('depositReceipt').files[0];
-                    const bancoSeleccionado = document.getElementById('BancoSeleccionado').value;
+                    const nombre = document.getElementById('depositName')?.value.trim();
+                    const archivo = document.getElementById('depositReceipt')?.files[0];
+                    const bancoSeleccionado = document.getElementById('BancoSeleccionado')?.value;
 
                     if (!nombre) {
                         e.preventDefault();
-                        if (window.Swal) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Campo requerido',
-                                text: 'Por favor, ingresa el nombre de quien deposita.',
-                                confirmButtonColor: '#3498db'
-                            });
-                        } else {
-                            alert("Por favor, ingresa el nombre de quien deposita.");
-                        }
+                        Swal.fire({icon:'warning',title:'Campo requerido',text:'Ingresa el nombre de quien deposita.',confirmButtonColor:'#e8b4b8'});
                         return;
                     }
                     if (!archivo) {
                         e.preventDefault();
-                        if (window.Swal) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Campo requerido',
-                                text: 'Por favor, adjunta el comprobante de depósito.',
-                                confirmButtonColor: '#3498db'
-                            });
-                        } else {
-                            alert("Por favor, adjunta el comprobante de depósito.");
-                        }
+                        Swal.fire({icon:'warning',title:'Campo requerido',text:'Adjunta el comprobante de depósito.',confirmButtonColor:'#e8b4b8'});
                         return;
                     }
                     if (!bancoSeleccionado) {
                         e.preventDefault();
-                        if (window.Swal) {
-                            Swal.fire({
-                                icon: 'warning',
-                                title: 'Campo requerido',
-                                text: 'Por favor, selecciona un banco.',
-                                confirmButtonColor: '#3498db'
-                            });
-                        } else {
-                            alert("Por favor, selecciona un banco.");
-                        }
+                        Swal.fire({icon:'warning',title:'Campo requerido',text:'Selecciona un banco.',confirmButtonColor:'#e8b4b8'});
                         return;
                     }
-                    // Validación extra: tamaño y tipo de archivo
-                    const extensionesPermitidas = ['jpg', 'jpeg', 'png', 'pdf'];
+
+                    const extensionesPermitidas=['jpg','jpeg','png','pdf'];
                     const extension = archivo.name.split('.').pop().toLowerCase();
-                    const tamañoMax = 5 * 1024 * 1024; // 5MB
+                    const tamañoMax = 5*1024*1024;
+
                     if (!extensionesPermitidas.includes(extension)) {
                         e.preventDefault();
-                        if (window.Swal) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Formato inválido',
-                                text: 'Formato de archivo no permitido. Solo JPG, PNG o PDF.',
-                                confirmButtonColor: '#e74c3c'
-                            });
-                        } else {
-                            alert("Formato de archivo no permitido. Solo JPG, PNG o PDF.");
-                        }
+                        Swal.fire({icon:'error',title:'Formato inválido',text:'Solo se permiten archivos JPG, PNG o PDF.',confirmButtonColor:'#e8b4b8'});
                         return;
                     }
                     if (archivo.size > tamañoMax) {
                         e.preventDefault();
-                        if (window.Swal) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Archivo muy grande',
-                                text: 'El archivo excede el tamaño máximo de 5MB.',
-                                confirmButtonColor: '#e74c3c'
-                            });
-                        } else {
-                            alert("El archivo excede el tamaño máximo de 5MB.");
-                        }
+                        Swal.fire({icon:'error',title:'Archivo muy grande',text:'El archivo no debe superar los 5MB.',confirmButtonColor:'#e8b4b8'});
                         return;
                     }
                 }
             });
         });
     </script>
-
 </body>
 </html>

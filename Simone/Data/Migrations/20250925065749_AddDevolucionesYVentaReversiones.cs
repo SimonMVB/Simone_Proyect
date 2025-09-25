@@ -3,10 +3,10 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Simone.Migrations
+namespace Simone.Data.Migrations
 {
     /// <inheritdoc />
-    public partial class _0001 : Migration
+    public partial class AddDevolucionesYVentaReversiones : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -588,6 +588,34 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "VentaReversiones",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    VentaID = table.Column<int>(type: "int", nullable: false),
+                    Motivo = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Nota = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AdminId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VentaReversiones", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VentaReversiones_AspNetUsers_AdminId",
+                        column: x => x.AdminId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_VentaReversiones_Ventas_VentaID",
+                        column: x => x.VentaID,
+                        principalTable: "Ventas",
+                        principalColumn: "VentaID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Productos",
                 columns: table => new
                 {
@@ -906,7 +934,7 @@ namespace Simone.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     DetalleVentaID = table.Column<int>(type: "int", nullable: false),
                     FechaDevolucion = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Motivo = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Motivo = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     CantidadDevuelta = table.Column<int>(type: "int", nullable: false),
                     Aprobada = table.Column<bool>(type: "bit", nullable: false)
                 },
@@ -1143,6 +1171,16 @@ namespace Simone.Migrations
                 column: "CategoriaID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_VentaReversiones_AdminId",
+                table: "VentaReversiones",
+                column: "AdminId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VentaReversiones_VentaID",
+                table: "VentaReversiones",
+                column: "VentaID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Ventas_EmpleadoID",
                 table: "Ventas",
                 column: "EmpleadoID");
@@ -1227,6 +1265,9 @@ namespace Simone.Migrations
 
             migrationBuilder.DropTable(
                 name: "Reseñas");
+
+            migrationBuilder.DropTable(
+                name: "VentaReversiones");
 
             migrationBuilder.DropTable(
                 name: "Carrito");

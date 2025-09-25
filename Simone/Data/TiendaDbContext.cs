@@ -34,7 +34,7 @@ namespace Simone.Data
         public DbSet<DetallesCompra> DetallesCompra { get; set; }
         public DbSet<DetallesPedido> DetallesPedido { get; set; }
         public DbSet<DetalleVentas> DetalleVentas { get; set; }
-        public DbSet<Devoluciones> Devoluciones { get; set; }
+        public DbSet<Devoluciones> Devoluciones { get; set; } = default!;
         public DbSet<Empleados> Empleados { get; set; }
         public DbSet<Gastos> Gastos { get; set; }
         public DbSet<HistorialPrecios> HistorialPrecios { get; set; }
@@ -48,6 +48,7 @@ namespace Simone.Data
         public DbSet<Subcategorias> Subcategorias { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
+        public DbSet<VentaReversion> VentaReversiones { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -56,6 +57,13 @@ namespace Simone.Data
             // ------------------------------------------------------------
             // 1) Claves primarias compuestas (N:M) + FKs
             // ------------------------------------------------------------
+
+            modelBuilder.Entity<Devoluciones>()
+               .HasOne(d => d.DetalleVenta)
+               .WithMany(v => v.Devoluciones)
+               .HasForeignKey(d => d.DetalleVentaID)
+               .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<ClientesProgramas>(entity =>
             {
                 entity.HasKey(cp => new { cp.UsuarioId, cp.ProgramaID });

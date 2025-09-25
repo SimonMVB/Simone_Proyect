@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class _0001 : Migration
+    public partial class _0001_Base : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

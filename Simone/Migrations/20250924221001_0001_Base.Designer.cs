@@ -12,8 +12,8 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20250923031052_0001")]
-    partial class _0001
+    [Migration("20250924221001_0001_Base")]
+    partial class _0001_Base
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

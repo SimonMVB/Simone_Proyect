@@ -8,6 +8,21 @@
     string Safe(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
     string JoinNonEmpty(params string?[] xs) => string.Join(", ", xs.Where(s => !string.IsNullOrWhiteSpace(s)));
 
+    // Mapea IDs de banco a nombre bonito (por si llega "pichincha", "guayaquil", etc.)
+    string BankPretty(string? b)
+    {
+        if (string.IsNullOrWhiteSpace(b)) return "";
+        var k = b.Trim().ToLowerInvariant();
+        return k switch
+        {
+            "pichincha" => "Banco Pichincha",
+            "guayaquil" => "Banco Guayaquil",
+            "pacifico" => "Banco del Pacífico",
+            "jep" => "Banco JEP",
+            _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(b)
+        };
+    }
+
     // Perfil (fallback)
     var dirPerfil = string.IsNullOrWhiteSpace(Model.Direccion) ? null : Model.Direccion;
     var telPerfil = string.IsNullOrWhiteSpace(Model.Telefono) ? null : Model.Telefono;
@@ -15,7 +30,7 @@
     var provPerfil = string.IsNullOrWhiteSpace(Model.PerfilProvincia) ? null : Model.PerfilProvincia;
     var refPerfil = string.IsNullOrWhiteSpace(Model.PerfilReferencia) ? null : Model.PerfilReferencia;
 
-    // Elegir dirección usada:
+    // Dirección usada
     var dirUsada = (Model.Direcciones ?? Enumerable.Empty<Simone.ViewModels.Reportes.DireccionVM>())
                     .Where(d => d.FechaRegistro <= Model.Fecha)
                     .OrderByDescending(d => d.FechaRegistro)
@@ -24,13 +39,12 @@
                     .OrderByDescending(d => d.FechaRegistro)
                     .FirstOrDefault();
 
-    // Normalizamos datos finales que se van a mostrar/imprimir
     var calleUsada = dirUsada?.Calle ?? dirPerfil;
     var ciudadUsada = string.IsNullOrWhiteSpace(dirUsada?.Ciudad) ? ciudadPerfil : dirUsada!.Ciudad;
     var estadoUsado = string.IsNullOrWhiteSpace(dirUsada?.EstadoProvincia) ? provPerfil : dirUsada!.EstadoProvincia;
     var cpUsado = string.IsNullOrWhiteSpace(dirUsada?.CodigoPostal) ? null : dirUsada!.CodigoPostal;
     var telUsado = string.IsNullOrWhiteSpace(dirUsada?.TelefonoContacto) ? telPerfil : dirUsada!.TelefonoContacto;
-    var refUsada = dirUsada != null ? null : refPerfil; // Solo mostramos referencia del perfil en el fallback
+    var refUsada = dirUsada != null ? null : refPerfil;
 
     var linea2Usada = JoinNonEmpty(ciudadUsada, estadoUsado) + (string.IsNullOrWhiteSpace(cpUsado) ? "" : $" ({cpUsado})");
 
@@ -45,33 +59,37 @@
 
     var yaEnviado = string.Equals(Model.Estado, "Enviado", StringComparison.OrdinalIgnoreCase);
 
-    // Pago/depósito
+    // Pago/depósito: mostrar si hay pista
     var showPago = !string.IsNullOrWhiteSpace(Model.Depositante)
                    || !string.IsNullOrWhiteSpace(Model.ComprobanteUrl)
                    || (!string.IsNullOrWhiteSpace(Model.MetodoPago)
                        && Model.MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase));
 
+    // Normaliza URL del comprobante
     string? compUrl = null;
     if (!string.IsNullOrWhiteSpace(Model.ComprobanteUrl))
     {
-        var comp = Model.ComprobanteUrl!.Trim();
-        compUrl = comp.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? comp
-            : Url.Content(comp.StartsWith("~/") || comp.StartsWith("/") ? comp : "~/" + comp);
+        var raw = Model.ComprobanteUrl.Trim();
+        compUrl = raw.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? raw
+            : Url.Content(raw.StartsWith("~/") || raw.StartsWith("/") ? raw : "~/" + raw);
     }
     bool isPdf = !string.IsNullOrWhiteSpace(compUrl)
                  && compUrl!.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
+    // Nombre de depositante listo para UI
+    var hasDepos = !string.IsNullOrWhiteSpace(Model.Depositante);
+    var deposText = hasDepos ? Model.Depositante!.Trim() : "No informado";
+    var bancoPretty = BankPretty(Model.Banco);
 }
 
 <div class="main-container">
     <div class="header">
         <div class="logo">
-            <i class="fas fa-store"></i>
-            <span>SIMONE</span>
+            <i class="fas fa-store"></i><span>SIMONE</span>
         </div>
         <a asp-controller="Panel" asp-action="Reportes" class="back-btn">
-            <i class="fas fa-arrow-left"></i>
-            Volver a compradores
+            <i class="fas fa-arrow-left"></i> Volver a compradores
         </a>
     </div>
 
@@ -79,43 +97,20 @@
     <p class="page-subtitle">Información completa de la venta realizada el @Model.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
 
     <div class="row">
-        <!-- Columna izquierda -->
+        <!-- Izquierda -->
         <div class="col-lg-4">
-            <!-- Información del cliente -->
+            <!-- Cliente -->
             <div class="card">
-                <div class="card-header">
-                    <span><i class="fas fa-user-circle"></i> Información del cliente</span>
-                </div>
+                <div class="card-header"><span><i class="fas fa-user-circle"></i> Información del cliente</span></div>
                 <div class="card-body">
                     <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">Nombre</span>
-                            <span class="info-value">@Safe(Model.Nombre)</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Email</span>
-                            <span class="info-value">@Safe(Model.Email)</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Teléfono</span>
-                            <span class="info-value">@Safe(Model.Telefono)</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Dirección (perfil)</span>
-                            <span class="info-value">@Safe(Model.Direccion)</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Venta #</span>
-                            <span class="info-value">@Model.VentaID</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Fecha</span>
-                            <span class="info-value">@Model.Fecha.ToString("dd/MM/yyyy HH:mm")</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Método de pago</span>
-                            <span class="info-value">@Safe(Model.MetodoPago)</span>
-                        </div>
+                        <div class="info-item"><span class="info-label">Nombre</span>  <span class="info-value">@Safe(Model.Nombre)</span></div>
+                        <div class="info-item"><span class="info-label">Email</span>   <span class="info-value">@Safe(Model.Email)</span></div>
+                        <div class="info-item"><span class="info-label">Teléfono</span><span class="info-value">@Safe(Model.Telefono)</span></div>
+                        <div class="info-item"><span class="info-label">Dirección (perfil)</span><span class="info-value">@Safe(Model.Direccion)</span></div>
+                        <div class="info-item"><span class="info-label">Venta #</span><span class="info-value">@Model.VentaID</span></div>
+                        <div class="info-item"><span class="info-label">Fecha</span><span class="info-value">@Model.Fecha.ToString("dd/MM/yyyy HH:mm")</span></div>
+                        <div class="info-item"><span class="info-label">Método de pago</span><span class="info-value">@Safe(Model.MetodoPago)</span></div>
                         <div class="info-item">
                             <span class="info-label">Estado</span>
                             <span class="status-badge @(yaEnviado ? "status-shipped" : "status-pending")">
@@ -147,13 +142,21 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label">Depositante</span>
-                                <span class="info-value">@Safe(Model.Depositante)</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="info-value" id="depositanteText">@deposText</span>
+                                    @if (hasDepos)
+                                    {
+                                        <button type="button" class="btn-action btn-outline" id="copyDepositante">
+                                            <i class="fas fa-copy"></i> Copiar
+                                        </button>
+                                    }
+                                </div>
                             </div>
-                            @if (!string.IsNullOrWhiteSpace(Model.Banco))
+                            @if (!string.IsNullOrWhiteSpace(bancoPretty))
                             {
                                 <div class="info-item">
                                     <span class="info-label">Banco</span>
-                                    <span class="info-value">@Model.Banco</span>
+                                    <span class="info-value">@bancoPretty</span>
                                 </div>
                             }
                         </div>
@@ -166,19 +169,24 @@
                                     <a class="file-pill" href="@compUrl" target="_blank" rel="noopener">
                                         <i class="fas fa-file-pdf"></i> Ver comprobante (PDF)
                                     </a>
+                                    <div class="deposit-actions mt-2">
+                                        <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
+                                            <i class="fas fa-download"></i> Descargar
+                                        </a>
+                                    </div>
                                 }
                                 else
                                 {
-                                    <a href="@compUrl" target="_blank" rel="noopener">
+                                    <a href="#" data-bs-toggle="modal" data-bs-target="#modalComprobante">
                                         <img src="@compUrl" alt="Comprobante de depósito" class="deposit-proof" />
                                     </a>
-                                    <div class="text-muted mt-2"><small>Click para ver en tamaño completo</small></div>
+                                    <div class="text-muted mt-2"><small>Clic para ver en grande</small></div>
+                                    <div class="deposit-actions mt-2">
+                                        <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
+                                            <i class="fas fa-download"></i> Descargar imagen
+                                        </a>
+                                    </div>
                                 }
-                                <div class="deposit-actions mt-2">
-                                    <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
-                                        <i class="fas fa-download"></i> Descargar comprobante
-                                    </a>
-                                </div>
                             </div>
                         }
                         else
@@ -193,20 +201,15 @@
             }
         </div>
 
-        <!-- Columna central: Dirección de envío -->
+        <!-- Centro: Dirección -->
         <div class="col-lg-4">
             <div class="card">
-                <div class="card-header">
-                    <span><i class="fas fa-truck"></i> Dirección de envío</span>
-                </div>
+                <div class="card-header"><span><i class="fas fa-truck"></i> Dirección de envío</span></div>
                 <div class="card-body">
                     <div class="address-box">
                         @if (dirUsada != null)
                         {
-                            <div class="address-line">
-                                <span class="address-label">Principal:</span>
-                                <span>@Safe(dirUsada.Calle)</span>
-                            </div>
+                            <div class="address-line"><span class="address-label">Principal:</span><span>@Safe(dirUsada.Calle)</span></div>
                             @if (!string.IsNullOrWhiteSpace(linea2Usada))
                             {
                                 <div class="address-line"><span>@linea2Usada</span></div>
@@ -219,36 +222,23 @@
                         }
                         else
                         {
-                            <div class="address-line">
-                                <span class="address-label">Principal:</span>
-                                <span>Sin direcciones guardadas</span>
-                            </div>
+                            <div class="address-line"><span class="address-label">Principal:</span><span>Sin direcciones guardadas</span></div>
                             <div class="address-line text-muted">Se usó la dirección del perfil en el momento de la compra.</div>
-
                             @if (!string.IsNullOrWhiteSpace(calleUsada))
                             {
                                 <div class="address-line"><span>@calleUsada</span></div>
                             }
-
                             @if (!string.IsNullOrWhiteSpace(JoinNonEmpty(ciudadUsada, estadoUsado)))
                             {
                                 <div class="address-line"><span>@JoinNonEmpty(ciudadUsada, estadoUsado)</span></div>
                             }
-
                             @if (!string.IsNullOrWhiteSpace(refUsada))
                             {
-                                <div class="address-line">
-                                    <span class="address-label">Ref:</span>
-                                    <span>@refUsada</span>
-                                </div>
+                                <div class="address-line"><span class="address-label">Ref:</span><span>@refUsada</span></div>
                             }
-
                             @if (!string.IsNullOrWhiteSpace(telUsado))
                             {
-                                <div class="address-line">
-                                    <span class="address-label">Tel:</span>
-                                    <span>@telUsado</span>
-                                </div>
+                                <div class="address-line"><span class="address-label">Tel:</span><span>@telUsado</span></div>
                             }
                         }
                     </div>
@@ -265,57 +255,34 @@
                         </div>
                     }
 
-                    <div class="section-title">
-                        <i class="fas fa-copy"></i>
-                        <span>Etiqueta de envío</span>
-                    </div>
-
+                    <div class="section-title"><i class="fas fa-copy"></i><span>Etiqueta de envío</span></div>
                     <div class="copy-box">
                         <pre id="copyContent" class="copy-content">@etiquetaEnvio</pre>
-                        <button id="btnCopy" class="btn-action btn-outline copy-btn">
-                            <i class="fas fa-copy"></i> Copiar
-                        </button>
+                        <button id="btnCopy" class="btn-action btn-outline copy-btn"><i class="fas fa-copy"></i> Copiar</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Columna derecha: Productos -->
+        <!-- Derecha: Productos -->
         <div class="col-lg-4">
             <div class="card">
-                <div class="card-header">
-                    <span><i class="fas fa-shopping-bag"></i> Productos</span>
-                </div>
+                <div class="card-header"><span><i class="fas fa-shopping-bag"></i> Productos</span></div>
                 <div class="card-body">
                     <table class="products-table">
-                        <thead>
-                            <tr>
-                                <th>Producto</th>
-                                <th>Cantidad</th>
-                                <th>Precio</th>
-                            </tr>
-                        </thead>
+                        <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th></tr></thead>
                         <tbody>
                             @if (Model.Detalles == null || !Model.Detalles.Any())
                             {
-                                <tr>
-                                    <td colspan="3" class="text-muted">Sin detalles.</td>
-                                </tr>
+                                <tr><td colspan="3" class="text-muted">Sin detalles.</td></tr>
                             }
                             else
                             {
-                                @foreach (var d in Model.Detalles)
+                                foreach (var d in Model.Detalles)
                                 {
-                                    <tr>
-                                        <td>@d.Producto</td>
-                                        <td>× @d.Cantidad</td>
-                                        <td>@d.Subtotal.ToString("C", culture)</td>
-                                    </tr>
+                                    <tr><td>@d.Producto</td><td>× @d.Cantidad</td><td>@d.Subtotal.ToString("C", culture)</td></tr>
                                 }
-                                <tr class="total-row">
-                                    <td colspan="2">Total</td>
-                                    <td>@Model.Total.ToString("C", culture)</td>
-                                </tr>
+                                <tr class="total-row"><td colspan="2">Total</td><td>@Model.Total.ToString("C", culture)</td></tr>
                             }
                         </tbody>
                     </table>
@@ -342,7 +309,7 @@
         --light: #f8f9fa;
         --border-radius: 12px;
         --box-shadow: 0 5px 15px rgba(0,0,0,.08);
-        --transition: all .3s ease;
+        --transition: all .3s ease
     }
 
     * {
@@ -353,7 +320,7 @@
 
     body {
         font-family: 'Poppins',sans-serif;
-        background-color: #f8fafc;
+        background: #f8fafc;
         color: var(--dark);
         line-height: 1.6
     }
@@ -618,14 +585,13 @@
         gap: 10px
     }
 
-    /* Mejoras para el comprobante */
     .deposit-proof {
         max-width: 100%;
         max-height: 240px;
         width: auto;
         border-radius: 10px;
         box-shadow: var(--box-shadow);
-        object-fit: contain;
+        object-fit: contain
     }
 
     .file-pill {
@@ -638,7 +604,7 @@
         text-decoration: none;
         color: #111827;
         font-weight: 500;
-        box-shadow: var(--box-shadow);
+        box-shadow: var(--box-shadow)
     }
 
         .file-pill i {
@@ -650,17 +616,13 @@
         justify-content: center
     }
 
-    @* Razor necesita escapar @media *@
-    @@media (max-width: 992px) {
-        .info-grid
-
-    {
-        grid-template-columns: 1fr 1fr
+    @@media (max-width:992px) {
+        .info-grid {
+            grid-template-columns: 1fr 1fr
+        }
     }
 
-    }
-
-    @@media (max-width: 768px) {
+    @@media (max-width:768px) {
         .info-grid {
             grid-template-columns: 1fr
         }
@@ -676,10 +638,36 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
+<!-- Modal para ver el comprobante en grande -->
+@if (!string.IsNullOrWhiteSpace(compUrl) && !isPdf)
+{
+    <div class="modal fade" id="modalComprobante" tabindex="-1" aria-labelledby="modalComprobanteLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalComprobanteLabel"><i class="fas fa-image me-2"></i>Comprobante de depósito</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <img src="@compUrl" alt="Comprobante de depósito" class="img-fluid" />
+                </div>
+                <div class="modal-footer">
+                    <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
+                        <i class="fas fa-download"></i> Descargar
+                    </a>
+                    <button type="button" class="btn-action btn-primary" data-bs-dismiss="modal">
+                        <i class="fas fa-check"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Copiar etiqueta
+            // Copiar etiqueta de envío
             const btnCopy = document.getElementById('btnCopy');
             if (btnCopy) {
                 btnCopy.addEventListener('click', () => {
@@ -692,7 +680,21 @@
                 });
             }
 
-            // Marcar como enviado (POST con fetch para no recargar toda la página)
+            // Copiar depositante
+            const btnDep = document.getElementById('copyDepositante');
+            if (btnDep) {
+                btnDep.addEventListener('click', () => {
+                    const name = document.getElementById('depositanteText').innerText.trim();
+                    if (!name || name === 'No informado') return;
+                    navigator.clipboard.writeText(name).then(() => {
+                        const prev = btnDep.innerHTML;
+                        btnDep.innerHTML = '<i class="fas fa-check"></i> Copiado';
+                        setTimeout(() => btnDep.innerHTML = '<i class="fas fa-copy"></i> Copiar', 1400);
+                    });
+                });
+            }
+
+            // Marcar como enviado (AJAX)
             const form = document.getElementById('markShippedForm');
             const btn  = document.getElementById('btnMarkShipped');
             if (form && btn) {
@@ -706,18 +708,13 @@
                     try {
                         const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With':'XMLHttpRequest' }});
                         if (res.ok) {
-                            let data = null;
-                            try { data = await res.json(); } catch {}
+                            let data = null; try { data = await res.json(); } catch {}
                             if (!data || data.ok) location.reload();
                         } else {
-                            btn.disabled = false;
-                            btn.innerHTML = prev;
-                            alert('No se pudo marcar como enviado.');
+                            btn.disabled = false; btn.innerHTML = prev; alert('No se pudo marcar como enviado.');
                         }
                     } catch {
-                        btn.disabled = false;
-                        btn.innerHTML = prev;
-                        alert('Error de red al marcar como enviado.');
+                        btn.disabled = false; btn.innerHTML = prev; alert('Error de red al marcar como enviado.');
                     }
                 });
             }
