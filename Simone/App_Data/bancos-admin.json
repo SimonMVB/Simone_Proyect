@@ -1,0 +1,12 @@
+[
+  {
+    "Codigo": "guayaquil",
+    "Nombre": "Banco Guayaquil",
+    "Numero": "220328124421",
+    "Tipo": "Cuenta de Ahorros",
+    "Titular": "Martin Buena\u00F1o",
+    "Ruc": "0001293138122",
+    "LogoPath": "/images/Bancos/guayaquil.png",
+    "Activo": false
+  }
+]

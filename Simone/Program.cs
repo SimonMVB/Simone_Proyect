@@ -1,10 +1,13 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http.Features;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
 using System.Linq;
+// (opcional si no tienes las global usings)
+// using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,21 +19,22 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<TiendaDbContext>(options =>
     options.UseSqlServer(
         connectionString,
-        sql => sql.MigrationsAssembly(typeof(TiendaDbContext).Assembly.FullName)   // <- asegura dónde están las migraciones
+        sql => sql.MigrationsAssembly(typeof(TiendaDbContext).Assembly.FullName)
     )
 );
-
 
 builder.Services.AddIdentity<Usuario, Roles>(options =>
 {
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.AllowedForNewUsers = true;
+
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
+
     options.SignIn.RequireConfirmedEmail = false;
 })
 .AddEntityFrameworkStores<TiendaDbContext>()
@@ -56,7 +60,14 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
 });
 
+// (Opcional) Límite de subida por encima de 5MB para el request completo
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 10 * 1024 * 1024;  // 10MB request total
+});
+
 // 4) Servicios de dominio
+builder.Services.AddScoped<PagosResolver>();     // Simone.Services.PagosResolver
 builder.Services.AddScoped<CategoriasService>();
 builder.Services.AddScoped<SubcategoriasService>();
 builder.Services.AddScoped<ProveedorService>();
@@ -64,7 +75,13 @@ builder.Services.AddScoped<ProductosService>();
 builder.Services.AddScoped<CarritoService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<LogService>();
-builder.Services.AddScoped<CarritoActionFilter>(); // 👍
+builder.Services.AddScoped<CarritoActionFilter>();
+
+// 🔧 Bancos: usar Singleton (servicio sin estado que maneja IO a archivos)
+builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
+
+// ❌ No registrar resolvers duplicados bajo otros namespaces
+// builder.Services.AddScoped<Simone.ViewModels.Pagos.PagosResolver>();
 
 // 5) MVC + filtro global
 builder.Services.AddControllersWithViews(options =>
@@ -86,16 +103,16 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-app.UseSession();
-
+// 🔧 Orden recomendado: Auth → Authorize → Session
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseSession();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// 7) Seed inicial (roles, admin, datos base)
+// 7) Seed inicial (roles, admin, datos base) + asegurar carpetas
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -103,24 +120,29 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        await CrearRolesYAdmin(services, logger);
+        // Asegurar carpetas de trabajo (necesarias para bancos y comprobantes)
+        var env = services.GetRequiredService<IWebHostEnvironment>();
+        Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "App_Data"));
+        Directory.CreateDirectory(Path.Combine(env.WebRootPath, "uploads", "comprobantes"));
 
+        // 1) Migrar primero
         var db = services.GetRequiredService<TiendaDbContext>();
         await db.Database.MigrateAsync();
 
+        // 2) Seed de Identity (roles + admin)
         await CrearRolesYAdmin(services, logger);
 
+        // 3) Seed de dominio
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
 
-        logger.LogInformation("Iniciado en puerto 7074");
+        logger.LogInformation("Iniciado correctamente.");
     }
     catch (Exception ex)
     {
         logger.LogError(ex, "Error al inicializar datos.");
     }
 }
-
 
 app.Run();
 
@@ -176,6 +198,14 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
         {
             var errores = string.Join(", ", result.Errors.Select(e => e.Description));
             logger.LogError("Error al crear el admin: {Err}", errores);
+        }
+    }
+    else
+    {
+        // Garantizar que el admin tenga el rol, por si ya existía
+        if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
+        {
+            await userManager.AddToRoleAsync(existingAdmin, "Administrador");
         }
     }
 }

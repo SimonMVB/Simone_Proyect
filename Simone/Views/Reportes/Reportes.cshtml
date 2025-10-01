@@ -154,17 +154,17 @@
                             <i class="fa-regular fa-eye me-1"></i> Ver
                         </a>
 
-                        <!-- Reportar / Revertir -->
-                        <button type="button"
-                                class="btn btn-sm btn-outline-danger ms-1 btn-report"
-                                title="Reportar problema / Revertir venta"
-                                data-bs-toggle="modal"
-                                data-bs-target="#reportModal"
-                                data-id="@v.VentaID"
-                                data-nombre="@Safe(v.Nombre)"
-                                data-total="@v.Total.ToString("C", culture)">
+                        <!-- Reportar/Devolver -->
+                        <a asp-controller="Devoluciones"
+                           asp-action="Crear"
+                           asp-route-ventaId="@v.VentaID"
+                           asp-route-returnUrl="@(Context?.Request?.Path + Context?.Request?.QueryString)"
+                           class="btn btn-sm btn-outline-danger ms-1"
+                           title="Reportar problema / Solicitar devolución">
                             <i class="fa-solid fa-flag me-1"></i> Reportar
-                        </button>
+                        </a>
+
+
                     </div>
                 </div>
             }

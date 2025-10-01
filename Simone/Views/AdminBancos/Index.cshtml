@@ -1,0 +1,386 @@
+﻿@using Simone.Models
+@using SimoneCfg = Simone.Configuration
+@{
+    ViewData["Title"] = User.IsInRole("Vendedor") ? "Mis Cuentas Bancarias" : "Bancos del Administrador";
+    var cuentas = (ViewBag.Cuentas as IEnumerable<SimoneCfg.CuentaBancaria>) ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>();
+    bool esVendedor = User.IsInRole("Vendedor");
+
+    var catalogo = new[]{
+        new { Codigo="pichincha",   Nombre="Banco Pichincha",      Logo="/images/Bancos/pichincha.png" },
+        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",      Logo="/images/Bancos/guayaquil.png" },
+        new { Codigo="pacifico",    Nombre="Banco del Pacífico",   Logo="/images/Bancos/pacifico.png" },
+        new { Codigo="bolivariano", Nombre="Banco Bolivariano",    Logo="/images/Bancos/bolivariano.png" },
+        new { Codigo="jep",         Nombre="Cooperativa JEP",      Logo="/images/Bancos/jep.png" },
+    };
+
+    var modelErrors = ViewBag.ModelErrors as string;
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+    .page-title {
+        font-family: "Playfair Display",serif;
+        font-weight: 700
+    }
+
+    .card-elev {
+        box-shadow: 0 10px 26px rgba(0,0,0,.06);
+        border: 1px solid #eef0f4;
+        border-radius: 16px
+    }
+
+    .bank-preview {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #eef0f4;
+        padding: 14px 16px;
+        border-radius: 14px
+    }
+
+    .bank-logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        object-fit: contain;
+        background: #fff;
+        border: 1px solid #eaecef
+    }
+
+    .muted {
+        color: #6b7280
+    }
+
+    .table thead th {
+        background: #f7f8fb;
+        border-bottom-color: #eef0f4
+    }
+
+    .table td, .table th {
+        vertical-align: middle
+    }
+
+    .badge-dot {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem
+    }
+
+        .badge-dot i {
+            font-size: .5rem
+        }
+
+    .text-mono {
+        font-family: ui-monospace,Menlo,Consolas,monospace
+    }
+</style>
+
+<div class="container my-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h1 class="page-title mb-0"><i class="fa-solid fa-university me-2"></i>@ViewData["Title"]</h1>
+        <div class="small text-muted">
+            @(esVendedor ? (object)"Se muestra al cliente cuando la compra es solo de tu tienda."
+                        : (object)"Se usa cuando el carrito es de varias tiendas.")
+        </div>
+    </div>
+
+    @if (TempData["MensajeExito"] is string okMsg)
+    {
+        <div class="alert alert-success">@okMsg</div>
+    }
+    @if (TempData["MensajeError"] is string errMsg)
+    {
+        <div class="alert alert-danger mb-2">@errMsg</div>
+        @if (!string.IsNullOrWhiteSpace(modelErrors))
+        {
+            <div class="alert alert-warning"><small>@modelErrors</small></div>
+        }
+    }
+
+    <!-- ===== Formulario Upsert ===== -->
+    <div class="card card-elev mb-4">
+        <div class="card-header bg-white">
+            <strong><i class="fa-solid fa-pen-to-square me-2"></i> @(esVendedor ? "Agregar / Editar cuenta de mi tienda" : "Nueva / Editar cuenta")</strong>
+        </div>
+        <div class="card-body">
+            <form asp-action="SaveAdmin" asp-controller="AdminBancos" method="post" id="frmBanco" class="row g-3" novalidate>
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" id="OriginalCodigo" name="OriginalCodigo" />
+
+                <!-- Catálogo de bancos -->
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Banco</label>
+                    <select id="ddlBanco" class="form-select">
+                        <option value="">Selecciona un banco...</option>
+                        @foreach (var b in catalogo)
+                        {
+                            <option value="@b.Codigo" data-nombre="@b.Nombre" data-logo="@b.Logo">@b.Nombre</option>
+                        }
+                    </select>
+                    <div class="form-text">Al seleccionar, se autocompletan nombre y logo.</div>
+                </div>
+
+                <!-- Preview -->
+                <div class="col-12">
+                    <div class="bank-preview">
+                        <img id="logoPreview" class="bank-logo" src="/images/product-placeholder.png"
+                             onerror="this.src='/images/product-placeholder.png'">
+                        <div>
+                            <div class="fw-semibold" id="bankName">—</div>
+                            <div class="small muted">Los datos del banco se establecen automáticamente.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos editables -->
+                <div class="col-md-4">
+                    <label class="form-label">Número de cuenta</label>
+                    <input id="Numero" name="Numero" class="form-control" inputmode="numeric" maxlength="20"
+                           pattern="[0-9]{6,20}" placeholder="Ej. 2210704773" required>
+                    <div class="invalid-feedback">Ingrese un número válido (solo dígitos, 6–20).</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tipo</label>
+                    <select id="Tipo" name="Tipo" class="form-select" required>
+                        <option value="Cuenta de Ahorros">Cuenta de Ahorros</option>
+                        <option value="Cuenta Corriente">Cuenta Corriente</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Titular <small class="text-muted">(opcional)</small></label>
+                    <input id="Titular" name="Titular" class="form-control" placeholder="Nombre del titular" maxlength="120">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">RUC / Cédula <small class="text-muted">(opcional)</small></label>
+                    <input id="Ruc" name="Ruc" class="form-control" inputmode="numeric"
+                           pattern="^\d{10}(\d{3})?$" maxlength="13" placeholder="10 o 13 dígitos">
+                    <div class="form-text">Ej: cédula (10) o RUC (13).</div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <div class="form-check">
+                        <input type="hidden" name="Activo" value="false" />
+                        <!-- truco estándar de ASP.NET Core para checkboxes -->
+                        <input type="hidden" name="Activo" value="false" />
+                        <input class="form-check-input" type="checkbox" id="Activo" name="Activo" value="true" checked>
+
+                        <label class="form-check-label" for="Activo">Activo</label>
+
+                    </div>
+                </div>
+
+                <!-- Hidden que el backend usa -->
+                <input type="hidden" id="Codigo" name="Codigo" required maxlength="50">
+                <input type="hidden" id="Nombre" name="Nombre" required maxlength="120">
+                <input type="hidden" id="LogoPath" name="LogoPath" maxlength="200">
+
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary me-2" id="btnGuardar">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary" id="btnLimpiar">
+                        <i class="fa-solid fa-eraser me-1"></i> Limpiar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== Listado ===== -->
+    <div class="card card-elev">
+        <div class="card-header bg-white d-flex align-items-center justify-content-between">
+            <strong><i class="fa-solid fa-list-ul me-2"></i> Cuentas registradas</strong>
+            <span class="text-muted small">@cuentas.Count() registro(s)</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Logo</th>
+                        <th>Banco</th>
+                        <th>Número</th>
+                        <th>Tipo</th>
+                        <th>Titular</th>
+                        <th>RUC</th>
+                        <th>Estado</th>
+                        <th style="width:170px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (cuentas.Any())
+                    {
+                        foreach (var c in cuentas)
+                        {
+                            <tr>
+                                <td>
+                                    <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/product-placeholder.png" : c.LogoPath)"
+                                         class="bank-logo" onerror="this.src='/images/product-placeholder.png'">
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(c.Nombre) ? c.Codigo : c.Nombre)</td>
+                                <td class="text-mono">@c.Numero</td>
+                                <td>@c.Tipo</td>
+                                <td>@c.Titular</td>
+                                <td>@c.Ruc</td>
+                                <td>
+                                    @if (c.Activo)
+                                    {
+                                        <span class="badge bg-success badge-dot"><i class="fa-solid fa-circle"></i> Activo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary badge-dot"><i class="fa-solid fa-circle"></i> Inactivo</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        <!-- Edita en el mismo formulario (lee desde data-*) -->
+                                        <button type="button"
+                                                class="btn btn-outline-primary btn-sm"
+                                                data-codigo="@c.Codigo"
+                                                data-nombre="@(c.Nombre ?? "")"
+                                                data-numero="@(c.Numero ?? "")"
+                                                data-tipo="@(c.Tipo ?? "")"
+                                                data-titular="@(c.Titular ?? "")"
+                                                data-ruc="@(c.Ruc ?? "")"
+                                                data-logo="@(c.LogoPath ?? "")"
+                                                data-activo="@(c.Activo ? "true" : "false")"
+                                                onclick="editarDesdeData(this)">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </button>
+
+                                        <!-- Eliminar por POST -->
+                                        <form asp-action="DeleteAdmin" asp-controller="AdminBancos" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="codigo" value="@c.Codigo" />
+                                            <button class="btn btn-outline-danger btn-sm" type="submit"
+                                                    onclick="return confirm('¿Eliminar la cuenta @((c.Nombre ?? c.Codigo))?');">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="8" class="text-center text-muted py-4">No hay cuentas registradas.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (() => {
+        const $ = (s)=>document.querySelector(s);
+
+        const ddl   = $("#ddlBanco");
+        const nameL = $("#bankName");
+        const logo  = $("#logoPreview");
+
+        const f     = $("#frmBanco");
+        const hOrig = $("#OriginalCodigo");
+        const hCod  = $("#Codigo");
+        const hNom  = $("#Nombre");
+        const hLogo = $("#LogoPath");
+        const inpN  = $("#Numero");
+        const selT  = $("#Tipo");
+        const inpTi = $("#Titular");
+        const inpR  = $("#Ruc");
+        const chkA  = $("#Activo");
+        const btnG  = $("#btnGuardar");
+
+        function setPreview(nombre, logoPath){
+            nameL.textContent = nombre || "—";
+            logo.src = (logoPath || "/images/product-placeholder.png");
+        }
+
+        function setFromCatalog(opt){
+            if (!opt) { setPreview(null, null); hCod.value=hNom.value=hLogo.value=""; return; }
+            const code = opt.value;
+            const name = opt.getAttribute("data-nombre") || code;
+            const img  = opt.getAttribute("data-logo")   || "/images/product-placeholder.png";
+            hCod.value  = code;
+            hNom.value  = name;
+            hLogo.value = img;
+            setPreview(name, img);
+        }
+
+        // Selección desde catálogo (opcional)
+        ddl?.addEventListener("change", function(){
+            const opt = this.selectedIndex > 0 ? this.options[this.selectedIndex] : null;
+            setFromCatalog(opt);
+            if (!selT.value) selT.value = "Cuenta de Ahorros";
+        });
+
+        // Función de edición usando data-*
+        window.editarDesdeData = function (btn) {
+            const d = btn.dataset;
+            editar(
+                d.codigo, d.nombre || '', d.numero || '', d.tipo || '',
+                d.titular || '', d.ruc || '', d.logo || '', d.activo === 'true'
+            );
+        };
+
+        // Rellenar formulario para editar una fila existente
+        window.editar = function(codigo, nombre, numero, tipo, titular, ruc, logoPath, activo){
+            hOrig.value = codigo;               // Update
+            hCod.value  = codigo;
+            hNom.value  = nombre || codigo;
+            hLogo.value = logoPath || "/images/product-placeholder.png";
+
+            setPreview(hNom.value, hLogo.value);
+
+            // Intenta seleccionar el catálogo si existe
+            if (ddl){
+                const opt = Array.from(ddl.options).find(o => o.value === codigo);
+                ddl.value = opt ? codigo : "";
+            }
+
+            inpN.value   = numero || "";
+            selT.value   = tipo || "Cuenta de Ahorros";
+            inpTi.value  = titular || "";
+            inpR.value   = ruc || "";
+            chkA.checked = (activo === true || activo === "true");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        };
+
+        // Limpiar formulario
+        $("#btnLimpiar")?.addEventListener("click", () => {
+            setTimeout(() => {
+                f.reset();
+                ddl.value = "";
+                hOrig.value = "";
+                hCod.value = hNom.value = hLogo.value = "";
+                setPreview(null, null);
+                f.classList.remove("was-validated");
+                btnG.disabled = false;
+            }, 0);
+        });
+
+        // Validación HTML5 + asegurar hidden requeridos (Codigo/Nombre)
+        f?.addEventListener("submit", (e) => {
+            // Si solo eligieron del catálogo, completa los hidden
+            if (!hCod.value && ddl && ddl.value){
+                const opt = ddl.options[ddl.selectedIndex];
+                setFromCatalog(opt);
+            }
+            // Reglas básicas del navegador
+            if (!f.checkValidity()){
+                e.preventDefault();
+                e.stopPropagation();
+            } else {
+                // Evitar doble submit
+                btnG.disabled = true;
+            }
+            f.classList.add("was-validated");
+        });
+    })();
+</script>

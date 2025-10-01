@@ -13,6 +13,8 @@ namespace Simone.Models
         [Required]
         public string Nombre { get; set; }
 
+
+
         [Required]
         public DateTime FechaAgregado { get; set; }
 

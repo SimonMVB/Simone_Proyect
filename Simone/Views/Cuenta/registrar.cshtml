@@ -13,7 +13,6 @@
         </div>
 
         <div class="card-body p-4">
-
             @* mensajes *@
             @if (TempData["MensajeError"] is string err && !string.IsNullOrWhiteSpace(err))
             {
@@ -50,6 +49,25 @@
                     <span asp-validation-for="Nombre" class="text-danger small"></span>
                 </div>
 
+                <!-- Cédula -->
+                <div class="mb-3">
+                    <label asp-for="Cedula" class="form-label">Cédula</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
+                        <input asp-for="Cedula"
+                               class="form-control"
+                               placeholder="10 dígitos"
+                               inputmode="numeric"
+                               pattern="\d{10}"
+                               maxlength="10"
+                               autocomplete="off"
+                               aria-describedby="cedHelp"
+                               required />
+                    </div>
+                    <div id="cedHelp" class="form-text">Solo números, exactamente 10 dígitos.</div>
+                    <span asp-validation-for="Cedula" class="text-danger small"></span>
+                </div>
+
                 <!-- Email -->
                 <div class="mb-3">
                     <label asp-for="Email" class="form-label">Correo electrónico</label>
@@ -59,7 +77,7 @@
                                class="form-control"
                                placeholder="correo@ejemplo.com"
                                inputmode="email"
-                               autocomplete="email"
+                               autocomplete="username email"
                                required />
                     </div>
                     <span asp-validation-for="Email" class="text-danger small"></span>
@@ -74,7 +92,7 @@
                                class="form-control"
                                placeholder="0999999999"
                                inputmode="numeric"
-                               pattern="^\d{9,10}$"
+                               pattern="\d{9,10}"
                                maxlength="10"
                                autocomplete="tel-national"
                                aria-describedby="telHelp" />
@@ -201,13 +219,13 @@
             const form = document.getElementById('formRegistro');
             const btn  = document.getElementById('btnRegistrar');
             const tel  = document.getElementById('@Html.IdFor(m => m.Telefono)');
+            const ced  = document.getElementById('@Html.IdFor(m => m.Cedula)');
             const pwd  = document.getElementById('@Html.IdFor(m => m.Password)');
             const pwd2 = document.getElementById('@Html.IdFor(m => m.ConfirmPassword)');
             const meter= document.getElementById('pwdMeter');
 
             // Habilitar/deshabilitar por validez
             const toggleSubmit = () => {
-                // usa checkValidity (HTML5) + jQuery unobtrusive si está presente
                 let valid = form.checkValidity();
                 if (window.jQuery && $.validator && $(form).data('validator')) {
                     valid = valid && $(form).valid();
@@ -215,17 +233,23 @@
                 btn.disabled = !valid;
             };
 
-            // Solo dígitos en teléfono
+            // Solo dígitos en Cédula (10) y Teléfono (máx 10)
+            if (ced) {
+                ced.addEventListener('input', () => {
+                    const digits = (ced.value || '').replace(/\D+/g, '').slice(0, 10);
+                    if (ced.value !== digits) ced.value = digits;
+                    ced.setCustomValidity(digits.length === 10 ? '' : 'La cédula debe tener 10 dígitos.');
+                });
+            }
             if (tel) {
                 tel.addEventListener('input', () => {
-                    tel.value = tel.value.replace(/\D+/g, '').slice(0, 10);
+                    tel.value = (tel.value || '').replace(/\D+/g, '').slice(0, 10);
                 });
             }
 
             // Medidor de contraseña
             function scorePassword(v) {
-                let s = 0;
-                if (!v) return 0;
+                let s = 0; if (!v) return 0;
                 if (v.length >= 8) s += 20;
                 if (/[a-z]/.test(v)) s += 20;
                 if (/[A-Z]/.test(v)) s += 20;
@@ -281,7 +305,6 @@
     </script>
 
     <style>
-        /* Detalles visuales sutiles */
         .input-group-text {
             background: #fff;
         }

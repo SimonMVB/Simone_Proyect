@@ -1,17 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
+using ResolverPagos = Simone.Services.PagosResolver;
 
 namespace Simone.Controllers
 {
@@ -24,6 +27,14 @@ namespace Simone.Controllers
         private readonly CarritoService _carrito;
         private readonly UserManager<Usuario> _userManager;
         private readonly ILogger<ComprasController> _logger;
+        private readonly IWebHostEnvironment _env;
+
+        private readonly ResolverPagos _pagosResolver;     // mono/multi
+        private readonly IBancosConfigService _bancosSvc;   // admin + tiendas
+
+        private const int MAX_FILE_MB = 5;
+        private static readonly HashSet<string> _extPermitidas =
+            new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
 
         public ComprasController(
             UserManager<Usuario> user,
@@ -32,22 +43,28 @@ namespace Simone.Controllers
             CategoriasService categorias,
             SubcategoriasService subcategorias,
             CarritoService carrito,
-            ILogger<ComprasController> logger)
+            ILogger<ComprasController> logger,
+            IWebHostEnvironment env,
+            ResolverPagos pagosResolver,
+            IBancosConfigService bancosSvc)
         {
-            _context = context;
-            _productos = productos;
-            _categorias = categorias;
-            _subcategorias = subcategorias;
-            _carrito = carrito;
-            _userManager = user;
-            _logger = logger;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _productos = productos ?? throw new ArgumentNullException(nameof(productos));
+            _categorias = categorias ?? throw new ArgumentNullException(nameof(categorias));
+            _subcategorias = subcategorias ?? throw new ArgumentNullException(nameof(subcategorias));
+            _carrito = carrito ?? throw new ArgumentNullException(nameof(carrito));
+            _userManager = user ?? throw new ArgumentNullException(nameof(user));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _env = env ?? throw new ArgumentNullException(nameof(env));
+            _pagosResolver = pagosResolver ?? throw new ArgumentNullException(nameof(pagosResolver));
+            _bancosSvc = bancosSvc ?? throw new ArgumentNullException(nameof(bancosSvc));
         }
 
-        // -----------------------------------------------------------
-        // CATÁLOGO
-        // -----------------------------------------------------------
+        // =========================
+        // CATÁLOGO / PRODUCTO
+        // =========================
         [HttpGet]
-        public async Task<IActionResult> Catalogo(int? categoriaID, int[]? subcategoriaIDs, int pageNumber = 1, int pageSize = 20)
+        public async Task<IActionResult> Catalogo(int? categoriaID, int[]? subcategoriaIDs, int pageNumber = 1, int pageSize = 20, CancellationToken ct = default)
         {
             var categorias = await _categorias.GetAllAsync();
             var subcategorias = categoriaID.HasValue
@@ -62,13 +79,13 @@ namespace Simone.Controllers
             if (subcategoriaIDs is { Length: > 0 })
                 query = query.Where(p => subcategoriaIDs!.Contains(p.SubcategoriaID));
 
-            var totalProducts = await query.CountAsync();
+            var totalProducts = await query.CountAsync(ct);
 
             var productos = await query
                 .OrderBy(p => p.Nombre)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
-                .ToListAsync();
+                .ToListAsync(ct);
 
             var model = new CatalogoViewModel
             {
@@ -83,36 +100,29 @@ namespace Simone.Controllers
                 ProductoIDsFavoritos = new List<int>()
             };
 
-            // Marcar favoritos si está autenticado
             if (User.Identity?.IsAuthenticated == true)
             {
                 var userId = _userManager.GetUserId(User);
                 model.ProductoIDsFavoritos = await _context.Favoritos
                     .Where(f => f.UsuarioId == userId)
                     .Select(f => f.ProductoId)
-                    .ToListAsync();
+                    .ToListAsync(ct);
             }
 
             return View(model);
         }
 
-        // -----------------------------------------------------------
-        // DETALLE DE PRODUCTO + RELACIONADOS
-        // /Compras/VerProducto?productoID=1
-        // (también acepta /p/{id}/{slug?})
-        // -----------------------------------------------------------
         [HttpGet]
         [Route("/p/{productoID:int}/{slug?}")]
-        public async Task<IActionResult> VerProducto(int productoID)
+        public async Task<IActionResult> VerProducto(int productoID, CancellationToken ct = default)
         {
-            if (productoID <= 0)
-                return RedirectToAction(nameof(Catalogo));
+            if (productoID <= 0) return RedirectToAction(nameof(Catalogo));
 
             var producto = await _context.Productos
                 .AsNoTracking()
                 .Include(p => p.Categoria)
                 .Include(p => p.Subcategoria)
-                .FirstOrDefaultAsync(p => p.ProductoID == productoID);
+                .FirstOrDefaultAsync(p => p.ProductoID == productoID, ct);
 
             if (producto == null)
             {
@@ -120,29 +130,27 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(Catalogo));
             }
 
-            // Relacionados: misma subcategoría; si no hay, por categoría
-            var relacionadosQuery = _context.Productos.AsNoTracking()
+            var relacionados = _context.Productos.AsNoTracking()
                 .Where(p => p.ProductoID != producto.ProductoID);
 
             if (producto.SubcategoriaID != 0)
-                relacionadosQuery = relacionadosQuery.Where(p => p.SubcategoriaID == producto.SubcategoriaID);
+                relacionados = relacionados.Where(p => p.SubcategoriaID == producto.SubcategoriaID);
             else if (producto.CategoriaID != 0)
-                relacionadosQuery = relacionadosQuery.Where(p => p.CategoriaID == producto.CategoriaID);
+                relacionados = relacionados.Where(p => p.CategoriaID == producto.CategoriaID);
 
-            ViewBag.Relacionados = await relacionadosQuery
+            ViewBag.Relacionados = await relacionados
                 .OrderByDescending(p => p.FechaAgregado)
                 .ThenBy(p => p.Nombre)
                 .Take(8)
-                .ToListAsync();
+                .ToListAsync(ct);
 
-            return View(producto); // Views/Compras/VerProducto.cshtml
+            return View(producto);
         }
 
-        // -----------------------------------------------------------
-        // CARRITO: AÑADIR (POST normal o AJAX)
-        // -----------------------------------------------------------
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        // =========================
+        // CARRITO
+        // =========================
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirAlCarrito([Bind("ProductoID,Cantidad")] CatalogoViewModel model, CancellationToken ct = default)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -163,22 +171,22 @@ namespace Simone.Controllers
                 return RedirectToReferrerOr("Catalogo");
             }
 
-            // Asegurar carrito
-            var carrito = await _carrito.GetByClienteIdAsync(user.Id);
+            var carrito = await _carrito.GetByClienteIdAsync(user.Id)
+                        ?? (await _carrito.AddAsync(user) ? await _carrito.GetByClienteIdAsync(user.Id) : null);
+
             if (carrito == null)
             {
-                await _carrito.AddAsync(user);
-                carrito = await _carrito.GetByClienteIdAsync(user.Id);
+                TempData["MensajeError"] = "No fue posible obtener tu carrito.";
+                return RedirectToReferrerOr("Catalogo");
             }
 
-            // Stock: lo que hay ya en el carrito + lo solicitado ahora
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            var cantidadEnCarrito = detalles.Where(c => c.ProductoID == model.ProductoID).Sum(c => c.Cantidad);
+            var enCarrito = detalles.Where(c => c.ProductoID == model.ProductoID).Sum(c => c.Cantidad);
 
-            if (cantidadEnCarrito + model.Cantidad > producto.Stock)
+            if (enCarrito + model.Cantidad > producto.Stock)
             {
                 var msg = "La cantidad solicitada supera el stock disponible.";
-                if (EsAjax()) return Json(new { ok = false, error = msg, stock = producto.Stock, enCarrito = cantidadEnCarrito });
+                if (EsAjax()) return Json(new { ok = false, error = msg, stock = producto.Stock, enCarrito });
                 TempData["MensajeError"] = msg;
                 return RedirectToReferrerOr("Catalogo");
             }
@@ -191,7 +199,6 @@ namespace Simone.Controllers
                 return RedirectToReferrerOr("Catalogo");
             }
 
-            // Nuevo contador de ítems
             var count = await _context.CarritoDetalle
                 .Where(cd => cd.CarritoID == carrito.CarritoID)
                 .SumAsync(cd => cd.Cantidad, ct);
@@ -202,14 +209,11 @@ namespace Simone.Controllers
             return RedirectToReferrerOr("Catalogo");
         }
 
-        // Cambiar cantidad de un ítem del carrito (útil si lo usas en vistas futuras)
-        [HttpPost]
-        [ValidateAntiForgeryToken]
+        [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> ActualizarCantidad(int carritoDetalleID, int cantidad, CancellationToken ct = default)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Unauthorized();
-
             if (cantidad <= 0) cantidad = 1;
 
             var detalle = await _context.CarritoDetalle
@@ -217,9 +221,7 @@ namespace Simone.Controllers
                 .Include(cd => cd.Producto)
                 .FirstOrDefaultAsync(cd => cd.CarritoDetalleID == carritoDetalleID, ct);
 
-            if (detalle == null || detalle.Carrito?.UsuarioId != user.Id)
-                return NotFound();
-
+            if (detalle == null || detalle.Carrito?.UsuarioId != user.Id) return NotFound();
             if (detalle.Producto == null) return NotFound();
 
             if (cantidad > detalle.Producto.Stock)
@@ -233,26 +235,20 @@ namespace Simone.Controllers
             detalle.Cantidad = cantidad;
             await _context.SaveChangesAsync(ct);
 
-            if (EsAjax())
-            {
-                var subtotal = detalle.Cantidad * detalle.Precio;
-                return Json(new { ok = true, subtotal });
-            }
+            if (EsAjax()) return Json(new { ok = true, subtotal = detalle.Cantidad * detalle.Precio });
 
             TempData["MensajeExito"] = "Cantidad actualizada.";
             return RedirectToReferrerOr("Resumen");
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EliminarArticulo(int carritoDetalleID)
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarArticulo(int carritoDetalleID, CancellationToken ct = default)
         {
             await _carrito.BorrarProductoCarrito(carritoDetalleID);
             TempData["MensajeExito"] = "Producto eliminado del carrito con éxito.";
             return RedirectToAction("Catalogo");
         }
 
-        // Info mínima del carrito para actualizar el badge del header
         [HttpGet]
         public async Task<IActionResult> CartInfo(CancellationToken ct)
         {
@@ -263,55 +259,14 @@ namespace Simone.Controllers
             if (carrito == null) return Json(new { count = 0, subtotal = 0m });
 
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            var count = detalles.Sum(d => d.Cantidad);
-            var subtotal = detalles.Sum(d => d.Cantidad * d.Precio);
-
-            return Json(new { count, subtotal });
+            return Json(new { count = detalles.Sum(d => d.Cantidad), subtotal = detalles.Sum(d => d.Cantidad * d.Precio) });
         }
 
-        // -----------------------------------------------------------
-        // FAVORITOS (ruta usada en la vista: /Favoritos/Toggle/{id})
-        // Si ya tienes un FavoritosController, puedes omitir esto.
-        // -----------------------------------------------------------
-        [HttpPost("Favoritos/Toggle/{id:int}")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ToggleFavorito(int id, CancellationToken ct = default)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return EsAjax() ? Json(new { ok = false, needLogin = true }) : Unauthorized();
-
-            var prodExists = await _context.Productos.AsNoTracking().AnyAsync(p => p.ProductoID == id, ct);
-            if (!prodExists) return Json(new { ok = false, error = "Producto no encontrado" });
-
-            var fav = await _context.Favoritos.FirstOrDefaultAsync(f => f.UsuarioId == user.Id && f.ProductoId == id, ct);
-            bool esFavorito;
-
-            if (fav == null)
-            {
-                _context.Favoritos.Add(new Favorito
-                {
-                    UsuarioId = user.Id,
-                    ProductoId = id,
-                    FechaGuardado = DateTime.UtcNow
-                });
-                esFavorito = true;
-            }
-            else
-            {
-                _context.Favoritos.Remove(fav);
-                esFavorito = false;
-            }
-
-            await _context.SaveChangesAsync(ct);
-            return Json(new { ok = true, esFavorito });
-        }
-
-        // -----------------------------------------------------------
+        // =========================
         // RESUMEN / CHECKOUT
-        // -----------------------------------------------------------
+        // =========================
         [HttpGet]
-        public async Task<IActionResult> Resumen()
+        public async Task<IActionResult> Resumen(CancellationToken ct = default)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -320,7 +275,6 @@ namespace Simone.Controllers
                 return RedirectToAction("Login", "Cuenta");
             }
 
-            // Asegurar carrito
             var carrito = await _carrito.GetByClienteIdAsync(user.Id)
                          ?? (await _carrito.AddAsync(user) ? await _carrito.GetByClienteIdAsync(user.Id) : null);
 
@@ -330,19 +284,63 @@ namespace Simone.Controllers
                 return RedirectToAction("Catalogo");
             }
 
-            var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            var totalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
+            var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+            var totalCompra = detalles.Sum(cd => cd.Precio * cd.Cantidad);
 
-            ViewBag.CarritoDetalles = carritoDetalles;
+            // Resolver mono/multi
+            var decision = await _pagosResolver.ResolverAsync(user.Id, null, ct);
+            ViewBag.EsMultiVendedor = decision.EsMultiVendedor;
+            ViewBag.VendedorIdUnico = decision.VendedorIdUnico;
+            ViewBag.VendedoresIds = decision.VendedoresIds;
+
+            // Cargar cuentas según el caso + fallback
+            if (!decision.EsMultiVendedor && !string.IsNullOrWhiteSpace(decision.VendedorIdUnico))
+            {
+                var cuentasProv = new List<Simone.Configuration.CuentaBancaria>();
+                try
+                {
+                    cuentasProv = (await _bancosSvc.GetByProveedorAsync(decision.VendedorIdUnico!, ct))
+                                  .Where(c => c?.Activo == true).ToList();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "No se pudieron cargar cuentas del proveedor {vid}", decision.VendedorIdUnico);
+                }
+
+                ViewBag.CuentasProveedor = cuentasProv;
+                if (cuentasProv.Count == 0)
+                {
+                    // Fallback a admin si la tienda no tiene
+                    var admin = (await _bancosSvc.GetAdminAsync(ct)).Where(c => c?.Activo == true).ToList();
+                    ViewBag.CuentasAdmin = admin;
+                    ViewBag.FallbackAdmin = true;
+                }
+                else
+                {
+                    ViewBag.FallbackAdmin = false;
+                }
+            }
+            else
+            {
+                var admin = (await _bancosSvc.GetAdminAsync(ct)).Where(c => c?.Activo == true).ToList();
+                ViewBag.CuentasAdmin = admin;
+                ViewBag.FallbackAdmin = true; // en multi siempre admin
+            }
+
+            ViewBag.CarritoDetalles = detalles;
             ViewBag.TotalCompra = totalCompra;
             ViewBag.HasAddress = !string.IsNullOrWhiteSpace(user.Direccion);
 
             return View(user);
         }
 
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConfirmarCompra()
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ConfirmarCompra(
+            string? MetodoPago,
+            string? BancoSeleccionado,
+            string? Depositante,
+            IFormFile? Comprobante,
+            CancellationToken ct = default)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -358,72 +356,131 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(Resumen));
             }
 
-            var carritoDetalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            if (carritoDetalles == null || !carritoDetalles.Any())
+            var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
+            if (detalles == null || !detalles.Any())
             {
                 TempData["MensajeError"] = "Tu carrito está vacío.";
                 return RedirectToAction(nameof(Resumen));
             }
 
-            // Requiere dirección
             if (string.IsNullOrWhiteSpace(user.Direccion))
             {
                 ViewBag.HasAddress = false;
-                ViewBag.CarritoDetalles = carritoDetalles;
-                ViewBag.TotalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
+                ViewBag.CarritoDetalles = detalles;
+                ViewBag.TotalCompra = detalles.Sum(cd => cd.Precio * cd.Cantidad);
                 TempData["MensajeError"] = "Agrega una dirección para continuar con la compra.";
                 return View("Resumen", user);
             }
 
-            // Validación de stock (previa)
-            var faltantes = carritoDetalles
-                .Where(d => d.Producto != null && d.Producto.Stock < d.Cantidad)
-                .ToList();
-
+            // Stock
+            var faltantes = detalles.Where(d => d.Producto != null && d.Producto.Stock < d.Cantidad).ToList();
             if (faltantes.Any())
             {
                 ViewBag.HasAddress = true;
-                ViewBag.CarritoDetalles = carritoDetalles;
-                ViewBag.TotalCompra = carritoDetalles.Sum(cd => cd.Precio * cd.Cantidad);
+                ViewBag.CarritoDetalles = detalles;
+                ViewBag.TotalCompra = detalles.Sum(cd => cd.Precio * cd.Cantidad);
                 TempData["MensajeError"] = "Stock insuficiente para: " +
                     string.Join(", ", faltantes.Select(f => $"{f.Producto!.Nombre} (disp: {f.Producto.Stock}, pediste: {f.Cantidad})"));
                 return View("Resumen", user);
             }
 
-            try
+            var decision = await _pagosResolver.ResolverAsync(user.Id, null, ct);
+            var esDeposito = (MetodoPago ?? "").StartsWith("dep", StringComparison.OrdinalIgnoreCase);
+
+            if (esDeposito)
             {
-                // Registra venta, descuenta stock y cierra carrito
-                var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
-
-                if (ok)
+                if (string.IsNullOrWhiteSpace(BancoSeleccionado) ||
+                    string.IsNullOrWhiteSpace(Depositante) ||
+                    Comprobante == null || Comprobante.Length == 0)
                 {
-                    // ID de la venta creada (la más reciente del usuario)
-                    var ventaId = await _context.Ventas
-                        .Where(v => v.UsuarioId == user.Id)
-                        .OrderByDescending(v => v.FechaVenta)
-                        .Select(v => v.VentaID)
-                        .FirstOrDefaultAsync();
-
-                    // Prepara un carrito nuevo y vacío
-                    await _carrito.AddAsync(user);
-
-                    TempData["MensajeExito"] = "¡Gracias por tu compra!";
-                    if (ventaId > 0) return RedirectToAction(nameof(CompraExito), new { id = ventaId });
-                    return RedirectToAction("Index", "MisCompras");
+                    TempData["MensajeError"] = "Para depósito, selecciona banco, indica el nombre del depositante y adjunta el comprobante.";
+                    return RedirectToAction(nameof(Resumen));
                 }
 
-                TempData["MensajeError"] = "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
-                return RedirectToAction(nameof(Resumen));
+                if (!EsMimePermitido(Comprobante) || Comprobante.Length > MAX_FILE_MB * 1024 * 1024)
+                {
+                    TempData["MensajeError"] = $"Comprobante inválido. Formatos: JPG, PNG, WEBP o PDF. Máximo {MAX_FILE_MB}MB.";
+                    return RedirectToAction(nameof(Resumen));
+                }
+            }
+
+            try
+            {
+                // 1) Registrar venta
+                var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
+                if (!ok)
+                {
+                    TempData["MensajeError"] = "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
+                    return RedirectToAction(nameof(Resumen));
+                }
+
+                // 2) Obtener venta creada
+                var ventaId = await _context.Ventas
+                    .Where(v => v.UsuarioId == user.Id)
+                    .OrderByDescending(v => v.FechaVenta)
+                    .Select(v => v.VentaID)
+                    .FirstOrDefaultAsync(ct);
+
+                if (ventaId > 0)
+                {
+                    Directory.CreateDirectory(UploadsFolderAbs());
+
+                    // Resolver banco elegido (valida admin/tienda y Activo)
+                    var (okBanco, metaBancoObj, destinoPago, errBanco) =
+                        await ResolverBancoSeleccionadoAsync(BancoSeleccionado ?? "", ct);
+
+                    // En multi-tienda solo admin
+                    if (decision.EsMultiVendedor && okBanco &&
+                        !string.Equals(destinoPago, "admin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        TempData["MensajeError"] = "En pedidos multi-tienda, el pago se realiza únicamente a cuentas del administrador.";
+                        return RedirectToAction(nameof(Resumen));
+                    }
+
+                    if (esDeposito && !okBanco)
+                    {
+                        TempData["MensajeError"] = errBanco ?? "Banco seleccionado inválido.";
+                        return RedirectToAction(nameof(Resumen));
+                    }
+
+                    // Metadatos del pago
+                    var metaObj = new
+                    {
+                        metodo = MetodoPago,
+                        destino = okBanco ? destinoPago : null,
+                        bancoSeleccion = okBanco ? metaBancoObj : new { valor = BancoSeleccionado },
+                        depositante = string.IsNullOrWhiteSpace(Depositante) ? null : Depositante.Trim(),
+                        ts = DateTime.UtcNow
+                    };
+                    var metaPath = Path.Combine(UploadsFolderAbs(), $"venta-{ventaId}.meta.json");
+                    await System.IO.File.WriteAllTextAsync(metaPath, JsonSerializer.Serialize(metaObj), ct);
+
+                    // Comprobante
+                    if (esDeposito && Comprobante != null && Comprobante.Length > 0)
+                    {
+                        var save = await GuardarComprobanteAsync(ventaId, Comprobante, ct);
+                        if (!save.ok)
+                        {
+                            TempData["MensajeError"] = save.error ?? "No se pudo guardar el comprobante.";
+                            return RedirectToAction(nameof(Resumen));
+                        }
+                    }
+                }
+
+                // 3) Reiniciar carrito
+                await _carrito.AddAsync(user);
+
+                TempData["MensajeExito"] = "¡Gracias por tu compra!";
+                if (ventaId > 0) return RedirectToAction(nameof(CompraExito), new { id = ventaId });
+                return RedirectToAction("Index", "MisCompras");
             }
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning(ex, "Validación al confirmar compra");
-
-                var carritoDetallesView = await _carrito.LoadCartDetails(carrito.CarritoID);
+                var det = await _carrito.LoadCartDetails(carrito.CarritoID);
                 ViewBag.HasAddress = true;
-                ViewBag.CarritoDetalles = carritoDetallesView;
-                ViewBag.TotalCompra = carritoDetallesView.Sum(cd => cd.Precio * cd.Cantidad);
-
+                ViewBag.CarritoDetalles = det;
+                ViewBag.TotalCompra = det.Sum(cd => cd.Precio * cd.Cantidad);
                 TempData["MensajeError"] = ex.Message;
                 return View("Resumen", user);
             }
@@ -435,39 +492,67 @@ namespace Simone.Controllers
             }
         }
 
-        // -----------------------------------------------------------
-        // PANTALLAS RESULTADO
-        // -----------------------------------------------------------
+        // =========================
+        // SUBIR COMPROBANTE / PANTALLAS
+        // =========================
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> SubirComprobante(int id, IFormFile? archivo, string? depositante, string? banco, CancellationToken ct = default)
+        {
+            var uid = _userManager.GetUserId(User);
+            if (uid == null) return Unauthorized();
+
+            var venta = await _context.Ventas
+                .Include(v => v.Usuario)
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid, ct);
+
+            if (venta == null)
+                return EsAjax() ? Json(new { ok = false, error = "Venta no encontrada." }) : NotFound();
+
+            string? relUrl = null;
+
+            if (archivo != null)
+            {
+                var res = await GuardarComprobanteAsync(id, archivo, ct);
+                if (!res.ok)
+                {
+                    if (EsAjax()) return Json(new { ok = false, error = res.error });
+                    TempData["MensajeError"] = res.error;
+                    return RedirectToAction(nameof(CompraExito), new { id });
+                }
+                relUrl = res.relUrl;
+            }
+
+            if (!string.IsNullOrWhiteSpace(depositante) || !string.IsNullOrWhiteSpace(banco))
+                GuardarMetaDeposito(id, depositante, banco);
+
+            if (EsAjax()) return Json(new { ok = true, url = relUrl });
+
+            TempData["MensajeExito"] = "Información de depósito registrada.";
+            return RedirectToAction(nameof(CompraExito), new { id });
+        }
+
         [HttpGet]
-        public async Task<IActionResult> CompraExito(int id)
+        public async Task<IActionResult> CompraExito(int id, CancellationToken ct = default)
         {
             var uid = _userManager.GetUserId(User);
             var venta = await _context.Ventas
                 .AsNoTracking()
                 .Include(v => v.Usuario)
-                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid);
-
-            if (venta == null)
-                return RedirectToAction("Index", "Home");
-
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid, ct);
+            if (venta == null) return RedirectToAction("Index", "Home");
             return View(venta);
         }
 
-        [HttpGet]
-        public IActionResult CompraError() => View();
+        [HttpGet] public IActionResult CompraError() => View();
 
-        // -----------------------------------------------------------
-        // DESCARGAR COMPROBANTE
-        // -----------------------------------------------------------
         [HttpGet]
-        public async Task<IActionResult> Comprobante(int id)
+        public async Task<IActionResult> Comprobante(int id, CancellationToken ct = default)
         {
             var uid = _userManager.GetUserId(User);
             var venta = await _context.Ventas
                 .Include(v => v.Usuario)
                 .Include(v => v.DetalleVentas).ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid);
-
+                .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == uid, ct);
             if (venta == null) return NotFound();
 
             var html = $@"
@@ -484,38 +569,152 @@ namespace Simone.Controllers
 <h1>Comprobante de compra</h1>
 <div class='muted'>Referencia: #{venta.VentaID} · Fecha: {venta.FechaVenta:dd/MM/yyyy HH:mm}</div>
 <div class='muted'>Cliente: {venta.Usuario?.NombreCompleto} · Email: {venta.Usuario?.Email}</div>
-
 <table>
 <thead><tr><th>Producto</th><th class='r'>Cant.</th><th class='r'>Precio</th><th class='r'>Subtotal</th></tr></thead>
 <tbody>
-{string.Join("", venta.DetalleVentas.Select(d =>
-            $"<tr><td>{d.Producto?.Nombre}</td><td class='r'>{d.Cantidad}</td><td class='r'>{d.PrecioUnitario:C2}</td><td class='r'>{d.Subtotal:C2}</td></tr>"
-        ))}
+{string.Join("", venta.DetalleVentas.Select(d => $"<tr><td>{d.Producto?.Nombre}</td><td class='r'>{d.Cantidad}</td><td class='r'>{d.PrecioUnitario:C2}</td><td class='r'>{d.Subtotal:C2}</td></tr>"))}
 </tbody>
-<tfoot>
-<tr><th colspan='3' class='r'>Total</th><th class='r'>{venta.Total:C2}</th></tr>
-</tfoot>
+<tfoot><tr><th colspan='3' class='r'>Total</th><th class='r'>{venta.Total:C2}</th></tr></tfoot>
 </table>
-
 <p class='muted'>Método de pago: {venta.MetodoPago ?? "N/D"} · Estado: {venta.Estado ?? "N/D"}</p>
 </body></html>";
-
             var bytes = System.Text.Encoding.UTF8.GetBytes(html);
-            var fileName = $"comprobante-{venta.VentaID}.html";
-            return File(bytes, "text/html", fileName);
+            return File(bytes, "text/html", $"comprobante-{venta.VentaID}.html");
         }
 
-        // -----------------------------------------------------------
+        // =========================
         // HELPERS
-        // -----------------------------------------------------------
+        // =========================
         private bool EsAjax() =>
             string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
         private IActionResult RedirectToReferrerOr(string action, string controller = "Compras")
         {
             var referer = Request.Headers["Referer"].ToString();
-            if (!string.IsNullOrWhiteSpace(referer)) return Redirect(referer);
-            return RedirectToAction(action, controller);
+            return !string.IsNullOrWhiteSpace(referer) ? Redirect(referer) : RedirectToAction(action, controller);
+        }
+
+        private string UploadsFolderAbs() =>
+            Path.Combine(_env.WebRootPath, "uploads", "comprobantes");
+
+        private bool EsMimePermitido(IFormFile f)
+        {
+            if (f == null) return false;
+            var okMime = (f.ContentType?.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ?? false)
+                         || string.Equals(f.ContentType, "application/pdf", StringComparison.OrdinalIgnoreCase);
+            var ext = Path.GetExtension(f.FileName ?? string.Empty);
+            return okMime && _extPermitidas.Contains(ext);
+        }
+
+        private async Task<(bool ok, string? relUrl, string? error)> GuardarComprobanteAsync(int ventaId, IFormFile archivo, CancellationToken ct)
+        {
+            if (archivo == null || archivo.Length == 0)
+                return (false, null, "No se recibió archivo.");
+            if (!EsMimePermitido(archivo))
+                return (false, null, "Formato no permitido. Usa JPG, PNG, WEBP o PDF.");
+            if (archivo.Length > MAX_FILE_MB * 1024 * 1024)
+                return (false, null, $"El archivo supera {MAX_FILE_MB}MB.");
+
+            var folder = UploadsFolderAbs();
+            Directory.CreateDirectory(folder);
+
+            foreach (var old in Directory.EnumerateFiles(folder, $"venta-{ventaId}.*", SearchOption.TopDirectoryOnly))
+            {
+                try { System.IO.File.Delete(old); } catch { /* ignore */ }
+            }
+
+            var ext = Path.GetExtension(archivo.FileName);
+            var fileAbs = Path.Combine(folder, $"venta-{ventaId}{ext}");
+            await using var fs = new FileStream(fileAbs, FileMode.Create, FileAccess.Write, FileShare.None);
+            await archivo.CopyToAsync(fs, ct);
+
+            var rel = Path.GetRelativePath(_env.WebRootPath, fileAbs).Replace("\\", "/");
+            return (true, "/" + rel.TrimStart('/'), null);
+        }
+
+        private void GuardarMetaDeposito(int ventaId, string? depositante, string? banco)
+        {
+            var folder = UploadsFolderAbs();
+            Directory.CreateDirectory(folder);
+
+            var metaObj = new
+            {
+                depositante = string.IsNullOrWhiteSpace(depositante) ? null : depositante.Trim(),
+                banco = string.IsNullOrWhiteSpace(banco) ? null : banco.Trim(),
+                ts = DateTime.UtcNow
+            };
+            var metaPath = Path.Combine(folder, $"venta-{ventaId}.meta.json");
+            System.IO.File.WriteAllText(metaPath, JsonSerializer.Serialize(metaObj));
+        }
+
+        /// Resuelve admin/tienda con validación de Activo.
+        private async Task<(bool ok, object metaBanco, string destino, string? error)>
+            ResolverBancoSeleccionadoAsync(string bancoSeleccionado, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(bancoSeleccionado))
+                return (false, new { }, "", "No se especificó banco.");
+
+            var raw = bancoSeleccionado.Trim();
+            if (!raw.Contains(':', StringComparison.Ordinal))
+                raw = $"admin:{raw}"; // compat "pichincha" => "admin:pichincha"
+
+            var parts = raw.Split(':', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2) return (false, new { }, "", "Formato de banco inválido.");
+
+            var scope = parts[0].ToLowerInvariant();
+
+            // ADMIN
+            if (scope == "admin")
+            {
+                var codigo = parts[1].Trim().ToLowerInvariant();
+                var admin = (await _bancosSvc.GetAdminAsync(ct)).Where(c => c.Activo).ToList();
+                var sel = admin.FirstOrDefault(c => string.Equals(c.Codigo?.Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+                if (sel == null) return (false, new { }, "admin", "Banco del administrador inválido o inactivo.");
+
+                var meta = new
+                {
+                    destino = "admin",
+                    banco = new { codigo = sel.Codigo, nombre = sel.Nombre, numero = sel.Numero, tipo = sel.Tipo, titular = sel.Titular, ruc = sel.Ruc }
+                };
+                return (true, meta, "admin", null);
+            }
+
+            // TIENDA
+            if (scope == "tienda")
+            {
+                var vendedorId = parts[1].Trim();
+                if (string.IsNullOrWhiteSpace(vendedorId))
+                    return (false, new { }, "tienda", "Vendedor no especificado.");
+
+                var cuentas = (await _bancosSvc.GetByProveedorAsync(vendedorId, ct)).Where(c => c.Activo).ToList();
+                if (cuentas.Count == 0)
+                    return (false, new { }, "tienda", "El vendedor no tiene cuentas activas.");
+
+                Simone.Configuration.CuentaBancaria? sel = null;
+
+                if (parts.Length >= 3)
+                {
+                    var codigo = parts[2].Trim();
+                    sel = cuentas.FirstOrDefault(c => string.Equals(c.Codigo?.Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+                    if (sel == null)
+                        return (false, new { }, "tienda", "La cuenta seleccionada del vendedor no existe o no está activa.");
+                }
+                else
+                {
+                    if (cuentas.Count == 1) sel = cuentas[0];
+                    else return (false, new { }, "tienda", "Selecciona una cuenta específica del vendedor.");
+                }
+
+                var meta = new
+                {
+                    destino = "tienda",
+                    vendedorId,
+                    banco = new { codigo = sel!.Codigo, nombre = sel.Nombre, numero = sel.Numero, tipo = sel.Tipo, titular = sel.Titular, ruc = sel.Ruc }
+                };
+                return (true, meta, "tienda", null);
+            }
+
+            return (false, new { }, "", "Ámbito de banco inválido.");
         }
     }
 }

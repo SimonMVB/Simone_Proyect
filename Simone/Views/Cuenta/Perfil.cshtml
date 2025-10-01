@@ -277,36 +277,33 @@
         background: #f1f5f9
     }
 
-    @@media (max-width: 680px) {
-        .profile-card
+    @@media (max-width:680px) {
+        .profile-card {
+            padding: 1.2rem 1rem;
+            margin: 1rem auto
+        }
 
-    {
-        padding: 1.2rem 1rem;
-        margin: 1rem auto
-    }
+        .profile-form-grid {
+            grid-template-columns: 1fr
+        }
 
-    .profile-form-grid {
-        grid-template-columns: 1fr
-    }
+        .profile-avatar-container {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem
+        }
 
-    .profile-avatar-container {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem
-    }
-
-    .avatar-wrapper {
-        width: 84px;
-        height: 84px
-    }
-
+        .avatar-wrapper {
+            width: 84px;
+            height: 84px
+        }
     }
 </style>
 
 <div class="profile-main-bg">
     <div class="profile-card">
         <div class="profile-header text-center mb-2">
-            <h2><i class="fas fa-user-circle me-1"></i> Mi Perfil</h2>
+            <h2><i class="fas fa-user-circle me-1" aria-hidden="true"></i> Mi Perfil</h2>
             <div class="profile-subtitle">Administra tu información personal</div>
         </div>
 
@@ -332,6 +329,7 @@
             <div id="personal-tab" class="tab-content active" role="tabpanel" aria-labelledby="personal">
                 <form asp-action="ActualizarPerfil" asp-controller="Cuenta" method="post" enctype="multipart/form-data" id="formPerfil" class="needs-validation" novalidate>
                     @Html.AntiForgeryToken()
+                    <!-- No usamos el Id posteado en servidor, pero no estorba si existe -->
                     <input asp-for="Id" type="hidden" />
 
                     <div class="profile-avatar-container">
@@ -378,6 +376,23 @@
                                 <input asp-for="Email" class="form-control" placeholder="Correo electrónico" readonly />
                             </div>
                             <small class="text-muted">Para cambiar tu correo, contacta al administrador.</small>
+                        </div>
+
+                        <!-- CÉDULA (10 dígitos) -->
+                        <div class="form-group">
+                            <label asp-for="Cedula" class="form-label">Cédula</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-id-card" aria-hidden="true"></i></span>
+                                <input asp-for="Cedula"
+                                       class="form-control"
+                                       placeholder="10 dígitos"
+                                       inputmode="numeric"
+                                       pattern="\d{10}"
+                                       maxlength="10"
+                                       aria-describedby="cedulaHelp" />
+                            </div>
+                            <small id="cedulaHelp" class="text-muted">Solo números, exactamente 10 dígitos.</small>
+                            <span asp-validation-for="Cedula" class="form-error"></span>
                         </div>
 
                         <div class="form-group">
@@ -428,7 +443,7 @@
                         <div class="form-group">
                             <label class="form-label">Rol actual</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                                <span class="input-group-text"><i class="fas fa-user-tag" aria-hidden="true"></i></span>
                                 <input value="@ViewBag.RolUsuario" class="form-control" readonly />
                             </div>
                         </div>
@@ -436,7 +451,7 @@
                         <div class="form-group">
                             <label class="form-label">Fecha de registro</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                                <span class="input-group-text"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span>
                                 <input value="@Model.FechaRegistro.ToString("dd/MM/yyyy")" class="form-control" readonly />
                             </div>
                         </div>
@@ -444,9 +459,9 @@
                         <div class="form-group">
                             <label class="form-label">Estado</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-circle"></i></span>
+                                <span class="input-group-text"><i class="fas fa-circle" aria-hidden="true"></i></span>
                                 <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control" readonly />
-                                <span class="input-group-text status-icon @(Model.Activo ? "active" : "inactive")">
+                                <span class="input-group-text status-icon @(Model.Activo ? "active" : "inactive")" aria-hidden="true">
                                     <i class="fas @(Model.Activo ? "fa-check" : "fa-times")"></i>
                                 </span>
                             </div>
@@ -468,7 +483,7 @@
             <!-- Pestaña: Seguridad -->
             <div id="security-tab" class="tab-content" role="tabpanel" aria-labelledby="security">
                 <div class="mb-4">
-                    <h5 class="mb-3"><i class="fas fa-shield-alt me-2"></i> Seguridad de la cuenta</h5>
+                    <h5 class="mb-3"><i class="fas fa-shield-alt me-2" aria-hidden="true"></i> Seguridad de la cuenta</h5>
                     <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
                         <div>
                             <h6 class="mb-1">Contraseña</h6>
@@ -479,13 +494,13 @@
                         </button>
                     </div>
                     <div class="alert alert-info mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
+                        <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
                         Te recomendamos una contraseña de al menos 12 caracteres con mayúsculas, minúsculas y números.
                     </div>
                 </div>
 
                 <div id="passwordForm" class="d-none">
-                    <h5 class="mb-3"><i class="fas fa-key me-2"></i> Cambiar contraseña</h5>
+                    <h5 class="mb-3"><i class="fas fa-key me-2" aria-hidden="true"></i> Cambiar contraseña</h5>
                     <form id="changePasswordForm" method="post" asp-action="CambiarPassword" asp-controller="Cuenta" novalidate>
                         @Html.AntiForgeryToken()
 
@@ -538,9 +553,9 @@
                 </div>
             </div>
 
-            <!-- Pestaña: Actividad -->
+            <!-- Pestaña: Actividad (placeholder) -->
             <div id="activity-tab" class="tab-content" role="tabpanel" aria-labelledby="activity">
-                <h5 class="mb-3"><i class="fas fa-history me-2"></i> Actividad reciente</h5>
+                <h5 class="mb-3"><i class="fas fa-history me-2" aria-hidden="true"></i> Actividad reciente</h5>
 
                 <div class="activity-item">
                     <div class="activity-icon"><i class="fas fa-sign-in-alt" aria-hidden="true"></i></div>
@@ -587,124 +602,120 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        (function () {
+        (function(){
             // Tabs
-            const tabs = document.querySelectorAll('.profile-tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+            const tabs=document.querySelectorAll('.profile-tab');
+            tabs.forEach(tab=>{
+                tab.addEventListener('click',()=>{
+                    tabs.forEach(t=>{t.classList.remove('active'); t.setAttribute('aria-selected','false');});
                     tab.classList.add('active'); tab.setAttribute('aria-selected','true');
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
                     document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
                 });
             });
 
             // Avatar: selección/preview/validación
-            const imgInput = document.getElementById('ImagenPerfil');
-            const delBtn = document.getElementById('btnEliminarFoto');
-            const MAX = 5 * 1024 * 1024;
-            imgInput?.addEventListener('change', () => {
-                if (!imgInput.files?.length) return;
-                const f = imgInput.files[0];
-                const okType = ['image/jpeg','image/png','image/webp'].includes(f.type);
-                if (!okType) { toast('danger','Solo JPG, PNG o WEBP.'); imgInput.value=''; return; }
-                if (f.size > MAX) { toast('danger','La imagen supera 5MB.'); imgInput.value=''; return; }
-
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const wrap = document.querySelector('.avatar-wrapper');
-                    let avatar = wrap.querySelector('.profile-avatar');
-                    if (!avatar) {
-                        avatar = document.createElement('img');
-                        avatar.className = 'profile-avatar';
-                        avatar.alt = 'Foto de perfil';
+            const imgInput=document.getElementById('ImagenPerfil');
+            const delBtn=document.getElementById('btnEliminarFoto');
+            const MAX=5*1024*1024;
+            imgInput?.addEventListener('change',()=>{
+                if(!imgInput.files?.length) return;
+                const f=imgInput.files[0];
+                const okType=['image/jpeg','image/png','image/webp'].includes(f.type);
+                if(!okType){ toast('danger','Solo JPG, PNG o WEBP.'); imgInput.value=''; return; }
+                if(f.size>MAX){ toast('danger','La imagen supera 5MB.'); imgInput.value=''; return; }
+                const reader=new FileReader();
+                reader.onload=e=>{
+                    const wrap=document.querySelector('.avatar-wrapper');
+                    let avatar=wrap.querySelector('.profile-avatar');
+                    if(!avatar){
+                        avatar=document.createElement('img');
+                        avatar.className='profile-avatar'; avatar.alt='Foto de perfil';
                         wrap.prepend(avatar);
                     }
-                    avatar.src = e.target.result;
-                    avatar.style.display = 'block';
+                    avatar.src=e.target.result; avatar.style.display='block';
                     wrap.querySelector('.avatar-placeholder')?.classList.add('d-none');
-                    // Si existía intención de borrar, la anulamos
-                    const hidden = document.getElementById('EliminarFoto');
-                    if (hidden) hidden.remove();
+                    // Si se había marcado eliminar, lo revertimos
+                    const hidden=document.getElementById('EliminarFoto'); if(hidden) hidden.remove();
                     delBtn?.classList.remove('d-none');
                 };
                 reader.readAsDataURL(f);
             });
 
             // Eliminar foto (marca hidden para que el controlador la quite)
-            delBtn?.addEventListener('click', () => {
-                const wrap = document.querySelector('.avatar-wrapper');
-                const avatar = wrap.querySelector('.profile-avatar');
-                if (avatar) avatar.style.display = 'none';
+            delBtn?.addEventListener('click',()=>{
+                const wrap=document.querySelector('.avatar-wrapper');
+                const avatar=wrap.querySelector('.profile-avatar'); if(avatar) avatar.style.display='none';
                 wrap.querySelector('.avatar-placeholder')?.classList.remove('d-none');
-                imgInput.value = '';
-                delBtn.classList.add('d-none');
-
-                if (!document.getElementById('EliminarFoto')) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'EliminarFoto';
-                    input.id = 'EliminarFoto';
-                    input.value = 'true';
+                imgInput.value=''; delBtn.classList.add('d-none');
+                if(!document.getElementById('EliminarFoto')){
+                    const input=document.createElement('input');
+                    input.type='hidden'; input.name='EliminarFoto'; input.id='EliminarFoto'; input.value='true';
                     document.getElementById('formPerfil').appendChild(input);
                 }
             });
 
+            // CÉDULA: fuerza solo dígitos y longitud 10
+            const ced=document.getElementById('Cedula');
+            ced?.addEventListener('input',()=>{
+                const digits=(ced.value||'').replace(/\D+/g,'').slice(0,10);
+                if(ced.value!==digits) ced.value=digits;
+                ced.setCustomValidity(digits.length===0 || digits.length===10 ? '' : 'La cédula debe tener 10 dígitos.');
+            });
+
             // Guardar perfil (feedback)
-            const formPerfil = document.getElementById('formPerfil');
-            const btnPerfil = document.getElementById('btnPerfil');
-            formPerfil?.addEventListener('submit', (e) => {
-                if (!formPerfil.checkValidity()) {
+            const formPerfil=document.getElementById('formPerfil');
+            const btnPerfil=document.getElementById('btnPerfil');
+            formPerfil?.addEventListener('submit',(e)=>{
+                if(!formPerfil.checkValidity()){
                     e.preventDefault(); e.stopPropagation();
-                    formPerfil.classList.add('was-validated');
-                    return;
+                    formPerfil.classList.add('was-validated'); return;
                 }
-                btnPerfil.disabled = true;
-                const txt = btnPerfil.querySelector('.btn-text');
-                const prev = txt.textContent;
-                txt.textContent = 'Guardando...';
+                btnPerfil.disabled=true;
+                const txt=btnPerfil.querySelector('.btn-text'); const prev=txt.textContent;
+                txt.textContent='Guardando...';
                 btnPerfil.insertAdjacentHTML('afterbegin','<span class="spinner-border spinner-border-sm me-2"></span>');
-                // (El estado se restaura tras el postback)
+                // Se restablece tras postback
             });
 
             // Seguridad: mostrar/ocultar formulario
-            const btnCambiar = document.getElementById('btnCambiarPassword');
-            const formPwdWrap = document.getElementById('passwordForm');
-            const cancelPwd = document.getElementById('cancelPasswordChange');
-            btnCambiar?.addEventListener('click', ()=>{ formPwdWrap.classList.remove('d-none'); btnCambiar.classList.add('d-none'); });
-            cancelPwd?.addEventListener('click', ()=>{
+            const btnCambiar=document.getElementById('btnCambiarPassword');
+            const formPwdWrap=document.getElementById('passwordForm');
+            const cancelPwd=document.getElementById('cancelPasswordChange');
+            btnCambiar?.addEventListener('click',()=>{formPwdWrap.classList.remove('d-none'); btnCambiar.classList.add('d-none');});
+            cancelPwd?.addEventListener('click',()=>{
                 formPwdWrap.classList.add('d-none'); btnCambiar.classList.remove('d-none');
                 document.getElementById('changePasswordForm').reset(); resetStrength();
             });
 
             // Mostrar/ocultar contraseñas
             document.querySelectorAll('.toggle-password').forEach(btn=>{
-                btn.addEventListener('click', ()=>{
-                    const input = btn.parentElement.querySelector('input');
-                    const icon = btn.querySelector('i');
-                    const isPwd = input.type === 'password';
-                    input.type = isPwd ? 'text' : 'password';
+                btn.addEventListener('click',()=>{
+                    const input=btn.parentElement.querySelector('input');
+                    const icon=btn.querySelector('i');
+                    const isPwd=input.type==='password';
+                    input.type=isPwd?'text':'password';
                     icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash');
                 });
             });
 
             // Aviso CapsLock
-            function capsFor(inputId, warnId){
-                const input = document.getElementById(inputId);
-                const warn = document.getElementById(warnId);
-                if(!input || !warn) return;
-                ['keyup','keydown'].forEach(ev => input.addEventListener(ev,(e)=>{
-                    const caps = e.getModifierState && e.getModifierState('CapsLock');
-                    warn.classList.toggle('d-none', !caps);
+            function capsFor(inputId,warnId){
+                const input=document.getElementById(inputId);
+                const warn=document.getElementById(warnId);
+                if(!input||!warn) return;
+                ['keyup','keydown'].forEach(ev=>input.addEventListener(ev,(e)=>{
+                    const caps=e.getModifierState&&e.getModifierState('CapsLock');
+                    warn.classList.toggle('d-none',!caps);
                 }));
             }
             capsFor('CurrentPassword','capsWarnCurrent');
             capsFor('NewPassword','capsWarnNew');
 
             // Medidor de fuerza
-            const newPwd = document.getElementById('NewPassword');
-            const bar = document.getElementById('pwdStrengthBar');
-            const txt = document.getElementById('pwdStrengthText');
+            const newPwd=document.getElementById('NewPassword');
+            const bar=document.getElementById('pwdStrengthBar');
+            const txt=document.getElementById('pwdStrengthText');
             function score(p){ if(!p) return 0; let s=0;
                 if(p.length>=8) s+=25; if(p.length>=12) s+=15;
                 if(/[A-Z]/.test(p)) s+=20; if(/[a-z]/.test(p)) s+=15;
@@ -731,10 +742,10 @@
                 const t=new bootstrap.Toast(el,{delay:3500}); t.show(); setTimeout(()=>el.remove(),4000);
             }
 
-            // Cambiar contraseña vía AJAX (sin redirección)
-            const formPwd = document.getElementById('changePasswordForm');
-            const btnSave = document.getElementById('btnSavePassword');
-            formPwd?.addEventListener('submit', async (e)=>{
+            // Cambiar contraseña vía AJAX
+            const formPwd=document.getElementById('changePasswordForm');
+            const btnSave=document.getElementById('btnSavePassword');
+            formPwd?.addEventListener('submit',async (e)=>{
                 e.preventDefault();
                 const cur=document.getElementById('CurrentPassword').value.trim();
                 const np=document.getElementById('NewPassword').value.trim();

@@ -6,7 +6,7 @@ using Simone.Models;
 
 namespace Simone.Data
 {
-    public class TiendaDbContext : IdentityDbContext<Usuario, IdentityRole, string>
+    public class TiendaDbContext : IdentityDbContext<Usuario, Roles, string>
     {
         public TiendaDbContext(DbContextOptions<TiendaDbContext> options)
             : base(options)
@@ -16,7 +16,7 @@ namespace Simone.Data
         // ✅ Tablas del sistema / Identity
         public DbSet<Usuario> Usuarios { get; set; }
 
-        // ✅ Tablas del dominio
+        // ✅ Tablas del dominio (existentes)
         public DbSet<ActividadUsuario> ActividadesUsuarios { get; set; }
         public DbSet<LogIniciosSesion> LogIniciosSesion { get; set; }
         public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
@@ -50,14 +50,34 @@ namespace Simone.Data
         public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<VentaReversion> VentaReversiones { get; set; }
 
+        // ✅ NUEVO: Multi-vendedor (según Models/Vendedor.cs)
+        public DbSet<Vendedor> Vendedores { get; set; }
+        public DbSet<Banco> Bancos { get; set; }
+        public DbSet<CuentaBancaria> CuentasBancarias { get; set; }
+        public DbSet<ContactoTienda> ContactosTiendas { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
             // ------------------------------------------------------------
+            // 0) Usuario.Cedula → longitud/columna e índice único (opcional)
+            // ------------------------------------------------------------
+            modelBuilder.Entity<Usuario>(entity =>
+            {
+                entity.Property(u => u.Cedula)
+                      .HasMaxLength(10)
+                      .HasColumnType("nvarchar(10)");
+
+                // Única si no es null (SQL Server)
+                entity.HasIndex(u => u.Cedula)
+                      .IsUnique()
+                      .HasFilter("[Cedula] IS NOT NULL");
+            });
+
+            // ------------------------------------------------------------
             // 1) Claves primarias compuestas (N:M) + FKs
             // ------------------------------------------------------------
-
             modelBuilder.Entity<Devoluciones>()
                .HasOne(d => d.DetalleVenta)
                .WithMany(v => v.Devoluciones)
@@ -69,12 +89,12 @@ namespace Simone.Data
                 entity.HasKey(cp => new { cp.UsuarioId, cp.ProgramaID });
 
                 entity.HasOne(cp => cp.Usuario)
-                      .WithMany() // o .WithMany(u => u.ClientesProgramas) si expones colección
+                      .WithMany()
                       .HasForeignKey(cp => cp.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(cp => cp.Programa)
-                      .WithMany() // o .WithMany(p => p.Clientes) si expones colección
+                      .WithMany()
                       .HasForeignKey(cp => cp.ProgramaID)
                       .OnDelete(DeleteBehavior.Cascade);
             });
@@ -84,15 +104,9 @@ namespace Simone.Data
                 entity.HasKey(cu => new { cu.UsuarioId, cu.PromocionID });
 
                 entity.HasOne(cu => cu.Usuario)
-                      .WithMany() // o .WithMany(u => u.CuponesUsados) si expones colección
+                      .WithMany()
                       .HasForeignKey(cu => cu.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
-
-                // si tienes navegación a Promocion, puedes explicitarla también:
-                // entity.HasOne(cu => cu.Promocion)
-                //       .WithMany()
-                //       .HasForeignKey(cu => cu.PromocionID)
-                //       .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ------------------------------------------------------------
@@ -109,31 +123,26 @@ namespace Simone.Data
             // ------------------------------------------------------------
             // 3) Relaciones + DeleteBehavior
             // ------------------------------------------------------------
-
-            // Carrito → Usuario
             modelBuilder.Entity<Carrito>(entity =>
             {
                 entity.HasOne(c => c.Usuario)
-                      .WithMany() // o .WithMany(u => u.Carritos)
+                      .WithMany()
                       .HasForeignKey(c => c.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // CarritoDetalle → Producto (Restrict)
             modelBuilder.Entity<CarritoDetalle>()
                 .HasOne(cd => cd.Producto)
                 .WithMany(p => p.CarritoDetalles)
                 .HasForeignKey(cd => cd.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // CarritoDetalle → Carrito (Restrict)
             modelBuilder.Entity<CarritoDetalle>()
                 .HasOne(cd => cd.Carrito)
                 .WithMany(c => c.CarritoDetalles)
                 .HasForeignKey(cd => cd.CarritoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Producto → Proveedor/Subcategoria/Categoria (Restrict)
             modelBuilder.Entity<Producto>()
                 .HasOne(p => p.Proveedor)
                 .WithMany(pr => pr.Productos)
@@ -152,7 +161,6 @@ namespace Simone.Data
                 .HasForeignKey(s => s.CategoriaID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Reseñas → Usuario/Producto (Restrict)
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Usuario)
                 .WithMany()
@@ -165,7 +173,6 @@ namespace Simone.Data
                 .HasForeignKey(r => r.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // DetalleVentas → Venta/Producto (Restrict)
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Venta)
                 .WithMany(v => v.DetalleVentas)
@@ -178,26 +185,73 @@ namespace Simone.Data
                 .HasForeignKey(dv => dv.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Favorito → Usuario (Restrict)
             modelBuilder.Entity<Favorito>()
                 .HasOne(f => f.Usuario)
                 .WithMany()
                 .HasForeignKey(f => f.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Ventas → Usuario (Restrict)
             modelBuilder.Entity<Ventas>()
                 .HasOne(v => v.Usuario)
-                .WithMany() // o .WithMany(u => u.Ventas)
+                .WithMany()
                 .HasForeignKey(v => v.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Pedido → Usuario (si usas Pedido)
             modelBuilder.Entity<Pedido>()
                 .HasOne(p => p.Usuario)
-                .WithMany() // o .WithMany(u => u.Pedidos)
+                .WithMany()
                 .HasForeignKey(p => p.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ------------------------------------------------------------
+            // 3.b) NUEVO — Multi-vendedor: Vendedor/Banco/Cuenta/Contacto
+            // ------------------------------------------------------------
+            // Vendedor
+            modelBuilder.Entity<Vendedor>(entity =>
+            {
+                entity.HasKey(v => v.VendedorId);
+
+                entity.HasMany(v => v.Cuentas)
+                      .WithOne(c => c.Vendedor)
+                      .HasForeignKey(c => c.VendedorId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(v => v.Contactos)
+                      .WithOne(c => c.Vendedor)
+                      .HasForeignKey(c => c.VendedorId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Banco
+            modelBuilder.Entity<Banco>(entity =>
+            {
+                entity.HasKey(b => b.BancoId);
+
+                // Código único (ej.: "pichincha", "guayaquil")
+                entity.HasIndex(b => b.Codigo)
+                      .IsUnique();
+            });
+
+            // CuentaBancaria
+            modelBuilder.Entity<CuentaBancaria>(entity =>
+            {
+                entity.HasKey(c => c.CuentaBancariaId);
+
+                entity.HasOne(c => c.Banco)
+                      .WithMany(b => b.Cuentas)
+                      .HasForeignKey(c => c.BancoId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Evita duplicados de misma cuenta por vendedor/banco
+                entity.HasIndex(c => new { c.VendedorId, c.BancoId, c.Numero })
+                      .IsUnique();
+            });
+
+            // ContactoTienda
+            modelBuilder.Entity<ContactoTienda>(entity =>
+            {
+                entity.HasKey(c => c.ContactoTiendaId);
+            });
 
             // ------------------------------------------------------------
             // 4) Estandarizar DECIMAL(18,2) en campos financieros

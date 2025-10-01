@@ -10,14 +10,19 @@
     <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel" aria-label="Promociones principales">
         <div class="carousel-inner">
             <div class="carousel-item active position-relative">
-                <img src="~/images/Home/vestidos_home.jpg" asp-append-version="true"
-                     class="d-block w-100 banner-img" alt="Colección de vestidos" />
+                <img src="~/images/Home/vestidos_home.jpg"
+                     asp-append-version="true"
+                     class="d-block w-100 banner-img"
+                     alt="Colección de vestidos"
+                     fetchpriority="high"
+                     decoding="async" />
                 <div class="carousel-caption d-flex flex-column justify-content-center align-items-center h-100">
-                    <h1 class="display-4 fw-bold text-white text-shadow mb-3 animate__animated animate__fadeInDown">
+                    <h1 class="display-4 fw-bold text-white text-shadow mb-3">
                         Descubre Nuestra Colección de Vestidos
                     </h1>
                     <a asp-controller="Categorias" asp-action="Vestidos"
-                       class="btn btn-lg btn-light shadow animate__animated animate__fadeInUp">
+                       class="btn btn-lg btn-light shadow"
+                       aria-label="Ver vestidos">
                         Ver vestidos
                     </a>
                 </div>
@@ -28,7 +33,7 @@
 
 <!-- Promoción destacada -->
 <div class="container-fluid text-white text-center py-5"
-     style="background: linear-gradient(135deg, #000000, #1a1a1a); animation: fadeIn 0.9s ease-in;">
+     style="background: linear-gradient(135deg, #000000, #1a1a1a); animation: fadeIn .9s ease-in;">
     <div class="container py-4">
         <h2 class="fw-bold mb-2">Body's irresistibles</h2>
         <p class="lead mb-4">¡Llévate el segundo body con <span class="text-warning">envío gratis</span>!</p>
@@ -42,77 +47,97 @@
 <section class="container my-5">
     <div class="d-flex justify-content-between align-items-end mb-3">
         <h3 class="fw-bold m-0">Explora por categoría</h3>
-        
     </div>
 
     <div class="row g-3 g-lg-4">
-        <!-- Blusas -->
+        <!-- Nota: verifica que los nombres de archivos y acciones coincidan EXACTO en mayúsculas/minúsculas -->
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Blusas" class="cat-card">
-                <img src="~/images/Categorias_slider/blusas.png" class="cat-img" alt="Blusas" loading="lazy" />
+                <img src="~/images/Categorias_slider/blusas.png" asp-append-version="true"
+                     class="cat-img" alt="Blusas" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Blusas</span>
             </a>
         </div>
-        <!-- Tops -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Tops" class="cat-card">
-                <img src="~/images/Categorias_slider/tops.png" class="cat-img" alt="Tops" loading="lazy" />
+                <img src="~/images/Categorias_slider/tops.png" asp-append-version="true"
+                     class="cat-img" alt="Tops" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Tops</span>
             </a>
         </div>
-        <!-- Body's -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Bodys" class="cat-card">
-                <img src="~/images/Categorias_slider/Bodys.png" class="cat-img" alt="Body's" loading="lazy" />
+                <img src="~/images/Categorias_slider/Bodys.png" asp-append-version="true"
+                     class="cat-img" alt="Body's" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Body's</span>
             </a>
         </div>
-        <!-- Trajes de baño -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="TrajeDeBaño" class="cat-card">
-                <img src="~/images/Categorias_slider/Traje_de_bano.png" class="cat-img" alt="Trajes de baño" loading="lazy" />
+            <!-- Usa el nombre ASCII del método en el Controller (p. ej. TrajeDeBano) -->
+            <a asp-controller="Categorias" asp-action="TrajeDeBano" class="cat-card">
+                <img src="~/images/Categorias_slider/Traje_de_bano.png" asp-append-version="true"
+                     class="cat-img" alt="Trajes de baño" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Trajes de Baño</span>
             </a>
         </div>
-        <!-- Conjuntos -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Conjuntos" class="cat-card">
-                <img src="~/images/Categorias_slider/conjuntos.png" class="cat-img" alt="Conjuntos" loading="lazy" />
+                <img src="~/images/Categorias_slider/conjuntos.png" asp-append-version="true"
+                     class="cat-img" alt="Conjuntos" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Conjuntos</span>
             </a>
         </div>
-        <!-- Vestidos -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Vestidos" class="cat-card">
-                <img src="~/images/Categorias_slider/vestidos.png" class="cat-img" alt="Vestidos" loading="lazy" />
+                <img src="~/images/Categorias_slider/vestidos.png" asp-append-version="true"
+                     class="cat-img" alt="Vestidos" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Vestidos</span>
             </a>
         </div>
-        <!-- Faldas -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Faldas" class="cat-card">
-                <img src="~/images/Categorias_slider/faldas.png" class="cat-img" alt="Faldas" loading="lazy" />
+                <img src="~/images/Categorias_slider/faldas.png" asp-append-version="true"
+                     class="cat-img" alt="Faldas" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Faldas</span>
             </a>
         </div>
-        <!-- Pantalones -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Pantalones" class="cat-card">
-                <img src="~/images/Categorias_slider/Pantalones.png" class="cat-img" alt="Pantalones" loading="lazy" />
+                <img src="~/images/Categorias_slider/Pantalones.png" asp-append-version="true"
+                     class="cat-img" alt="Pantalones" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Pantalones</span>
             </a>
         </div>
-        <!-- Jeans -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Jeans" class="cat-card">
-                <img src="~/images/Categorias_slider/Jeans.png" class="cat-img" alt="Jeans" loading="lazy" />
+                <img src="~/images/Categorias_slider/Jeans.png" asp-append-version="true"
+                     class="cat-img" alt="Jeans" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Jeans</span>
             </a>
         </div>
-        <!-- Bolsas -->
+
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
             <a asp-controller="Categorias" asp-action="Bolsas" class="cat-card">
-                <img src="~/images/Categorias_slider/bolsas.png" class="cat-img" alt="Bolsas" loading="lazy" />
+                <img src="~/images/Categorias_slider/bolsas.png" asp-append-version="true"
+                     class="cat-img" alt="Bolsas" loading="lazy" decoding="async"
+                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
                 <span class="cat-title">Bolsas</span>
             </a>
         </div>
@@ -145,7 +170,8 @@
                     <article class="card product-card h-100 border-0 shadow-sm">
                         <div class="position-relative">
                             <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID">
-                                <img src="@(string.IsNullOrWhiteSpace(producto.ImagenPath) ? "/images/Categorias_slider/ver_todo.png" : producto.ImagenPath)"
+                                <img src="@(string.IsNullOrWhiteSpace(producto.ImagenPath) ? Url.Content("~/images/Categorias_slider/ver_todo.png") : producto.ImagenPath)"
+                                     asp-append-version="true"
                                      alt="@producto.Nombre"
                                      class="card-img-top product-img"
                                      loading="lazy" decoding="async"
@@ -173,20 +199,17 @@
 
 <!-- Estilos -->
 <style>
-    /* Razor necesita @@ para imprimir @@keyframes */
+    /* Razor: usa @@ para literales CSS at-rules */
     @@keyframes fadeIn {
-        from
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
 
-    {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     .banner-img {
@@ -236,5 +259,19 @@
 
     .product-card:hover {
         box-shadow: 0 10px 28px rgba(0,0,0,.12);
+    }
+
+    /* Respeta usuarios con “reduced motion” */
+    @@media (prefers-reduced-motion: reduce) {
+        .banner-img
+
+    {
+        filter: brightness(75%);
+    }
+
+    .cat-card, .product-card {
+        transition: none;
+    }
+
     }
 </style>

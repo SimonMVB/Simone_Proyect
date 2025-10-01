@@ -1,0 +1,102 @@
+@model Simone.ViewModels.Devoluciones.CrearDevolucionVM
+@using System.Globalization
+@{
+    ViewData["Title"] = "Reportar / Devolver";
+    var culture = new CultureInfo("es-EC");
+}
+<div class="container mt-3">
+    <div class="col-lg-10 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <i class="fa-solid fa-flag me-2"></i> Reportar / Solicitar Devolución — Venta #@Model.VentaId
+            </div>
+
+            <div class="card-body">
+                <form asp-action="Crear" method="post" class="needs-validation" novalidate>
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" asp-for="VentaId" />
+                    <input type="hidden" asp-for="ReturnUrl" />
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label d-block"><strong>Motivo</strong></label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" asp-for="Motivo" value="devolucion" id="m1" checked>
+                            <label class="form-check-label" for="m1">Devolución</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" asp-for="Motivo" value="deposito_falso" id="m2">
+                            <label class="form-check-label" for="m2">Depósito falso</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" asp-for="Motivo" value="otro" id="m3">
+                            <label class="form-check-label" for="m3">Otro</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Detalle / Nota (opcional)</strong></label>
+                        <textarea asp-for="Nota" rows="3" class="form-control" placeholder="Explica brevemente el problema..."></textarea>
+                        <span class="text-danger" asp-validation-for="Nota"></span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-end">Vendido</th>
+                                    <th class="text-end">Devuelto</th>
+                                    <th class="text-end">Máx. devolver</th>
+                                    <th class="text-end" style="width:160px">Devolver ahora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < Model.Lineas.Count; i++)
+                                {
+                                    <tr>
+                                        <td>@Model.Lineas[i].Producto</td>
+                                        <td class="text-end">@Model.Lineas[i].CantidadVendida</td>
+                                        <td class="text-end">@Model.Lineas[i].CantidadDevueltaAcumulada</td>
+                                        <td class="text-end">@Model.Lineas[i].CantidadMaxDevolucion</td>
+                                        <td class="text-end">
+                                            <input type="hidden" asp-for="Lineas[i].DetalleVentaID" />
+                                            <input type="number" class="form-control form-control-sm text-end"
+                                                   asp-for="Lineas[i].CantidadADevolver"
+                                                   min="0"
+                                                   max="@Model.Lineas[i].CantidadMaxDevolucion" />
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="alert alert-warning small">
+                        Se registrará una <strong>Devolución</strong> por cada línea con cantidad &gt; 0 y se <strong>repondrá el stock</strong>.
+                        Si el total devuelto alcanza el total vendido, la venta quedará como <em>cancelado</em>.
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        @if (!string.IsNullOrWhiteSpace(Model.ReturnUrl) && Url.IsLocalUrl(Model.ReturnUrl))
+                        {
+                            <a href="@Model.ReturnUrl" class="btn btn-outline-secondary">Cancelar</a>
+                        }
+                        else
+                        {
+                            <a asp-controller="MisCompras" asp-action="Index" class="btn btn-outline-secondary">Cancelar</a>
+                        }
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fa-solid fa-rotate-left me-1"></i> Confirmar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

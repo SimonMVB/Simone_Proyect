@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
@@ -10,6 +11,11 @@ namespace Simone.Models
         // -------- Perfil / contacto --------
         [Required, StringLength(100)]
         public string NombreCompleto { get; set; } = string.Empty;
+
+        // Cédula del usuario (10 dígitos Ecuador)
+        [Column(TypeName = "nvarchar(10)")]
+        [StringLength(10)]
+        public string? Cedula { get; set; }
 
         // Identity ya tiene PhoneNumber; este campo es opcional para tu UI
         [Phone, StringLength(20)]
@@ -40,10 +46,10 @@ namespace Simone.Models
         [StringLength(200)]
         public string? Referencia { get; set; }
 
-        [StringLength(150)]                 // ← SQL: NVARCHAR(150)
+        [StringLength(150)] // NVARCHAR(150)
         public string? NombreContactoEnvio { get; set; }
 
-        [StringLength(1000)]               // ← SQL: NVARCHAR(1000)
+        [StringLength(1000)] // NVARCHAR(1000)
         public string? InstruccionesEnvio { get; set; }
 
         // -------- Pago por depósito / transferencia --------
@@ -54,11 +60,7 @@ namespace Simone.Models
         public string? FotoComprobanteDeposito { get; set; }
 
         // -------- Relaciones existentes --------
-        public virtual ICollection<ActividadUsuario> Actividades { get; set; }
-            = new HashSet<ActividadUsuario>();
-
-        public virtual ICollection<LogIniciosSesion> LogsInicioSesion { get; set; }
-            = new HashSet<LogIniciosSesion>();
-
+        public virtual ICollection<ActividadUsuario> Actividades { get; set; } = new HashSet<ActividadUsuario>();
+        public virtual ICollection<LogIniciosSesion> LogsInicioSesion { get; set; } = new HashSet<LogIniciosSesion>();
     }
 }

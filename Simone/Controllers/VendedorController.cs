@@ -16,10 +16,10 @@ namespace Simone.Controllers
 
         private readonly UserManager<Usuario> _userManager;
         private readonly RoleManager<Roles> _roleManager;
-        private readonly ILogger<AdminController> _logger;
+        private readonly ILogger<BancoCuenta> _logger;
         private readonly TiendaDbContext _context;
 
-        public VendedorController(UserManager<Usuario> userManager, RoleManager<Roles> roleManager, ILogger<AdminController> logger, TiendaDbContext context)
+        public VendedorController(UserManager<Usuario> userManager, RoleManager<Roles> roleManager, ILogger<BancoCuenta> logger, TiendaDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;

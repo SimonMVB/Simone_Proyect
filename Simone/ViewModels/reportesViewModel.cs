@@ -1,14 +1,16 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 
 namespace Simone.ViewModels.Reportes
 {
-    /// <summary>Resumen para la lista (compradores/ventas).</summary>
+    // =======================
+    //  Resumen para listados
+    // =======================
     public sealed class CompradorResumenVM
     {
         public int VentaID { get; set; }
 
-        /// <summary>Id del usuario (AspNetUsers.Id).</summary>
+        /// Id del usuario (AspNetUsers.Id)
         public string UsuarioId { get; set; } = string.Empty;
 
         public string Nombre { get; set; } = "(sin usuario)";
@@ -19,58 +21,38 @@ namespace Simone.ViewModels.Reportes
         public string Estado { get; set; } = string.Empty;
         public string MetodoPago { get; set; } = string.Empty;
 
-        // Si tu entidad usa decimal? proyecta con GetValueOrDefault() o ?? 0m
+        /// Total de la venta (si en la proyecci√≥n el origen es decimal?, usa ?? 0m)
         public decimal Total { get; set; }
 
-        /// <summary>URL de foto de perfil (AspNetUsers.FotoPerfil).</summary>
+        /// URL de foto de perfil (AspNetUsers.FotoPerfil)
         public string? FotoPerfil { get; set; }
     }
 
-    /// <summary>Õtem (lÌnea) de la venta.</summary>
+    // =======================
+    //  √çtem de detalle
+    // =======================
+    public sealed class DetalleVentaVM
+    {
+        public string Producto { get; set; } = string.Empty;
+        public int Cantidad { get; set; }
+        /// Si el origen es decimal?, proyecta con ?? 0m
+        public decimal Subtotal { get; set; }
+    }
+
+    /// <summary>
+    /// Compatibilidad: nombre hist√≥rico usado en el proyecto.
+    /// Se mantiene como tipo propio con la misma forma (sin herencia).
+    /// </summary>
     public sealed class DetalleFilaVM
     {
         public string Producto { get; set; } = string.Empty;
         public int Cantidad { get; set; }
-
-        // Igual que arriba: si tu Subtotal viene como decimal?, proyecta con ?? 0m.
         public decimal Subtotal { get; set; }
     }
 
-    /// <summary>Detalle completo de la venta + persona + envÌo + pago.</summary>
-    public sealed class VentaDetalleVM
-    {
-        // Pago / depÛsito (desde Usuario)
-        public string? Banco { get; set; }
-        public string? Depositante { get; set; }
-        public string? ComprobanteUrl { get; set; }
-
-        // Fallback desde perfil Identity (cuando no hay direcciÛn histÛrica)
-        public string? PerfilCiudad { get; set; }
-        public string? PerfilProvincia { get; set; }
-        public string? PerfilReferencia { get; set; }
-
-        // Datos de la venta
-        public int VentaID { get; set; }
-        public DateTime Fecha { get; set; }
-        public string Estado { get; set; } = string.Empty;
-        public string MetodoPago { get; set; } = string.Empty;
-        public decimal Total { get; set; }
-
-        // Persona (centralizada en Usuario)
-        public string UsuarioId { get; set; } = string.Empty;
-        public string Nombre { get; set; } = "(sin usuario)";
-        public string? Email { get; set; }
-        public string? Telefono { get; set; }
-        public string? Direccion { get; set; }
-
-        // EnvÌo (direcciones a mostrar)
-        public List<DireccionVM> Direcciones { get; set; } = new();
-
-        // Productos vendidos en esa venta
-        public List<DetalleFilaVM> Detalles { get; set; } = new();
-    }
-
-    /// <summary>DirecciÛn del usuario para mostrar en reportes.</summary>
+    // =======================
+    //  Direcci√≥n para reportes
+    // =======================
     public sealed class DireccionVM
     {
         public string? Calle { get; set; }
@@ -79,5 +61,50 @@ namespace Simone.ViewModels.Reportes
         public string? CodigoPostal { get; set; }
         public string? TelefonoContacto { get; set; }
         public DateTime FechaRegistro { get; set; }
+    }
+
+    // =======================
+    //  Detalle completo
+    // =======================
+    public sealed class VentaDetalleVM
+    {
+        // ---- Datos de la venta
+        public int VentaID { get; set; }
+        public DateTime Fecha { get; set; }
+        public string Estado { get; set; } = string.Empty;
+        public string MetodoPago { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+
+        // ---- Persona (usuario)
+        public string UsuarioId { get; set; } = string.Empty;
+        public string Nombre { get; set; } = "(sin usuario)";
+        public string? Email { get; set; }
+        public string? Telefono { get; set; }
+        public string? Cedula { get; set; }         // ‚Üê a√±adida
+        public string? Direccion { get; set; }
+        public string? FotoPerfil { get; set; }
+
+        // ---- Env√≠o (perfil como fallback)
+        public List<DireccionVM> Direcciones { get; set; } = new();
+        public string? PerfilCiudad { get; set; }
+        public string? PerfilProvincia { get; set; }
+        public string? PerfilReferencia { get; set; }
+
+        // ---- Pago / dep√≥sito
+        public string? Banco { get; set; }
+        public string? Depositante { get; set; }
+        public string? ComprobanteUrl { get; set; }
+
+        public bool TieneComprobante =>
+            !string.IsNullOrWhiteSpace(ComprobanteUrl);
+
+        public bool EsPagoPorTransferencia =>
+            !string.IsNullOrWhiteSpace(MetodoPago) &&
+            (MetodoPago.Contains("trans", StringComparison.OrdinalIgnoreCase) ||
+             MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase) ||
+             MetodoPago.Contains("transfer", StringComparison.OrdinalIgnoreCase));
+
+        // ---- Detalle de productos
+        public List<DetalleVentaVM> Detalles { get; set; } = new();
     }
 }
