@@ -1,12 +1,22 @@
 [
   {
-    "Codigo": "guayaquil",
-    "Nombre": "Banco Guayaquil",
-    "Numero": "220328124421",
-    "Tipo": "Cuenta de Ahorros",
-    "Titular": "Martin Buena\u00F1o",
-    "Ruc": "0001293138122",
-    "LogoPath": "/images/Bancos/guayaquil.png",
-    "Activo": false
+    "codigo": "pichincha",
+    "nombre": "Banco Pichincha",
+    "numero": "220328124421",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "Martin Buena\u00F1o",
+    "ruc": "0001293138122",
+    "logoPath": "/images/Bancos/pichincha.webp",
+    "activo": true
+  },
+  {
+    "codigo": "guayaquil",
+    "nombre": "Banco Guayaquil",
+    "numero": "2131213123123",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "karina buena\u00F1o",
+    "ruc": "1202389123",
+    "logoPath": "/images/Bancos/Guayaquil.png",
+    "activo": true
   }
 ]

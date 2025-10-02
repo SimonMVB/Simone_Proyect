@@ -3,8 +3,6 @@
 @{
     ViewData["Title"] = "Detalles del Producto";
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
-
-    // fallback imagen
     string Img(string? src) => string.IsNullOrWhiteSpace(src) ? Url.Content("~/images/Productos/default.jpg") : src!;
 }
 
@@ -26,6 +24,7 @@
 </nav>
 
 <div class="container pb-5" itemscope itemtype="https://schema.org/Product">
+    <meta itemprop="sku" content="@Model.ProductoID" />
     <div class="row g-4">
         <!-- Galería -->
         <div class="col-lg-6">
@@ -48,12 +47,12 @@
                         }
                     </div>
 
-                    <!-- miniaturas (si solo tienes una imagen, repetimos como placeholder) -->
+                    <!-- miniaturas -->
                     <div class="d-flex gap-2 mt-3">
-                        <button type="button" class="thumb active" data-src="@Img(Model.ImagenPath)">
+                        <button type="button" class="thumb active" data-src="@Img(Model.ImagenPath)" aria-label="Vista principal">
                             <img src="@Img(Model.ImagenPath)" alt="Miniatura" />
                         </button>
-                        <!-- Si en el futuro agregas más, duplica botones .thumb con data-src -->
+                        @* Si en el futuro agregas más imágenes, duplica <button class="thumb" data-src="..."> *@
                     </div>
                 </div>
             </div>
@@ -82,10 +81,12 @@
                         </span>
                     </div>
 
-                    <div class="d-flex align-items-center gap-3 mb-3">
-                        <div class="display-6 fw-bold text-primary m-0" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
-                            <span itemprop="priceCurrency" content="USD" class="d-none">USD</span>
-                            <span itemprop="price">@Model.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture)</span><span class="fs-5 ms-1">USD</span>
+                    <div class="d-flex align-items-center gap-3 mb-3" itemprop="offers" itemscope itemtype="https://schema.org/Offer">
+                        <meta itemprop="priceCurrency" content="USD" />
+                        <link itemprop="availability" href="https://schema.org/@(Model.Stock > 0 ? "InStock" : "OutOfStock")" />
+                        <div class="display-6 fw-bold text-primary m-0">
+                            <span itemprop="price">@Model.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture)</span>
+                            <span class="fs-5 ms-1">USD</span>
                         </div>
                         <span class="badge @(Model.Stock > 0 ? "text-bg-success" : "text-bg-secondary")">
                             @(Model.Stock > 0 ? "En stock" : "Sin stock")
@@ -98,13 +99,13 @@
                     }
 
                     <div class="d-flex align-items-center gap-3 mb-3">
-                        <!-- selector cantidad -->
+                        <!-- selector cantidad (el visible NO se llama 'Cantidad') -->
                         <div class="input-group input-group-sm quantity" style="width:160px;">
                             <button class="btn btn-outline-secondary" type="button" id="btnMinus" aria-label="Disminuir cantidad">
                                 <i class="fa-solid fa-minus"></i>
                             </button>
-                            <input id="Cantidad" name="Cantidad" type="number" class="form-control text-center"
-                                   min="1" max="@(Model.Stock > 0 ? Model.Stock : 1)" value="1" />
+                            <input id="Cantidad" name="CantidadInput" type="number" class="form-control text-center"
+                                   min="1" max="@(Model.Stock > 0 ? Model.Stock : 1)" value="1" inputmode="numeric" />
                             <button class="btn btn-outline-secondary" type="button" id="btnPlus" aria-label="Aumentar cantidad">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
@@ -113,7 +114,7 @@
                         <!-- favoritos -->
                         <form method="post" action="/Favoritos/Toggle/@Model.ProductoID" class="m-0" id="favForm">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <button type="submit" class="btn btn-outline-danger btn-sm" aria-live="polite">
                                 <i class="fa-regular fa-heart me-1"></i> Favorito
                             </button>
                         </form>
@@ -132,7 +133,7 @@
                     </div>
 
                     <!-- Añadir al carrito (AJAX) -->
-                    <form id="formAdd" asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="mt-2">
+                    <form id="formAdd" asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="mt-2" novalidate>
                         @Html.AntiForgeryToken()
                         <input type="hidden" name="ProductoID" value="@Model.ProductoID" />
                         <input type="hidden" name="Cantidad" id="CantidadHidden" value="1" />
@@ -144,7 +145,7 @@
                         }
                         else
                         {
-                            <button class="btn btn-secondary btn-lg w-100" type="button" disabled>
+                            <button class="btn btn-secondary btn-lg w-100" type="button" disabled aria-disabled="true">
                                 <i class="fa-solid fa-ban me-2"></i>Sin stock
                             </button>
                         }
@@ -188,7 +189,7 @@
         </div>
     </div>
 
-    <!-- Relacionados (opcional: usa ViewBag.Relacionados como IEnumerable<Producto>) -->
+    @* Relacionados *@
     @if (ViewBag.Relacionados is IEnumerable<Simone.Models.Producto> rel && rel.Any())
     {
         <div class="mt-5">
@@ -215,7 +216,7 @@
     }
 </div>
 
-<!-- Toast simple -->
+<!-- Toasts -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080;">
     <div id="toastOk" class="toast align-items-center text-bg-success border-0" role="status" aria-live="polite" aria-atomic="true">
         <div class="d-flex">
@@ -276,97 +277,148 @@
 
 @section Scripts {
     <script>
+
+        async function updateCartBadge(){
+          // intenta primero con Compras (tu CartInfo que funciona en catálogo)
+          async function getInfo(url){
+            const r = await fetch(url, { credentials:'same-origin' });
+            if (!r.ok) throw new Error('x');
+            return r.json();
+          }
+          try{
+            var d = await getInfo('/Compras/CartInfo');
+          }catch{
+            try{ d = await getInfo('/Carrito/CartInfo'); }catch{ d = { count: null, subtotal: null }; }
+          }
+          // admite ambos IDs (según tu layout)
+          const countEl = document.getElementById('cartCount') || document.getElementById('cart-count');
+          const totalEl = document.getElementById('cartTotal') || document.getElementById('cart-total');
+          if (countEl && d.count != null)   countEl.textContent = d.count;
+          if (totalEl && d.subtotal != null) totalEl.textContent =
+            new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'}).format(d.subtotal);
+        }
+
+
         (() => {
-            const $ = s => document.querySelector(s);
+          const $ = s => document.querySelector(s);
 
-            // thumbs
-            document.querySelectorAll('.thumb').forEach(t => {
-                t.addEventListener('click', () => {
-                    document.querySelectorAll('.thumb').forEach(x => x.classList.remove('active'));
-                    t.classList.add('active');
-                    const src = t.getAttribute('data-src');
-                    if (src) $('#mainImg').src = src;
-                });
+          // thumbs
+          document.querySelectorAll('.thumb').forEach(t => {
+            t.type = 'button';
+            t.addEventListener('click', () => {
+              document.querySelectorAll('.thumb').forEach(x => x.classList.remove('active'));
+              t.classList.add('active');
+              const src = t.getAttribute('data-src');
+              if (src) $('#mainImg').src = src;
             });
+          });
 
-            // cantidad stepper
-            const input = $('#Cantidad');
-            const hidden = $('#CantidadHidden');
-            const stockMax = parseInt(input?.getAttribute('max') || '1', 10);
+          // cantidad stepper (visible no se postea; se copia al hidden Cantidad)
+          const input  = $('#Cantidad');
+          const hidden = $('#CantidadHidden');
+          const stockMax = parseInt(input?.getAttribute('max') || '1', 10);
+          const clamp = (v) => Math.min(Math.max(v, 1), stockMax);
 
-            const sync = () => {
-                let val = parseInt(input.value || '1', 10);
-                if (isNaN(val) || val < 1) val = 1;
-                if (val > stockMax) val = stockMax;
-                input.value = val;
-                hidden.value = val;
-            };
-            $('#btnMinus')?.addEventListener('click', () => { input.value = (parseInt(input.value||'1',10) - 1); sync(); });
-            $('#btnPlus')?.addEventListener('click',  () => { input.value = (parseInt(input.value||'1',10) + 1); sync(); });
-            input?.addEventListener('change', sync);
-            sync();
+          const sync = () => {
+            let val = parseInt(input.value || '1', 10);
+            if (isNaN(val)) val = 1;
+            val = clamp(val);
+            input.value = val;
+            hidden.value = val; // este es el que viaja al server (name="Cantidad")
+          };
 
-            // compartir
-            $('#btnShare')?.addEventListener('click', async () => {
-                const data = { title: document.title, text: '@Model?.Nombre', url: location.href };
-                if (navigator.share) { try { await navigator.share(data); } catch {} }
-                else { await navigator.clipboard.writeText(location.href); alert('Enlace copiado'); }
-            });
+          $('#btnMinus')?.addEventListener('click', () => { input.value = clamp((parseInt(input.value||'1',10) - 1)); sync(); });
+          $('#btnPlus') ?.addEventListener('click', () => { input.value = clamp((parseInt(input.value||'1',10) + 1)); sync(); });
+          input?.addEventListener('change', sync);
+          sync();
 
-            // toggle favorito (opcional: sin recargar)
-            const favForm = $('#favForm');
-            favForm?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                try{
-                    const res = await fetch(favForm.action, { method:'POST', body: new FormData(favForm), headers:{'X-Requested-With':'XMLHttpRequest'} });
-                    if(res.ok){
-                        const btn = favForm.querySelector('button');
-                        const ic  = btn.querySelector('i');
-                        btn.classList.toggle('btn-outline-danger');
-                        btn.classList.toggle('btn-danger');
-                        ic.classList.toggle('fa-regular');
-                        ic.classList.toggle('fa-solid');
-                    }else{
-                        alert('No se pudo actualizar favoritos.');
-                    }
-                }catch{ alert('Error de red.'); }
-            });
+          // compartir
+          $('#btnShare')?.addEventListener('click', async () => {
+            const data = { title: document.title, text: '@Model?.Nombre', url: location.href };
+            if (navigator.share) { try { await navigator.share(data); } catch {} }
+            else { await navigator.clipboard.writeText(location.href); alert('Enlace copiado'); }
+          });
 
-            // añadir al carrito (AJAX usa tu AnadirAlCarrito que ya devuelve JSON)
-            const form = $('#formAdd');
-            const btn  = $('#btnAdd');
-            form?.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                if (!btn) return form.submit(); // fallback
-                btn.disabled = true; const prev = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Agregando...';
-                try{
-                    const res = await fetch(form.action, { method:'POST', body: new FormData(form), headers:{'X-Requested-With':'XMLHttpRequest'} });
-                    const data = res.ok ? await res.json() : null;
-                    if (data && data.ok){
-                        showToast('#toastOk');
-                        // si quieres, actualiza contador del carrito en tu layout con data.count
-                        // document.getElementById('cartCount')?.textContent = data.count;
-                    }else{
-                        const msg = (data && data.error) ? data.error : 'No se pudo añadir.';
-                        $('#toastErrMsg').textContent = msg;
-                        showToast('#toastErr');
-                    }
-                }catch{
-                    $('#toastErrMsg').textContent = 'Error de red.';
-                    showToast('#toastErr');
-                }finally{
-                    btn.disabled = false; btn.innerHTML = prev;
-                }
-            });
+          // favoritos (AJAX opcional)
+          const favForm = $('#favForm');
+          favForm?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try{
+              const res = await fetch(favForm.action, { method:'POST', body: new FormData(favForm), headers:{'X-Requested-With':'XMLHttpRequest'}, credentials:'same-origin' });
+              if(res.ok){
+                const btn = favForm.querySelector('button');
+                const ic  = btn.querySelector('i');
+                btn.classList.toggle('btn-outline-danger');
+                btn.classList.toggle('btn-danger');
+                ic.classList.toggle('fa-regular');
+                ic.classList.toggle('fa-solid');
+              }else{
+                alert('No se pudo actualizar favoritos.');
+              }
+            }catch{ alert('Error de red.'); }
+          });
 
-            function showToast(sel){
-                try{
-                    const el = document.querySelector(sel);
-                    const t  = bootstrap.Toast.getOrCreateInstance(el);
-                    t.show();
-                }catch{ /* sin bootstrap */ }
+          // helpers carrito
+          async function refreshCartInfo(){
+            try{
+              const res = await fetch('/Compras/CartInfo', { credentials:'same-origin' });
+              if(!res.ok) return;
+              const d = await res.json();
+              const countEl = document.getElementById('cart-count');
+              const totalEl = document.getElementById('cart-total');
+              if (countEl) countEl.textContent = d.count ?? 0;
+              if (totalEl) totalEl.textContent =
+                new Intl.NumberFormat('es-EC', { style:'currency', currency:'USD' }).format(d.subtotal ?? 0);
+            }catch{}
+          }
+          function showToast(sel){
+            try{
+              const el = document.querySelector(sel);
+              const t  = bootstrap.Toast.getOrCreateInstance(el);
+              t.show();
+            }catch{}
+          }
+
+          // añadir al carrito vía Compras/AnadirAlCarrito
+          const form = $('#formAdd');
+          const btn  = $('#btnAdd');
+          form?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!btn) return form.submit(); // fallback
+            btn.disabled = true; const prev = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Agregando...';
+            try{
+              const res = await fetch(form.action, {
+                method:'POST',
+                body: new FormData(form),
+                headers:{ 'X-Requested-With':'XMLHttpRequest' },
+                credentials:'same-origin'
+              });
+              const data = res.ok ? await res.json() : null;
+              if (data?.needLogin){
+                // si el server pide login, redirige a login o muestra modal (elige tu UX)
+                location.href = '/Cuenta/Login';
+                return;
+              }
+              if (data && data.ok){
+                showToast('#toastOk');
+                await updateCartBadge();
+                await refreshCartInfo(); // <-- actualiza el widget
+              }else{
+                const msg = (data && data.error) ? data.error : 'No se pudo añadir.';
+                $('#toastErrMsg').textContent = msg;
+                showToast('#toastErr');
+              }
+            }catch{
+              $('#toastErrMsg').textContent = 'Error de red.';
+              showToast('#toastErr');
+            }finally{
+              btn.disabled = false; btn.innerHTML = prev;
             }
+          });
+
+          // (opcional) sincroniza el widget al cargar
+          document.addEventListener('DOMContentLoaded', refreshCartInfo);
         })();
     </script>
 }

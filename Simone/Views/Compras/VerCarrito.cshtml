@@ -2,12 +2,12 @@
 @{
     ViewData["Title"] = "Carrito de Compras";
     var totalCarrito = Model.Sum(x => x.Total);
-    decimal descuento = ViewBag.Descuento ?? 0;
+    decimal descuento = ViewBag.Descuento ?? 0m;
     string codigoCupon = ViewBag.CodigoCupon ?? "";
-    var totalConDescuento = totalCarrito - descuento;
+    var totalConDescuento = Math.Max(0m, totalCarrito - descuento);
 }
 
-<div class="ui container mt-5">
+<div class="ui container mt-5" id="cart-root" data-descuento="@descuento" data-cod="@codigoCupon">
     <h2 class="ui header">
         <i class="shopping cart icon"></i>
         <div class="content">
@@ -20,7 +20,12 @@
 
     @if (Model.Any())
     {
-        <table class="ui celled striped table">
+        <!-- token global para AJAX -->
+        <form id="af-global" class="d-none" method="post">
+            @Html.AntiForgeryToken()
+        </form>
+
+        <table class="ui celled striped table" id="cart-table">
             <thead>
                 <tr>
                     <th>Producto</th>
@@ -33,25 +38,22 @@
             <tbody>
                 @foreach (var item in Model)
                 {
-                    <tr>
-                        <td>@item.Producto.Nombre</td>
+                    <tr data-row data-id="@item.ProductoID">
+                        <td>@item.Producto?.Nombre</td>
                         <td>
-                            <form method="post" asp-action="ActualizarCarrito" class="ui form">
-                                <div class="ui action input">
-                                    <input type="hidden" name="productoId" value="@item.ProductoID" />
-                                    <input type="number" name="cantidad" min="1" value="@item.Cantidad" style="width:80px" />
-                                    <button type="submit" class="ui icon blue button" title="Actualizar">
-                                        <i class="sync alternate icon"></i>
-                                    </button>
-                                </div>
-                            </form>
+                            <div class="ui action input">
+                                <input type="number" data-qty min="1" value="@item.Cantidad" style="width:80px" />
+                                <button type="button" class="ui icon blue button" data-update title="Actualizar" aria-label="Actualizar cantidad">
+                                    <i class="sync alternate icon"></i>
+                                </button>
+                            </div>
                         </td>
-                        <td>$@item.Precio.ToString("F2")</td>
-                        <td>$@item.Total.ToString("F2")</td>
+                        <td>$<span data-price>@item.Precio.ToString("F2")</span></td>
+                        <td>$<span data-subtotal>@item.Total.ToString("F2")</span></td>
                         <td>
-                            <a href="@Url.Action("EliminarDelCarrito", "Carrito", new { productoId = item.ProductoID })" class="ui red icon button" title="Eliminar">
+                            <button type="button" class="ui red icon button" data-remove title="Eliminar">
                                 <i class="trash icon"></i>
-                            </a>
+                            </button>
                         </td>
                     </tr>
                 }
@@ -59,31 +61,26 @@
             <tfoot>
                 <tr>
                     <th colspan="3" class="right aligned">Subtotal:</th>
-                    <th colspan="2">$@totalCarrito.ToString("F2")</th>
+                    <th colspan="2">$<span id="ft-subtotal">@totalCarrito.ToString("F2")</span></th>
                 </tr>
 
-                @if (descuento > 0)
-                {
-                    <tr class="warning">
-                        <th colspan="3" class="right aligned">
-                            Cupón aplicado (@codigoCupon):
-                        </th>
-                        <th colspan="2" class="negative">- $@descuento.ToString("F2")</th>
-                    </tr>
-                    <tr>
-                        <th colspan="5" class="right aligned">
-                            <form method="post" asp-action="QuitarCupon" style="display:inline;">
-                                <button class="ui tiny button red">
-                                    <i class="close icon"></i> Quitar Cupón
-                                </button>
-                            </form>
-                        </th>
-                    </tr>
-                }
+                <tr id="ft-cupon-row" class="@(descuento > 0 ? "" : "d-none")">
+                    <th colspan="3" class="right aligned">
+                        Cupón aplicado (<span id="ft-cupon-cod">@codigoCupon</span>):
+                    </th>
+                    <th colspan="2" class="negative">- $<span id="ft-desc">@descuento.ToString("F2")</span></th>
+                </tr>
+                <tr id="ft-cupon-actions" class="@(descuento > 0 ? "" : "d-none")">
+                    <th colspan="5" class="right aligned">
+                        <button type="button" class="ui tiny button red" id="btn-remove-coupon">
+                            <i class="close icon"></i> Quitar Cupón
+                        </button>
+                    </th>
+                </tr>
 
                 <tr>
                     <th colspan="3" class="right aligned">Total a Pagar:</th>
-                    <th colspan="2"><strong>$@totalConDescuento.ToString("F2")</strong></th>
+                    <th colspan="2"><strong>$<span id="ft-total">@totalConDescuento.ToString("F2")</span></strong></th>
                 </tr>
             </tfoot>
         </table>
@@ -92,33 +89,22 @@
 
         <div class="ui two column stackable grid">
             <div class="column">
-                <form method="post" asp-action="AplicarCupon" class="ui form">
+                <div class="ui form">
                     <div class="field">
                         <label>¿Tienes un código de cupón?</label>
                         <div class="ui action input">
-                            <input type="text" name="codigoCupon" placeholder="Ingresa tu cupón..." />
-                            <button type="submit" class="ui teal button">Aplicar</button>
+                            <input type="text" id="coupon-input" placeholder="Ingresa tu cupón..." value="@(descuento > 0 ? codigoCupon : "")" />
+                            <button type="button" class="ui teal button" id="btn-apply-coupon">Aplicar</button>
                         </div>
                     </div>
-                </form>
+                </div>
 
-                @if (TempData["CuponAplicado"] != null)
-                {
-                    <div class="ui green message">
-                        <i class="check icon"></i> @TempData["CuponAplicado"]
-                    </div>
-                }
-
-                @if (TempData["CuponError"] != null)
-                {
-                    <div class="ui red message">
-                        <i class="times icon"></i> @TempData["CuponError"]
-                    </div>
-                }
+                <div id="coupon-msg" class="ui hidden message"></div>
             </div>
 
             <div class="right aligned column">
-                <form asp-action="ConfirmarCompra" method="post">
+                <form asp-controller="Carrito" asp-action="ConfirmarCompra" method="post">
+                    @Html.AntiForgeryToken()
                     <button class="ui green huge button">
                         <i class="check icon"></i> Confirmar Compra
                     </button>
@@ -137,3 +123,167 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+          const $ = (s, root=document) => root.querySelector(s);
+          const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+          const root     = $('#cart-root');
+          if (!root) return;
+
+          // ===== util =====
+          const fmt = (n) => (Number(n||0)).toFixed(2);
+          const token = () => $('#af-global input[name="__RequestVerificationToken"]')?.value;
+
+          async function refreshWidget(){
+            try{
+              const r = await fetch('/Carrito/CartInfo', { credentials:'same-origin' });
+              if(!r.ok) return;
+              const d = await r.json();
+              const countEl = document.getElementById('cart-count');
+              const totalEl = document.getElementById('cart-total');
+              if (countEl) countEl.textContent = d.count ?? 0;
+              if (totalEl) totalEl.textContent =
+                new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'}).format(d.subtotal ?? 0);
+            }catch{}
+          }
+
+          function recomputeFooterFromDom(){
+            // Suma todos los subtotales visibles en la tabla
+            const sum = $$('#cart-table [data-subtotal]').reduce((acc,el)=>acc + Number(el.textContent||0), 0);
+            $('#ft-subtotal').textContent = fmt(sum);
+
+            const desc  = Number(root.dataset.descuento || 0);
+            const total = Math.max(0, sum - desc);
+            $('#ft-total').textContent = fmt(total);
+
+            // Mostrar/ocultar filas de cupón
+            const hasCoupon = desc > 0;
+            $('#ft-cupon-row')?.classList.toggle('d-none', !hasCoupon);
+            $('#ft-cupon-actions')?.classList.toggle('d-none', !hasCoupon);
+          }
+
+          function showCouponMsg(ok, msg){
+            const box = $('#coupon-msg');
+            if (!box) return;
+            box.className = 'ui message ' + (ok ? 'green' : 'red');
+            box.innerHTML = `<i class="${ok?'check':'times'} icon"></i> ${msg}`;
+          }
+
+          // ===== actualizar cantidad =====
+          document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-update]');
+            if (!btn) return;
+
+            const row = btn.closest('[data-row]');
+            const id  = row?.dataset.id;
+            const qty = Number($('[data-qty]', row).value || 1);
+            if (!id || !qty) return;
+
+            const fd = new FormData();
+            fd.append('productoId', id);
+            fd.append('cantidad', qty);
+            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
+
+            const r = await fetch('/Carrito/ActualizarCarrito', {
+              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
+            });
+            const data = r.ok ? await r.json() : null;
+
+            if (data?.ok){
+              // actualizar subtotal fila y pie
+              $('[data-subtotal]', row).textContent = fmt(data.subtotal);
+              recomputeFooterFromDom();
+              refreshWidget();
+            }else{
+              alert(data?.error || 'No se pudo actualizar la cantidad.');
+            }
+          });
+
+          // ===== eliminar artículo =====
+          document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('[data-remove]');
+            if (!btn) return;
+
+            const row = btn.closest('[data-row]');
+            const id  = row?.dataset.id;
+            if (!id) return;
+
+            const fd = new FormData();
+            fd.append('productoId', id);
+            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
+
+            const r = await fetch('/Carrito/EliminarDelCarrito', {
+              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
+            });
+            const data = r.ok ? await r.json() : null;
+
+            if (data?.ok){
+              row.remove();
+              // Si no quedan filas, recarga suave a la misma vista para mostrar el estado vacío
+              if ($$('#cart-table tbody tr').length === 0) {
+                location.reload();
+                return;
+              }
+              recomputeFooterFromDom();
+              refreshWidget();
+            }else{
+              alert(data?.error || 'No se pudo eliminar el artículo.');
+            }
+          });
+
+          // ===== aplicar cupón =====
+          $('#btn-apply-coupon')?.addEventListener('click', async () => {
+            const code = $('#coupon-input')?.value?.trim();
+            if (!code) return;
+
+            const fd = new FormData();
+            fd.append('codigoCupon', code);
+            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
+
+            const r = await fetch('/Carrito/AplicarCupon', {
+              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
+            });
+            const data = r.ok ? await r.json() : null;
+
+            if (data?.ok){
+              // Actualiza descuento y código
+              root.dataset.descuento = data.descuento ?? 0;
+              $('#ft-desc').textContent = fmt(data.descuento ?? 0);
+              $('#ft-cupon-cod').textContent = data.codigo ?? '';
+              showCouponMsg(true, `Cupón aplicado: ${data.codigo}.`);
+              recomputeFooterFromDom();
+            }else{
+              showCouponMsg(false, data?.error || 'Cupón inválido o expirado.');
+              // reset visual si estaba aplicado
+              root.dataset.descuento = 0;
+              $('#ft-desc').textContent = fmt(0);
+              $('#ft-cupon-cod').textContent = '';
+              recomputeFooterFromDom();
+            }
+          });
+
+          // ===== quitar cupón =====
+          $('#btn-remove-coupon')?.addEventListener('click', async () => {
+            const fd = new FormData();
+            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
+
+            const r = await fetch('/Carrito/QuitarCupon', {
+              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
+            });
+            const data = r.ok ? await r.json() : null;
+
+            // En nuestro controller siempre devuelve {ok:true} por AJAX
+            root.dataset.descuento = 0;
+            $('#ft-desc').textContent = fmt(0);
+            $('#ft-cupon-cod').textContent = '';
+            showCouponMsg(true, 'Cupón eliminado.');
+            recomputeFooterFromDom();
+          });
+
+          // Recalcula al cargar (por si hay cupon aplicado desde el server)
+          recomputeFooterFromDom();
+        })();
+    </script>
+}

@@ -209,6 +209,25 @@ namespace Simone.Controllers
             return RedirectToReferrerOr("Catalogo");
         }
 
+        // Mini resumen del carrito (HTML) para refrescar el panel por AJAX
+        [HttpGet]
+        [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Mini(CancellationToken ct = default)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return PartialView("_CartPartial", Enumerable.Empty<CarritoDetalle>());
+
+            var carrito = await _carrito.GetByClienteIdAsync(user.Id);
+            var detalles = carrito == null
+                ? Enumerable.Empty<CarritoDetalle>()
+                : await _carrito.LoadCartDetails(carrito.CarritoID);
+
+            return PartialView("_CartPartial", detalles);
+        }
+
+
+
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> ActualizarCantidad(int carritoDetalleID, int cantidad, CancellationToken ct = default)
         {

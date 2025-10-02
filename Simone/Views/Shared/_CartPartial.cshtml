@@ -1,66 +1,81 @@
 ﻿@model IEnumerable<Simone.Models.CarritoDetalle>
+@using System.Globalization
+@{
+    var culture = CultureInfo.CreateSpecificCulture("es-EC");
+    string Img(string? src) => string.IsNullOrWhiteSpace(src)
+        ? Url.Content("~/images/Productos/default.jpg")
+        : src!;
+    decimal total = Model?.Sum(x => x.Precio * x.Cantidad) ?? 0m;
+}
 
-<div class="cart-partial">
+<div id="mini-cart" class="cart-partial">
     <h5 class="mb-3">Mis artículos</h5>
     <hr />
+
     @if (Model == null || !Model.Any())
     {
-        <div class="alert alert-info" role="alert">
+        <div class="alert alert-info mb-0" role="alert">
             No tienes artículos en tu carrito.
         </div>
     }
     else
     {
+        <!-- token global reutilizable para AJAX -->
+        <form id="mini-cart-af" class="d-none" method="post">@Html.AntiForgeryToken()</form>
+
         <ul class="list-group">
             @foreach (var item in Model)
-{
-    <li class="list-group-item">
-        <div class="row align-items-center">
-            <!-- Columna para la imagen (si tienes la propiedad "Imagen") -->
-            <div class="col-3">
-                <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.Producto.ProductoID">
-                    <img src="@item.Producto.ImagenPath"
-                         alt="@item.Producto.Nombre"
-                         class="img-fluid"
-                         onerror="this.src='/images/Productos/default.jpg';" />
-                </a>
-            </div>
-            <!-- Columna con detalles del producto -->
-            <div class="col-6">
-                <!-- Producto nombre es ahora un enlace -->
-                <h6 class="mb-1">
-                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.Producto.ProductoID" class="text-decoration-none">
-                        @item.Producto.Nombre
-                    </a>
-                </h6>
-                <p class="mb-1"><small>Cantidad: @item.Cantidad</small></p>
-                <p class="mb-1"><small>Precio: @item.Precio.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</small></p>
-            </div>
-            <!-- Columna con total y botón de acción -->
-            <div class="col-3 text-end">
-                <p class="mb-1 fw-bold">@item.Total.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</p>
-                <form asp-controller="Compras" asp-action="EliminarArticulo" method="post">
-                    <input type="hidden" name="carritoDetalleID" value="@item.CarritoDetalleID" />
-                    <button type="submit" class="btn btn-sm btn-danger remove-item" title="Eliminar artículo">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </li>
-}
+            {
+                var p = item.Producto;
+                <li class="list-group-item" data-row data-id="@item.ProductoID" data-det-id="@item.CarritoDetalleID">
+                    <div class="row align-items-center g-2">
+                        <!-- Imagen -->
+                        <div class="col-3">
+                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID">
+                                <img src="@Img(p?.ImagenPath)"
+                                     alt="@p?.Nombre"
+                                     class="img-fluid rounded"
+                                     onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+                            </a>
+                        </div>
+
+                        <!-- Detalles -->
+                        <div class="col-6">
+                            <h6 class="mb-1 text-truncate">
+                                <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID" class="text-decoration-none">
+                                    @(p?.Nombre ?? "Producto")
+                                </a>
+                            </h6>
+                            <div class="small text-muted">Cantidad: <span data-qty>@item.Cantidad</span></div>
+                            <div class="small">Precio: @item.Precio.ToString("C", culture)</div>
+                        </div>
+
+                        <!-- Total y acciones -->
+                        <div class="col-3 text-end">
+                            <div class="mb-2 fw-semibold" data-subtotal>
+                                @((item.Precio * item.Cantidad).ToString("C", culture))
+                            </div>
+
+                            <!-- Fallback clásico (si no hay JS) -->
+                            <form asp-controller="Compras" asp-action="EliminarArticulo" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="carritoDetalleID" value="@item.CarritoDetalleID" />
+                                <button type="submit" class="btn btn-sm btn-danger" title="Eliminar artículo">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+            }
         </ul>
 
-        <!-- Total general del carrito -->
+        <!-- Total general -->
         <div class="mt-3 text-end">
-            @{
-                decimal totalCompra = Model.Sum(x => x.Total);
-            }
-            <h5>Total: @totalCompra.ToString("C", CultureInfo.CreateSpecificCulture("en-US"))</h5>
+            <h5 class="mb-0">Total: <span id="mini-cart-total">@total.ToString("C", culture)</span></h5>
         </div>
 
-        <!-- "Comprar Ahora" Button (Only visible if user is logged in and cart has items) -->
-        @if (User.Identity.IsAuthenticated && Model.Any())
+        @if (User?.Identity?.IsAuthenticated == true)
         {
             <a href="@Url.Action("Resumen", "Compras")" class="btn btn-lg btn-success w-100 mt-3">
                 <i class="fa fa-shopping-cart me-2"></i> Comprar Ahora

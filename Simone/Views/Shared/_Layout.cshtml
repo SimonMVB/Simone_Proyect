@@ -12,7 +12,7 @@
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- FontAwesome (único) -->
+    <!-- FontAwesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
     <!-- Swiper + Animate -->
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
@@ -23,7 +23,11 @@
 
     <style>
         :root {
+            /* Layout */
             --nav-h: 68px;
+            --z-navbar: 1100;
+            --z-overlay: 1080;
+            /* Tema base */
             --simone-bg: #000;
             --simone-fg: #fff;
             --simone-accent: #0d6efd;
@@ -36,58 +40,55 @@
         }
 
         html {
-            scroll-padding-top: var(--nav-h); /* Para que los anchors respeten el navbar fijo */
+            scroll-padding-top: var(--nav-h);
         }
 
         body {
-            padding-top: var(--nav-h); /* Compensa la altura del navbar fijo */
-            overflow-x: hidden; /* Previene scroll horizontal */
+            padding-top: var(--nav-h);
+            overflow-x: hidden;
+            background-color: #f8f9fa;
         }
 
         main {
             padding-top: 8px;
-            position: relative; /* Establece un contexto de apilamiento */
-            z-index: 1; /* Por debajo del navbar */
+            position: relative;
+            z-index: 1;
         }
 
             main.container {
                 min-height: 60vh;
             }
 
-        /* =========================================================
-                     NAVBAR + DROPDOWN (encima de TODO - CORREGIDO)
-                     ========================================================= */
+        /* ================= NAVBAR + DROPDOWN ================= */
         header, .navbar, .nav-snowglitter {
-            position: fixed; /* Cambiado de sticky a fixed para mejor control */
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
             width: 100%;
-            z-index: 9999; /* Valor alto pero no extremo */
+            z-index: var(--z-navbar);
         }
 
         .navbar {
             min-height: var(--nav-h);
         }
 
-            /* IMPORTANTE: Asegurar que el contenedor del dropdown tenga overflow visible */
             .navbar .nav-item.dropdown {
-                position: static; /* Permite que el dropdown se extienda más allá */
+                position: static;
             }
 
             .navbar .dropdown-menu {
                 position: absolute;
                 left: auto;
                 right: 0;
-                top: 100%; /* Se despliega justo debajo del navbar */
-                z-index: 10000; /* Mayor que el navbar */
+                top: 100%;
+                z-index: calc(var(--z-navbar) + 1);
                 border-radius: 12px;
                 padding: 8px 0;
                 box-shadow: 0 12px 28px rgba(0,0,0,.12);
-                margin-top: 0; /* Elimina cualquier espacio no deseado */
+                margin-top: 0;
             }
 
-                /* Para dropdowns que necesitan alineación izquierda */
                 .navbar .dropdown-menu.dropdown-menu-start {
                     left: 0;
                     right: auto;
@@ -109,10 +110,9 @@
                 text-align: center;
             }
 
-        /* Brillo del navbar */
         .nav-snowglitter {
             position: relative;
-            overflow: visible; /* IMPORTANTE: Permite que el dropdown se muestre */
+            overflow: visible;
             background: var(--simone-bg);
         }
 
@@ -130,16 +130,13 @@
             }
 
         @@keyframes glitterFall {
-            0%
+            0% {
+                background-position: 0 0, 0 0, 0 0;
+            }
 
-        {
-            background-position: 0 0, 0 0, 0 0;
-        }
-
-        100% {
-            background-position: 0 1000px, 0 800px, 0 600px;
-        }
-
+            100% {
+                background-position: 0 1000px, 0 800px, 0 600px;
+            }
         }
 
         .nav-snowglitter > * {
@@ -152,20 +149,16 @@
             color: var(--simone-fg) !important;
         }
 
-        /* =========================================================
-                     HERO / CAROUSEL (ajustado para navbar fixed)
-                     ========================================================= */
+        /* ============== HERO / CAROUSEL ajuste navbar ============== */
         .carousel, .carousel-inner, .swiper, .swiper-wrapper {
             overflow: visible;
             z-index: 1;
         }
 
-            /* Empuja cualquier caption/overlay un poquito hacia abajo */
             .carousel .carousel-caption {
                 margin-top: 14px;
             }
 
-                /* Quita el redondeo superior del overlay que chocaba con el navbar */
                 .carousel .carousel-caption > .rounded,
                 .carousel .carousel-caption > .rounded-4,
                 .hero .overlay, .banner .overlay,
@@ -174,15 +167,12 @@
                     border-top-right-radius: 0 !important;
                 }
 
-        /* Por si algún hero/overlay trae z-index alto inline */
         .hero, .banner, .carousel {
             position: relative;
             z-index: 1 !important;
         }
 
-        /* =========================================================
-                     SIDEBAR CATEGORÍAS
-                     ========================================================= */
+        /* ===================== SIDEBAR CATEGORÍAS ===================== */
         #sidebar {
             position: fixed;
             top: 0;
@@ -193,10 +183,10 @@
             color: #fff;
             transform: translateX(-100%);
             transition: transform .3s ease;
-            z-index: 9998; /* Por debajo del navbar */
+            z-index: var(--z-overlay);
             padding: 1.25rem;
             box-shadow: 0 8px 24px rgba(0,0,0,.35);
-            margin-top: var(--nav-h); /* Respeta el espacio del navbar */
+            margin-top: var(--nav-h);
         }
 
             #sidebar.show {
@@ -271,9 +261,7 @@
             transform: translate(0);
         }
 
-        /* =========================================================
-                     PANEL CARRITO (derecha)
-                     ========================================================= */
+        /* ====================== PANEL CARRITO ====================== */
         #cartPanel {
             position: fixed;
             top: 0;
@@ -282,9 +270,9 @@
             height: 100vh;
             background: #fff;
             transition: right .3s ease;
-            z-index: 9998; /* Por debajo del navbar */
+            z-index: var(--z-overlay);
             box-shadow: -8px 0 24px rgba(0,0,0,.1);
-            margin-top: var(--nav-h); /* Respeta el espacio del navbar */
+            margin-top: var(--nav-h);
         }
 
             #cartPanel.show {
@@ -306,9 +294,7 @@
             right: -10px;
         }
 
-        /* =========================================================
-                     FOOTER – Redes
-                     ========================================================= */
+        /* ====================== FOOTER – Redes ====================== */
         .wrapper {
             display: inline-flex;
             list-style: none;
@@ -362,35 +348,27 @@
                 opacity: 1;
             }
 
-            .wrapper .facebook:hover,
-            .wrapper .facebook:hover .tooltip,
-            .wrapper .facebook:hover .tooltip::before {
+            .wrapper .facebook:hover, .wrapper .facebook:hover .tooltip, .wrapper .facebook:hover .tooltip::before {
                 background: #1877f2;
                 color: #fff;
             }
 
-            .wrapper .twitter:hover,
-            .wrapper .twitter:hover .tooltip,
-            .wrapper .twitter:hover .tooltip::before {
+            .wrapper .twitter:hover, .wrapper .twitter:hover .tooltip, .wrapper .twitter:hover .tooltip::before {
                 background: #1da1f2;
                 color: #fff;
             }
 
-            .wrapper .instagram:hover,
-            .wrapper .instagram:hover .tooltip,
-            .wrapper .instagram:hover .tooltip::before {
+            .wrapper .instagram:hover, .wrapper .instagram:hover .tooltip, .wrapper .instagram:hover .tooltip::before {
                 background: #e4405f;
                 color: #fff;
             }
 
-            .wrapper .tiktok:hover,
-            .wrapper .tiktok:hover .tooltip,
-            .wrapper .tiktok:hover .tooltip::before {
+            .wrapper .tiktok:hover, .wrapper .tiktok:hover .tooltip, .wrapper .tiktok:hover .tooltip::before {
                 background: #000;
                 color: #fff;
             }
 
-        /* Insignia de versión (sin chocar con .badge de Bootstrap) */
+        /* Insignia de versión */
         .version-badge {
             display: inline-block;
             position: relative;
@@ -416,8 +394,7 @@
                 filter: blur(.5px);
             }
 
-                .version-badge span:before,
-                .version-badge span:after {
+                .version-badge span:before, .version-badge span:after {
                     content: "";
                     position: absolute;
                 }
@@ -437,24 +414,20 @@
                 }
 
         @@keyframes rotate {
-            0%
+            0% {
+                transform: rotate(0) scale(1);
+            }
 
-        {
-            transform: rotate(0) scale(1);
+            50% {
+                transform: rotate(180deg) scale(1.8);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
         }
 
-        50% {
-            transform: rotate(180deg) scale(1.8);
-        }
-
-        100% {
-            transform: rotate(360deg) scale(1);
-        }
-
-        }
-
-        .version-badge:hover span:after,
-        .version-badge:hover span:before {
+        .version-badge:hover span:after, .version-badge:hover span:before {
             animation: rotate 3s ease-in-out;
         }
 
@@ -471,11 +444,10 @@
             right: 30px;
             padding-bottom: 2em;
             cursor: pointer;
-            z-index: 9997; /* Por debajo del navbar pero encima del contenido */
+            z-index: calc(var(--z-overlay) - 1);
         }
 
-            .back-to-top > div,
-            .back-to-top > svg {
+            .back-to-top > div, .back-to-top > svg {
                 position: absolute;
                 width: 100%;
                 height: 100%;
@@ -500,8 +472,7 @@
                 transform-origin: bottom left;
             }
 
-            .back-to-top .clone > *,
-            .back-to-top .text > * {
+            .back-to-top .clone > *, .back-to-top .text > * {
                 opacity: 1;
                 font-size: 1.3rem;
                 transition: .2s;
@@ -546,44 +517,82 @@
                 transform: translateY(-50%) rotate(-90deg);
             }
 
-        /* Accesibilidad: respeta usuarios con motion reducido */
+        /* Motion reducido */
         @@media (prefers-reduced-motion: reduce) {
-            .back-to-top:before, .button:hover .button__icon-svg:first-child, .button:hover .button__icon-svg--copy, .version-badge:hover span:after, .version-badge:hover span:before
-
-        {
-            transition: none !important;
-            animation: none !important;
+            .back-to-top:before,
+            .button:hover .button__icon-svg:first-child,
+            .button:hover .button__icon-svg--copy,
+            .version-badge:hover span:after,
+            .version-badge:hover span:before,
+            .nav-snowglitter::before {
+                transition: none !important;
+                animation: none !important;
+            }
         }
 
+        /* Responsive */
+        @@media (max-width: 575.98px) {
+            #sidebar {
+                width: 85vw;
+            }
+
+            #cartPanel {
+                width: 100vw;
+                right: -100vw;
+            }
+
+                #cartPanel.show {
+                    right: 0;
+                }
+
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+
+            #cart-count {
+                right: -6px;
+                top: -6px;
+            }
         }
 
-        /* Responsive adjustments */
+        @@media (min-width: 576px) and (max-width: 991.98px) {
+            #cartPanel {
+                width: 380px;
+                right: -380px;
+            }
+
+                #cartPanel.show {
+                    right: 0;
+                }
+        }
+
         @@media (max-width: 991.98px) {
-            .navbar .dropdown-menu
-
-        {
-            position: static; /* En móvil, el dropdown ocupa el ancho completo */
-            margin-top: 0.5rem;
-        }
-
+            .navbar .dropdown-menu {
+                position: static !important;
+                margin-top: .5rem;
+            }
         }
     </style>
-
-
 </head>
 
-<body class="bg-light">
+<body>
     <!-- Navbar Superior -->
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark nav-snowglitter" role="navigation" aria-label="Barra principal">
             <div class="container">
                 <!-- Botón abrir categorías -->
-                <button class="btn text-white me-2" id="open-sidebar" aria-label="Abrir menú de categorías" title="Categorías">
+                <button class="btn text-white me-2" id="open-sidebar" aria-expanded="false" aria-label="Abrir menú de categorías" title="Categorías">
                     <i class="fa-solid fa-bars"></i>
                 </button>
 
                 <!-- Logo -->
                 <a class="navbar-brand fw-bold text-white" asp-controller="Home" asp-action="Index">SIMONE</a>
+
+                <!-- Toggler para menú colapsable -->
+                <button class="navbar-toggler border-0 ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                        aria-controls="navbarNav" aria-expanded="false" aria-label="Mostrar navegación">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
                 <!-- Centro -->
                 <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
@@ -595,7 +604,7 @@
                             <form asp-controller="home" asp-action="proximamente" method="get" class="d-inline">
                                 <button type="submit" class="btn btn-ofertas text-white" aria-label="Ver ofertas">
                                     Ofertas
-                                    <!-- estrellas decorativas (SVGs) -->
+                                    <!-- estrellas decorativas -->
                                     <div class="star-1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
                                     <div class="star-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
                                     <div class="star-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
@@ -620,11 +629,11 @@
 
                     <!-- Favoritos -->
                     <a href="/Favoritos/Index" id="heart-link" class="mx-2" aria-label="Favoritos" title="Favoritos">
-                        <i id="icon" class="far fa-heart" style="font-size: 20px; color: crimson;"></i>
+                        <i id="heart-icon" class="far fa-heart" style="font-size:20px;color:crimson;"></i>
                     </a>
 
                     <!-- Carrito -->
-                    <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart" aria-label="Ver carrito" title="Carrito">
+                    <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart" aria-expanded="false" aria-label="Ver carrito" title="Carrito">
                         <i class="fa-solid fa-cart-shopping fa-lg"></i>
                         <span id="cart-count" class="position-absolute badge rounded-pill bg-danger">@cartCount</span>
                     </a>
@@ -637,10 +646,11 @@
                     {
                         var user = await UserManager.GetUserAsync(User);
                         <div class="dropdown">
-                            <a class="mx-2 dropdown-toggle d-flex align-items-center" id="userDropdown" data-bs-toggle="dropdown" data-bs-display="static" aria-expanded="false" role="button" aria-label="Menú de usuario" style="text-decoration: none;">
+                            <a class="mx-2 dropdown-toggle d-flex align-items-center" id="userDropdown" data-bs-toggle="dropdown" data-bs-display="static"
+                               aria-expanded="false" role="button" aria-label="Menú de usuario" style="text-decoration:none;">
                                 @if (!string.IsNullOrEmpty(user.FotoPerfil))
                                 {
-                                    <img src="@user.FotoPerfil" class="rounded-circle border border-light shadow-sm" style="width: 38px; height: 38px; object-fit: cover;" alt="Avatar" />
+                                    <img src="@user.FotoPerfil" class="rounded-circle border border-light shadow-sm" style="width:38px;height:38px;object-fit:cover;" alt="Avatar" />
                                 }
                                 else
                                 {
@@ -649,14 +659,11 @@
                             </a>
 
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
-                                <!-- Perfil -->
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center" asp-controller="Cuenta" asp-action="Perfil">
                                         <i class="fa-solid fa-user-circle me-2 text-primary"></i> Perfil
                                     </a>
                                 </li>
-
-                                <!-- Mis Pedidos -->
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center" asp-controller="MisCompras" asp-action="Index">
                                         <i class="fa-solid fa-box me-2 text-success"></i> Mis Pedidos
@@ -670,7 +677,6 @@
                                         }
                                     </a>
                                 </li>
-
                                 @if (!User.IsInRole("Cliente"))
                                 {
                                     <li>
@@ -679,8 +685,6 @@
                                         </a>
                                     </li>
                                 }
-
-                                <!-- Logout -->
                                 <li>
                                     <form asp-controller="Cuenta" asp-action="Logout" method="post" style="display:inline;">
                                         @Html.AntiForgeryToken()
@@ -714,7 +718,7 @@
 
         <ul class="list-unstyled sidebar-list">
             <li class="mb-2">
-                <a href="/Compras/Catalogo" class="button w-100 justify-content-between" style="--clr: #7808d0">
+                <a href="/Compras/Catalogo" class="button w-100 justify-content-between" style="--clr:#7808d0">
                     <span>Ver todo</span>
                     <span class="button__icon-wrapper">
                         <svg viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg" width="10">
@@ -766,28 +770,13 @@
             <hr class="mb-4" style="border-top: 1px solid #5c6f7f; width: 90%; margin: 0 auto;">
 
             <ul class="wrapper justify-content-center">
-                <li class="icon facebook" title="Facebook">
-                    <span class="tooltip">Facebook</span>
-                    <i class="fab fa-facebook-f"></i>
-                </li>
-                <li class="icon instagram" title="Instagram">
-                    <span class="tooltip">Instagram</span>
-                    <i class="fab fa-instagram"></i>
-                </li>
-                <li class="icon tiktok" title="TikTok">
-                    <span class="tooltip">TikTok</span>
-                    <i class="fab fa-tiktok"></i>
-                </li>
-                <li class="icon twitter" title="X">
-                    <span class="tooltip">X</span>
-                    <i class="fab fa-x-twitter"></i>
-                </li>
+                <li class="icon facebook" title="Facebook"><span class="tooltip">Facebook</span><i class="fab fa-facebook-f"></i></li>
+                <li class="icon instagram" title="Instagram"><span class="tooltip">Instagram</span><i class="fab fa-instagram"></i></li>
+                <li class="icon tiktok" title="TikTok"><span class="tooltip">TikTok</span><i class="fab fa-tiktok"></i></li>
+                <li class="icon twitter" title="X"><span class="tooltip">X</span><i class="fab fa-x-twitter"></i></li>
             </ul>
 
-            <div class="version-badge mt-2">
-                v0.1
-                <span></span>
-            </div>
+            <div class="version-badge mt-2">v0.1<span></span></div>
 
             <div class="mb-2 mt-4">
                 <strong>Simone</strong><br />
@@ -807,91 +796,222 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script defer src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 
+    <!-- Script unificado: paneles, wishlist, carrito, accesibilidad -->
     <script>
-        (function () {
-            const body = document.body;
+        (() => {
+          const qs  = (s, r=document) => r.querySelector(s);
+          const qsa = (s, r=document) => r.querySelectorAll(s);
+          const fx  = new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'});
+          const AJAX_HDRS = { 'X-Requested-With':'XMLHttpRequest' };
 
-            // Sidebar
-            const sidebar = document.getElementById("sidebar");
-            const openSidebarBtn = document.getElementById("open-sidebar");
-            const closeSidebarBtn = document.getElementById("close-sidebar");
+          /* ===== Utils ===== */
+          const setAriaExp = (btn, open) => { if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
+          const lockScroll  = (on) => {
+            document.documentElement.classList.toggle('no-scroll', on);
+            document.body.classList.toggle('no-scroll', on);
+          };
+          const firstFocusable = (root) => root?.querySelector('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
 
-            const openSidebar = (e) => { e?.stopPropagation(); sidebar.classList.add("show"); };
-            const closeSidebar = (e) => { e?.stopPropagation(); sidebar.classList.remove("show"); };
+          async function getJSON(url){
+            const r = await fetch(url, { credentials:'same-origin', headers: AJAX_HDRS });
+            if(!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          }
 
-            openSidebarBtn?.addEventListener("click", openSidebar);
-            closeSidebarBtn?.addEventListener("click", closeSidebar);
+          /* ===== Badge + total global ===== */
+          async function updateCartBadge(){
+            let d = { count:null, subtotal:null };
+            try { d = await getJSON('/Compras/CartInfo'); }
+            catch { try { d = await getJSON('/Carrito/CartInfo'); } catch {} }
 
-            // Carrito
-            const cartPanel = document.getElementById("cartPanel");
-            const openCartBtn = document.getElementById("open-cart");
-            const closeCartBtn = document.getElementById("close-cart");
+            const countEl = document.getElementById('cart-count') || document.getElementById('cartCount') || document.getElementById('nav-cart-count');
+            const totalEl = document.getElementById('cart-total') || document.getElementById('cartTotal');
+            if (countEl && d.count    != null) countEl.textContent = d.count;
+            if (totalEl && d.subtotal != null) totalEl.textContent = fx.format(d.subtotal);
+            // si tu parcial imprime <span id="mini-cart-total">, también lo actualizamos:
+            const inline = document.getElementById('mini-cart-total');
+            if (inline && d.subtotal != null) inline.textContent = fx.format(d.subtotal);
+          }
 
-            const openCart = (e) => { e?.stopPropagation(); cartPanel.classList.add("show"); };
-            const closeCart = (e) => { e?.stopPropagation(); cartPanel.classList.remove("show"); };
+          /* ===== Refrescar HTML del panel de carrito ===== */
+          async function refreshCartHtml(){
+            try{
+              const r = await fetch('/Compras/Mini', {
+                credentials: 'same-origin',
+                headers: AJAX_HDRS
+              });
+              if (!r.ok) return;
+              const html = await r.text();
+              const host = document.getElementById('cart-content'); // contenedor del partial en el panel
+              if (host) host.innerHTML = html;
+            }catch{}
+          }
 
-            openCartBtn?.addEventListener("click", openCart);
-            closeCartBtn?.addEventListener("click", closeCart);
+          /* Acción compuesta tras mutar carrito */
+          async function afterCartMutation(){
+            await updateCartBadge();
+            await refreshCartHtml();
+            try { localStorage.setItem('simone_cart_ping', String(Date.now())); } catch {}
+          }
 
-            // Cerrar paneles por click fuera
-            document.addEventListener("click", (e) => {
-                if (sidebar.classList.contains("show") && !sidebar.contains(e.target) && !openSidebarBtn.contains(e.target)) {
-                    sidebar.classList.remove("show");
-                }
-                if (cartPanel.classList.contains("show") && !cartPanel.contains(e.target) && !openCartBtn.contains(e.target)) {
-                    cartPanel.classList.remove("show");
-                }
-            });
+          /* ===== Paneles (sidebar / carrito) ===== */
+          const sidebar = qs('#sidebar');
+          const cart    = qs('#cartPanel');
+          const btnOpenSidebar = qs('#open-sidebar');
+          const btnCloseSidebar = qs('#close-sidebar');
+          const btnOpenCart = qs('#open-cart');
+          const btnCloseCart = qs('#close-cart');
 
-            // Cerrar con ESC
-            document.addEventListener("keydown", (e) => {
-                if (e.key === "Escape") {
-                    sidebar.classList.remove("show");
-                    cartPanel.classList.remove("show");
-                }
-            });
+          function togglePanel(panel, open, triggerBtn){
+            if (!panel) return;
+            panel.classList.toggle('show', open);
+            setAriaExp(triggerBtn, open);
+            lockScroll(open);
+            if (open) firstFocusable(panel)?.focus();
+            else triggerBtn?.focus();
+          }
 
-            // Wishlist AJAX (si la vista contiene formularios .wishlist-form)
-            document.querySelectorAll('.wishlist-form').forEach(form => {
-                form.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    const formData = new FormData(this);
-                    const btn = this.querySelector('button');
-                    const icon = btn?.querySelector('i');
+          btnOpenSidebar?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); togglePanel(sidebar, true, btnOpenSidebar); });
+          btnCloseSidebar?.addEventListener('click', (e)=>{ e.preventDefault(); togglePanel(sidebar, false, btnOpenSidebar); });
 
-                    fetch(this.action, { method: 'POST', body: formData })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (!icon) return;
-                            if (data.esFavorito) {
-                                icon.classList.remove('far');
-                                icon.classList.add('fas');
-                                btn.title = "Eliminar de favoritos";
-                            } else {
-                                icon.classList.remove('fas');
-                                icon.classList.add('far');
-                                btn.title = "Añadir a favoritos";
-                            }
-                        })
-                        .catch(err => console.error("Error en favoritos:", err));
-                });
-            });
+          btnOpenCart?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); togglePanel(cart, true, btnOpenCart); });
+          btnCloseCart?.addEventListener('click', (e)=>{ e.preventDefault(); togglePanel(cart, false, btnOpenCart); });
 
-            // Back to top
-            window.scrollToTop = function () {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+          // Cerrar por click fuera
+          document.addEventListener('click', (e) => {
+            const t = e.target;
+            if (sidebar?.classList.contains('show') && !sidebar.contains(t) && !(btnOpenSidebar && btnOpenSidebar.contains(t))) {
+              togglePanel(sidebar, false, btnOpenSidebar);
             }
+            if (cart?.classList.contains('show') && !cart.contains(t) && !(btnOpenCart && btnOpenCart.contains(t))) {
+              togglePanel(cart, false, btnOpenCart);
+            }
+          });
+
+          // Cerrar con ESC
+          document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (sidebar?.classList.contains('show')) togglePanel(sidebar, false, btnOpenSidebar);
+            if (cart?.classList.contains('show')) togglePanel(cart, false, btnOpenCart);
+          });
+
+          /* ===== Delegación: wishlist + add-to-cart + eliminar mini ===== */
+          document.addEventListener('submit', async (e) => {
+            const form = e.target;
+            if (!(form instanceof HTMLFormElement)) return;
+
+            // Token anti-forgery si existe
+            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            const commonHeaders = { ...AJAX_HDRS };
+            if (token) commonHeaders['RequestVerificationToken'] = token;
+
+            // Wishlist
+            if (form.matches('.wishlist-form')) {
+              e.preventDefault();
+              try{
+                const res = await fetch(form.action, { method:'POST', body:new FormData(form), credentials:'same-origin', headers: commonHeaders });
+                const data = res.ok ? await res.json() : null;
+                const btn = form.querySelector('button');
+                const ic  = btn?.querySelector('i');
+                if (data?.esFavorito && ic && btn){
+                  ic.classList.remove('far'); ic.classList.add('fas');
+                  btn.title = 'Eliminar de favoritos'; btn.classList.add('active');
+                }else if (ic && btn){
+                  ic.classList.remove('fas'); ic.classList.add('far');
+                  btn.title = 'Añadir a favoritos'; btn.classList.remove('active');
+                }
+              }catch(err){ console.error('Error en favoritos:', err); }
+              return;
+            }
+
+            // (3.2) Añadir al carrito (unificado)
+            if (form.matches('[data-add-to-cart], #formAdd, form[action$="/Compras/AnadirAlCarrito"]')) {
+              e.preventDefault();
+              const btn = form.querySelector('[data-role="add-btn"], button[type="submit"]');
+              const prevHTML = btn?.innerHTML;
+              if (btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Agregando...'; }
+              try{
+                const res  = await fetch(form.action, { method:'POST', body:new FormData(form), credentials:'same-origin', headers: commonHeaders });
+                const data = res.ok ? await res.json() : null;
+                if (data?.needLogin){ location.href = '/Cuenta/Login'; return; }
+                if (!data?.ok) throw new Error(data?.error || 'No se pudo añadir.');
+                const toastEl = qs('#toastOk');
+                if (toastEl && window.bootstrap) bootstrap.Toast.getOrCreateInstance(toastEl).show();
+                await afterCartMutation(); // <<--- refresca badge + panel
+                // togglePanel(cart, true, btnOpenCart); // (opcional) abre el panel al añadir
+              }catch(err){
+                console.error(err);
+                const msgEl = qs('#toastErrMsg');
+                if (msgEl) msgEl.textContent = err.message || 'Error de red.';
+                const toastErr = qs('#toastErr');
+                if (toastErr && window.bootstrap) bootstrap.Toast.getOrCreateInstance(toastErr).show();
+              }finally{
+                if (btn){ btn.disabled = false; btn.innerHTML = prevHTML; }
+              }
+              return;
+            }
+
+            // (3.3) Eliminar/actualizar desde el mini-panel (acciones del panel derecho)
+            if (form.matches('#cartPanel form[action$="/Compras/EliminarArticulo"], #cartPanel form[action$="/Compras/ActualizarCantidad"]')) {
+              e.preventDefault();
+
+              const fd = new FormData(form);
+              const tokenHidden = document.querySelector('#mini-cart-af input[name="__RequestVerificationToken"]')?.value
+                               || form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+              if (tokenHidden && !fd.has('__RequestVerificationToken')) {
+                fd.append('__RequestVerificationToken', tokenHidden);
+              }
+
+              try{
+                const res = await fetch(form.action, { method:'POST', body: fd, credentials:'same-origin', headers: AJAX_HDRS });
+                const data = res.ok ? await res.json() : null;
+                if (!data?.ok && !res.ok) throw new Error(data?.error || 'Operación no realizada.');
+                await afterCartMutation();
+              }catch(err){
+                console.error(err);
+                alert(err.message || 'No se pudo completar la operación.');
+              }
+              return;
+            }
+          });
+
+          // Fallback por click en el botón de borrar del mini (por si el navegador no dispara submit)
+          document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('#cartPanel [data-role="mini-remove"]');
+            if (!btn) return;
+            const form = btn.closest('form');
+            if (!form) return;
+            e.preventDefault();
+            const fd = new FormData(form);
+            const tokenHidden = document.querySelector('#mini-cart-af input[name="__RequestVerificationToken"]')?.value
+                             || form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+            if (tokenHidden && !fd.has('__RequestVerificationToken')) {
+              fd.append('__RequestVerificationToken', tokenHidden);
+            }
+            await fetch(form.action, { method:'POST', body: fd, credentials:'same-origin', headers: AJAX_HDRS }).catch(()=>{});
+            await afterCartMutation();
+          });
+
+          /* (3.4) Sincroniza al cargar / volver de background */
+          document.addEventListener('DOMContentLoaded', () => {
+            updateCartBadge();
+            // refreshCartHtml(); // descomenta si quieres que el panel siempre se repinte al cargar
+          });
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden){ updateCartBadge(); /* refreshCartHtml(); */ }
+          });
+          window.addEventListener('focus', () => { updateCartBadge(); });
+
+          /* Exponer si alguna vista lo llama explícitamente */
+          window.SimoneCart = { updateCartBadge, refreshCartHtml };
         })();
     </script>
 
+
     <!-- Botón flotante Back to Top -->
     <button class="back-to-top" onclick="scrollToTop()" aria-label="Volver arriba" title="Volver arriba">
-        <div class="text">
-            <span>Back</span><span>to</span><span>top</span>
-        </div>
-        <div class="clone">
-            <span>Back</span><span>to</span><span>top</span>
-        </div>
+        <div class="text"><span>Back</span><span>to</span><span>top</span></div>
+        <div class="clone"><span>Back</span><span>to</span><span>top</span></div>
         <svg stroke-width="2" stroke="currentColor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20">
             <path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linejoin="round" stroke-linecap="round" />
         </svg>

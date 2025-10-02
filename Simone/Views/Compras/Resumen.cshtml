@@ -23,7 +23,7 @@
     bool esMulti = ((bool?)ViewBag.EsMultiVendedor == true);
     string vendedorIdUnico = ViewBag.VendedorIdUnico as string ?? "";
 
-    // Cuentas dinámicas (SOLO activas)
+    // Cuentas (solo activas)
     var cuentasProv = (ViewBag.CuentasProveedor as IEnumerable<SimoneCfg.CuentaBancaria> ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>())
                         .Where(c => c?.Activo == true)
                         .ToList();
@@ -31,31 +31,22 @@
                         .Where(c => c?.Activo == true)
                         .ToList();
 
-    // ¿Hay cuentas disponibles para este escenario?
-    bool hayCuentas = esMulti ? cuentasAdmin.Any() : cuentasProv.Any();
-    int numCtas = esMulti ? cuentasAdmin.Count : cuentasProv.Count;
+    bool fallbackAdmin = (ViewBag.FallbackAdmin as bool?) ?? false;
 
-    // Diccionario para JS (admin:{codigo} / tienda:{vendedorId}:{codigo})
+    // ✅ En multi: admin; en mono: vendedor si hay; si no hay → admin.
+    bool hayProv = cuentasProv.Any();
+    bool hayAdm = cuentasAdmin.Any();
+    bool hayCuentas = esMulti ? hayAdm : (hayProv || hayAdm);
+
+    // Para auto-selección si hay 1 sola opción real.
+    int numCtas = esMulti
+        ? cuentasAdmin.Count
+        : (hayProv ? cuentasProv.Count : cuentasAdmin.Count);
+
+    // Diccionario para JS (lo que REALMENTE se muestra)
     var bankItems = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-    if (!esMulti && !string.IsNullOrWhiteSpace(vendedorIdUnico))
-    {
-        foreach (var c in cuentasProv)
-        {
-            var key = $"tienda:{vendedorIdUnico}:{c.Codigo}";
-            bankItems[key] = new
-            {
-                scope = "tienda",
-                codigo = c.Codigo,
-                nombre = c.Nombre,
-                numero = c.Numero,
-                tipo = c.Tipo,
-                titular = c.Titular,
-                ruc = c.Ruc,
-                logo = string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/bank-placeholder.png" : c.LogoPath
-            };
-        }
-    }
-    else
+
+    if (esMulti || (!hayProv && hayAdm))
     {
         foreach (var c in cuentasAdmin)
         {
@@ -69,11 +60,32 @@
                 tipo = c.Tipo,
                 titular = c.Titular,
                 ruc = c.Ruc,
-                logo = string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/bank-placeholder.png" : c.LogoPath
+                logo = string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/Bancos/pichincha.webp" : c.LogoPath
             };
         }
     }
+    else
+    {
+        foreach (var c in cuentasProv)
+        {
+            var key = $"tienda:{vendedorIdUnico}:{c.Codigo}";
+            bankItems[key] = new
+            {
+                scope = "tienda",
+                codigo = c.Codigo,
+                nombre = c.Nombre,
+                numero = c.Numero,
+                tipo = c.Tipo,
+                titular = c.Titular,
+                ruc = c.Ruc,
+                logo = string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/Bancos/pichincha.webp" : c.LogoPath
+            };
+        }
+    }
+
     var bankItemsJson = JsonSerializer.Serialize(bankItems);
+
+
 }
 
 <!DOCTYPE html>
@@ -371,11 +383,27 @@
                                                 <div class="col-md-6 mb-3">
                                                     <div class="bank-card" data-bank="@dataVal" tabindex="0" role="button" aria-label="@c.Nombre">
                                                         <div class="d-flex align-items-center">
-                                                            <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/bank-placeholder.png" : c.LogoPath)" alt="@c.Nombre" class="bank-logo">
-                                                            <div>
-                                                                <h6 class="mb-0">@c.Nombre</h6>
-                                                                <small class="text-muted">@c.Tipo · @c.Numero</small>
-                                                            </div>
+                                                            <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/bank-placeholder.png" : c.LogoPath)" class="bank-logo" alt="@c.Nombre">
+                                                            <div><h6 class="mb-0">@c.Nombre</h6><small class="text-muted">@c.Tipo · @c.Numero</small></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else if (cuentasAdmin.Any())
+                                        {
+                                            <div class="col-12">
+                                                <div class="alert alert-info">La tienda no tiene cuentas configuradas. Mostrando <strong>cuentas del administrador</strong>.</div>
+                                            </div>
+
+                                            @foreach (var c in cuentasAdmin)
+                                            {
+                                                var dataVal = $"admin:{c.Codigo}";
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="bank-card" data-bank="@dataVal" tabindex="0" role="button" aria-label="@c.Nombre">
+                                                        <div class="d-flex align-items-center">
+                                                            <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/bank-placeholder.png" : c.LogoPath)" class="bank-logo" alt="@c.Nombre">
+                                                            <div><h6 class="mb-0">@c.Nombre</h6><small class="text-muted">@c.Tipo · @c.Numero</small></div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -383,13 +411,10 @@
                                         }
                                         else
                                         {
-                                            <div class="col-12">
-                                                <div class="alert alert-warning">
-                                                    La tienda no tiene cuentas configuradas.
-                                                </div>
-                                            </div>
+                                            <div class="col-12"><div class="alert alert-warning">No hay cuentas disponibles.</div></div>
                                         }
                                     }
+
                                 </div>
                             </div>
 
@@ -523,6 +548,13 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
+
+            // Autoseleccionar si hay 1 tarjeta visible
+        const cardList = Array.from(document.querySelectorAll('.bank-card'));
+        if (cardList.length === 1) {
+          cardList[0].click();
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             const esMultiVendedor = @((esMulti ? "true" : "false"));
             const bankMap = @Html.Raw(bankItemsJson); // { "admin:codigo": {...}, "tienda:vId:codigo": {...} }

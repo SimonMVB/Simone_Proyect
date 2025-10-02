@@ -6,12 +6,13 @@
     bool esVendedor = User.IsInRole("Vendedor");
 
     var catalogo = new[]{
-        new { Codigo="pichincha",   Nombre="Banco Pichincha",      Logo="/images/Bancos/pichincha.png" },
-        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",      Logo="/images/Bancos/guayaquil.png" },
-        new { Codigo="pacifico",    Nombre="Banco del Pacífico",   Logo="/images/Bancos/pacifico.png" },
-        new { Codigo="bolivariano", Nombre="Banco Bolivariano",    Logo="/images/Bancos/bolivariano.png" },
-        new { Codigo="jep",         Nombre="Cooperativa JEP",      Logo="/images/Bancos/jep.png" },
-    };
+    new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
+    new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/Guayaquil.png" },
+    new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/Pacifico.png" },
+    new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/Bolivariano.webp" },
+    new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/JEP.png" },
+};
+
 
     var modelErrors = ViewBag.ModelErrors as string;
 }
@@ -299,7 +300,7 @@
 
         function setPreview(nombre, logoPath){
             nameL.textContent = nombre || "—";
-            logo.src = (logoPath || "/images/product-placeholder.png");
+            logo.src = (logoPath || "/images/Bancos/pichincha.webp");
         }
 
         function setFromCatalog(opt){

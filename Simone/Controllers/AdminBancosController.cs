@@ -1,14 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+﻿// Simone/Models/AdminBancosController.cs
+using Microsoft.AspNetCore.Mvc;
 using Simone.Configuration;
 using Simone.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
-// using Microsoft.AspNetCore.Authorization;
 
 namespace Simone.Controllers
 {
-    // [Authorize(Roles = "Admin")]
     [Route("Admin/Bancos")]
     public class AdminBancosController : Controller
     {
@@ -24,111 +22,136 @@ namespace Simone.Controllers
         // -----------------------------
         // Helpers
         // -----------------------------
-        private static string NormKey(string? s) => (s ?? string.Empty).Trim().ToLowerInvariant();
+        private static string NormalizeKey(string? s) => (s ?? string.Empty).Trim().ToLowerInvariant();
         private static string TrimOrEmpty(string? s) => (s ?? string.Empty).Trim();
-        private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s!.Trim();
+        private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
-        private string ModelErrorsToString()
-            => string.Join("; ",
-               ModelState.Where(kv => kv.Value!.Errors.Count > 0)
-                         .Select(kv => $"{kv.Key}: {string.Join(" | ", kv.Value!.Errors.Select(e => e.ErrorMessage))}"));
+        private string GetModelErrors()
+        {
+            var errors = ModelState
+                .Where(kv => kv.Value?.Errors.Count > 0)
+                .Select(kv => $"{kv.Key}: {string.Join(" | ", kv.Value!.Errors.Select(e => e.ErrorMessage))}");
+
+            return string.Join("; ", errors);
+        }
 
         // -----------------------------
-        // Reglas de validación
+        // Validation rules
         // -----------------------------
-        private static readonly Regex CodigoRx = new(@"^[a-z0-9_-]{2,50}$", RegexOptions.Compiled);
-        private static readonly Regex NumeroRx = new(@"^[0-9]{6,20}$", RegexOptions.Compiled); // solo dígitos
-        private static readonly Regex Texto40Rx = new(@"^[^\r\n\t]{1,40}$", RegexOptions.Compiled);
-        private static readonly Regex Texto120Rx = new(@"^[^\r\n\t]{1,120}$", RegexOptions.Compiled);
-        private static readonly Regex RucRx = new(@"^\d{10}(\d{3})?$", RegexOptions.Compiled); // 10 o 13
-        private static readonly Regex LogoRx = new(@"^[A-Za-z0-9_\-\/\.]{1,200}$", RegexOptions.Compiled);
+        private static readonly Regex CodigoRegex = new(@"^[a-z0-9_-]{2,50}$", RegexOptions.Compiled);
+        private static readonly Regex NumeroCuentaRegex = new(@"^[0-9]{6,20}$", RegexOptions.Compiled);
+        private static readonly Regex Texto40Regex = new(@"^.{1,40}$", RegexOptions.Compiled);
+        private static readonly Regex Texto120Regex = new(@"^.{1,120}$", RegexOptions.Compiled);
+        private static readonly Regex RucRegex = new(@"^\d{10}(\d{3})?$", RegexOptions.Compiled);
+        private static readonly Regex LogoPathRegex = new(@"^[A-Za-z0-9_\-/\.]{1,200}$", RegexOptions.Compiled);
 
-        private (bool ok, string? msg) ValidarVM(AdminUpsertVm vm)
+        private (bool IsValid, string? ErrorMessage) ValidateViewModel(AdminUpsertVm vm)
         {
             if (string.IsNullOrWhiteSpace(vm.Codigo) || string.IsNullOrWhiteSpace(vm.Nombre))
                 return (false, "Selecciona un banco de la lista (código y nombre obligatorios).");
 
-            if (!CodigoRx.IsMatch(vm.Codigo))
-                return (false, "Código inválido. Usa minúsculas, números, '-' o '_' (2–50).");
+            if (!CodigoRegex.IsMatch(vm.Codigo))
+                return (false, "Código inválido. Usa minúsculas, números, '-' o '_' (2-50 caracteres).");
 
-            if (!Texto120Rx.IsMatch(vm.Nombre))
-                return (false, "Nombre inválido (1–120, sin saltos de línea).");
+            if (!Texto120Regex.IsMatch(vm.Nombre))
+                return (false, "Nombre inválido (máximo 120 caracteres).");
 
-            if (string.IsNullOrWhiteSpace(vm.Numero) || !NumeroRx.IsMatch(vm.Numero))
-                return (false, "Número de cuenta inválido (solo dígitos, 6–20).");
+            if (string.IsNullOrWhiteSpace(vm.Numero) || !NumeroCuentaRegex.IsMatch(vm.Numero))
+                return (false, "Número de cuenta inválido (solo dígitos, 6-20 caracteres).");
 
-            if (string.IsNullOrWhiteSpace(vm.Tipo) || !Texto40Rx.IsMatch(vm.Tipo))
+            if (string.IsNullOrWhiteSpace(vm.Tipo) || !Texto40Regex.IsMatch(vm.Tipo))
                 return (false, "Tipo de cuenta inválido.");
 
-            if (!string.IsNullOrWhiteSpace(vm.Titular) && !Texto120Rx.IsMatch(vm.Titular!))
-                return (false, "Titular inválido.");
+            if (!string.IsNullOrWhiteSpace(vm.Titular) && !Texto120Regex.IsMatch(vm.Titular))
+                return (false, "Titular inválido (máximo 120 caracteres).");
 
-            if (!string.IsNullOrWhiteSpace(vm.Ruc) && !RucRx.IsMatch(vm.Ruc!))
-                return (false, "RUC/Cédula inválido(a).");
+            if (!string.IsNullOrWhiteSpace(vm.Ruc) && !RucRegex.IsMatch(vm.Ruc))
+                return (false, "RUC/Cédula inválido (debe tener 10 o 13 dígitos).");
 
             if (!string.IsNullOrWhiteSpace(vm.LogoPath))
             {
-                if (!LogoRx.IsMatch(vm.LogoPath!) || vm.LogoPath!.Contains("..") || vm.LogoPath!.Contains("://"))
-                    return (false, "LogoPath inválido (ruta relativa, sin '..' ni protocolo).");
+                if (!LogoPathRegex.IsMatch(vm.LogoPath) || vm.LogoPath.Contains("..") || vm.LogoPath.Contains("://"))
+                    return (false, "Ruta del logo inválida (debe ser una ruta relativa válida).");
             }
+
             return (true, null);
         }
 
         // -----------------------------
-        // Vista
+        // Views
         // -----------------------------
         [HttpGet("")]
         public async Task<IActionResult> Index()
         {
             try
             {
-                var list = (await _svc.GetAdminAsync())
-                            .OrderBy(x => x.Nombre)
-                            .ThenBy(x => x.Codigo)
-                            .ToList();
-
-                ViewBag.Cuentas = list;
+                var cuentas = await _svc.GetAdminAsync();
+                ViewBag.Cuentas = cuentas.OrderBy(x => x.Nombre).ThenBy(x => x.Codigo).ToList();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cargando bancos del administrador");
+                _logger.LogError(ex, "Error cargando cuentas bancarias del administrador");
                 ViewBag.Cuentas = new List<CuentaBancaria>();
                 TempData["MensajeError"] = "No se pudieron cargar las cuentas bancarias.";
             }
 
+            // Preserve temp data for view
             ViewBag.MensajeExito = TempData["MensajeExito"];
             ViewBag.MensajeError = TempData["MensajeError"];
             ViewBag.ModelErrors = TempData["ModelErrors"];
+
             return View();
         }
 
         // -----------------------------
-        // ViewModel (evitar over-posting)
+        // ViewModel
         // -----------------------------
         public sealed class AdminUpsertVm
         {
             public string? OriginalCodigo { get; set; }
 
-            [Required, MaxLength(50)] public string Codigo { get; set; } = "";
-            [Required, MaxLength(120)] public string Nombre { get; set; } = "";
-            [Required, MaxLength(20)] public string Numero { get; set; } = "";  // 6–20
-            [Required, MaxLength(40)] public string Tipo { get; set; } = "Cuenta de Ahorros";
+            [Required(ErrorMessage = "El código es requerido")]
+            [MaxLength(50)]
+            public string Codigo { get; set; } = string.Empty;
 
-            [MaxLength(120)] public string? Titular { get; set; }
-            [MaxLength(20)] public string? Ruc { get; set; }
-            [MaxLength(200)] public string? LogoPath { get; set; }
+            [Required(ErrorMessage = "El nombre es requerido")]
+            [MaxLength(120)]
+            public string Nombre { get; set; } = string.Empty;
+
+            [Required(ErrorMessage = "El número de cuenta es requerido")]
+            [MaxLength(20)]
+            public string Numero { get; set; } = string.Empty;
+
+            [Required(ErrorMessage = "El tipo de cuenta es requerido")]
+            [MaxLength(40)]
+            public string Tipo { get; set; } = "Cuenta de Ahorros";
+
+            [MaxLength(120)]
+            public string? Titular { get; set; }
+
+            [MaxLength(20)]
+            public string? Ruc { get; set; }
+
+            [MaxLength(200)]
+            public string? LogoPath { get; set; }
 
             public bool Activo { get; set; } = true;
         }
 
         // -----------------------------
-        // Acciones
+        // Actions
         // -----------------------------
         [HttpPost("SaveAdmin")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveAdmin([FromForm] AdminUpsertVm vm)
         {
-            // 1) Normalización campos texto
+            if (vm == null)
+            {
+                TempData["MensajeError"] = "Datos del formulario inválidos.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Normalize input
             vm.OriginalCodigo = TrimOrNull(vm.OriginalCodigo);
             vm.Codigo = TrimOrEmpty(vm.Codigo).ToLowerInvariant();
             vm.Nombre = TrimOrEmpty(vm.Nombre);
@@ -138,55 +161,64 @@ namespace Simone.Controllers
             vm.Ruc = TrimOrNull(vm.Ruc);
             vm.LogoPath = TrimOrNull(vm.LogoPath);
 
-            // 2) Fix binder checkbox "Activo" (on/true/1 → true; vacío → false)
-            ModelState.Remove(nameof(AdminUpsertVm.Activo));
-            if (Request.Form.TryGetValue(nameof(AdminUpsertVm.Activo), out var av))
+            // Handle checkbox (ASP.NET Core model binding issue with checkboxes)
+            if (Request.Form.TryGetValue(nameof(AdminUpsertVm.Activo), out var activoValues) &&
+                activoValues.Count > 0 &&
+                (activoValues[0] == "true" || activoValues[0] == "on"))
             {
-                var raw = (av.FirstOrDefault() ?? "").Trim().ToLowerInvariant();
-                vm.Activo = raw is "true" or "on" or "1";
+                vm.Activo = true;
             }
-            else vm.Activo = false;
+            else
+            {
+                vm.Activo = false;
+            }
 
-            // 3) En altas, no queremos que OriginalCodigo invalide el ModelState
+            // Remove OriginalCodigo from ModelState to avoid validation issues
             ModelState.Remove(nameof(AdminUpsertVm.OriginalCodigo));
 
-            // 4) Validación por DataAnnotations
+            // Basic model validation
             if (!ModelState.IsValid)
             {
-                var errs = ModelErrorsToString();
-                _logger.LogWarning("ModelState inválido en SaveAdmin: {Errs}", errs);
-                TempData["MensajeError"] = "Datos inválidos en el formulario.";
-                TempData["ModelErrors"] = errs;
+                var errors = GetModelErrors();
+                _logger.LogWarning("ModelState inválido en SaveAdmin: {Errors}", errors);
+                TempData["MensajeError"] = "Por favor, corrige los errores en el formulario.";
+                TempData["ModelErrors"] = errors;
                 return RedirectToAction(nameof(Index));
             }
 
-            // 5) Validación adicional de negocio
-            var (ok, msg) = ValidarVM(vm);
-            if (!ok)
+            // Business logic validation
+            var validationResult = ValidateViewModel(vm);
+            if (!validationResult.IsValid)
             {
-                TempData["MensajeError"] = msg!;
-                TempData["ModelErrors"] = msg;
+                TempData["MensajeError"] = validationResult.ErrorMessage;
+                TempData["ModelErrors"] = validationResult.ErrorMessage;
                 return RedirectToAction(nameof(Index));
             }
 
             try
             {
-                var list = (await _svc.GetAdminAsync()).ToList();
-                var nkey = NormKey(vm.Codigo);
+                var cuentas = (await _svc.GetAdminAsync()).ToList();
+                var normalizedCodigo = NormalizeKey(vm.Codigo);
+                var normalizedOriginalCodigo = NormalizeKey(vm.OriginalCodigo);
 
-                bool Duplicado(string key, CuentaBancaria? except = null)
-                    => list.Any(x => !ReferenceEquals(x, except) && NormKey(x.Codigo) == key);
+                // Check for duplicates
+                bool IsDuplicate(string codigo, CuentaBancaria? exclude = null)
+                {
+                    return cuentas.Any(c =>
+                        !ReferenceEquals(c, exclude) &&
+                        NormalizeKey(c.Codigo) == codigo);
+                }
 
                 if (string.IsNullOrEmpty(vm.OriginalCodigo))
                 {
-                    // ALTA
-                    if (Duplicado(nkey))
+                    // CREATE - Check for existing code
+                    if (IsDuplicate(normalizedCodigo))
                     {
                         TempData["MensajeError"] = "Ya existe una cuenta con ese código.";
                         return RedirectToAction(nameof(Index));
                     }
 
-                    list.Add(new CuentaBancaria
+                    var nuevaCuenta = new CuentaBancaria
                     {
                         Codigo = vm.Codigo,
                         Nombre = vm.Nombre,
@@ -196,42 +228,47 @@ namespace Simone.Controllers
                         Ruc = vm.Ruc,
                         LogoPath = vm.LogoPath,
                         Activo = vm.Activo
-                    });
+                    };
+
+                    cuentas.Add(nuevaCuenta);
                 }
                 else
                 {
-                    // EDICIÓN
-                    var okey = NormKey(vm.OriginalCodigo);
-                    var target = list.FirstOrDefault(x => NormKey(x.Codigo) == okey);
-                    if (target is null)
+                    // UPDATE - Find existing account
+                    var cuentaExistente = cuentas.FirstOrDefault(c =>
+                        NormalizeKey(c.Codigo) == normalizedOriginalCodigo);
+
+                    if (cuentaExistente == null)
                     {
                         TempData["MensajeError"] = "No se encontró la cuenta original para editar.";
                         return RedirectToAction(nameof(Index));
                     }
 
-                    if (nkey != okey && Duplicado(nkey))
+                    // Check if new code conflicts with another account
+                    if (normalizedCodigo != normalizedOriginalCodigo && IsDuplicate(normalizedCodigo, cuentaExistente))
                     {
                         TempData["MensajeError"] = "El nuevo código ya pertenece a otra cuenta.";
                         return RedirectToAction(nameof(Index));
                     }
 
-                    target.Codigo = vm.Codigo;
-                    target.Nombre = vm.Nombre;
-                    target.Numero = vm.Numero;
-                    target.Tipo = vm.Tipo;
-                    target.Titular = vm.Titular;
-                    target.Ruc = vm.Ruc;
-                    target.LogoPath = vm.LogoPath;
-                    target.Activo = vm.Activo;
+                    // Update properties
+                    cuentaExistente.Codigo = vm.Codigo;
+                    cuentaExistente.Nombre = vm.Nombre;
+                    cuentaExistente.Numero = vm.Numero;
+                    cuentaExistente.Tipo = vm.Tipo;
+                    cuentaExistente.Titular = vm.Titular;
+                    cuentaExistente.Ruc = vm.Ruc;
+                    cuentaExistente.LogoPath = vm.LogoPath;
+                    cuentaExistente.Activo = vm.Activo;
                 }
 
-                await _svc.SetAdminAsync(list);
+                await _svc.SetAdminAsync(cuentas);
                 TempData["MensajeExito"] = "Cuenta guardada correctamente.";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar cuenta bancaria (codigo: {Codigo})", vm.Codigo);
-                TempData["MensajeError"] = "Ocurrió un error al guardar la cuenta bancaria.";
+                _logger.LogError(ex, "Error al guardar cuenta bancaria (Código: {Codigo})", vm.Codigo);
+                TempData["MensajeError"] = "Ocurrió un error inesperado al guardar la cuenta bancaria.";
             }
 
             return RedirectToAction(nameof(Index));
@@ -239,36 +276,39 @@ namespace Simone.Controllers
 
         [HttpPost("DeleteAdmin")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteAdmin([FromForm][Required] string codigo)
+        public async Task<IActionResult> DeleteAdmin([FromForm] string codigo)
         {
-            var key = NormKey(codigo);
-            if (string.IsNullOrEmpty(key))
+            if (string.IsNullOrWhiteSpace(codigo))
             {
                 TempData["MensajeError"] = "Código inválido.";
                 return RedirectToAction(nameof(Index));
             }
 
+            var normalizedCodigo = NormalizeKey(codigo);
+
             try
             {
-                var list = (await _svc.GetAdminAsync()).ToList();
-                var idx = list.FindIndex(x => NormKey(x.Codigo) == key);
+                var cuentas = (await _svc.GetAdminAsync()).ToList();
+                var cuentaAEliminar = cuentas.FirstOrDefault(c =>
+                    NormalizeKey(c.Codigo) == normalizedCodigo);
 
-                if (idx >= 0)
+                if (cuentaAEliminar != null)
                 {
-                    list.RemoveAt(idx);
-                    await _svc.SetAdminAsync(list);
-                    TempData["MensajeExito"] = "Cuenta eliminada.";
+                    cuentas.Remove(cuentaAEliminar);
+                    await _svc.SetAdminAsync(cuentas);
+                    TempData["MensajeExito"] = "Cuenta eliminada correctamente.";
                 }
                 else
                 {
-                    TempData["MensajeError"] = "No se encontró la cuenta.";
+                    TempData["MensajeError"] = "No se encontró la cuenta especificada.";
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar cuenta bancaria (codigo: {Codigo})", codigo);
-                TempData["MensajeError"] = "Ocurrió un error al eliminar la cuenta bancaria.";
+                _logger.LogError(ex, "Error al eliminar cuenta bancaria (Código: {Codigo})", codigo);
+                TempData["MensajeError"] = "Ocurrió un error inesperado al eliminar la cuenta bancaria.";
             }
+
             return RedirectToAction(nameof(Index));
         }
     }
