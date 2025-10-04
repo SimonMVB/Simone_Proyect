@@ -4,6 +4,18 @@
 @{
     ViewData["Title"] = "Compradores / Ventas";
     var culture = new CultureInfo("es-EC");
+
+    // Detectar en qué controller se está renderizando esta vista (Panel vs Vendedor)
+    var controllerName = ViewContext?.RouteData?.Values?["controller"]?.ToString() ?? "";
+    var isVendorContext = string.Equals(controllerName, "Vendedor", StringComparison.OrdinalIgnoreCase);
+
+    // Preservar vId si Admin está ayudando a un vendedor
+    var vId = ViewContext?.HttpContext?.Request?.Query["vId"].ToString();
+
+    // Rutas/acciones según contexto
+    var detalleRouteName = isVendorContext ? "Vendedor_VentaDetalle" : "Panel_VentaDetalle";
+    var marcarUrl = Url.Action("MarcarEnviada", isVendorContext ? "Vendedor" : "Panel",
+                               isVendorContext ? new { vId = string.IsNullOrWhiteSpace(vId) ? null : vId } : null);
 }
 
 <style>
@@ -54,8 +66,6 @@
     .modal-backdrop.show {
         opacity: .35
     }
-
-    @* si necesitas responsive para el botón, ponlo en tu CSS global para evitar @media aquí *@
 </style>
 
 <div class="container-xl py-4">
@@ -109,8 +119,8 @@
 
                         <div class="min-w-0">
                             <div class="d-flex align-items-center flex-wrap gap-2">
-                                <a asp-route="Panel_VentaDetalle"
-                                   asp-route-id="@v.VentaID"
+                                <!-- ENLACE AL DETALLE según contexto -->
+                                <a href="@Url.RouteUrl(detalleRouteName, new { id = v.VentaID, vId = isVendorContext ? (string.IsNullOrWhiteSpace(vId) ? null : vId) : null })"
                                    class="fw-semibold link-dark text-truncate text-decoration-none">
                                     @Safe(v.Nombre)
                                 </a>
@@ -132,9 +142,9 @@
                     <div class="text-end">
                         <div class="fw-bold fs-6">@v.Total.ToString("C", culture)</div>
 
-                        <!-- Marcar Enviado -->
+                        <!-- Marcar Enviado (context-aware) -->
                         <form method="post"
-                              asp-route="Panel_MarcarEnviada"
+                              action="@marcarUrl"
                               class="d-inline-block ms-2 js-mark-shipped"
                               data-id="@v.VentaID">
                             @Html.AntiForgeryToken()
@@ -147,9 +157,8 @@
                             </button>
                         </form>
 
-                        <!-- Ver -->
-                        <a asp-route="Panel_VentaDetalle"
-                           asp-route-id="@v.VentaID"
+                        <!-- Ver (context-aware) -->
+                        <a href="@Url.RouteUrl(detalleRouteName, new { id = v.VentaID, vId = isVendorContext ? (string.IsNullOrWhiteSpace(vId) ? null : vId) : null })"
                            class="btn btn-sm btn-outline-primary ms-1">
                             <i class="fa-regular fa-eye me-1"></i> Ver
                         </a>
@@ -163,8 +172,6 @@
                            title="Reportar problema / Solicitar devolución">
                             <i class="fa-solid fa-flag me-1"></i> Reportar
                         </a>
-
-
                     </div>
                 </div>
             }
@@ -172,7 +179,7 @@
     }
 </div>
 
-<!-- Modal Reporte/Reversión -->
+<!-- Modal Reporte/Reversión (si lo usas) -->
 <div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -182,33 +189,20 @@
             </div>
             <div class="modal-body">
                 <div class="alert alert-warning small mb-3" id="repVentaInfo"></div>
-
                 <form id="reportForm" method="post" asp-action="ReportarVenta" asp-controller="Reportes">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="ventaId" id="repVentaId" />
-
                     <div class="mb-2">
                         <label class="form-label">Motivo</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="motivo" id="motivo1" value="deposito_falso" checked>
-                            <label class="form-check-label" for="motivo1">Depósito falso</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="motivo" id="motivo2" value="devolucion">
-                            <label class="form-check-label" for="motivo2">Devolución</label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="motivo" id="motivo3" value="otro">
-                            <label class="form-check-label" for="motivo3">Otro</label>
-                        </div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="motivo" id="motivo1" value="deposito_falso" checked><label class="form-check-label" for="motivo1">Depósito falso</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="motivo" id="motivo2" value="devolucion"><label class="form-check-label" for="motivo2">Devolución</label></div>
+                        <div class="form-check"><input class="form-check-input" type="radio" name="motivo" id="motivo3" value="otro"><label class="form-check-label" for="motivo3">Otro</label></div>
                     </div>
-
                     <div class="mb-2">
                         <label class="form-label" for="repNota">Detalle / Nota (opcional)</label>
                         <textarea name="nota" id="repNota" rows="3" class="form-control" placeholder="Explica brevemente el problema..."></textarea>
                     </div>
                 </form>
-
                 <div class="small text-muted">
                     Al revertir, el <strong>stock será repuesto</strong> y la venta quedará marcada como
                     <em>Cancelada (revertida)</em>.
@@ -227,7 +221,6 @@
 @section Scripts {
     <script>
         (function () {
-          // --- carga Bootstrap JS si no está disponible (evita "pantalla oscura") ---
           function onReady(fn){ if(document.readyState!=='loading') fn(); else document.addEventListener('DOMContentLoaded',fn); }
           function ensureBootstrap(callback){
             if(window.bootstrap && bootstrap.Modal){ callback(); return; }
@@ -236,12 +229,10 @@
             s.defer=true; s.onload=callback; document.body.appendChild(s);
           }
 
-          onReady(function(){
-            ensureBootstrap(wireUp);
-          });
+          onReady(function(){ ensureBootstrap(wireUp); });
 
           function wireUp(){
-            // ----- Marcar Enviado (AJAX) -----
+            // Marcar Enviado (AJAX)
             document.querySelectorAll('form.js-mark-shipped').forEach(function(f){
               f.addEventListener('submit', async function(e){
                 e.preventDefault();
@@ -253,78 +244,34 @@
                 btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Enviando...';
 
                 try{
-                  const res = await fetch(f.action, {
-                    method:'POST',
-                    headers:{'X-Requested-With':'XMLHttpRequest'},
-                    body: new FormData(f) // incluye el antiforgery
-                  });
+                  const res = await fetch(f.action, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body: new FormData(f) });
                   if(res.ok){
                     let json=null; try{ json=await res.json(); }catch{}
                     badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
                     badge.className   = 'badge bg-success estado-badge';
                     btn.innerHTML     = '<i class="fa-solid fa-check me-1"></i> Enviado';
                   }else{
-                    btn.disabled=false; btn.innerHTML=prev;
-                    alert('No se pudo marcar como enviado.');
+                    btn.disabled=false; btn.innerHTML=prev; alert('No se pudo marcar como enviado.');
                   }
                 }catch{
-                  btn.disabled=false; btn.innerHTML=prev;
-                  alert('Error de red.');
+                  btn.disabled=false; btn.innerHTML=prev; alert('Error de red.');
                 }
               });
             });
 
-            // ----- Modal: rellenar datos al abrir -----
+            // Modal de reporte (si aplica)
             const modalEl = document.getElementById('reportModal');
-            modalEl.addEventListener('show.bs.modal', function (ev) {
-              const btn = ev.relatedTarget;
-              const id = btn.getAttribute('data-id');
-              const nombre = btn.getAttribute('data-nombre') || '';
-              const total = btn.getAttribute('data-total') || '';
-
-              const repForm = document.getElementById('reportForm');
-              repForm.reset();
-              document.getElementById('motivo1').checked = true;
-              document.getElementById('repVentaId').value = id;
-              document.getElementById('repVentaInfo').textContent = `Venta #${id} · ${nombre} · Total ${total}`;
-            });
-
-            // ----- Envío AJAX del reporte -----
-            const repForm   = document.getElementById('reportForm');
-            const repSubmit = document.getElementById('repSubmit');
-            repForm.addEventListener('submit', async function(e){
-              e.preventDefault();
-              const data = new FormData(repForm);
-              const prev = repSubmit.innerHTML;
-              repSubmit.disabled = true;
-              repSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Procesando...';
-
-              try{
-                const res  = await fetch(repForm.action, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:data });
-                const json = await res.json().catch(()=>null);
-
-                if(res.ok && json && json.ok){
-                  const id = data.get('ventaId');
-                  const row = document.querySelector(`.comp-row[data-venta-id="${id}"]`);
-                  if(row){
-                    const badge = row.querySelector('.estado-badge');
-                    badge.textContent = 'Cancelada (revertida)';
-                    badge.className = 'badge bg-danger estado-badge';
-                    const shipBtn = row.querySelector('.btn-ship'); if(shipBtn) shipBtn.disabled = true;
-                    const repBtn  = row.querySelector('.btn-report'); if(repBtn){ repBtn.disabled = true; repBtn.classList.add('disabled'); }
-                  }
-                  const bsModal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
-                  if(bsModal) bsModal.hide();
-                }else{
-                  alert((json && json.error) ? json.error : 'No se pudo revertir la venta.');
-                }
-              }catch{
-                alert('Error de red.');
-              }finally{
-                repSubmit.disabled = false;
-                repSubmit.innerHTML = prev;
-              }
-            });
+            if(modalEl){
+              modalEl.addEventListener('show.bs.modal', function (ev) {
+                const btn = ev.relatedTarget;
+                if(!btn) return;
+                const id = btn.getAttribute('data-id');
+                const nombre = btn.getAttribute('data-nombre') || '';
+                const total = btn.getAttribute('data-total') || '';
+                document.getElementById('repVentaId').value = id;
+                document.getElementById('repVentaInfo').textContent = `Venta #${id} · ${nombre} · Total ${total}`;
+              });
+            }
           }
         })();
     </script>

@@ -64,9 +64,9 @@
 
     // Mostrar sección Pago si hay pista
     var showPago = !string.IsNullOrWhiteSpace(Model.Depositante)
-                   || !string.IsNullOrWhiteSpace(Model.ComprobanteUrl)
-                   || (!string.IsNullOrWhiteSpace(Model.MetodoPago)
-                       && Model.MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase));
+                || !string.IsNullOrWhiteSpace(Model.ComprobanteUrl)
+                || (!string.IsNullOrWhiteSpace(Model.MetodoPago) && Model.MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase));
+
 
     // Normaliza URL del comprobante
     string? compUrl = null;

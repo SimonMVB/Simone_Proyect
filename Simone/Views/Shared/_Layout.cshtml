@@ -8,7 +8,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] - Simone</title>
+    <title>@ViewData["Title"] - Neo Agora</title>
 
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -20,7 +20,7 @@
 
     <!-- Estilos personalizados -->
     <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
-
+    @RenderSection("Styles", required: false)
     <style>
         :root {
             /* Layout */
@@ -586,7 +586,7 @@
                 </button>
 
                 <!-- Logo -->
-                <a class="navbar-brand fw-bold text-white" asp-controller="Home" asp-action="Index">SIMONE</a>
+                <a class="navbar-brand fw-bold text-white" asp-controller="Home" asp-action="Index">NEO AGORA</a>
 
                 <!-- Toggler para menú colapsable -->
                 <button class="navbar-toggler border-0 ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -779,8 +779,8 @@
             <div class="version-badge mt-2">v0.1<span></span></div>
 
             <div class="mb-2 mt-4">
-                <strong>Simone</strong><br />
-                <small>&copy; 2025 Simone - Todos los derechos reservados.</small>
+                <strong>NEO AGORA</strong><br />
+                <small>&copy; 2025 NEO AGORA - Todos los derechos reservados.</small>
             </div>
 
             <div>

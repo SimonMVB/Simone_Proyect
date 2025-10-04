@@ -86,15 +86,21 @@ namespace Simone.Controllers
             var folder = UploadsFolderAbs();
             if (!Directory.Exists(folder)) return null;
 
+            var allow = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
+
             var files = Directory.EnumerateFiles(folder, $"venta-{ventaId}.*", SearchOption.TopDirectoryOnly)
+                                 .Where(f => allow.Contains(Path.GetExtension(f)))
                                  .OrderByDescending(f => System.IO.File.GetLastWriteTimeUtc(f))
                                  .ToList();
             if (files.Count == 0) return null;
 
-            // Mapeo a ruta web
-            var rel = Path.GetRelativePath(_env.WebRootPath, files[0]).Replace("\\", "/");
+            var webroot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var rel = Path.GetRelativePath(webroot, files[0]).Replace("\\", "/");
             return NormalizarCompUrl("/" + rel.TrimStart('/'));
         }
+
+
 
         /// <summary>
         /// Lee metadatos (depositante, banco) en:
@@ -113,18 +119,43 @@ namespace Simone.Controllers
                 try
                 {
                     using var doc = JsonDocument.Parse(System.IO.File.ReadAllText(jsonMeta));
-                    string? dep = null, bank = null;
-                    if (doc.RootElement.TryGetProperty("depositante", out var eDep))
-                        dep = eDep.GetString();
-                    if (doc.RootElement.TryGetProperty("banco", out var eBan))
-                        bank = eBan.GetString();
+                    var root = doc.RootElement;
+
+                    string? dep = null;
+                    string? bank = null;
+
+                    // depositante: string en la raíz
+                    if (root.TryGetProperty("depositante", out var pDep))
+                        dep = pDep.ValueKind == JsonValueKind.String ? pDep.GetString() : pDep.ToString();
+
+                    // banco puede venir como "banco": "pichincha"  (SubirComprobante)
+                    // o como "bancoSeleccion": { codigo/nombre/valor: ... } (ConfirmarCompra)
+                    if (root.TryGetProperty("banco", out var pBanco))
+                    {
+                        bank = pBanco.ValueKind == JsonValueKind.String ? pBanco.GetString() : pBanco.ToString();
+                    }
+                    else if (root.TryGetProperty("bancoSeleccion", out var pSel))
+                    {
+                        if (pSel.ValueKind == JsonValueKind.String)
+                            bank = pSel.GetString();
+                        else if (pSel.ValueKind == JsonValueKind.Object)
+                        {
+                            if (pSel.TryGetProperty("codigo", out var pCodigo) && pCodigo.ValueKind == JsonValueKind.String)
+                                bank = pCodigo.GetString();
+                            else if (pSel.TryGetProperty("nombre", out var pNombre) && pNombre.ValueKind == JsonValueKind.String)
+                                bank = pNombre.GetString();
+                            else if (pSel.TryGetProperty("valor", out var pValor) && pValor.ValueKind == JsonValueKind.String)
+                                bank = pValor.GetString();
+                        }
+                    }
+
                     dep = string.IsNullOrWhiteSpace(dep) ? null : dep.Trim();
                     bank = string.IsNullOrWhiteSpace(bank) ? null : bank.Trim();
                     return (dep, bank);
                 }
                 catch
                 {
-                    // Ignorar errores de parseo y continuar a TXT
+                    // Si el JSON tiene formato inesperado, probamos el TXT
                 }
             }
 
@@ -215,18 +246,20 @@ namespace Simone.Controllers
 
             if (v == null) return NotFound();
 
-            // 1) Fallbacks para comprobante y depositante
-            //    - Primero valores guardados en Usuario
-            //    - Luego metadatos/archivos en disco
+            // Comprobante: primero ruta guardada en Usuario, luego /uploads/comprobantes
             var compUrl =
                 NormalizarCompUrl(v.Usuario?.FotoComprobanteDeposito) ??
                 BuscarComprobanteUrl(v.VentaID);
 
+            // Meta por venta (preferido). Si no hay, usa Usuario.NombreDepositante (si existe).
             var (depMeta, bancoMeta) = BuscarMetaDeposito(v.VentaID);
-            var depositante = string.IsNullOrWhiteSpace(v.Usuario?.NombreDepositante)
-                                ? depMeta
-                                : v.Usuario!.NombreDepositante!.Trim();
+            var depositante = !string.IsNullOrWhiteSpace(depMeta)
+                                ? depMeta!.Trim()
+                                : (string.IsNullOrWhiteSpace(v.Usuario?.NombreDepositante)
+                                    ? null
+                                    : v.Usuario!.NombreDepositante!.Trim());
 
+            // Direcciones (perfil como fuente si no hay historial)
             var direcciones = new List<DireccionVM>();
             if (v.Usuario != null && !string.IsNullOrWhiteSpace(v.Usuario.Direccion))
             {
@@ -244,7 +277,7 @@ namespace Simone.Controllers
             var vm = new VentaDetalleVM
             {
                 // Pago / depósito
-                Banco = bancoMeta,                 // si agregas Usuario.Banco, priorízalo aquí
+                Banco = bancoMeta,
                 Depositante = depositante,
                 ComprobanteUrl = compUrl,
 
@@ -260,7 +293,7 @@ namespace Simone.Controllers
                 Nombre = v.Usuario?.NombreCompleto ?? "(sin usuario)",
                 Email = v.Usuario?.Email,
                 Telefono = v.Usuario?.Telefono ?? v.Usuario?.PhoneNumber,
-                Cedula = v.Usuario?.Cedula,               // ← CÉDULA
+                Cedula = v.Usuario?.Cedula,
                 Direccion = v.Usuario?.Direccion,
                 FotoPerfil = v.Usuario?.FotoPerfil,
 
@@ -285,6 +318,8 @@ namespace Simone.Controllers
 
             return View("~/Views/Reportes/VentaDetalle.cshtml", vm);
         }
+
+
 
         // ------------------------------- Acciones rápidas -------------------------------
 

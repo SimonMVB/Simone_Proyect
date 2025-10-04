@@ -2,21 +2,11 @@
   {
     "codigo": "pichincha",
     "nombre": "Banco Pichincha",
-    "numero": "220328124421",
+    "numero": "0987654321",
     "tipo": "Cuenta de Ahorros",
-    "titular": "Martin Buena\u00F1o",
-    "ruc": "0001293138122",
+    "titular": "Simon Vanegas",
+    "ruc": "0957828429",
     "logoPath": "/images/Bancos/pichincha.webp",
-    "activo": true
-  },
-  {
-    "codigo": "guayaquil",
-    "nombre": "Banco Guayaquil",
-    "numero": "2131213123123",
-    "tipo": "Cuenta de Ahorros",
-    "titular": "karina buena\u00F1o",
-    "ruc": "1202389123",
-    "logoPath": "/images/Bancos/Guayaquil.png",
     "activo": true
   }
 ]

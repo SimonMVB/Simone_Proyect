@@ -1,7 +1,12 @@
 @using System.Globalization
+@using Simone.Models
 @{
     ViewData["Title"] = ViewBag.Producto != null ? "Editar Producto" : "Añadir Producto";
-    var producto = ViewBag.Producto; // dinámico: producto?.Propiedad
+    var producto = ViewBag.Producto as Producto;
+    var categorias = ViewBag.Categorias as IEnumerable<Categorias> ?? Enumerable.Empty<Categorias>();
+    var proveedores = ViewBag.Proveedores as IEnumerable<Proveedores> ?? Enumerable.Empty<Proveedores>();
+    // Soporta ambos nombres: Subcategorias / subcategorias (según el controlador que llame)
+    var subcatsSrc = (IEnumerable<Subcategorias>)(ViewBag.Subcategorias ?? ViewBag.subcategorias ?? new List<Subcategorias>());
 }
 
 <!-- Font Awesome -->
@@ -10,262 +15,498 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
-    :root{
-        --primary-light:#fff;--accent-purple:#4B0082;--light-gray:#F8F8F8;--medium-gray:#E0E0E0;--dark-gray:#333;--text:#333;--danger:#dc3545
+    :root {
+        --primary-light: #fff;
+        --accent-purple: #4B0082;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333;
+        --text: #333;
+        --danger: #dc3545;
+        --ok: #28a745;
+        --info: #17a2b8;
     }
-    body{font-family:'Montserrat',sans-serif;background:#f5f5f7;color:var(--text)}
-    h1,h2,h3,h4,h5,h6{font-family:'Playfair Display',serif;font-weight:600}
-    .form-container{max-width:900px;margin:2rem auto;padding:0 15px}
-    .form-card{background:#fff;border-radius:12px;padding:2rem;box-shadow:0 10px 30px rgba(0,0,0,.08)}
-    .form-header{display:flex;align-items:center;margin-bottom:2rem;color:var(--accent-purple)}
-    .form-header i{font-size:1.8rem;margin-right:1rem}
-    .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.5rem}
-    .form-group.full{grid-column:span 2}
-    .form-label{display:block;margin-bottom:.5rem;font-weight:500;color:var(--dark-gray)}
-    .form-input,.form-select,.form-textarea{width:100%;padding:.75rem 1rem;border:1px solid var(--medium-gray);border-radius:8px;font-size:1rem;transition:.2s}
-    .form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent-purple);box-shadow:0 0 0 3px rgba(75,0,130,.1);outline:0}
-    .image-upload{display:flex;flex-direction:column;gap:1rem}
-    .image-preview{width:150px;height:150px;object-fit:cover;border-radius:8px;border:1px solid var(--medium-gray)}
-    .no-image{width:150px;height:150px;background:var(--light-gray);border-radius:8px;display:grid;place-items:center;color:#777}
-    .file-input{display:none}
-    .file-label{background:var(--light-gray);padding:.5rem 1rem;border-radius:6px;cursor:pointer;display:inline-flex;gap:.5rem;align-items:center}
-    .file-label:hover{background:var(--medium-gray)}
-    .error-msg{color:var(--danger);font-size:.85rem;display:none}
-    .submit-btn{background:linear-gradient(135deg,var(--accent-purple),#5E2D8C);color:#fff;border:0;padding:.9rem 1.6rem;border-radius:30px;font-weight:700;cursor:pointer;grid-column:span 2}
-    .submit-btn:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(75,0,130,.25)}
-    @@media (max-width:768px){.form-grid{grid-template-columns:1fr}.submit-btn{grid-column:span 1}}
+
+    body {
+        font-family: 'Montserrat',sans-serif;
+        background: #f5f5f7;
+        color: var(--text)
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display',serif;
+        font-weight: 600
+    }
+
+    .form-container {
+        max-width: 980px;
+        margin: 2rem auto;
+        padding: 0 15px
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+        overflow: hidden
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.1rem 1.25rem;
+        border-bottom: 1px solid var(--medium-gray);
+        background: linear-gradient(135deg, rgba(75,0,130,.06), rgba(75,0,130,.02));
+    }
+
+    .title {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        color: var(--accent-purple)
+    }
+
+    .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        text-decoration: none;
+        font-weight: 600;
+        color: var(--accent-purple);
+        border: 1px solid rgba(75,0,130,.25);
+        padding: .45rem .75rem;
+        border-radius: 999px;
+        background: rgba(75,0,130,.05)
+    }
+
+        .back-link:hover {
+            background: rgba(75,0,130,.12)
+        }
+
+    .card-body {
+        padding: 1.25rem
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 1.2rem
+    }
+
+    .full {
+        grid-column: span 2
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: .45rem;
+        font-weight: 600;
+        color: var(--dark-gray)
+    }
+
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: .75rem 1rem;
+        border: 1px solid var(--medium-gray);
+        border-radius: 10px;
+        font-size: 1rem;
+        background: #fff;
+        transition: border-color .15s ease, box-shadow .15s ease
+    }
+
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(75,0,130,.12);
+            outline: none
+        }
+
+    .image-upload {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem
+    }
+
+    .image-preview {
+        width: 170px;
+        height: 170px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 1px solid var(--medium-gray)
+    }
+
+    .no-image {
+        width: 170px;
+        height: 170px;
+        background: var(--light-gray);
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: #777
+    }
+
+    .file-input {
+        display: none
+    }
+
+    .file-label {
+        background: var(--light-gray);
+        padding: .6rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        gap: .5rem;
+        align-items: center
+    }
+
+        .file-label:hover {
+            background: var(--medium-gray)
+        }
+
+    .error-msg {
+        color: var(--danger);
+        font-size: .9rem;
+        display: none
+    }
+
+    .btn {
+        appearance: none;
+        border: none;
+        cursor: pointer;
+        font-weight: 700;
+        border-radius: 999px;
+        padding: .85rem 1.25rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        transition: transform .15s ease, box-shadow .15s ease, background .2s ease, color .2s ease
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg,var(--accent-purple),#5E2D8C);
+        color: #fff
+    }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(75,0,130,.25)
+        }
+
+    .btn-secondary {
+        background: #fff;
+        color: var(--accent-purple);
+        border: 1px solid rgba(75,0,130,.3)
+    }
+
+        .btn-secondary:hover {
+            background: rgba(75,0,130,.06)
+        }
+
+    .alert {
+        border-radius: 12px;
+        padding: .9rem 1rem;
+        margin: .8rem 0;
+        display: flex;
+        gap: .6rem;
+        align-items: center;
+        font-weight: 500
+    }
+
+    .alert-success {
+        background: rgba(40,167,69,.1);
+        color: var(--ok);
+        border: 1px solid rgba(40,167,69,.25)
+    }
+
+    .alert-danger {
+        background: rgba(220,53,69,.1);
+        color: var(--danger);
+        border: 1px solid rgba(220,53,69,.25)
+    }
+
+    @@media (max-width:768px) {
+        .form-grid {
+            grid-template-columns: 1fr
+        }
+    }
 </style>
 
 <div class="form-container">
-    <div class="form-card">
-        <div class="form-header">
-            <i class="fas fa-box-open"></i>
-            <h2>@ViewData["Title"]</h2>
+    <div class="card">
+        <div class="card-header">
+            <div class="title">
+                <i class="fas fa-box-open"></i>
+                <h2 style="margin:0">@ViewData["Title"]</h2>
+            </div>
+            <a class="back-link" asp-controller="Panel" asp-action="Productos">
+                <i class="fa-solid fa-arrow-left"></i> Volver al listado
+            </a>
         </div>
 
-        <form class="form-grid" method="post"
-              asp-controller="Panel"
-              asp-action="@(producto != null ? "EditarProducto" : "AnadirProducto")"
-              enctype="multipart/form-data" id="productoForm">
-            @Html.AntiForgeryToken()
-
-            @if (producto != null)
+        <div class="card-body">
+            @* Mensajes de servidor *@
+            @if (TempData["Ok"] != null)
             {
-                <input type="hidden" name="productoID" value="@producto.ProductoID" />
+                <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i><span>@TempData["Ok"]</span></div>
+            }
+            @if (TempData["Err"] != null)
+            {
+                <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i><span>@TempData["Err"]</span></div>
             }
 
-            <!-- Nombre -->
-            <div class="form-group">
-                <label for="Nombre" class="form-label">Nombre</label>
-                <input type="text" name="nombreProducto" id="Nombre" class="form-input"
-                       placeholder="Nombre del producto" required value="@(producto != null ? (string)producto.Nombre : "")" />
-            </div>
+            <form class="form-grid" method="post"
+                  asp-controller="Panel"
+                  asp-action="@(producto != null ? "EditarProducto" : "AnadirProducto")"
+                  enctype="multipart/form-data" id="productoForm" novalidate>
+                @Html.AntiForgeryToken()
 
-            <!-- Descripción -->
-            <div class="form-group full">
-                <label for="Descripcion" class="form-label">Descripción</label>
-                <textarea name="descripcion" id="Descripcion" class="form-textarea" rows="4" required>@(producto != null ? (string)producto.Descripcion : "")</textarea>
-            </div>
+                @if (producto != null)
+                {
+                    <input type="hidden" name="productoID" value="@producto.ProductoID" />
+                }
 
-            <!-- Talla -->
-            <div class="form-group">
-                <label for="Talla" class="form-label">Talla</label>
-                <input type="text" name="talla" id="Talla" class="form-input"
-                       placeholder="Ej. S, M, L, 38, XL…" required value="@(producto != null ? (string)producto.Talla : "")" />
-            </div>
+                <!-- Nombre -->
+                <div class="form-group">
+                    <label for="Nombre" class="form-label">Nombre</label>
+                    <input type="text" name="nombreProducto" id="Nombre" class="form-input"
+                           placeholder="Nombre del producto" maxlength="120" required
+                           value="@(producto?.Nombre ?? "")" />
+                </div>
 
-            <!-- Color -->
-            <div class="form-group">
-                <label for="Color" class="form-label">Color</label>
-                <input type="text" name="color" id="Color" class="form-input"
-                       placeholder="Color del producto" required value="@(producto != null ? (string)producto.Color : "")" />
-            </div>
+                <!-- Descripción -->
+                <div class="form-group full">
+                    <label for="Descripcion" class="form-label">Descripción</label>
+                    <textarea name="descripcion" id="Descripcion" class="form-textarea" rows="4" required>@(producto?.Descripcion ?? "")</textarea>
+                </div>
 
-            <!-- Marca -->
-            <div class="form-group">
-                <label for="Marca" class="form-label">Marca</label>
-                <input type="text" name="marca" id="Marca" class="form-input"
-                       placeholder="Marca del producto" required value="@(producto != null ? (string)producto.Marca : "")" />
-            </div>
+                <!-- Talla -->
+                <div class="form-group">
+                    <label for="Talla" class="form-label">Talla</label>
+                    <input type="text" name="talla" id="Talla" class="form-input"
+                           placeholder="Ej. S, M, L, 38, XL…" maxlength="40" required
+                           value="@(producto?.Talla ?? "")" />
+                </div>
 
-            <!-- Precio Compra -->
-            <div class="form-group">
-                <label for="PrecioCompra" class="form-label">Precio de Compra</label>
-                <input type="number" name="precioCompra" id="PrecioCompra" class="form-input"
-                       placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true"
-                       value="@(producto != null ? ((decimal)producto.PrecioCompra).ToString("0.##", CultureInfo.InvariantCulture) : "")" />
-            </div>
+                <!-- Color -->
+                <div class="form-group">
+                    <label for="Color" class="form-label">Color</label>
+                    <input type="text" name="color" id="Color" class="form-input"
+                           placeholder="Color del producto" maxlength="40" required
+                           value="@(producto?.Color ?? "")" />
+                </div>
 
-            <!-- Precio Venta -->
-            <div class="form-group">
-                <label for="PrecioVenta" class="form-label">Precio de Venta</label>
-                <input type="number" name="precioVenta" id="PrecioVenta" class="form-input"
-                       placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true"
-                       value="@(producto != null ? ((decimal)producto.PrecioVenta).ToString("0.##", CultureInfo.InvariantCulture) : "")" />
-            </div>
+                <!-- Marca -->
+                <div class="form-group">
+                    <label for="Marca" class="form-label">Marca</label>
+                    <input type="text" name="marca" id="Marca" class="form-input"
+                           placeholder="Marca del producto" maxlength="80" required
+                           value="@(producto?.Marca ?? "")" />
+                </div>
 
-            <!-- Categoría -->
-            <div class="form-group">
-                <label for="Categoria" class="form-label">Categoría</label>
-                <select name="categoriaID" id="Categoria" class="form-select" required>
-                    <option value="">Seleccione una categoría</option>
-                    @if (ViewBag.Categorias != null)
-                    {
-                        foreach (var c in ViewBag.Categorias)
+                <!-- Precio Compra -->
+                <div class="form-group">
+                    <label for="PrecioCompra" class="form-label">Precio de Compra</label>
+                    <input type="number" name="precioCompra" id="PrecioCompra" class="form-input"
+                           placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true" required
+                           value="@(producto != null ? producto.PrecioCompra.ToString("0.##", CultureInfo.InvariantCulture) : "")" />
+                </div>
+
+                <!-- Precio Venta -->
+                <div class="form-group">
+                    <label for="PrecioVenta" class="form-label">Precio de Venta</label>
+                    <input type="number" name="precioVenta" id="PrecioVenta" class="form-input"
+                           placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true" required
+                           value="@(producto != null ? producto.PrecioVenta.ToString("0.##", CultureInfo.InvariantCulture) : "")" />
+                </div>
+
+                <!-- Categoría -->
+                <div class="form-group">
+                    <label for="Categoria" class="form-label">Categoría</label>
+                    <select name="categoriaID" id="Categoria" class="form-select" required>
+                        <option value="">Seleccione una categoría</option>
+                        @foreach (var c in categorias)
                         {
-                            <option value="@c.CategoriaID"
-                                    selected="@( (ViewBag.Producto != null && ViewBag.Producto.CategoriaID == c.CategoriaID) ? "selected" : null )">
+                            <option value="@c.CategoriaID" selected="@(producto != null && producto.CategoriaID == c.CategoriaID)">
                                 @c.Nombre
                             </option>
                         }
-                    }
-                </select>
-            </div>
+                    </select>
+                </div>
 
-            <!-- Subcategoría -->
-            <div class="form-group">
-                <label for="Subcategoria" class="form-label">Subcategoría</label>
-                <select name="subcategoriaID" id="Subcategoria" class="form-select" required>
-                    <option value="">Seleccione una subcategoría</option>
-                    @if (ViewBag.Producto != null && ViewBag.Subcategorias != null)
-                    {
-                        foreach (var s in ViewBag.Subcategorias)
-                        {
-                            if (s.CategoriaID == ViewBag.Producto.CategoriaID)
-                            {
-                                <option value="@s.SubcategoriaID"
-                                        selected="@( (ViewBag.Producto.SubcategoriaID == s.SubcategoriaID) ? "selected" : null )">
-                                    @s.NombreSubcategoria
-                                </option>
-                            }
-                        }
-                    }
-                </select>
-            </div>
+                <!-- Subcategoría (se llena según categoría) -->
+                <div class="form-group">
+                    <label for="Subcategoria" class="form-label">Subcategoría</label>
+                    <select name="subcategoriaID" id="Subcategoria" class="form-select" required disabled>
+                        <option value="">Seleccione una subcategoría</option>
+                    </select>
+                </div>
 
-            <!-- Proveedor -->
-            <div class="form-group">
-                <label for="Proveedor" class="form-label">Proveedor</label>
-                <select name="proveedorID" id="Proveedor" class="form-select" required>
-                    <option value="">Seleccione un proveedor</option>
-                    @if (ViewBag.Proveedores != null)
-                    {
-                        foreach (var p in ViewBag.Proveedores)
+                <!-- Proveedor -->
+                <div class="form-group">
+                    <label for="Proveedor" class="form-label">Proveedor</label>
+                    <select name="proveedorID" id="Proveedor" class="form-select" required>
+                        <option value="">Seleccione un proveedor</option>
+                        @foreach (var p in proveedores)
                         {
-                            <option value="@p.ProveedorID"
-                                    selected="@( (ViewBag.Producto != null && ViewBag.Producto.ProveedorID == p.ProveedorID) ? "selected" : null )">
+                            <option value="@p.ProveedorID" selected="@(producto != null && producto.ProveedorID == p.ProveedorID)">
                                 @p.NombreProveedor
                             </option>
                         }
-                    }
-                </select>
-            </div>
-
-
-            <!-- Stock -->
-            <div class="form-group">
-                <label for="Stock" class="form-label">Stock</label>
-                <input type="number" name="stock" id="Stock" class="form-input" min="0" step="1"
-                       placeholder="0" value="@(producto != null ? ((int)producto.Stock).ToString(CultureInfo.InvariantCulture) : "")" />
-            </div>
-
-            <!-- Imagen -->
-            <div class="form-group full">
-                <label class="form-label">Imagen del Producto</label>
-                <div class="image-upload">
-                    @if (producto != null && !string.IsNullOrEmpty((string)producto.ImagenPath))
-                    {
-                        <img src="@producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview" />
-                        <input type="hidden" name="existingImagenPath" value="@producto.ImagenPath" />
-                    }
-                    else
-                    {
-                        <div class="no-image" id="imagePreview">No hay imagen seleccionada</div>
-                    }
-
-                    <input type="file" name="imagen" id="Imagen" class="file-input" accept="image/*">
-                    <label for="Imagen" class="file-label"><i class="fas fa-camera"></i> @(producto!=null?"Cambiar imagen":"Seleccionar imagen")</label>
-                    <small class="error-msg" id="error-msg">El archivo debe ser menor o igual a 2MB.</small>
+                    </select>
                 </div>
-            </div>
 
-            <!-- Submit -->
-            <button type="submit" class="submit-btn">
-                <i class="fas @(producto!=null?"fa-save":"fa-plus") me-2"></i>
-                @(producto!=null?"Guardar Cambios":"Añadir Producto")
-            </button>
-        </form>
+                <!-- Stock -->
+                <div class="form-group">
+                    <label for="Stock" class="form-label">Stock</label>
+                    <input type="number" name="stock" id="Stock" class="form-input" min="0" step="1" placeholder="0" required
+                           value="@(producto != null ? producto.Stock.ToString(CultureInfo.InvariantCulture) : "")" />
+                </div>
+
+                <!-- Imagen -->
+                <div class="form-group full">
+                    <label class="form-label">Imagen del Producto</label>
+                    <div class="image-upload">
+                        @if (!string.IsNullOrWhiteSpace(producto?.ImagenPath))
+                        {
+                            <img src="@producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview" />
+                            <input type="hidden" name="existingImagenPath" value="@producto.ImagenPath" />
+                        }
+                        else
+                        {
+                            <div class="no-image" id="imagePreview">No hay imagen seleccionada</div>
+                        }
+
+                        <input type="file" name="imagen" id="Imagen" class="file-input" accept="image/*">
+                        <label for="Imagen" class="file-label"><i class="fas fa-camera"></i> @(producto != null ? "Cambiar imagen" : "Seleccionar imagen")</label>
+                        <small class="error-msg" id="error-msg">El archivo debe ser imagen y pesar ≤ 2 MB.</small>
+                    </div>
+                </div>
+
+                <!-- Acciones -->
+                <div class="full" style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.25rem">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas @(producto != null ? "fa-save" : "fa-plus") me-2"></i>
+                        @(producto != null ? "Guardar Cambios" : "Añadir Producto")
+                    </button>
+                    <a asp-controller="Panel" asp-action="Productos" class="btn btn-secondary">
+                        <i class="fa-solid fa-arrow-left"></i> Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-@section Scripts{
-<script>
-// ---------- Subcategorías dinámicas ----------
-document.addEventListener('DOMContentLoaded', () => {
-    const categoria = document.getElementById('Categoria');
-    const subcategoria = document.getElementById('Subcategoria');
+@section Scripts {
+    <script>
+        (function(){
+            // ---------- Datos de subcategorías (server → cliente)
+            const subsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
+                    ));
 
-    const data = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.Subcategorias ?? new object[0]));
-    const currentSubId = @((producto!=null ? (int)producto.SubcategoriaID : 0));
+        // ---------- Elementos clave
+        const form     = document.getElementById('productoForm');
+        const catSel   = document.getElementById('Categoria');
+        const subSel   = document.getElementById('Subcategoria');
+        const imgInput = document.getElementById('Imagen');
+        const imgPrev  = document.getElementById('imagePreview');
+        const errMsg   = document.getElementById('error-msg');
+        const submit   = document.getElementById('submitBtn');
 
-    function get(obj, ...keys){ for(const k of keys){ if(obj && k in obj) return obj[k]; } return undefined; }
+            // ---------- Rellena subcategorías por categoría seleccionada
+            function fillSubcats(catId, currentSubId){
+                subSel.innerHTML = '<option value="">Seleccione una subcategoría</option>';
+                subSel.disabled = true;
 
-    function renderSubs(catId){
-        subcategoria.innerHTML = '<option value="">Seleccione una subcategoría</option>';
-        const list = (data || []).filter(s => (get(s,'CategoriaID','categoriaID')) == catId);
-        if(list.length===0){
-            const opt=document.createElement('option');opt.value='';opt.textContent='No hay subcategorías disponibles';subcategoria.appendChild(opt);subcategoria.disabled=true;return;
-        }
-        list.forEach(s=>{
-            const id = get(s,'SubcategoriaID','subcategoriaID');
-            const name = get(s,'NombreSubcategoria','nombreSubcategoria');
-            const opt = document.createElement('option');
-            opt.value = id;
-            opt.textContent = name;
-            if (currentSubId && id === currentSubId) opt.selected = true;
-            subcategoria.appendChild(opt);
-        });
-        subcategoria.disabled=false;
-    }
+                if(!catId){ return; }
 
-    if (categoria && categoria.value) renderSubs(parseInt(categoria.value,10));
-    categoria?.addEventListener('change', e => {
-        renderSubs(parseInt(e.target.value || '0',10));
-    });
-});
+                const list = (subsData || []).filter(s => s.CategoriaID === catId);
+                if(list.length === 0){
+                    const opt = document.createElement('option');
+                    opt.value = '';
+                    opt.textContent = 'No hay subcategorías disponibles';
+                    subSel.appendChild(opt);
+                    return;
+                }
 
-// ---------- Previsualización imagen + validación 2MB ----------
-document.addEventListener('DOMContentLoaded', () => {
-    const input = document.getElementById('Imagen');
-    const error = document.getElementById('error-msg');
-    const MAX = 2 * 1024 * 1024;
-
-    input?.addEventListener('change', function(){
-        const file = this.files?.[0];
-        if(!file) return;
-        error.style.display = 'none';
-        if(file.size > MAX){
-            error.style.display = 'block'; this.value=''; return;
-        }
-        const reader = new FileReader();
-        reader.onload = e=>{
-            const prev = document.getElementById('imagePreview');
-            if(prev.tagName === 'IMG') prev.src = e.target.result;
-            else{
-                const img = document.createElement('img');
-                img.src = e.target.result; img.className='image-preview'; img.id='imagePreview';
-                prev.replaceWith(img);
+                list.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.SubcategoriaID;
+                    opt.textContent = s.NombreSubcategoria;
+                    if(currentSubId && s.SubcategoriaID === currentSubId) opt.selected = true;
+                    subSel.appendChild(opt);
+                });
+                subSel.disabled = false;
             }
-        };
-        reader.readAsDataURL(file);
-    });
-});
 
-// ---------- Normalización de decimales (evita 10 -> 1000) ----------
-document.getElementById('productoForm')?.addEventListener('submit', () => {
-    document.querySelectorAll('input[type="number"][data-decimal="true"]').forEach(i=>{
-        if(i.value) i.value = i.value.replace(',', '.'); // estandariza al formato que espera el servidor
-    });
-});
-</script>
+            // Al cargar: si hay categoría seleccionada (modo edición), prellenar
+            const initialCat = parseInt(catSel?.value || '0', 10);
+            const currentSubId = @((producto != null) ? producto.SubcategoriaID : 0);
+            if(initialCat) fillSubcats(initialCat, currentSubId);
+
+            catSel?.addEventListener('change', e => {
+                const catId = parseInt(e.target.value || '0', 10);
+                fillSubcats(catId, 0);
+            });
+
+            // ---------- Imagen: validación y previsualización
+            const MAX = 2 * 1024 * 1024; // 2MB
+            imgInput?.addEventListener('change', function(){
+                const file = this.files?.[0];
+                if(!file) return;
+                errMsg.style.display = 'none';
+
+                if(!file.type.startsWith('image/')){
+                    errMsg.textContent = 'El archivo debe ser una imagen.';
+                    errMsg.style.display = 'block';
+                    this.value = '';
+                    return;
+                }
+                if(file.size > MAX){
+                    errMsg.textContent = 'El archivo debe pesar ≤ 2 MB.';
+                    errMsg.style.display = 'block';
+                    this.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = e => {
+                    if(imgPrev.tagName === 'IMG'){
+                        imgPrev.src = e.target.result;
+                    }else{
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        img.className = 'image-preview';
+                        img.id = 'imagePreview';
+                        imgPrev.replaceWith(img);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // ---------- Normalización de decimales y doble submit
+            form?.addEventListener('submit', e => {
+                // Normaliza decimal con punto
+                form.querySelectorAll('input[type="number"][data-decimal="true"]').forEach(i => {
+                    if(i.value) i.value = i.value.replace(',', '.');
+                });
+
+                // Validación mínima cliente
+                if(!form.checkValidity()){
+                    e.preventDefault(); e.stopPropagation();
+                    alert('Revisa los campos: todos los requeridos deben estar completos y válidos.');
+                    return;
+                }
+
+                // Evitar doble submit
+                if(submit){
+                    submit.disabled = true;
+                    const icon = submit.querySelector('i');
+                    if(icon){ icon.className = 'fa-solid fa-circle-notch fa-spin'; }
+                    submit.lastChild && submit.lastChild.nodeType === 3 && (submit.lastChild.textContent = ' Guardando...');
+                }
+            });
+        })();
+    </script>
 }

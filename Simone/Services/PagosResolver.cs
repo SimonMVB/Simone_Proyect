@@ -8,9 +8,7 @@ using Simone.Data;
 
 namespace Simone.Services
 {
-    /// <summary>
-    /// Resultado mínimo para decidir si mostrar cuentas del vendedor o del administrador.
-    /// </summary>
+    // Resultado para decidir si mostrar cuentas del vendedor o del admin.
     public sealed class CarritoVendedorInfo
     {
         public bool EsMultiVendedor { get; init; }
@@ -19,23 +17,13 @@ namespace Simone.Services
         public int TiendasCount => VendedoresIds?.Count ?? 0;
     }
 
-    /// <summary>
-    /// Resolver de lógica: ¿el carrito del usuario mezcla varias tiendas?
-    /// Usa CarritoDetalle -> Producto para detectar los VendedorID involucrados.
-    /// </summary>
+    /// Resolver: ¿el carrito del usuario mezcla varias tiendas?
     public sealed class PagosResolver
     {
         private readonly TiendaDbContext _db;
-
         public PagosResolver(TiendaDbContext db) => _db = db;
 
-        /// <summary>
-        /// Obtiene los VendedorID distintos presentes en el carrito del usuario.
-        /// Si <paramref name="carritoId"/> es null, evalúa todos los carritos del usuario
-        /// (con el esquema actual, normalmente será uno).
-        /// </summary>
-        /// <param name="usuarioId">Usuario propietario del carrito.</param>
-        /// <param name="carritoId">Opcional, para restringir a un carrito concreto.</param>
+        /// Obtiene los VendedorID distintos del carrito actual (o de todos si no se pasa carritoId).
         public async Task<CarritoVendedorInfo> ResolverAsync(
             string usuarioId,
             int? carritoId = null,
@@ -44,46 +32,44 @@ namespace Simone.Services
             if (string.IsNullOrWhiteSpace(usuarioId))
                 throw new ArgumentException("usuarioId es requerido.", nameof(usuarioId));
 
-            // Base: detalles del/los carritos del usuario (sin tracking).
-            IQueryable<Models.CarritoDetalle> query = _db.CarritoDetalle
+            // Base: detalles de carritos del usuario
+            IQueryable<Simone.Models.CarritoDetalle> query = _db.CarritoDetalle
                 .AsNoTracking()
                 .Where(cd => cd.Carrito != null && cd.Carrito.UsuarioId == usuarioId);
 
             if (carritoId.HasValue)
                 query = query.Where(cd => cd.CarritoID == carritoId.Value);
 
-            // Filtra cantidades no positivas si existieran (defensivo).
+            // Solo cantidades válidas
             query = query.Where(cd => cd.Cantidad > 0);
 
-            // Proyecta el VendedorID del producto.
-            var vendedoresRaw = await query
-                .Include(cd => cd.Producto)
-                .Select(cd => cd.Producto!.VendedorID)
-                .Where(v => v != null && v != "")
+            // Proyección directa y normalización en memoria
+            var vendedores = await query
+                .Where(cd => cd.Producto != null && cd.Producto.VendedorID != null && cd.Producto.VendedorID != "")
+                .Select(cd => cd.Producto!.VendedorID!) // seguro por el Where anterior
                 .ToListAsync(ct);
 
-            // Limpieza: trim y distinct estable.
-            var vendedores = vendedoresRaw
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-                .Select(v => v!.Trim())
-                .Distinct(StringComparer.Ordinal)
+            var vendedoresNorm = vendedores
+                .Select(v => v.Trim())
+                .Where(v => v.Length > 0)
+                .Distinct(StringComparer.Ordinal) // sensible a mayúsculas/minúsculas
                 .ToList();
 
-            if (vendedores.Count == 1)
+            if (vendedoresNorm.Count == 1)
             {
                 return new CarritoVendedorInfo
                 {
                     EsMultiVendedor = false,
-                    VendedorIdUnico = vendedores[0],
-                    VendedoresIds = vendedores
+                    VendedorIdUnico = vendedoresNorm[0],
+                    VendedoresIds = vendedoresNorm
                 };
             }
 
             return new CarritoVendedorInfo
             {
-                EsMultiVendedor = vendedores.Count > 1,
+                EsMultiVendedor = vendedoresNorm.Count > 1,
                 VendedorIdUnico = null,
-                VendedoresIds = vendedores
+                VendedoresIds = vendedoresNorm
             };
         }
     }

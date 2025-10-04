@@ -1,0 +1,12 @@
+[
+  {
+    "codigo": "pacifico",
+    "nombre": "banco pacifico",
+    "numero": "1061064149",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "Melina Fuentes",
+    "ruc": "0941984890",
+    "logoPath": "/images/Bancos/pacifico.png",
+    "activo": true
+  }
+]

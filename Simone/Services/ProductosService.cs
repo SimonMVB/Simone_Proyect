@@ -16,60 +16,107 @@ namespace Simone.Services
             _context = context;
         }
 
-        // Agregar una nueva producto de manera asíncrona
+        // ==================== CREATE ====================
         public async Task<bool> AddAsync(Producto producto)
         {
             try
             {
-                await _context.Productos.AddAsync(producto); // Usamos AddAsync
-                await _context.SaveChangesAsync(); // Guardar los cambios de manera asíncrona
-                return true; // Retorna true si la producto se ha agregado correctamente
+                await _context.Productos.AddAsync(producto);
+                await _context.SaveChangesAsync();
+                return true;
             }
             catch
             {
-                return false; // Retorna false si hubo algún error
+                return false;
             }
         }
 
-        // Obtener todas las productos de manera asíncrona
+        // ==================== READ ====================
+
+        /// <summary>
+        /// Todos los productos (para admin). Incluye Categoria, Subcategoria y Proveedor.
+        /// </summary>
         public async Task<List<Producto>> GetAllAsync()
         {
-            return await _context.Productos.ToListAsync(); // Usamos ToListAsync
+            return await _context.Productos
+                                 .AsNoTracking()
+                                 .Include(p => p.Categoria)
+                                 .Include(p => p.Subcategoria)
+                                 .Include(p => p.Proveedor)
+                                 .ToListAsync();
         }
 
-        // Obtener varios productos de manera asíncrona
+        /// <summary>
+        /// Primeros N productos (orden natural por PK). Solo lectura.
+        /// </summary>
         public async Task<List<Producto>> GetFirstAsync(int n)
         {
-            return await _context.Productos.
-            Take(n).
-            ToListAsync(); // Usamos ToListAsync
+            return await _context.Productos
+                                 .AsNoTracking()
+                                 .OrderBy(p => p.ProductoID)
+                                 .Take(n)
+                                 .Include(p => p.Categoria)
+                                 .Include(p => p.Subcategoria)
+                                 .Include(p => p.Proveedor)
+                                 .ToListAsync();
         }
 
-        // Obtener una producto por su ID de manera asíncrona
+        /// <summary>
+        /// Un producto por ID, con relaciones principales.
+        /// </summary>
         public async Task<Producto> GetByIdAsync(int id)
         {
             return await _context.Productos
-                .Where(p => p.ProductoID == id)  // Using Where to filter the product by its ID
-                .Include(p => p.Categoria)
-                .Include(p => p.Subcategoria)      // Eagerly load the related Categoria
-                .FirstOrDefaultAsync();         // Return the first matching product or null if not found
+                                 .Include(p => p.Categoria)
+                                 .Include(p => p.Subcategoria)
+                                 .Include(p => p.Proveedor)
+                                 .FirstOrDefaultAsync(p => p.ProductoID == id);
         }
-        // Actualizar una producto de manera asíncrona
+
+        /// <summary>
+        /// Por categoría (cualquier vendedor). Solo lectura.
+        /// </summary>
+        public async Task<List<Producto>> GetByCategoryID(int categoriaID)
+        {
+            return await _context.Productos
+                                 .AsNoTracking()
+                                 .Where(p => p.CategoriaID == categoriaID)
+                                 .Include(p => p.Categoria)
+                                 .Include(p => p.Subcategoria)
+                                 .Include(p => p.Proveedor)
+                                 .ToListAsync();
+        }
+
+        /// <summary>
+        /// Por vendedor (solo sus productos). Solo lectura.
+        /// </summary>
+        public async Task<List<Producto>> GetByVendedorID(string vendedorID)
+        {
+            return await _context.Productos
+                                 .AsNoTracking()
+                                 .Where(p => p.VendedorID == vendedorID)
+                                 .Include(p => p.Categoria)
+                                 .Include(p => p.Subcategoria)
+                                 .Include(p => p.Proveedor)
+                                 .ToListAsync();
+        }
+
+        // ==================== UPDATE ====================
         public async Task<bool> UpdateAsync(Producto producto)
         {
             try
             {
-                _context.Productos.Update(producto); // Actualizar producto
-                await _context.SaveChangesAsync(); // Guardar los cambios de manera asíncrona
-                return true; // Retorna true si la producto se actualiza correctamente
+                _context.Productos.Update(producto);
+                await _context.SaveChangesAsync();
+                return true;
             }
             catch
             {
-                return false; // Retorna false si hubo algún error
+                return false;
             }
         }
 
-        // Eliminar un producto de manera asíncrona
+        // ==================== DELETE ====================
         public async Task<bool> DeleteAsync(int id)
         {
             try
@@ -77,7 +124,7 @@ namespace Simone.Services
                 var producto = await _context.Productos.FindAsync(id);
                 if (producto == null) return false;
 
-                // Chequeos mínimos de dependencias (agrega los que uses)
+                // Dependencias duras que impedirían el borrado
                 bool tieneDependencias =
                     await _context.DetalleVentas.AnyAsync(d => d.ProductoID == id) ||
                     await _context.DetallesPedido.AnyAsync(d => d.ProductoID == id) ||
@@ -86,7 +133,7 @@ namespace Simone.Services
 
                 if (tieneDependencias)
                 {
-                    // TODO: opcional: marcar estado "Inactivo" si agregas SoftDelete al modelo
+                    // Si más adelante implementas SoftDelete, aquí sería el lugar.
                     return false;
                 }
 
@@ -94,26 +141,10 @@ namespace Simone.Services
                 await _context.SaveChangesAsync();
                 return true;
             }
-            catch (DbUpdateException ex)
+            catch
             {
-                // Log y fallback
                 return false;
             }
-        }
-
-
-        public async Task<List<Producto>> GetByCategoryID(int categoriaID)
-        {
-            return await _context.Productos
-                                 .Where(p => p.CategoriaID == categoriaID)
-                                 .ToListAsync();
-        }
-
-        public async Task<List<Producto>> GetByVendedorID(string vendedorID)
-        {
-            return await _context.Productos
-                                 .Where(p => p.VendedorID == vendedorID)
-                                 .ToListAsync();
         }
     }
 }

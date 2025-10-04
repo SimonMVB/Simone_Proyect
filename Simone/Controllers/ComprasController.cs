@@ -226,8 +226,6 @@ namespace Simone.Controllers
             return PartialView("_CartPartial", detalles);
         }
 
-
-
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> ActualizarCantidad(int carritoDetalleID, int cantidad, CancellationToken ct = default)
         {
@@ -307,7 +305,7 @@ namespace Simone.Controllers
             var totalCompra = detalles.Sum(cd => cd.Precio * cd.Cantidad);
 
             // Resolver mono/multi
-            var decision = await _pagosResolver.ResolverAsync(user.Id, null, ct);
+            var decision = await _pagosResolver.ResolverAsync(user.Id, carrito.CarritoID, ct); // FIX: usar carrito actual
             ViewBag.EsMultiVendedor = decision.EsMultiVendedor;
             ViewBag.VendedorIdUnico = decision.VendedorIdUnico;
             ViewBag.VendedoresIds = decision.VendedoresIds;
@@ -403,7 +401,8 @@ namespace Simone.Controllers
                 return View("Resumen", user);
             }
 
-            var decision = await _pagosResolver.ResolverAsync(user.Id, null, ct);
+            // FIX: resolver con el carrito actual
+            var decision = await _pagosResolver.ResolverAsync(user.Id, carrito.CarritoID, ct);
             var esDeposito = (MetodoPago ?? "").StartsWith("dep", StringComparison.OrdinalIgnoreCase);
 
             if (esDeposito)

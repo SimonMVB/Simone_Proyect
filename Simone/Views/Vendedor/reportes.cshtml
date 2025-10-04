@@ -1,0 +1,103 @@
+@using Simone.ViewModels.Reportes
+@model IEnumerable<CompradorResumenVM>
+
+@{
+    ViewData["Title"] = ViewData["Title"] ?? "Mis ventas";
+    var vId = ViewContext?.HttpContext?.Request?.Query["vId"].ToString();
+    var totalVendedor = Model?.Sum(x => x.Total) ?? 0m;
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+<div class="container my-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">
+            <i class="fa-solid fa-chart-line me-2"></i>@(ViewData["Title"]?.ToString())
+        </h3>
+        <span class="badge bg-primary fs-6">
+            Total vendedor: <strong class="ms-1">@totalVendedor.ToString("C")</strong>
+        </span>
+    </div>
+
+    @if (Model == null || !Model.Any())
+    {
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <i class="fa-regular fa-circle-info me-2"></i>
+            Aún no hay ventas que incluyan tus productos.
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Estado</th>
+                                <th>Método</th>
+                                <th class="text-end">Total (tus ítems)</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var r in Model)
+                            {
+                                var estado = (r.Estado ?? "").Trim().ToLowerInvariant();
+                                string estadoClass = estado switch
+                                {
+                                    "pagado" or "completado" or "entregado" => "bg-success",
+                                    "pendiente" or "en proceso" => "bg-warning text-dark",
+                                    "cancelado" or "rechazado" => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+
+                                <tr>
+                                    <td>@r.VentaID</td>
+                                    <td>
+                                        @r.Fecha.ToString("yyyy-MM-dd")
+                                        @r.Fecha.ToString("HH:mm")
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold">@r.Nombre</div>
+                                        <div class="small text-muted">
+                                            @if (!string.IsNullOrWhiteSpace(r.Email))
+                                            {
+                                                <span><i class="fa-regular fa-envelope me-1"></i>@r.Email</span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(r.Email) && !string.IsNullOrWhiteSpace(r.Telefono))
+                                            {
+                                                <span class="mx-2">·</span>
+                                            }
+                                            @if (!string.IsNullOrWhiteSpace(r.Telefono))
+                                            {
+                                                <span><i class="fa-solid fa-phone me-1"></i>@r.Telefono</span>
+                                            }
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge @estadoClass">@(!string.IsNullOrWhiteSpace(r.Estado) ? r.Estado : "—")</span>
+                                    </td>
+                                    <td>@(!string.IsNullOrWhiteSpace(r.MetodoPago) ? r.MetodoPago : "—")</td>
+                                    <td class="text-end fw-semibold">@r.Total.ToString("C")</td>
+                                    <td class="text-center">
+                                        <a asp-route="Vendedor_VentaDetalle"
+                                           asp-route-id="@r.VentaID"
+                                           asp-route-vId="@(string.IsNullOrWhiteSpace(vId) ? null : vId)"
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fa-regular fa-eye me-1"></i> Ver detalle
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>

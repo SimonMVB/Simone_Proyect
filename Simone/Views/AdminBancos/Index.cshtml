@@ -1,18 +1,23 @@
 ﻿@using Simone.Models
 @using SimoneCfg = Simone.Configuration
 @{
-    ViewData["Title"] = User.IsInRole("Vendedor") ? "Mis Cuentas Bancarias" : "Bancos del Administrador";
+    // Detecta contexto: vendedor puro o admin ayudando a un vendedor (vId)
     var cuentas = (ViewBag.Cuentas as IEnumerable<SimoneCfg.CuentaBancaria>) ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>();
     bool esVendedor = User.IsInRole("Vendedor");
+    bool esAdmin = User.IsInRole("Administrador");
+    string? targetVendorId = ViewBag.TargetVendorId as string; // si el Admin ayuda a un vendedor
+    bool adminAyudando = esAdmin && !string.IsNullOrWhiteSpace(targetVendorId);
+    bool ctxVendedor = esVendedor || adminAyudando;
+
+    ViewData["Title"] = ctxVendedor ? "Mis Cuentas Bancarias" : "Bancos del Administrador";
 
     var catalogo = new[]{
-    new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
-    new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/Guayaquil.png" },
-    new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/Pacifico.png" },
-    new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/Bolivariano.webp" },
-    new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/JEP.png" },
-};
-
+        new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
+        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/Guayaquil.png" },
+        new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/Pacifico.png" },
+        new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/Bolivariano.webp" },
+        new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/JEP.png" },
+    };
 
     var modelErrors = ViewBag.ModelErrors as string;
 }
@@ -83,8 +88,12 @@
     <div class="d-flex align-items-center justify-content-between mb-3">
         <h1 class="page-title mb-0"><i class="fa-solid fa-university me-2"></i>@ViewData["Title"]</h1>
         <div class="small text-muted">
-            @(esVendedor ? (object)"Se muestra al cliente cuando la compra es solo de tu tienda."
+            @(ctxVendedor ? (object)"Se muestra al cliente cuando la compra es solo de tu tienda."
                         : (object)"Se usa cuando el carrito es de varias tiendas.")
+            @if (adminAyudando)
+            {
+                <span class="ms-2">(Ayudando a vendedor: <code>@targetVendorId</code>)</span>
+            }
         </div>
     </div>
 
@@ -104,11 +113,20 @@
     <!-- ===== Formulario Upsert ===== -->
     <div class="card card-elev mb-4">
         <div class="card-header bg-white">
-            <strong><i class="fa-solid fa-pen-to-square me-2"></i> @(esVendedor ? "Agregar / Editar cuenta de mi tienda" : "Nueva / Editar cuenta")</strong>
+            <strong><i class="fa-solid fa-pen-to-square me-2"></i> @(ctxVendedor ? "Agregar / Editar cuenta de mi tienda" : "Nueva / Editar cuenta (Admin)")</strong>
         </div>
         <div class="card-body">
-            <form asp-action="SaveAdmin" asp-controller="AdminBancos" method="post" id="frmBanco" class="row g-3" novalidate>
+            <form method="post"
+                  asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
+                  asp-action="@(ctxVendedor ? "Save" : "SaveAdmin")"
+                  id="frmBanco" class="row g-3" novalidate>
                 @Html.AntiForgeryToken()
+
+                @* si un Admin está ayudando a un vendedor, propaga vId *@
+                @if (adminAyudando)
+                {
+                    <input type="hidden" name="vId" value="@targetVendorId" />
+                }
 
                 <input type="hidden" id="OriginalCodigo" name="OriginalCodigo" />
 
@@ -165,16 +183,12 @@
                 <div class="col-md-2 d-flex align-items-end">
                     <div class="form-check">
                         <input type="hidden" name="Activo" value="false" />
-                        <!-- truco estándar de ASP.NET Core para checkboxes -->
-                        <input type="hidden" name="Activo" value="false" />
                         <input class="form-check-input" type="checkbox" id="Activo" name="Activo" value="true" checked>
-
                         <label class="form-check-label" for="Activo">Activo</label>
-
                     </div>
                 </div>
 
-                <!-- Hidden que el backend usa -->
+                <!-- Hidden que usa el backend -->
                 <input type="hidden" id="Codigo" name="Codigo" required maxlength="50">
                 <input type="hidden" id="Nombre" name="Nombre" required maxlength="120">
                 <input type="hidden" id="LogoPath" name="LogoPath" maxlength="200">
@@ -233,12 +247,12 @@
                                     }
                                     else
                                     {
+
                                         <span class="badge bg-secondary badge-dot"><i class="fa-solid fa-circle"></i> Inactivo</span>
                                     }
                                 </td>
                                 <td>
                                     <div class="d-flex gap-2">
-                                        <!-- Edita en el mismo formulario (lee desde data-*) -->
                                         <button type="button"
                                                 class="btn btn-outline-primary btn-sm"
                                                 data-codigo="@c.Codigo"
@@ -253,12 +267,18 @@
                                             <i class="fa-regular fa-pen-to-square"></i>
                                         </button>
 
-                                        <!-- Eliminar por POST -->
-                                        <form asp-action="DeleteAdmin" asp-controller="AdminBancos" method="post" class="d-inline">
+                                        <form method="post"
+                                              asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
+                                              asp-action="@(ctxVendedor ? "Delete" : "DeleteAdmin")"
+                                              class="d-inline"
+                                              onsubmit="return confirm('¿Eliminar la cuenta @((c.Nombre ?? c.Codigo))?');">
                                             @Html.AntiForgeryToken()
+                                            @if (adminAyudando)
+                                            {
+                                                <input type="hidden" name="vId" value="@targetVendorId" />
+                                            }
                                             <input type="hidden" name="codigo" value="@c.Codigo" />
-                                            <button class="btn btn-outline-danger btn-sm" type="submit"
-                                                    onclick="return confirm('¿Eliminar la cuenta @((c.Nombre ?? c.Codigo))?');">
+                                            <button class="btn btn-outline-danger btn-sm" type="submit">
                                                 <i class="fa-regular fa-trash-can"></i>
                                             </button>
                                         </form>
@@ -280,7 +300,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (() => {
-        const $ = (s)=>document.querySelector(s);
+        const $ = s => document.querySelector(s);
 
         const ddl   = $("#ddlBanco");
         const nameL = $("#bankName");
@@ -300,7 +320,7 @@
 
         function setPreview(nombre, logoPath){
             nameL.textContent = nombre || "—";
-            logo.src = (logoPath || "/images/Bancos/pichincha.webp");
+            logo.src = (logoPath || "/images/product-placeholder.png");
         }
 
         function setFromCatalog(opt){
@@ -314,14 +334,12 @@
             setPreview(name, img);
         }
 
-        // Selección desde catálogo (opcional)
         ddl?.addEventListener("change", function(){
             const opt = this.selectedIndex > 0 ? this.options[this.selectedIndex] : null;
             setFromCatalog(opt);
             if (!selT.value) selT.value = "Cuenta de Ahorros";
         });
 
-        // Función de edición usando data-*
         window.editarDesdeData = function (btn) {
             const d = btn.dataset;
             editar(
@@ -330,16 +348,13 @@
             );
         };
 
-        // Rellenar formulario para editar una fila existente
         window.editar = function(codigo, nombre, numero, tipo, titular, ruc, logoPath, activo){
-            hOrig.value = codigo;               // Update
+            hOrig.value = codigo;
             hCod.value  = codigo;
             hNom.value  = nombre || codigo;
             hLogo.value = logoPath || "/images/product-placeholder.png";
-
             setPreview(hNom.value, hLogo.value);
 
-            // Intenta seleccionar el catálogo si existe
             if (ddl){
                 const opt = Array.from(ddl.options).find(o => o.value === codigo);
                 ddl.value = opt ? codigo : "";
@@ -353,7 +368,6 @@
             window.scrollTo({ top: 0, behavior: "smooth" });
         };
 
-        // Limpiar formulario
         $("#btnLimpiar")?.addEventListener("click", () => {
             setTimeout(() => {
                 f.reset();
@@ -366,19 +380,15 @@
             }, 0);
         });
 
-        // Validación HTML5 + asegurar hidden requeridos (Codigo/Nombre)
         f?.addEventListener("submit", (e) => {
-            // Si solo eligieron del catálogo, completa los hidden
             if (!hCod.value && ddl && ddl.value){
                 const opt = ddl.options[ddl.selectedIndex];
                 setFromCatalog(opt);
             }
-            // Reglas básicas del navegador
             if (!f.checkValidity()){
                 e.preventDefault();
                 e.stopPropagation();
             } else {
-                // Evitar doble submit
                 btnG.disabled = true;
             }
             f.classList.add("was-validated");

@@ -2,255 +2,253 @@
 @{
     ViewData["Title"] = "Compra exitosa";
     var ventaId = Model?.VentaID ?? (int)(ViewBag.VentaId ?? 0);
+    // Usa el Layout del proyecto (no metas <html> ni <body> aquí)
+    // Layout = "_Layout"; // si ya está por defecto, puedes omitirlo
 }
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>¡Compra Exitosa! - Simones</title>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+    /* ===== Todo lo de la página va “scopeado” a .success ===== */
+    .success {
+        --primary: #4a6cf7;
+        --secondary: #6c757d;
+        --success: #28a745;
+        --dark: #343a40;
+        --light: #f8f9fa;
+        --radius: 12px;
+        --shadow: 0 10px 30px rgba(0,0,0,.08);
+        font-family: Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+        background: linear-gradient(135deg,#f5f7fa 0%,#e4e9f2 100%);
+    }
 
-    <style>
-        :root {
-            --primary: #4a6cf7;
-            --secondary: #6c757d;
-            --success: #28a745;
-            --dark: #343a40;
-            --light: #f8f9fa;
-            --radius: 12px;
-            --shadow: 0 10px 30px rgba(0,0,0,.08);
-        }
+    /* Solo este wrapper ocupa alto y centra; NO tocamos body */
+    .success-page {
+        min-height: 72vh; /* suficiente para que no empuje al footer */
+        display: grid;
+        place-items: center;
+        padding: 20px;
+    }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box
-        }
+    .success-card {
+        background: #fff;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 40px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        max-width: 840px;
+        width: 100%;
+    }
 
-        body {
-            font-family: Poppins,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-            background: linear-gradient(135deg,#f5f7fa 0%,#e4e9f2 100%);
-            color: var(--dark);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px
-        }
-
-        .container {
-            max-width: 840px;
-            width: 100%
-        }
-
-        .card {
-            background: #fff;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 40px;
-            text-align: center;
-            position: relative;
-            overflow: hidden
-        }
-
-            .card::before {
-                content: "";
-                position: absolute;
-                inset: 0 0 auto 0;
-                height: 5px;
-                background: linear-gradient(90deg,var(--primary),var(--success))
-            }
-
-        .ico {
-            font-size: 80px;
-            color: var(--success);
-            margin-bottom: 14px;
-            animation: bounce 1s
-        }
-
-        @@keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0)
-            }
-
-            40% {
-                transform: translateY(-18px)
-            }
-
-            60% {
-                transform: translateY(-9px)
-            }
-        }
-
-        h1 {
-            font-size: 32px;
-            color: var(--primary);
-            margin-bottom: 10px
-        }
-
-        .sub {
-            color: var(--secondary);
-            margin-bottom: 18px
-        }
-
-        .list {
-            max-width: 520px;
-            margin: 0 auto 26px;
-            text-align: left
-        }
-
-        .item {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            background: #f8f9fa;
-            border-left: 4px solid var(--success);
-            padding: 12px 14px;
-            border-radius: 8px;
-            margin-bottom: 10px
-        }
-
-        .btns {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            justify-content: center;
-            margin: 26px 0
-        }
-
-        .btn {
-            padding: 12px 22px;
-            border-radius: 10px;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: .2s
-        }
-
-        .btn-primary {
-            background: var(--primary);
-            color: #fff
-        }
-
-            .btn-primary:hover {
-                filter: brightness(.95);
-                transform: translateY(-1px)
-            }
-
-        .btn-ol {
-            border: 2px solid var(--primary);
-            color: var(--primary)
-        }
-
-            .btn-ol:hover {
-                background: var(--primary);
-                color: #fff;
-                transform: translateY(-1px)
-            }
-
-        .foot {
-            border-top: 1px solid #e9ecef;
-            margin-top: 20px;
-            padding-top: 18px
-        }
-
-        .ref {
-            font-weight: 700;
-            color: var(--primary)
-        }
-
-        .confetti {
+        .success-card::before {
+            content: "";
             position: absolute;
-            width: 10px;
-            height: 10px;
+            inset: 0 0 auto 0;
+            height: 5px;
+            background: linear-gradient(90deg,var(--primary),var(--success));
+        }
+
+    .success-ico {
+        font-size: 80px;
+        color: var(--success);
+        margin-bottom: 14px;
+        animation: success-bounce 1s;
+    }
+    @@keyframes success-bounce {
+        0%,20%,50%,80%,100%
+
+    {
+        transform: translateY(0)
+    }
+
+    40% {
+        transform: translateY(-18px)
+    }
+
+    60% {
+        transform: translateY(-9px)
+    }
+
+    }
+
+    .success-title {
+        font-size: 32px;
+        color: var(--primary);
+        margin-bottom: 10px;
+    }
+
+    .success-sub {
+        color: var(--secondary);
+        margin-bottom: 18px;
+    }
+
+    .success-list {
+        max-width: 520px;
+        margin: 0 auto 26px;
+        text-align: left;
+    }
+
+    .success-item {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        background: #f8f9fa;
+        border-left: 4px solid var(--success);
+        padding: 12px 14px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .success-btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin: 26px 0;
+    }
+
+    .success-btn {
+        padding: 12px 22px;
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: .2s;
+    }
+
+    .success-btn-primary {
+        background: var(--primary);
+        color: #fff;
+    }
+
+        .success-btn-primary:hover {
+            filter: brightness(.95);
+            transform: translateY(-1px);
+        }
+
+    .success-btn-ol {
+        border: 2px solid var(--primary);
+        color: var(--primary);
+    }
+
+        .success-btn-ol:hover {
             background: var(--primary);
-            opacity: .7;
-            animation: fall 5s linear infinite
+            color: #fff;
+            transform: translateY(-1px);
         }
 
-        @@keyframes fall {
-            0% {
-                transform: translateY(-10px) rotate(0)
-            }
+    .success-foot {
+        border-top: 1px solid #e9ecef;
+        margin-top: 20px;
+        padding-top: 18px;
+    }
 
-            100% {
-                transform: translateY(100vh) rotate(360deg);
-                opacity: 0
-            }
-        }
+    .success-ref {
+        font-weight: 700;
+        color: var(--primary);
+    }
 
-        @@media (max-width:768px) {
-            .card {
-                padding: 28px
-            }
+    /* Confetti dentro de la tarjeta, no afecta layout */
+    .success-confetti {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--primary);
+        opacity: .7;
+        animation: success-fall 5s linear infinite;
+        pointer-events: none;
+    }
+    @@keyframes success-fall {
+        0%
 
-            .btn {
-                width: 100%
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="card">
-            <!-- confetti -->
-            <div class="confetti" style="left:6%;animation-delay:0s"></div>
-            <div class="confetti" style="left:12%;animation-delay:1s"></div>
-            <div class="confetti" style="left:18%;animation-delay:2s"></div>
-            <div class="confetti" style="left:82%;animation-delay:1.5s"></div>
-            <div class="confetti" style="left:88%;animation-delay:2.5s"></div>
-            <div class="confetti" style="left:94%;animation-delay:3.5s"></div>
+    {
+        transform: translateY(-10px) rotate(0)
+    }
 
-            <i class="fa-solid fa-circle-check ico"></i>
-            <h1>¡Gracias por tu compra!</h1>
-            <p class="sub">Tu pedido fue procesado correctamente y está siendo preparado.</p>
+    100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0
+    }
 
-            <div class="list">
-                <div class="item"><i class="fa-solid fa-check text-success"></i> Recibirás un email con el detalle de tu compra.</div>
-                <div class="item"><i class="fa-solid fa-check text-success"></i> Compra registrada con el número de referencia <span class="ref">#@ventaId</span>.</div>
+    }
+
+    @@media (max-width:768px) {
+        .success-card
+
+    {
+        padding: 28px;
+    }
+
+    .success-btn {
+        width: 100%;
+    }
+
+    }
+</style>
+
+<div class="success">
+    <section class="success-page">
+        <div class="success-card" role="status" aria-live="polite">
+            <!-- confetti base -->
+            <div class="success-confetti" style="left:6%;animation-delay:0s"></div>
+            <div class="success-confetti" style="left:12%;animation-delay:1s"></div>
+            <div class="success-confetti" style="left:18%;animation-delay:2s"></div>
+            <div class="success-confetti" style="left:82%;animation-delay:1.5s"></div>
+            <div class="success-confetti" style="left:88%;animation-delay:2.5s"></div>
+            <div class="success-confetti" style="left:94%;animation-delay:3.5s"></div>
+
+            <i class="fa-solid fa-circle-check success-ico" aria-hidden="true"></i>
+            <h1 class="success-title">¡Gracias por tu compra!</h1>
+            <p class="success-sub">Tu pedido fue procesado correctamente y está siendo preparado.</p>
+
+            <div class="success-list">
+                <div class="success-item">
+                    <i class="fa-solid fa-check text-success" aria-hidden="true"></i>
+                    <span>Recibirás un email con el detalle de tu compra.</span>
+                </div>
+                <div class="success-item">
+                    <i class="fa-solid fa-check text-success" aria-hidden="true"></i>
+                    <span>Compra registrada con el número de referencia <span class="success-ref">#@ventaId</span>.</span>
+                </div>
             </div>
 
-            <div class="btns">
-                <!-- Ver mis pedidos -->
-                <a asp-controller="MisCompras" asp-action="Index" class="btn btn-primary">
-                    <i class="fa-solid fa-list"></i> Ver mis pedidos
+            <nav class="success-btns" aria-label="Acciones tras la compra">
+                <a asp-controller="MisCompras" asp-action="Index" class="success-btn success-btn-primary">
+                    <i class="fa-solid fa-list" aria-hidden="true"></i> Ver mis pedidos
                 </a>
-                <!-- Volver al inicio -->
-                <a asp-controller="Home" asp-action="Index" class="btn btn-ol">
-                    <i class="fa-solid fa-house"></i> Volver al inicio
+                <a asp-controller="Home" asp-action="Index" class="success-btn success-btn-ol">
+                    <i class="fa-solid fa-house" aria-hidden="true"></i> Volver al inicio
                 </a>
-                <!-- Descargar comprobante -->
-                <a asp-controller="Compras" asp-action="Comprobante" asp-route-id="@ventaId" class="btn btn-ol">
-                    <i class="fa-solid fa-download"></i> Descargar comprobante
+                <a asp-controller="Compras" asp-action="Comprobante" asp-route-id="@ventaId" class="success-btn success-btn-ol">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i> Descargar comprobante
                 </a>
-            </div>
+            </nav>
 
-            <div class="foot">
-                <div class="sub">¿Necesitas ayuda? Contáctanos</div>
-                <div class="sub">Número de referencia: <span class="ref">#@ventaId</span></div>
+            <div class="success-foot">
+                <div class="success-sub">¿Necesitas ayuda? Contáctanos</div>
+                <div class="success-sub">Número de referencia: <span class="success-ref">#@ventaId</span></div>
             </div>
         </div>
-    </div>
+    </section>
+</div>
 
+@section Scripts {
     <script>
-        // confetti extra
-        document.addEventListener('DOMContentLoaded', () => {
-            const box = document.querySelector('.card');
-            const colors = ['#4a6cf7','#28a745','#6c757d','#ffc107','#dc3545'];
-            for (let i = 0; i < 18; i++) {
-                const c = document.createElement('div');
-                c.className = 'confetti';
-                c.style.left = Math.random() * 100 + '%';
-                c.style.animationDelay = (Math.random() * 5) + 's';
-                c.style.background = colors[Math.floor(Math.random()*colors.length)];
-                box.appendChild(c);
-            }
-        });
+        // Confetti adicional dentro de la tarjeta (no toca el footer)
+        (function(){
+          const box = document.querySelector('.success-card');
+          if(!box) return;
+          const colors = ['#4a6cf7','#28a745','#6c757d','#ffc107','#dc3545'];
+          for (let i = 0; i < 18; i++) {
+            const c = document.createElement('div');
+            c.className = 'success-confetti';
+            c.style.left = Math.random() * 100 + '%';
+            c.style.animationDelay = (Math.random() * 5) + 's';
+            c.style.background = colors[Math.floor(Math.random()*colors.length)];
+            box.appendChild(c);
+          }
+        })();
     </script>
-</body>
-</html>
+}

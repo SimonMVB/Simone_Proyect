@@ -1191,11 +1191,20 @@ namespace Simone.Data.Migrations
 
                     b.Property<string>("NombreSubcategoria")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VendedorID")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("SubcategoriaID");
 
                     b.HasIndex("CategoriaID");
+
+                    b.HasIndex("VendedorID", "CategoriaID", "NombreSubcategoria")
+                        .IsUnique();
 
                     b.ToTable("Subcategorias");
                 });
@@ -1869,7 +1878,15 @@ namespace Simone.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Simone.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("VendedorID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Categoria");
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Simone.Models.Ventas", b =>

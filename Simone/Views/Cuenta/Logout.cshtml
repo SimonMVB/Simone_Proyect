@@ -111,6 +111,53 @@
                 }
             });
 
+
+
+                    const getToken = () =>
+          document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? "";
+
+        async function quitarDelCarrito(detalleId){
+          try{
+            const r = await fetch('/Compras/Quitar', {
+              method: 'POST',
+              credentials: 'same-origin',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'RequestVerificationToken': getToken()
+              },
+              body: JSON.stringify({ detalleId })
+            });
+            if(!r.ok) throw new Error(`HTTP ${r.status}`);
+
+            // Solo parsea si realmente es JSON
+            const ct = (r.headers.get('content-type') || '').toLowerCase();
+            if (ct.includes('application/json')) {
+              await r.json(); // opcional si no lo usas
+            }
+
+            await afterCartMutation(); // update badge + refresh mini
+          }catch(e){
+            console.error('quitarDelCarrito:', e); // evita alert con el texto del HTML
+          }
+        }
+
+        async function updateCartBadge(){
+          try{
+            const r = await fetch('/Compras/Badge', { credentials:'same-origin',
+              headers:{'X-Requested-With':'XMLHttpRequest'} });
+            if(!r.ok) throw new Error(`HTTP ${r.status}`);
+            const ct = (r.headers.get('content-type')||'').toLowerCase();
+            if(!ct.includes('application/json')) return;  // evita el parseo inválido
+            const data = await r.json();
+            const el = document.getElementById('cart-badge');
+            if (el) el.textContent = data.count ?? 0;
+          }catch(e){ console.error('updateCartBadge:', e); }
+        }
+
+
+
+
             // Forzar solicitud de logout al servidor
             fetch('/Cuenta/Logout', {
                 method: 'POST',

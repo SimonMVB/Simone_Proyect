@@ -253,14 +253,14 @@ namespace Simone.Controllers
             var usuarioDb = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == usuario.Id, ct);
             if (usuarioDb == null) return NotFound();
 
-            // Eliminar foto si el usuario lo solicitó
+            // --- Eliminar foto si el usuario lo solicitó ---
             if (EliminarFoto == true && !string.IsNullOrEmpty(usuarioDb.FotoPerfil))
             {
                 TryDeleteProfileImage(usuarioDb.FotoPerfil);
                 usuarioDb.FotoPerfil = null;
             }
 
-            // Subida segura de nueva imagen
+            // --- Subida segura de nueva imagen ---
             if (ImagenPerfil != null && ImagenPerfil.Length > 0)
             {
                 if (ImagenPerfil.Length > _maxImagenBytes)
@@ -270,7 +270,9 @@ namespace Simone.Controllers
                 }
 
                 var ext = Path.GetExtension(ImagenPerfil.FileName).ToLowerInvariant();
-                if (!_extPermitidas.Contains(ext) || string.IsNullOrWhiteSpace(ImagenPerfil.ContentType) || !ImagenPerfil.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                if (!_extPermitidas.Contains(ext) ||
+                    string.IsNullOrWhiteSpace(ImagenPerfil.ContentType) ||
+                    !ImagenPerfil.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
                 {
                     TempData["MensajeError"] = "Formato de imagen no permitido.";
                     return RedirectToAction(nameof(Perfil));
@@ -301,7 +303,27 @@ namespace Simone.Controllers
                 }
             }
 
-            // Solo campos permitidos
+            // --- Validación y asignación de CÉDULA ---
+            string? ced = string.IsNullOrWhiteSpace(usuario.Cedula) ? null : usuario.Cedula.Trim();
+
+            // 10 dígitos numéricos
+            if (ced != null && !System.Text.RegularExpressions.Regex.IsMatch(ced, @"^\d{10}$"))
+            {
+                TempData["MensajeError"] = "La cédula debe tener exactamente 10 dígitos numéricos.";
+                return RedirectToAction(nameof(Perfil));
+            }
+
+            // Unicidad (opcional pero recomendable)
+            if (ced != null &&
+                await _userManager.Users.AnyAsync(u => u.Id != usuarioDb.Id && u.Cedula == ced, ct))
+            {
+                TempData["MensajeError"] = "La cédula ingresada ya está registrada en otra cuenta.";
+                return RedirectToAction(nameof(Perfil));
+            }
+
+            usuarioDb.Cedula = ced;
+
+            // --- Asignar SOLO campos permitidos ---
             usuarioDb.NombreCompleto = usuario.NombreCompleto;
             usuarioDb.Telefono = string.IsNullOrWhiteSpace(usuario.Telefono) ? null : usuario.Telefono.Trim();
             usuarioDb.Direccion = string.IsNullOrWhiteSpace(usuario.Direccion) ? null : usuario.Direccion.Trim();
@@ -319,6 +341,10 @@ namespace Simone.Controllers
             if (_logService != null) await _logService.Registrar($"Actualizó su perfil: {usuarioDb.Email}");
             TempData["MensajeExito"] = "Perfil actualizado correctamente.";
             return RedirectToAction(nameof(Perfil));
+        
+
+
+
         }
 
         // ======= DIRECCIÓN DE ENVÍO =======

@@ -1,0 +1,12 @@
+[
+  {
+    "codigo": "pichincha",
+    "nombre": "Banco Pichincha",
+    "numero": "2207897450",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "Joseph Tipan",
+    "ruc": "0987654321",
+    "logoPath": "/images/Bancos/pichincha.webp",
+    "activo": true
+  }
+]

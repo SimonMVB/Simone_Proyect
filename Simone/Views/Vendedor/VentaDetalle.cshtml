@@ -1,0 +1,268 @@
+@using Simone.ViewModels.Reportes
+@model VentaDetalleVM
+
+@{
+    ViewData["Title"] = $"Venta #{Model.VentaID}";
+    // preservar ?vId= si un Admin ayuda a un vendedor
+    var vId = ViewContext?.HttpContext?.Request?.Query["vId"].ToString();
+
+    string EstadoClass(string? e)
+    {
+        var estado = (e ?? "").Trim().ToLowerInvariant();
+        return estado switch
+        {
+            "pagado" or "completado" or "entregado" => "bg-success",
+            "pendiente" or "en proceso" => "bg-warning text-dark",
+            "cancelado" or "rechazado" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    bool IsImage(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        var u = url.ToLowerInvariant();
+        return u.EndsWith(".jpg") || u.EndsWith(".jpeg") || u.EndsWith(".png") || u.EndsWith(".webp") || u.EndsWith(".gif");
+    }
+
+    bool IsPdf(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return false;
+        return url.ToLowerInvariant().EndsWith(".pdf");
+    }
+}
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+
+<div class="container my-4">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h3 class="mb-0">
+            <i class="fa-solid fa-receipt me-2"></i>@ViewData["Title"]
+        </h3>
+        <div class="d-flex gap-2">
+            <span class="badge @EstadoClass(Model.Estado) px-3 py-2">
+                @(!string.IsNullOrWhiteSpace(Model.Estado) ? Model.Estado : "—")
+            </span>
+            <a class="btn btn-outline-secondary"
+               href="@(Url.Action("Reportes", "Vendedor", new { vId = string.IsNullOrWhiteSpace(vId) ? null : vId }))">
+                <i class="fa-solid fa-arrow-left-long me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Resumen -->
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="small text-muted">Fecha</div>
+                            <div class="fw-semibold">
+                                @Model.Fecha.ToString("yyyy-MM-dd HH:mm")
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="small text-muted">Método de pago</div>
+                            <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.MetodoPago) ? Model.MetodoPago : "—")</div>
+                        </div>
+                        <div class="col-12">
+                            <hr class="my-2" />
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="fs-5">Total (tus ítems)</div>
+                                <div class="fs-4 fw-bold">@Model.Total.ToString("C")</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ítems del vendedor -->
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-light">
+                    <i class="fa-solid fa-shirt me-2"></i>Productos de esta venta (tus ítems)
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Detalles == null || !Model.Detalles.Any())
+                    {
+                        <div class="p-3 text-muted">No hay ítems de este vendedor en la venta.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th class="text-center">Cantidad</th>
+                                        <th class="text-end">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var d in Model.Detalles)
+                                    {
+                                        <tr>
+                                            <td>@d.Producto</td>
+                                            <td class="text-center">@d.Cantidad</td>
+                                            <td class="text-end">@d.Subtotal.ToString("C")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <th colspan="2" class="text-end">Total</th>
+                                        <th class="text-end">@Model.Total.ToString("C")</th>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Lado derecho: Cliente / Pago / Envío -->
+        <div class="col-12 col-lg-4">
+            <!-- Cliente -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light">
+                    <i class="fa-regular fa-user me-2"></i>Cliente
+                </div>
+                <div class="card-body">
+                    <div class="fw-semibold mb-1">@Model.Nombre</div>
+                    <div class="small text-muted">ID: @Model.UsuarioId</div>
+
+                    <div class="mt-2">
+                        @if (!string.IsNullOrWhiteSpace(Model.Cedula))
+                        {
+                            <div class="mb-1"><i class="fa-solid fa-id-card me-2"></i>@Model.Cedula</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.Email))
+                        {
+                            <div class="mb-1"><i class="fa-regular fa-envelope me-2"></i>@Model.Email</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.Telefono))
+                        {
+                            <div class="mb-1"><i class="fa-solid fa-phone me-2"></i>@Model.Telefono</div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(Model.Direccion))
+                        {
+                            <div class="mb-1"><i class="fa-solid fa-location-dot me-2"></i>@Model.Direccion</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pago / Depósito -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light">
+                    <i class="fa-solid fa-money-check-dollar me-2"></i>Pago / Depósito
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <div class="small text-muted">Banco reportado</div>
+                        <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.Banco) ? Model.Banco : "—")</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small text-muted">Depositante</div>
+                        <div class="fw-semibold">@(!string.IsNullOrWhiteSpace(Model.Depositante) ? Model.Depositante : "—")</div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.ComprobanteUrl))
+                    {
+                        <div class="mb-2">
+                            <div class="small text-muted mb-1">Comprobante</div>
+
+                            @if (IsImage(Model.ComprobanteUrl))
+                            {
+                                <a href="@Model.ComprobanteUrl" target="_blank" rel="noopener">
+                                    <img src="@Model.ComprobanteUrl"
+                                         alt="Comprobante de pago"
+                                         class="img-fluid rounded border" />
+                                </a>
+                            }
+                            else if (IsPdf(Model.ComprobanteUrl))
+                            {
+                                <a class="btn btn-sm btn-outline-primary"
+                                   href="@Model.ComprobanteUrl" target="_blank" rel="noopener">
+                                    <i class="fa-regular fa-file-pdf me-1"></i> Abrir comprobante (PDF)
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="btn btn-sm btn-outline-secondary"
+                                   href="@Model.ComprobanteUrl" target="_blank" rel="noopener">
+                                    <i class="fa-regular fa-file-lines me-1"></i> Abrir comprobante
+                                </a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted">No hay comprobante disponible.</div>
+                    }
+                </div>
+            </div>
+
+            <!-- Envío / Direcciones -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <i class="fa-solid fa-truck me-2"></i>Envío / Direcciones
+                </div>
+                <div class="card-body">
+                    @if (Model.Direcciones != null && Model.Direcciones.Any())
+                    {
+                        <div class="list-group">
+                            @foreach (var d in Model.Direcciones)
+                            {
+                                <div class="list-group-item">
+                                    <div class="fw-semibold">
+                                        @(string.Join(", ", new[]{
+                                                                d.Calle,
+                                                                d.Ciudad,
+                                                                d.EstadoProvincia,
+                                                                d.CodigoPostal
+                                                                }.Where(x => !string.IsNullOrWhiteSpace(x))))
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(d.TelefonoContacto))
+                                    {
+                                        <div class="small text-muted mt-1">
+                                            <i class="fa-solid fa-phone me-1"></i>@d.TelefonoContacto
+                                        </div>
+                                    }
+                                    @* d.FechaRegistro es DateTime (no nullable) en tu VM *@
+                                    @if (d.FechaRegistro != default(DateTime))
+                                    {
+                                        <div class="small text-muted">
+                                            <i class="fa-regular fa-clock me-1"></i>@d.FechaRegistro.ToString("yyyy-MM-dd HH:mm")
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-muted mb-2">Sin direcciones específicas para esta venta.</div>
+                        @if (!string.IsNullOrWhiteSpace(Model.PerfilProvincia) ||
+                                            !string.IsNullOrWhiteSpace(Model.PerfilCiudad) ||
+                                            !string.IsNullOrWhiteSpace(Model.PerfilReferencia))
+                        {
+                            <div class="border rounded p-2">
+                                <div class="fw-semibold mb-1">Datos del perfil</div>
+                                <div class="small">
+                                    <div><strong>Provincia:</strong> @(Model.PerfilProvincia ?? "—")</div>
+                                    <div><strong>Ciudad:</strong> @(Model.PerfilCiudad ?? "—")</div>
+                                    <div><strong>Referencia:</strong> @(Model.PerfilReferencia ?? "—")</div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

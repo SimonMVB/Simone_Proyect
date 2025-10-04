@@ -1,4 +1,5 @@
 ﻿// Simone/Models/AdminBancosController.cs
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Simone.Configuration;
 using Simone.Services;
@@ -7,6 +8,7 @@ using System.Text.RegularExpressions;
 
 namespace Simone.Controllers
 {
+    [Authorize(Roles = "Administrador")]
     [Route("Admin/Bancos")]
     public class AdminBancosController : Controller
     {
@@ -80,9 +82,11 @@ namespace Simone.Controllers
         // -----------------------------
         // Views
         // -----------------------------
-        [HttpGet("")]
+        [HttpGet("", Name = "AdminBancos_Index")]
         public async Task<IActionResult> Index()
         {
+            if (User.IsInRole("Vendedor") && !User.IsInRole("Administrador"))
+                return RedirectToAction("Bancos", "Vendedor");
             try
             {
                 var cuentas = await _svc.GetAdminAsync();

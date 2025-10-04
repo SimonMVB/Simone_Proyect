@@ -1,4 +1,4 @@
-﻿using System; // Necesario para Type en mapeos y DateTime
+﻿using System;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -50,7 +50,7 @@ namespace Simone.Data
         public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<VentaReversion> VentaReversiones { get; set; }
 
-        // ✅ NUEVO: Multi-vendedor (según Models/Vendedor.cs)
+        // ✅ Multi-vendedor
         public DbSet<Vendedor> Vendedores { get; set; }
         public DbSet<Banco> Bancos { get; set; }
         public DbSet<CuentaBancaria> CuentasBancarias { get; set; }
@@ -155,11 +155,28 @@ namespace Simone.Data
                 .HasForeignKey(p => p.SubcategoriaID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Subcategorias>()
-                .HasOne(s => s.Categoria)
-                .WithMany(c => c.Subcategoria)
-                .HasForeignKey(s => s.CategoriaID)
-                .OnDelete(DeleteBehavior.Restrict);
+            // ===== Subcategorias (multi-vendedor) =====
+            modelBuilder.Entity<Subcategorias>(entity =>
+            {
+                // Relación con Categorías (respeta tu navegación actual)
+                entity.HasOne(s => s.Categoria)
+                      .WithMany(c => c.Subcategoria)
+                      .HasForeignKey(s => s.CategoriaID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Vendedor dueño (FK -> AspNetUsers.Id)
+                entity.Property(s => s.VendedorID)
+                      .HasMaxLength(450); // nvarchar(450) de Identity
+
+                entity.HasOne(s => s.Usuario)
+                      .WithMany()
+                      .HasForeignKey(s => s.VendedorID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Unicidad por vendedor + categoría + nombre
+                entity.HasIndex(s => new { s.VendedorID, s.CategoriaID, s.NombreSubcategoria })
+                      .IsUnique();
+            });
 
             modelBuilder.Entity<Reseñas>()
                 .HasOne(r => r.Usuario)
@@ -204,7 +221,7 @@ namespace Simone.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ------------------------------------------------------------
-            // 3.b) NUEVO — Multi-vendedor: Vendedor/Banco/Cuenta/Contacto
+            // 3.b) Multi-vendedor: Vendedor/Banco/Cuenta/Contacto
             // ------------------------------------------------------------
             // Vendedor
             modelBuilder.Entity<Vendedor>(entity =>
@@ -226,10 +243,7 @@ namespace Simone.Data
             modelBuilder.Entity<Banco>(entity =>
             {
                 entity.HasKey(b => b.BancoId);
-
-                // Código único (ej.: "pichincha", "guayaquil")
-                entity.HasIndex(b => b.Codigo)
-                      .IsUnique();
+                entity.HasIndex(b => b.Codigo).IsUnique(); // ej.: "pichincha"
             });
 
             // CuentaBancaria

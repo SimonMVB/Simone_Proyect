@@ -1,273 +1,186 @@
 @model Usuario
-
 @{
     ViewData["Title"] = "Panel de Control";
 
-    // opcional: contador de cuentas activas enviado desde el controlador
     var bancosAdminCount = ViewBag.BancosAdminCount as int? ?? -1;
+    var bancosProvCount = ViewBag.BancosProvCount as int? ?? -1;
+
+    var isAdmin = User.IsInRole("Administrador");
+    var isVendedor = User.IsInRole("Vendedor");
 }
 
-<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
     :root {
         --primary-dark: #1A1A1A;
-        --primary-light: #FFFFFF;
+        --primary-light: #fff;
         --accent-purple: #4B0082;
         --accent-gold: #D4AF37;
         --light-gray: #F8F8F8;
         --medium-gray: #E0E0E0;
-        --dark-gray: #333333;
-        --text-color: #333333;
-        --text-light: #777777;
-        --success-color: #28a745;
-        --danger-color: #dc3545;
-        --warning-color: #ffc107;
-        --info-color: #17a2b8;
+        --dark-gray: #333;
+        --text-color: #333;
+        --text-light: #777;
+        --success: #28a745;
+        --danger: #dc3545;
+        --warning: #ffc107;
+        --info: #17a2b8;
     }
 
     body {
-        font-family: 'Montserrat', sans-serif;
-        background-color: #f5f5f7;
-        color: var(--text-color);
+        font-family: 'Montserrat',sans-serif;
+        background: #f5f5f7;
+        color: var(--text-color)
     }
 
     .dashboard-container {
         max-width: 1200px;
         margin: 2rem auto;
-        padding: 0 15px;
+        padding: 0 15px
     }
 
     .dashboard-header {
-        background: linear-gradient(135deg, var(--accent-purple), #2E0854);
-        color: var(--primary-light);
+        background: linear-gradient(135deg,var(--accent-purple),#2E0854);
+        color: #fff;
         padding: 2rem;
         border-radius: 12px 12px 0 0;
-        margin-bottom: 0;
+        margin-bottom: 0
     }
 
     .dashboard-title {
         font-size: 2rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: .5rem;
         display: flex;
-        align-items: center;
+        align-items: center
     }
 
     .dashboard-subtitle {
         font-size: 1rem;
-        opacity: 0.9;
-        margin-bottom: 0;
+        opacity: .9;
+        margin-bottom: 0
     }
 
     .dashboard-content {
-        background-color: var(--primary-light);
+        background: #fff;
         border-radius: 0 0 12px 12px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,.08);
+        padding: 2rem
     }
 
     .dashboard-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fill,minmax(350px,1fr));
+        gap: 1.5rem
     }
 
     .dashboard-card {
-        background-color: var(--primary-light);
+        background: #fff;
         border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        box-shadow: 0 4px 20px rgba(0,0,0,.08);
         padding: 1.5rem;
-        transition: all 0.3s ease;
+        transition: .3s;
         border-left: 4px solid var(--accent-purple);
         display: flex;
         flex-direction: column;
-        height: 100%;
+        height: 100%
     }
 
         .dashboard-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-            border-left: 4px solid var(--accent-gold);
+            box-shadow: 0 8px 25px rgba(0,0,0,.15);
+            border-left-color: var(--accent-gold)
         }
 
     .card-header {
         display: flex;
         align-items: flex-start;
-        margin-bottom: 1rem;
+        margin-bottom: 1rem
     }
 
     .card-icon {
         font-size: 1.5rem;
         color: var(--accent-purple);
         margin-right: 1rem;
-        flex-shrink: 0;
+        flex-shrink: 0
     }
 
     .card-title {
         font-size: 1.3rem;
         font-weight: 600;
-        margin-bottom: 0.25rem;
-        color: var(--dark-gray);
+        margin-bottom: .25rem;
+        color: var(--dark-gray)
     }
 
     .card-subtitle {
-        font-size: 0.9rem;
+        font-size: .9rem;
         color: var(--text-light);
-        margin-bottom: 0;
+        margin-bottom: 0
     }
 
     .card-body {
         flex-grow: 1;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.5rem
     }
 
     .card-description {
-        font-size: 0.95rem;
+        font-size: .95rem;
         color: var(--text-color);
-        line-height: 1.5;
+        line-height: 1.5
     }
 
     .card-footer {
-        margin-top: auto;
+        margin-top: auto
     }
 
     .card-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.5rem 1.25rem;
+        padding: .5rem 1.25rem;
         border-radius: 30px;
         font-weight: 500;
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
-        text-decoration: none;
+        font-size: .9rem;
+        transition: .3s;
+        text-decoration: none
     }
 
     .btn-primary {
-        background-color: var(--accent-purple);
-        color: var(--primary-light);
+        background: var(--accent-purple);
+        color: #fff
     }
 
         .btn-primary:hover {
-            background-color: #5E2D8C;
-            color: var(--primary-light);
+            background: #5E2D8C
         }
 
     .btn-success {
-        background-color: var(--success-color);
-        color: var(--primary-light);
+        background: var(--success);
+        color: #fff
     }
 
         .btn-success:hover {
-            background-color: #218838;
-            color: var(--primary-light);
+            background: #218838
         }
 
     .btn-warning {
-        background-color: var(--warning-color);
-        color: var(--primary-dark);
+        background: var(--warning);
+        color: var(--primary-dark)
     }
 
         .btn-warning:hover {
-            background-color: #e0a800;
-            color: var(--primary-dark);
+            background: #e0a800
         }
 
     .btn-info {
-        background-color: var(--info-color);
-        color: var(--primary-light);
+        background: var(--info);
+        color: #fff
     }
 
         .btn-info:hover {
-            background-color: #138496;
-            color: var(--primary-light);
+            background: #138496
         }
-
-    .btn-secondary {
-        background-color: var(--medium-gray);
-        color: var(--text-color);
-    }
-
-        .btn-secondary:hover {
-            background-color: #d6d8db;
-            color: var(--text-color);
-        }
-
-    .disabled-card {
-        opacity: 0.7;
-        filter: grayscale(30%);
-    }
-
-        .disabled-card:hover {
-            transform: none;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid var(--accent-purple);
-            cursor: not-allowed;
-        }
-
-    .card-image {
-        width: 80px;
-        height: 80px;
-        object-fit: cover;
-        border-radius: 8px;
-        margin-left: auto;
-        align-self: center;
-    }
-
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .fade-in {
-        animation: fadeIn 0.6s ease-out;
-    }
-
-    /* Responsive */
-    @@media (max-width: 992px) {
-        .dashboard-grid {
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        }
-    }
-
-    @@media (max-width: 768px) {
-        .dashboard-header {
-            padding: 1.5rem;
-        }
-
-        .dashboard-content {
-            padding: 1.5rem;
-        }
-
-        .dashboard-title {
-            font-size: 1.75rem;
-        }
-    }
-
-    @@media (max-width: 576px) {
-        .dashboard-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .dashboard-title {
-            font-size: 1.5rem;
-        }
-
-        .dashboard-subtitle {
-            font-size: 0.9rem;
-        }
-    }
 
     .chip {
         display: inline-block;
@@ -276,23 +189,65 @@
         border-radius: 999px;
         background: #f2f2f7;
         color: #333;
-        margin-left: .5rem;
+        margin-left: .5rem
+    }
+
+    @@media (max-width:992px) {
+        .dashboard-grid
+
+    {
+        grid-template-columns: repeat(auto-fill,minmax(300px,1fr))
+    }
+
+    }
+
+    @@media (max-width:768px) {
+        .dashboard-header
+
+    {
+        padding: 1.5rem
+    }
+
+    .dashboard-content {
+        padding: 1.5rem
+    }
+
+    .dashboard-title {
+        font-size: 1.75rem
+    }
+
+    }
+
+    @@media (max-width:576px) {
+        .dashboard-grid
+
+    {
+        grid-template-columns: 1fr
+    }
+
+    .dashboard-title {
+        font-size: 1.5rem
+    }
+
+    .dashboard-subtitle {
+        font-size: .9rem
+    }
+
     }
 </style>
 
-<div class="dashboard-container fade-in">
+<div class="dashboard-container">
     <div class="dashboard-header">
-        <h1 class="dashboard-title">
-            <i class="fas fa-cog me-3"></i> @ViewData["Title"]
-        </h1>
+        <h1 class="dashboard-title"><i class="fas fa-cog me-3"></i> @ViewData["Title"]</h1>
         <p class="dashboard-subtitle">Gestión central del sistema y módulos disponibles</p>
     </div>
 
     <div class="dashboard-content">
         <div class="dashboard-grid">
-            @if (User.IsInRole("Administrador"))
+
+            @if (isAdmin)
             {
-                <!-- Usuarios -->
+                <!-- (ADMIN) Usuarios -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-users"></i></div>
@@ -311,7 +266,7 @@
                     </div>
                 </div>
 
-                <!-- Productos -->
+                <!-- (ADMIN) Productos -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-boxes"></i></div>
@@ -330,7 +285,7 @@
                     </div>
                 </div>
 
-                <!-- Categorías -->
+                <!-- (ADMIN) Categorías -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-folder"></i></div>
@@ -349,7 +304,7 @@
                     </div>
                 </div>
 
-                <!-- Subcategorías -->
+                <!-- (ADMIN) Subcategorías -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-tags"></i></div>
@@ -368,7 +323,7 @@
                     </div>
                 </div>
 
-                <!-- Proveedores -->
+                <!-- (ADMIN) Proveedores -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-truck"></i></div>
@@ -387,7 +342,7 @@
                     </div>
                 </div>
 
-                <!-- Bancos (Administrador) -->
+                <!-- (ADMIN) Bancos -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-university"></i></div>
@@ -403,14 +358,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">
-                            Define y edita las cuentas bancarias del <strong>administrador</strong> que se muestran
-                            al cliente cuando su carrito contiene productos de <em>varias tiendas</em> (pagos centralizados).
-                        </p>
-                        <ul class="small text-muted mb-0">
-                            <li>Banco, número, tipo (ahorros/corriente), titular, RUC y logo.</li>
-                            <li>Se guardan en <code>App_Data/bancos-admin.json</code>.</li>
-                        </ul>
+                        <p class="card-description">Define las cuentas bancarias del <strong>administrador</strong> para pagos centralizados.</p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-primary" asp-controller="AdminBancos" asp-action="Index">
@@ -419,7 +367,7 @@
                     </div>
                 </div>
 
-                <!-- Registros -->
+                <!-- (ADMIN) Logs -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-clock"></i></div>
@@ -438,7 +386,7 @@
                     </div>
                 </div>
 
-                <!-- Reportes -->
+                <!-- (ADMIN) Reportes -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
@@ -457,9 +405,9 @@
                     </div>
                 </div>
             }
-            else if (User.IsInRole("Vendedor"))
+            else if (isVendedor)
             {
-                <!-- Productos para Vendedor -->
+                <!-- (VENDEDOR) Productos -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-boxes"></i></div>
@@ -478,29 +426,73 @@
                     </div>
                 </div>
 
-                <!-- (Opcional) Bancos por tienda: cuando habilitemos el módulo de vendedor -->
-                <div class="dashboard-card disabled-card">
+                <!-- (VENDEDOR) Mis Subcategorías  👈 NUEVO -->
+                <div class="dashboard-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-university"></i></div>
+                        <div class="card-icon"><i class="fas fa-tags"></i></div>
                         <div>
-                            <h3 class="card-title">Mis Cuentas Bancarias</h3>
-                            <p class="card-subtitle">Pago directo a mi tienda</p>
+                            <h3 class="card-title">Mis Subcategorías</h3>
+                            <p class="card-subtitle">Organización de mi tienda</p>
                         </div>
                     </div>
                     <div class="card-body">
                         <p class="card-description">
-                            Aquí podrás registrar las cuentas bancarias de tu tienda. Se mostrarán al cliente
-                            cuando su carrito contenga <strong>solo productos tuyos</strong>.
+                            Crea y administra subcategorías <strong>solo de tu tienda</strong>.
+                            Se validan duplicados por <em>(vendedor, categoría, nombre)</em>.
                         </p>
-                        <p class="small text-muted mb-0">Próximamente.</p>
                     </div>
                     <div class="card-footer">
-                        <a class="card-btn btn-secondary" tabindex="-1" aria-disabled="true">
-                            <i class="fas fa-university me-2"></i> Próximamente
+                        <a class="card-btn btn-warning" asp-controller="Panel" asp-action="Subcategorias">
+                            <i class="fas fa-tags me-2"></i> Ver Subcategorías
+                        </a>
+                    </div>
+                </div>
+
+                <!-- (VENDEDOR) Reportes -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div>
+                            <h3 class="card-title">Reportes</h3>
+                            <p class="card-subtitle">Mis ventas</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Consulta tus ventas y totales correspondientes <strong>solo a tus productos</strong>.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-success" asp-controller="Vendedor" asp-action="Reportes">
+                            <i class="fas fa-chart-bar me-2"></i> Ver Reportes
+                        </a>
+                    </div>
+                </div>
+
+                <!-- (VENDEDOR) Mis Cuentas Bancarias -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon"><i class="fas fa-university"></i></div>
+                        <div>
+                            <h3 class="card-title">
+                                Mis Cuentas Bancarias
+                                @if (bancosProvCount >= 0)
+                                {
+                                    <span class="chip">Activas: <strong>@bancosProvCount</strong></span>
+                                }
+                            </h3>
+                            <p class="card-subtitle">Pago directo a mi tienda</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">Registra las cuentas bancarias de tu tienda. Se mostrarán cuando el carrito contenga <strong>solo productos tuyos</strong>.</p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-primary" asp-controller="Vendedor" asp-action="Bancos">
+                            <i class="fas fa-university me-2"></i> Configurar Bancos
                         </a>
                     </div>
                 </div>
             }
+
         </div>
     </div>
 </div>

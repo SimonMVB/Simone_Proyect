@@ -1,0 +1,153 @@
+﻿@using SimoneCfg = Simone.Configuration
+@model IEnumerable<SimoneCfg.CuentaBancaria>
+@{
+    var selected = ViewBag.BancoCodigo as string;
+
+    var catalogo = new[]{
+        new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
+        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/Guayaquil.png" },
+        new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/Pacifico.png" },
+        new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/Bolivariano.webp" },
+        new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/JEP.png" },
+    };
+    var dict = catalogo.ToDictionary(x => x.Codigo, x => new { x.Nombre, x.Logo }, StringComparer.OrdinalIgnoreCase);
+}
+
+<style>
+    .banks-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
+        gap: 14px;
+    }
+
+    .bank-card {
+        position: relative;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        border: 1px solid #eef0f4;
+        border-radius: 14px;
+        padding: 12px 14px;
+        background: #fff;
+        cursor: pointer;
+        transition: .15s;
+        user-select: none;
+    }
+
+        .bank-card:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,.06);
+            transform: translateY(-1px);
+        }
+
+        .bank-card.selected {
+            border-color: #4a6cf7;
+            box-shadow: 0 8px 18px rgba(74,108,247,.15);
+        }
+
+    .bank-radio {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+    }
+
+    .bank-logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        object-fit: contain;
+        background: #fff;
+        border: 1px solid #eaecef;
+    }
+
+    .bank-name {
+        font-weight: 600;
+    }
+
+    .text-mono {
+        font-family: ui-monospace,Menlo,Consolas,monospace;
+    }
+</style>
+
+<form method="post" asp-controller="Compras" asp-action="ConfirmarBanco" id="frm-select-banco">
+    @Html.AntiForgeryToken()
+
+    <!-- Hidden que consume el backend -->
+    <input type="hidden" name="BancoCodigo" id="BancoCodigo" value="@selected" />
+    <input type="hidden" name="BancoNombre" id="BancoNombre" />
+    <input type="hidden" name="BancoLogo" id="BancoLogo" />
+    <input type="hidden" name="CuentaNumero" id="CuentaNumero" />
+    <input type="hidden" name="CuentaTipo" id="CuentaTipo" />
+
+    <div class="banks-grid">
+        @foreach (var c in (Model ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>()).Where(x => x.Activo))
+        {
+            var code = c.Codigo ?? "";
+            var has = dict.TryGetValue(code, out var meta);
+            var nombre = !string.IsNullOrWhiteSpace(c.Nombre) ? c.Nombre : (has ? meta!.Nombre : code);
+            var logo = !string.IsNullOrWhiteSpace(c.LogoPath) ? c.LogoPath : (has ? meta!.Logo : "/images/product-placeholder.png");
+            var isSel = string.Equals(selected, code, StringComparison.OrdinalIgnoreCase);
+
+            <label class="bank-card @(isSel ? "selected" : "")">
+                <input type="radio" name="bank" class="bank-radio"
+                       value="@code"
+                       data-nombre="@nombre"
+                       data-logo="@logo"
+                       data-numero="@(c.Numero ?? "")"
+                       data-tipo="@(c.Tipo ?? "")"
+                       @(isSel ? "checked" : null) />
+                <img src="@logo" alt="@nombre" class="bank-logo" onerror="this.src='/images/product-placeholder.png'">
+                <div>
+                    <div class="bank-name">@nombre</div>
+                    <div class="text-mono">@((c.Numero ?? "—"))</div>
+                    <small class="text-muted">@((c.Tipo ?? "—"))</small>
+                </div>
+            </label>
+        }
+    </div>
+
+    <div class="invalid-feedback d-block mt-2" id="err-banco" style="display:none">
+        Selecciona un banco para continuar.
+    </div>
+
+    <div class="mt-3 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-circle-check me-1"></i> Usar esta cuenta
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (()=> {
+          const form = document.getElementById('frm-select-banco');
+          const radios = form.querySelectorAll('.bank-radio');
+          const err = document.getElementById('err-banco');
+
+          const setFields = (r) => {
+            document.getElementById('BancoCodigo').value  = r.value || '';
+            document.getElementById('BancoNombre').value  = r.dataset.nombre || '';
+            document.getElementById('BancoLogo').value    = r.dataset.logo || '';
+            document.getElementById('CuentaNumero').value = r.dataset.numero || '';
+            document.getElementById('CuentaTipo').value   = r.dataset.tipo || '';
+          };
+
+          radios.forEach(r => {
+            r.addEventListener('change', () => {
+              form.querySelectorAll('.bank-card').forEach(c => c.classList.remove('selected'));
+              r.closest('.bank-card')?.classList.add('selected');
+              setFields(r);
+              err.style.display = 'none';
+            });
+            if (r.checked) r.dispatchEvent(new Event('change'));
+          });
+
+          form.addEventListener('submit', (e) => {
+            if (!document.getElementById('BancoCodigo').value) {
+              e.preventDefault();
+              err.style.display = 'block';
+            }
+          });
+        })();
+    </script>
+}

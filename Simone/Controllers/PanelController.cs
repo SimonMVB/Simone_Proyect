@@ -2,26 +2,25 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
 using System;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 
 namespace Simone.Controllers
 {
-    [Authorize(Roles = "Administrador" + "," + "Vendedor")]
+    [Authorize(Roles = "Administrador,Vendedor")]
     /// <summary>
-    /// Controlador principal de la aplicación. Maneja las páginas de inicio,
-    /// privacidad, ofertas, nosotros y el manejo de errores.
+    /// Controlador principal de la aplicación. Maneja el Panel (usuarios, categorías,
+    /// subcategorías, proveedores, productos).
     /// </summary>
     public class PanelController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly ILogger<PanelController> _logger;
         private readonly TiendaDbContext _context;
         private readonly UserManager<Usuario> _userManager;
         private readonly RoleManager<Roles> _roleManager;
@@ -30,13 +29,8 @@ namespace Simone.Controllers
         private readonly ProductosService _productosManager;
         private readonly ProveedorService _proveedoresManager;
 
-        /// <summary>
-        /// Constructor que recibe el logger y el contexto de la base de datos.
-        /// </summary>
-        /// <param name="logger">Instancia de ILogger para registro de eventos.</param>
-        /// <param name="context">Contexto de la base de datos para consultas.</param>
         public PanelController(
-            ILogger<HomeController> logger,
+            ILogger<PanelController> logger,
             TiendaDbContext context,
             UserManager<Usuario> user,
             RoleManager<Roles> rol,
@@ -55,73 +49,59 @@ namespace Simone.Controllers
             _proveedoresManager = proveedores;
         }
 
-        /// <summary>
-        /// Acción GET para mostrar la vista del panel de administración (Inicio).
-        /// </summary>
-        /// <returns>Vista de inicio del panel de administración.</returns>
-        [HttpGet]
-        public IActionResult Index()
-        {
-            return View();
-        }
+        // ===== Helpers =====
+        private string CurrentUserId() => _userManager.GetUserId(User)!;
+        private bool IsAdmin() => User.IsInRole("Administrador");
 
-        /// <summary>
-        /// Acción GET para mostrar la vista de gestión de usuarios.
-        /// Permite visualizar usuarios y sus roles.
-        /// </summary>
-        /// <returns>Vista de usuarios con la lista de roles asociados.</returns>
+        // ====================== INICIO ======================
+        [HttpGet]
+        public IActionResult Index() => View();
+
+        // ====================== USUARIOS (ADMIN) ======================
+        [Authorize(Roles = "Administrador")]
         [HttpGet]
         public IActionResult Usuarios()
         {
-            // Query para obtener usuarios y sus roles
-            var usuariosConRoles = from user in _userManager.Users
-                                   join userRole in _context.UserRoles on user.Id equals userRole.UserId
-                                   join role in _context.Roles on userRole.RoleId equals role.Id
-                                   select new
-                                   {
-                                       user.Id,
-                                       user.Email,
-                                       user.Telefono,
-                                       user.Direccion,
-                                       user.NombreCompleto,
-                                       roleId = role.Id,
-                                       roleName = role.Name
-                                   };
+            var usuariosConRoles =
+                from user in _userManager.Users
+                join userRole in _context.UserRoles on user.Id equals userRole.UserId
+                join role in _context.Roles on userRole.RoleId equals role.Id
+                select new
+                {
+                    user.Id,
+                    user.Email,
+                    user.Telefono,
+                    user.Direccion,
+                    user.NombreCompleto,
+                    roleId = role.Id,
+                    roleName = role.Name
+                };
 
-            // Ejecutar el query y convertirlo en lista
-            var usuarios = usuariosConRoles.ToList();
+            var usuariosList = usuariosConRoles
+                .AsEnumerable()
+                .Select(u => new Usuario
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    Telefono = u.Telefono,
+                    Direccion = u.Direccion,
+                    NombreCompleto = u.NombreCompleto,
+                    RolID = u.roleId,
+                })
+                .ToList();
 
-            // Convertirlo en Usuario object
-            var usuariosList = usuarios.Select(u => new Usuario
-            {
-                Id = u.Id,
-                Email = u.Email,
-                Telefono = u.Telefono,
-                Direccion = u.Direccion,
-                NombreCompleto = u.NombreCompleto,
-                RolID = u.roleId,  // Rol ID
-            }).ToList();
-
-            // Enviar la data a la vista via ViewBag
             ViewBag.Usuarios = usuariosList;
-            ViewBag.Roles = _roleManager.Roles.ToList(); // Obtener todos los roles para rellenar el dropdown
-
+            ViewBag.Roles = _roleManager.Roles.ToList();
             return View();
         }
 
-        /// <summary>
-        /// Acción POST para eliminar un usuario.
-        /// Elimina un usuario del sistema y redirige a la vista de usuarios.
-        /// </summary>
-        /// <param name="id">ID del usuario a eliminar.</param>
-        /// <returns>Redirige a la vista de usuarios después de la eliminación.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarUsuario(string id)
         {
             var usuario = await _userManager.FindByIdAsync(id);
-            if (usuario == null)
-                return NotFound();
+            if (usuario == null) return NotFound();
 
             var resultado = await _userManager.DeleteAsync(usuario);
             if (resultado.Succeeded)
@@ -129,45 +109,32 @@ namespace Simone.Controllers
                 _logger.LogInformation("Administrador eliminó al usuario {Email}.", usuario.Email);
                 return RedirectToAction("Usuarios");
             }
-            else
-            {
-                ModelState.AddModelError("", "Error al eliminar usuario.");
-                return View("Usuarios", _userManager.Users.ToList());
-            }
+
+            ModelState.AddModelError("", "Error al eliminar usuario.");
+            return View("Usuarios", _userManager.Users.ToList());
         }
 
-        /// <summary>
-        /// Acción POST para editar el rol de un usuario.
-        /// Cambia el rol de un usuario y redirige a la vista de usuarios.
-        /// </summary>
-        /// <param name="usuarioID">ID del usuario.</param>
-        /// <param name="nuevoRolID">ID del nuevo rol.</param>
-        /// <returns>Redirige a la vista de usuarios después de la edición del rol.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarRol(string usuarioID, string nuevoRolID)
         {
-            // Validacion de los parametros de la funcion
             if (string.IsNullOrEmpty(nuevoRolID) || string.IsNullOrEmpty(usuarioID))
             {
                 ModelState.AddModelError("", "El rol seleccionado no es válido.");
-                return RedirectToAction("Usuarios"); // Redireccion en caso de error
+                return RedirectToAction("Usuarios");
             }
 
-            // Obtener el usuario por su ID
             var usuario = await _userManager.FindByIdAsync(usuarioID);
-            if (usuario == null)
-                return NotFound();
+            if (usuario == null) return NotFound();
 
-            // Obtener el nuevo rol por su ID
             var nuevoRol = await _roleManager.FindByIdAsync(nuevoRolID);
             if (nuevoRol == null)
             {
                 ModelState.AddModelError("", "El rol seleccionado no existe.");
-                return RedirectToAction("Usuarios"); // Redireccion en caso de error
+                return RedirectToAction("Usuarios");
             }
 
-            // Obtener el rol actual del usuario y eliminarlo
             var rolesActuales = await _userManager.GetRolesAsync(usuario);
             var resultadoEliminar = await _userManager.RemoveFromRolesAsync(usuario, rolesActuales);
             if (!resultadoEliminar.Succeeded)
@@ -176,7 +143,6 @@ namespace Simone.Controllers
                 return RedirectToAction("Usuarios");
             }
 
-            // Asignar el nuevo rol por medio del nombre.
             var resultadoAsignar = await _userManager.AddToRoleAsync(usuario, nuevoRol.Name);
             if (!resultadoAsignar.Succeeded)
             {
@@ -184,224 +150,213 @@ namespace Simone.Controllers
                 return RedirectToAction("Usuarios");
             }
 
-            // Log
             _logger.LogInformation("Administrador cambió el rol del usuario {Email} a {Rol}.", usuario.Email, nuevoRol.Name);
-
-            // Actualizar la pagina
             TempData["MensajeExito"] = $"El rol del usuario {usuario.Email} fue actualizado a {nuevoRol.Name}.";
             return RedirectToAction("Usuarios");
         }
 
-        /// <summary>
-        /// Acción GET para mostrar las categorías disponibles.
-        /// </summary>
-        /// <returns>Vista con la lista de categorías.</returns>
+        // ====================== CATEGORÍAS (ADMIN) ======================
+        [Authorize(Roles = "Administrador")]
         [HttpGet]
         public async Task<IActionResult> Categorias()
         {
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
+            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
             return View();
         }
 
-        /// <summary>
-        /// Acción POST para añadir una nueva categoría.
-        /// </summary>
-        /// <param name="nombreCategoria">Nombre de la nueva categoría.</param>
-        /// <returns>Redirige a la vista de categorías después de añadir la nueva categoría.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirCategoria(string nombreCategoria)
         {
-            Categorias categoria = new Categorias
-            {
-                Nombre = nombreCategoria,
-            };
-            bool success = await _categoriasManager.AddAsync(categoria);
-            if (success)
-            {
-                return RedirectToAction("Categorias");
-            }
+            var categoria = new Categorias { Nombre = (nombreCategoria ?? string.Empty).Trim() };
+            await _categoriasManager.AddAsync(categoria);
             return RedirectToAction("Categorias");
         }
 
-        /// <summary>
-        /// Acción POST para editar una categoría existente.
-        /// </summary>
-        /// <param name="categoriaID">ID de la categoría a editar.</param>
-        /// <param name="nombreCategoria">Nuevo nombre de la categoría.</param>
-        /// <returns>Redirige a la vista de categorías después de editar la categoría.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarCategoria(int categoriaID, string nombreCategoria)
         {
-            if (ModelState.IsValid)
-            {
-                var categoria = await _categoriasManager.GetByIdAsync(categoriaID);
-                if (categoria == null)
-                {
-                    return NotFound();
-                }
+            if (!ModelState.IsValid) return RedirectToAction("Categorias");
 
-                categoria.Nombre = nombreCategoria;
-                await _categoriasManager.UpdateAsync(categoria);
+            var categoria = await _categoriasManager.GetByIdAsync(categoriaID);
+            if (categoria == null) return NotFound();
 
-                return RedirectToAction("Categorias");
-            }
-
+            categoria.Nombre = (nombreCategoria ?? string.Empty).Trim();
+            await _categoriasManager.UpdateAsync(categoria);
             return RedirectToAction("Categorias");
         }
 
-        /// <summary>
-        /// Acción POST para eliminar una categoría existente.
-        /// </summary>
-        /// <param name="categoriaID">ID de la categoría a eliminar.</param>
-        /// <returns>Redirige a la vista de categorías después de eliminar la categoría.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarCategoria(int categoriaID)
         {
-            bool success = await _categoriasManager.DeleteAsync(categoriaID);
+            await _categoriasManager.DeleteAsync(categoriaID);
             return RedirectToAction("Categorias");
         }
 
-        /// <summary>
-        /// Acción GET para mostrar las subcategorías.
-        /// </summary>
-        /// <returns>Vista con la lista de subcategorías.</returns>
+        // ====================== SUBCATEGORÍAS (ADMIN/VENDEDOR) ======================
         [HttpGet]
-        public async Task<IActionResult> Subcategorias()
+        public async Task<IActionResult> Subcategorias(string? vendorId)
         {
-            // Load Subcategorias with the related Categoria name
-            var subcategorias = await _subcategoriasManager.GetAllSubcategoriasWithCategoriaAsync();
+            var vid = (IsAdmin() && !string.IsNullOrWhiteSpace(vendorId)) ? vendorId! : CurrentUserId();
+
+            var subcategorias = await _context.Subcategorias
+                                              .AsNoTracking()
+                                              .Include(s => s.Categoria)
+                                              .Where(s => s.VendedorID == vid)
+                                              .OrderBy(s => s.CategoriaID)
+                                              .ThenBy(s => s.NombreSubcategoria)
+                                              .ToListAsync();
+
             ViewBag.Subcategorias = subcategorias;
+            ViewBag.TargetVendorId = (IsAdmin() && !string.IsNullOrWhiteSpace(vendorId)) ? vendorId : null;
             return View();
         }
 
-        /// <summary>
-        /// Acción GET para mostrar el formulario de añadir una subcategoría.
-        /// </summary>
-        /// <returns>Vista del formulario para añadir una subcategoría.</returns>
         [HttpGet]
         public async Task<IActionResult> AnadirSubcategoria()
         {
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
+            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
             return View("SubcategoriaForm");
         }
 
-        /// <summary>
-        /// Acción POST para añadir una nueva subcategoría.
-        /// </summary>
-        /// <param name="categoriaID">ID de la categoría asociada a la subcategoría.</param>
-        /// <param name="nombresubCategoria">Nombre de la subcategoría.</param>
-        /// <returns>Redirige a la vista de subcategorías después de añadir la nueva subcategoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirSubcategoria(int categoriaID, string nombresubCategoria)
         {
-            Subcategorias subcategoria = new Subcategorias
+            var subcategoria = new Subcategorias
             {
                 CategoriaID = categoriaID,
-                NombreSubcategoria = nombresubCategoria
+                NombreSubcategoria = (nombresubCategoria ?? string.Empty).Trim(),
+                VendedorID = CurrentUserId()
             };
-            bool success = await _subcategoriasManager.AddAsync(subcategoria);
-            if (success)
+
+            try
             {
-                return RedirectToAction("Subcategorias");
+                var ok = await _subcategoriasManager.AddAsync(subcategoria);
+                if (ok)
+                {
+                    TempData["Ok"] = "Subcategoría creada.";
+                    return RedirectToAction("Subcategorias");
+                }
+                TempData["Err"] = "No se pudo crear la subcategoría.";
             }
-            return RedirectToAction("Subcategorias");
+            catch (DbUpdateException ex) when (
+                   ex.InnerException?.Message.Contains("IX_Subcategorias_VendedorID_CategoriaID_NombreSubcategoria") == true
+                || ex.InnerException?.Message.Contains("2601") == true
+                || ex.InnerException?.Message.Contains("2627") == true)
+            {
+                TempData["Err"] = "Ya existe una subcategoría con ese nombre en esa categoría.";
+            }
+            catch
+            {
+                TempData["Err"] = "Error al guardar la subcategoría.";
+            }
+
+            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+            return View("SubcategoriaForm");
         }
 
-        /// <summary>
-        /// Acción GET para editar una subcategoría existente.
-        /// </summary>
-        /// <param name="subcategoriaID">ID de la subcategoría a editar.</param>
-        /// <returns>Vista del formulario para editar la subcategoría.</returns>
         [HttpGet]
         public async Task<IActionResult> EditarSubcategoria(int subcategoriaID)
         {
             var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+            if (subcategoria == null) return NotFound();
+
+            if (!IsAdmin() && subcategoria.VendedorID != CurrentUserId())
+                return Forbid();
+
             ViewBag.Subcategoria = subcategoria;
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
+            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
             return View("SubcategoriaForm");
         }
 
-        /// <summary>
-        /// Acción POST para editar una subcategoría existente.
-        /// </summary>
-        /// <param name="subcategoriaID">ID de la subcategoría a editar.</param>
-        /// <param name="categoriaID">Nuevo ID de la categoría asociada.</param>
-        /// <param name="nombresubCategoria">Nuevo nombre de la subcategoría.</param>
-        /// <returns>Redirige a la vista de subcategorías después de editar la subcategoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarSubcategoria(int subcategoriaID, int categoriaID, string nombresubCategoria)
         {
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid) return RedirectToAction("Subcategorias");
+
+            var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+            if (subcategoria == null) return NotFound();
+
+            if (!IsAdmin() && subcategoria.VendedorID != CurrentUserId())
+                return Forbid();
+
+            subcategoria.NombreSubcategoria = (nombresubCategoria ?? string.Empty).Trim();
+            subcategoria.CategoriaID = categoriaID;
+
+            try
             {
-                var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
-                if (subcategoria == null)
-                {
-                    return NotFound();
-                }
-
-                subcategoria.NombreSubcategoria = nombresubCategoria;
-                subcategoria.CategoriaID = categoriaID;
-
                 await _subcategoriasManager.UpdateAsync(subcategoria);
-
-                return RedirectToAction("Subcategorias");
+                TempData["Ok"] = "Subcategoría actualizada.";
+            }
+            catch (DbUpdateException ex) when (
+                   ex.InnerException?.Message.Contains("IX_Subcategorias_VendedorID_CategoriaID_NombreSubcategoria") == true
+                || ex.InnerException?.Message.Contains("2601") == true
+                || ex.InnerException?.Message.Contains("2627") == true)
+            {
+                TempData["Err"] = "Ya existe una subcategoría con ese nombre en esa categoría.";
+                ViewBag.Subcategoria = subcategoria;
+                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                return View("SubcategoriaForm");
+            }
+            catch
+            {
+                TempData["Err"] = "Error al actualizar la subcategoría.";
+                ViewBag.Subcategoria = subcategoria;
+                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                return View("SubcategoriaForm");
             }
 
             return RedirectToAction("Subcategorias");
         }
 
-        /// <summary>
-        /// Acción POST para eliminar una subcategoría.
-        /// </summary>
-        /// <param name="categoriaID">ID de la subcategoría a eliminar.</param>
-        /// <returns>Redirige a la vista de subcategorías después de eliminar la subcategoría.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarSubcategoria(int categoriaID)
         {
-            bool success = await _subcategoriasManager.DeleteAsync(categoriaID);
+            var sub = await _subcategoriasManager.GetByIdAsync(categoriaID); // categoriaID == SubcategoriaID (legacy)
+            if (sub == null) return NotFound();
+
+            if (!IsAdmin() && sub.VendedorID != CurrentUserId())
+                return Forbid();
+
+            try
+            {
+                await _subcategoriasManager.DeleteAsync(categoriaID);
+                TempData["Ok"] = "Subcategoría eliminada.";
+            }
+            catch (DbUpdateException)
+            {
+                TempData["Err"] = "No se puede eliminar: hay productos asociados a esta subcategoría.";
+            }
+            catch
+            {
+                TempData["Err"] = "Error al eliminar la subcategoría.";
+            }
+
             return RedirectToAction("Subcategorias");
         }
 
-        /// <summary>
-        /// Acción GET para mostrar la vista de proveedores.
-        /// </summary>
-        /// <returns>Vista con la lista de proveedores.</returns>
+        // ====================== PROVEEDORES (ADMIN) ======================
+        [Authorize(Roles = "Administrador")]
         [HttpGet]
         public async Task<IActionResult> Proveedores()
         {
-            var proveedores = await _proveedoresManager.GetAllAsync();
-            ViewBag.Proveedores = proveedores;
+            ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
             return View();
         }
 
-        /// <summary>
-        /// Acción GET para mostrar el formulario de añadir un proveedor.
-        /// </summary>
-        /// <returns>Vista del formulario para añadir un proveedor.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpGet]
-        public IActionResult AnadirProveedor()
-        {
-            return View("ProveedorForm");
-        }
+        public IActionResult AnadirProveedor() => View("ProveedorForm");
 
-        /// <summary>
-        /// Acción POST para añadir un proveedor.
-        /// </summary>
-        /// <param name="nombreProveedor">Nombre del proveedor.</param>
-        /// <param name="contacto">Contacto del proveedor.</param>
-        /// <param name="telefono">Teléfono del proveedor.</param>
-        /// <param name="email">Correo electrónico del proveedor.</param>
-        /// <param name="direccion">Dirección del proveedor.</param>
-        /// <returns>Redirige a la vista de proveedores después de añadir el proveedor.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirProveedor(
@@ -409,48 +364,29 @@ namespace Simone.Controllers
             string contacto,
             string telefono,
             string email,
-            string direccion
-            )
+            string direccion)
         {
-            Proveedores proveedor = new Proveedores
+            var proveedor = new Proveedores
             {
-                NombreProveedor = nombreProveedor,
+                NombreProveedor = (nombreProveedor ?? string.Empty).Trim(),
                 Contacto = contacto,
                 Telefono = telefono,
                 Email = email,
                 Direccion = direccion,
             };
-            bool success = await _proveedoresManager.AddAsync(proveedor);
-            if (success)
-            {
-                return RedirectToAction("Proveedores");
-            }
+            await _proveedoresManager.AddAsync(proveedor);
             return RedirectToAction("Proveedores");
         }
 
-        /// <summary>
-        /// Acción GET para editar un proveedor existente.
-        /// </summary>
-        /// <param name="proveedorID">ID del proveedor a editar.</param>
-        /// <returns>Vista del formulario para editar el proveedor.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpGet]
         public async Task<IActionResult> EditarProveedor(int proveedorID)
         {
-            var proveedores = await _proveedoresManager.GetByIdAsync(proveedorID);
-            ViewBag.Proveedor = proveedores;
+            ViewBag.Proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
             return View("ProveedorForm");
         }
 
-        /// <summary>
-        /// Acción POST para editar un proveedor existente.
-        /// </summary>
-        /// <param name="proveedorID">ID del proveedor a editar.</param>
-        /// <param name="nombreProveedor">Nuevo nombre del proveedor.</param>
-        /// <param name="contacto">Nuevo contacto del proveedor.</param>
-        /// <param name="telefono">Nuevo teléfono del proveedor.</param>
-        /// <param name="email">Nuevo correo electrónico del proveedor.</param>
-        /// <param name="direccion">Nueva dirección del proveedor.</param>
-        /// <returns>Redirige a la vista de proveedores después de editar el proveedor.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarProveedor(
@@ -459,120 +395,106 @@ namespace Simone.Controllers
             string contacto,
             string telefono,
             string email,
-            string direccion
-            )
+            string direccion)
         {
-            if (ModelState.IsValid)
-            {
-                var proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
-                if (proveedor == null)
-                {
-                    return NotFound();
-                }
+            if (!ModelState.IsValid) return RedirectToAction("Proveedores");
 
-                proveedor.NombreProveedor = nombreProveedor;
-                proveedor.Contacto = contacto;
-                proveedor.Telefono = telefono;
-                proveedor.Email = email;
-                proveedor.Direccion = direccion;
+            var proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
+            if (proveedor == null) return NotFound();
 
-                await _proveedoresManager.UpdateAsync(proveedor);
+            proveedor.NombreProveedor = (nombreProveedor ?? string.Empty).Trim();
+            proveedor.Contacto = contacto;
+            proveedor.Telefono = telefono;
+            proveedor.Email = email;
+            proveedor.Direccion = direccion;
 
-                return RedirectToAction("Proveedores");
-            }
-
+            await _proveedoresManager.UpdateAsync(proveedor);
             return RedirectToAction("Proveedores");
         }
 
-        /// <summary>
-        /// Acción POST para eliminar un proveedor.
-        /// </summary>
-        /// <param name="proveedorID">ID del proveedor a eliminar.</param>
-        /// <returns>Redirige a la vista de proveedores después de eliminar el proveedor.</returns>
+        [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarProveedor(int proveedorID)
         {
-            bool success = await _proveedoresManager.DeleteAsync(proveedorID);
+            await _proveedoresManager.DeleteAsync(proveedorID);
             return RedirectToAction("Proveedores");
         }
 
-        /// <summary>
-        /// Acción GET para mostrar los productos disponibles.
-        /// </summary>
-        /// <returns>Vista con la lista de productos.</returns>
+        // ====================== PRODUCTOS (ADMIN/VENDEDOR) ======================
         [HttpGet]
         public async Task<IActionResult> Productos()
         {
-            var user = await _userManager.GetUserAsync(User);
-            var adminRol = await _roleManager.FindByNameAsync("Administrador");
-
-            if (user.RolID == adminRol.Id)
+            if (IsAdmin())
             {
-                var productos = await _productosManager.GetAllAsync();
-                ViewBag.Productos = productos;
+                ViewBag.Productos = await _productosManager.GetAllAsync();
             }
             else
             {
-                var productos = await _productosManager.GetByVendedorID(user.Id);
-                ViewBag.Productos = productos;
+                ViewBag.Productos = await _productosManager.GetByVendedorID(CurrentUserId());
             }
-            
             return View();
         }
 
-        /// <summary>
-        /// Acción GET para mostrar el formulario de añadir un producto.
-        /// </summary>
-        /// <returns>Vista del formulario para añadir un producto.</returns>
         [HttpGet]
         public async Task<IActionResult> AnadirProducto()
         {
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
-            var subcategorias = await _subcategoriasManager.GetAllAsync();
-            ViewBag.subcategorias = subcategorias;
-            var proveedores = await _proveedoresManager.GetAllAsync();
-            ViewBag.Proveedores = proveedores;
+            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Subcategorias = IsAdmin()
+                ? await _subcategoriasManager.GetAllAsync()
+                : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
+            ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
             return View("ProductoForm");
         }
 
-        /// <summary>
-        /// Acción POST para añadir un producto.
-        /// </summary>
-        /// <param name="nombreProducto">Nombre del producto.</param>
-        /// <param name="descripcion">Descripción del producto.</param>
-        /// <param name="talla">Talla del producto.</param>
-        /// <param name="color">Color del producto.</param>
-        /// <param name="marca">Marca del producto.</param>
-        /// <param name="precioCompra">Precio de compra del producto.</param>
-        /// <param name="precioVenta">Precio de venta del producto.</param>
-        /// <param name="proveedorID">ID del proveedor del producto.</param>
-        /// <param name="categoriaID">ID de la categoría del producto.</param>
-        /// <param name="subcategoriaID">ID de la subcategoría del producto.</param>
-        /// <param name="stock">Cantidad disponible del producto.</param>
-        /// <param name="imagen">Imagen del producto.</param>
-        /// <returns>Redirige a la vista de productos después de añadir el producto.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirProducto(
-            String nombreProducto,
-            String descripcion,
-            String talla,
-            String color,
-            String marca,
+            string nombreProducto,
+            string descripcion,
+            string talla,
+            string color,
+            string marca,
             decimal precioCompra,
             decimal precioVenta,
             int proveedorID,
             int categoriaID,
             int subcategoriaID,
             int stock,
-            IFormFile imagen
-            )
+            IFormFile imagen)
         {
+            // Validar subcategoría: existe, pertenece a la categoría y (si no es admin) al vendedor actual
+            var sub = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+            if (sub == null || sub.CategoriaID != categoriaID || (!IsAdmin() && sub.VendedorID != CurrentUserId()))
+            {
+                TempData["Err"] = "Subcategoría inválida para la categoría seleccionada o no pertenece a tu tienda.";
+                // Reponer combos y datos para la vista
+                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                ViewBag.Subcategorias = IsAdmin()
+                    ? await _subcategoriasManager.GetAllAsync()
+                    : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
+                ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
+
+                ViewBag.Producto = new Producto
+                {
+                    Nombre = nombreProducto,
+                    Descripcion = descripcion,
+                    Talla = talla,
+                    Color = color,
+                    Marca = marca,
+                    PrecioCompra = precioCompra,
+                    PrecioVenta = precioVenta,
+                    Stock = stock,
+                    ProveedorID = proveedorID,
+                    CategoriaID = categoriaID,
+                    SubcategoriaID = subcategoriaID
+                };
+                return View("ProductoForm");
+            }
+
             var producto = new Producto
             {
-                Nombre = nombreProducto,
+                Nombre = (nombreProducto ?? string.Empty).Trim(),
                 FechaAgregado = DateTime.Now,
                 Descripcion = descripcion,
                 Talla = talla,
@@ -584,91 +506,82 @@ namespace Simone.Controllers
                 ProveedorID = proveedorID,
                 CategoriaID = categoriaID,
                 SubcategoriaID = subcategoriaID,
-                VendedorID = _userManager.GetUserId(User),
+                VendedorID = CurrentUserId(),
             };
 
             if (imagen != null)
             {
+                var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "Productos");
+                Directory.CreateDirectory(dir);
                 var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
-
-                // Save the image to the server
+                var filePath = Path.Combine(dir, uniqueFileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await imagen.CopyToAsync(stream);
                 }
-
                 producto.ImagenPath = "/images/Productos/" + uniqueFileName;
             }
 
             await _productosManager.AddAsync(producto);
-
             return RedirectToAction("Productos");
         }
 
-        /// <summary>
-        /// Acción GET para editar un producto.
-        /// </summary>
-        /// <param name="productoID">ID del producto a editar.</param>
-        /// <returns>Vista del formulario para editar el producto.</returns>
         [HttpGet]
         public async Task<IActionResult> EditarProducto(int productoID)
         {
             var producto = await _productosManager.GetByIdAsync(productoID);
-            var categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Categorias = categorias;
-            var proveedores = await _proveedoresManager.GetAllAsync();
-            ViewBag.Proveedores = proveedores;
-            var subcategorias = await _subcategoriasManager.GetAllAsync();
-            ViewBag.Subcategorias = subcategorias;
+            if (producto == null) return NotFound();
+            if (!IsAdmin() && producto.VendedorID != CurrentUserId())
+                return Forbid();
+
+            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
+            ViewBag.Subcategorias = IsAdmin()
+                ? await _subcategoriasManager.GetAllAsync()
+                : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
             ViewBag.Producto = producto;
             return View("ProductoForm");
         }
 
-        /// <summary>
-        /// Acción POST para editar un producto.
-        /// </summary>
-        /// <param name="productoID">ID del producto a editar.</param>
-        /// <param name="nombreProducto">Nuevo nombre del producto.</param>
-        /// <param name="descripcion">Nueva descripción del producto.</param>
-        /// <param name="talla">Nueva talla del producto.</param>
-        /// <param name="color">Nuevo color del producto.</param>
-        /// <param name="marca">Nueva marca del producto.</param>
-        /// <param name="existingImagenPath">Ruta de la imagen existente.</param>
-        /// <param name="precioCompra">Nuevo precio de compra.</param>
-        /// <param name="precioVenta">Nuevo precio de venta.</param>
-        /// <param name="proveedorID">Nuevo proveedor.</param>
-        /// <param name="categoriaID">Nueva categoría.</param>
-        /// <param name="subcategoriaID">Nueva subcategoría.</param>
-        /// <param name="stock">Nuevo stock.</param>
-        /// <param name="imagen">Nueva imagen del producto.</param>
-        /// <returns>Redirige a la vista de productos después de editar el producto.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarProducto(
             int productoID,
-            String nombreProducto,
-            String descripcion,
-            String talla,
-            String color,
-            String marca,
-            String existingImagenPath,
+            string nombreProducto,
+            string descripcion,
+            string talla,
+            string color,
+            string marca,
+            string existingImagenPath,
             decimal precioCompra,
             decimal precioVenta,
             int proveedorID,
             int categoriaID,
             int subcategoriaID,
             int stock,
-            IFormFile imagen
-            )
+            IFormFile imagen)
         {
             var producto = await _productosManager.GetByIdAsync(productoID);
-            if (producto == null)
+            if (producto == null) return NotFound();
+            if (!IsAdmin() && producto.VendedorID != CurrentUserId())
+                return Forbid();
+
+            // Validación de subcategoría coherente
+            var sub = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+            if (sub == null || sub.CategoriaID != categoriaID || (!IsAdmin() && sub.VendedorID != CurrentUserId()))
             {
-                return NotFound();
+                TempData["Err"] = "Subcategoría inválida para la categoría seleccionada o no pertenece a tu tienda.";
+
+                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
+                ViewBag.Subcategorias = IsAdmin()
+                    ? await _subcategoriasManager.GetAllAsync()
+                    : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
+                ViewBag.Producto = producto;
+                return View("ProductoForm");
             }
 
-            producto.Nombre = nombreProducto;
+            producto.Nombre = (nombreProducto ?? string.Empty).Trim();
             producto.Descripcion = descripcion;
             producto.Talla = talla;
             producto.Color = color;
@@ -682,15 +595,14 @@ namespace Simone.Controllers
 
             if (imagen != null)
             {
+                var dir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images", "Productos");
+                Directory.CreateDirectory(dir);
                 var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(imagen.FileName);
-                var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images/Productos", uniqueFileName);
-
-                // Save the image to the server
+                var filePath = Path.Combine(dir, uniqueFileName);
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await imagen.CopyToAsync(stream);
                 }
-
                 producto.ImagenPath = "/images/Productos/" + uniqueFileName;
             }
             else
@@ -699,23 +611,20 @@ namespace Simone.Controllers
             }
 
             await _productosManager.UpdateAsync(producto);
-
             return RedirectToAction("Productos");
         }
 
-        /// <summary>
-        /// Acción POST para eliminar un producto.
-        /// </summary>
-        /// <param name="productoID">ID del producto a eliminar.</param>
-        /// <returns>Redirige a la vista de productos después de eliminar el producto.</returns>
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarProducto(int productoID)
         {
-            bool success = await _productosManager.DeleteAsync(productoID);
+            var producto = await _productosManager.GetByIdAsync(productoID);
+            if (producto == null) return NotFound();
+            if (!IsAdmin() && producto.VendedorID != CurrentUserId())
+                return Forbid();
+
+            await _productosManager.DeleteAsync(productoID);
             return RedirectToAction("Productos");
         }
-
-       
     }
 }
