@@ -17,6 +17,11 @@ using System.IO;
 using System.Threading;
 using System.Linq;
 
+// ===== Añadidos para robustez =====
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+
 namespace Simone.Controllers
 {
     // Admin también puede ingresar para ayudar a un vendedor (pasando ?vId=)
@@ -156,6 +161,10 @@ namespace Simone.Controllers
         // -------------------- Acciones existentes --------------------
         [HttpGet("Productos")] public IActionResult Productos() => View();
         [HttpGet("AnadirProducto")] public IActionResult AnadirProducto() => View();
+
+        // ***** NUEVO: /Vendedor -> redirige a /Vendedor/Reportes *****
+        [HttpGet("")]
+        public IActionResult Index() => RedirectToAction(nameof(Reportes));
 
         // -------------------- Bancos (vendedor) --------------------
         public sealed class UpsertVm
@@ -450,92 +459,162 @@ namespace Simone.Controllers
         }
 
         // POST /Vendedor/Envios/Save?vId=<opcional para Admin>
-        [HttpPost("Envios/Save")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EnviosSave([FromForm] EnvioUpsertVm vm, [FromQuery] string? vId = null)
+
+[HttpPost("Envios/Save")]
+[ValidateAntiForgeryToken]
+public async Task<IActionResult> EnviosSave([FromForm] EnvioUpsertVm vm, [FromQuery] string? vId = null)
+{
+    var vendorId = CurrentVendorId(vId);
+
+    // ========== Parseo/normalización robusta de PRECIO ==========
+    // Tomamos el valor crudo como string desde el form para soportar "4,40" o "4.40" e incluso "1.234,56"
+    if (Request?.Form != null && Request.Form.ContainsKey("Precio"))
+    {
+        var raw = (Request.Form["Precio"].ToString() ?? "").Trim();
+
+        if (!string.IsNullOrWhiteSpace(raw))
         {
-            var vendorId = CurrentVendorId(vId);
-
-            // normalización
-            vm.OriginalProvincia = TN(vm.OriginalProvincia);
-            vm.OriginalCiudad = TN(vm.OriginalCiudad);
-
-            vm.Provincia = T(vm.Provincia);
-            vm.Ciudad = TN(vm.Ciudad);
-            vm.Nota = TN(vm.Nota);
-
-            var (ok, err) = ValidateEnvio(vm);
-            if (!ok)
+            if (!TryParsePrecioFlexible(raw, out var precio))
             {
-                TempData["MensajeError"] = err;
-                TempData["ModelErrors"] = err;
+                TempData["MensajeError"] = "Precio inválido. Usa formato 0.00 (ej.: 4,40 o 4.40).";
+                TempData["ModelErrors"] = "Precio inválido.";
                 return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
             }
 
-            try
+            // rango de seguridad
+            if (precio < 0m || precio > 9999.99m)
             {
-                var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
-                            ?? new List<Cfg.TarifaEnvioRegla>();
-
-                bool IsDup(string prov, string? city, Cfg.TarifaEnvioRegla? exclude = null) =>
-                    reglas.Any(r => !ReferenceEquals(r, exclude) && SameKey(r, prov, city));
-
-                if (string.IsNullOrEmpty(vm.OriginalProvincia) && string.IsNullOrEmpty(vm.OriginalCiudad))
-                {
-                    // Crear
-                    if (IsDup(vm.Provincia, vm.Ciudad))
-                    {
-                        TempData["MensajeError"] = "Ya existe una regla para ese destino.";
-                        return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
-                    }
-
-                    reglas.Add(new Cfg.TarifaEnvioRegla
-                    {
-                        Provincia = vm.Provincia,
-                        Ciudad = vm.Ciudad, // null o valor
-                        Precio = vm.Precio,
-                        Activo = vm.Activo,
-                        Nota = vm.Nota
-                    });
-                }
-                else
-                {
-                    // Editar: localizar por clave original
-                    var actual = reglas.FirstOrDefault(r => SameKey(r, vm.OriginalProvincia!, vm.OriginalCiudad));
-                    if (actual == null)
-                    {
-                        TempData["MensajeError"] = "No se encontró la regla original para editar.";
-                        return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
-                    }
-
-                    // Cambió la clave? validar duplicado
-                    if (K(vm.Provincia) != K(vm.OriginalProvincia) || K(vm.Ciudad ?? "") != K(vm.OriginalCiudad ?? ""))
-                    {
-                        if (IsDup(vm.Provincia, vm.Ciudad, actual))
-                        {
-                            TempData["MensajeError"] = "Ya existe otra regla con ese destino.";
-                            return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
-                        }
-                    }
-
-                    actual.Provincia = vm.Provincia;
-                    actual.Ciudad = vm.Ciudad;
-                    actual.Precio = vm.Precio;
-                    actual.Activo = vm.Activo;
-                    actual.Nota = vm.Nota;
-                }
-
-                await _envios.SetByProveedorAsync(vendorId, reglas);
-                TempData["MensajeExito"] = "Tarifa guardada correctamente.";
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al guardar tarifa de envío (VendorId: {VendorId})", vendorId);
-                TempData["MensajeError"] = "Ocurrió un error al guardar la tarifa.";
+                TempData["MensajeError"] = "El precio debe estar entre 0 y 9.999,99.";
+                TempData["ModelErrors"] = "Precio fuera de rango.";
+                return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
             }
 
-            return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+            vm.Precio = precio;
         }
+    }
+    // =============================================================
+
+    // normalización de textos
+    vm.OriginalProvincia = TN(vm.OriginalProvincia);
+    vm.OriginalCiudad = TN(vm.OriginalCiudad);
+
+    vm.Provincia = T(vm.Provincia);
+    vm.Ciudad = TN(vm.Ciudad);
+    vm.Nota = TN(vm.Nota);
+
+    var (ok, err) = ValidateEnvio(vm);
+    if (!ok)
+    {
+        TempData["MensajeError"] = err;
+        TempData["ModelErrors"] = err;
+        return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+    }
+
+    try
+    {
+        var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
+                    ?? new List<Cfg.TarifaEnvioRegla>();
+
+        bool IsDup(string prov, string? city, Cfg.TarifaEnvioRegla? exclude = null) =>
+            reglas.Any(r => !ReferenceEquals(r, exclude) && SameKey(r, prov, city));
+
+        if (string.IsNullOrEmpty(vm.OriginalProvincia) && string.IsNullOrEmpty(vm.OriginalCiudad))
+        {
+            // Crear
+            if (IsDup(vm.Provincia, vm.Ciudad))
+            {
+                TempData["MensajeError"] = "Ya existe una regla para ese destino.";
+                return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+            }
+
+            reglas.Add(new Cfg.TarifaEnvioRegla
+            {
+                Provincia = vm.Provincia,
+                Ciudad = vm.Ciudad, // null o valor
+                Precio = vm.Precio,
+                Activo = vm.Activo,
+                Nota = vm.Nota
+            });
+        }
+        else
+        {
+            // Editar
+            var actual = reglas.FirstOrDefault(r => SameKey(r, vm.OriginalProvincia!, vm.OriginalCiudad));
+            if (actual == null)
+            {
+                TempData["MensajeError"] = "No se encontró la regla original para editar.";
+                return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+            }
+
+            if (K(vm.Provincia) != K(vm.OriginalProvincia) || K(vm.Ciudad ?? "") != K(vm.OriginalCiudad ?? ""))
+            {
+                if (IsDup(vm.Provincia, vm.Ciudad, actual))
+                {
+                    TempData["MensajeError"] = "Ya existe otra regla con ese destino.";
+                    return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+                }
+            }
+
+            actual.Provincia = vm.Provincia;
+            actual.Ciudad = vm.Ciudad;
+            actual.Precio = vm.Precio;
+            actual.Activo = vm.Activo;
+            actual.Nota = vm.Nota;
+        }
+
+        await _envios.SetByProveedorAsync(vendorId, reglas);
+        TempData["MensajeExito"] = "Tarifa guardada correctamente.";
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "Error al guardar tarifa de envío (VendorId: {VendorId})", vendorId);
+        TempData["MensajeError"] = "Ocurrió un error al guardar la tarifa.";
+    }
+
+    return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+
+
+    // ---- helper local para parsear precios con coma o punto y con/ sin miles ----
+    static bool TryParsePrecioFlexible(string raw, out decimal value)
+    {
+        value = 0m;
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+
+        // quita espacios
+        var s = raw.Trim().Replace(" ", "");
+
+        // Si hay ambos (coma y punto), asumimos que el ÚLTIMO símbolo es el separador decimal
+        var lastComma = s.LastIndexOf(',');
+        var lastDot   = s.LastIndexOf('.');
+
+        if (lastComma >= 0 && lastDot >= 0)
+        {
+            if (lastComma > lastDot)
+            {
+                // formato "1.234,56" -> quitar puntos (miles) y cambiar coma por punto
+                s = s.Replace(".", "");
+                s = s.Replace(',', '.');
+            }
+            else
+            {
+                // formato "1,234.56" -> quitar comas (miles)
+                s = s.Replace(",", "");
+            }
+        }
+        else if (lastComma >= 0)
+        {
+            // Solo coma -> tratar como decimal
+            s = s.Replace(',', '.');
+        }
+        // Solo punto -> ya es decimal
+
+        // Parse invariante
+        return decimal.TryParse(s,
+            NumberStyles.AllowDecimalPoint | NumberStyles.AllowLeadingSign,
+            CultureInfo.InvariantCulture,
+            out value);
+    }
+}
 
         // POST /Vendedor/Envios/Delete?vId=<opcional para Admin>
         [HttpPost("Envios/Delete")]

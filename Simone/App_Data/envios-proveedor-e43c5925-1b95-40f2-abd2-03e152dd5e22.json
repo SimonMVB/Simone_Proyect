@@ -5,5 +5,26 @@
     "precio": 4,
     "activo": true,
     "nota": null
+  },
+  {
+    "provincia": "Esmeraldas",
+    "ciudad": null,
+    "precio": 4,
+    "activo": true,
+    "nota": null
+  },
+  {
+    "provincia": "Chimborazo",
+    "ciudad": "Guamote",
+    "precio": 4.40,
+    "activo": true,
+    "nota": null
+  },
+  {
+    "provincia": "El Oro",
+    "ciudad": "Pasaje",
+    "precio": 4.45,
+    "activo": true,
+    "nota": null
   }
 ]

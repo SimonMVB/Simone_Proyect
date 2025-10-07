@@ -44,9 +44,13 @@
             <span class="badge @EstadoClass(Model.Estado) px-3 py-2">
                 @(!string.IsNullOrWhiteSpace(Model.Estado) ? Model.Estado : "—")
             </span>
+
+            <!-- Botón corregido: vuelve al listado de Vendedor/Reportes -->
             <a class="btn btn-outline-secondary"
-               href="@(Url.Action("Reportes", "Vendedor", new { vId = string.IsNullOrWhiteSpace(vId) ? null : vId }))">
-                <i class="fa-solid fa-arrow-left-long me-1"></i> Volver
+               asp-controller="Vendedor"
+               asp-action="Reportes"
+               asp-route-vId="@(string.IsNullOrWhiteSpace(vId) ? null : vId)">
+                <i class="fa-solid fa-arrow-left-long me-1"></i> Volver a compradores
             </a>
         </div>
     </div>
@@ -220,7 +224,7 @@
                             {
                                 <div class="list-group-item">
                                     <div class="fw-semibold">
-                                        @(string.Join(", ", new[]{
+                                        @(string.Join(", ", new[] {
                                                                 d.Calle,
                                                                 d.Ciudad,
                                                                 d.EstadoProvincia,
@@ -233,7 +237,6 @@
                                             <i class="fa-solid fa-phone me-1"></i>@d.TelefonoContacto
                                         </div>
                                     }
-                                    @* d.FechaRegistro es DateTime (no nullable) en tu VM *@
                                     @if (d.FechaRegistro != default(DateTime))
                                     {
                                         <div class="small text-muted">

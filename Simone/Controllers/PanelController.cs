@@ -63,11 +63,11 @@ namespace Simone.Controllers
             // Tiendas (Vendedores) para filtro y selects
             var tiendasList = await _context.Vendedores
                 .AsNoTracking()
-                .OrderBy(v => v.Nombre) // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                .OrderBy(v => v.Nombre)
                 .Select(v => new SelectListItem
                 {
                     Value = v.VendedorId.ToString(),
-                    Text = v.Nombre           // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                    Text = v.Nombre
                 })
                 .ToListAsync();
 
@@ -168,10 +168,6 @@ namespace Simone.Controllers
             return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
         }
 
-        /// <summary>
-        /// Crea una tienda (Vendedor) con solo el nombre, y devuelve JSON con la lista de tiendas.
-        /// Usado por el offcanvas de “Añadir tienda”.
-        /// </summary>
         [Authorize(Roles = "Administrador")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -182,7 +178,7 @@ namespace Simone.Controllers
 
             var v = new Vendedor
             {
-                Nombre = nombre.Trim() // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                Nombre = nombre.Trim()
             };
 
             _context.Vendedores.Add(v);
@@ -190,15 +186,15 @@ namespace Simone.Controllers
 
             var tiendas = await _context.Vendedores
                 .AsNoTracking()
-                .OrderBy(x => x.Nombre) // <-- CAMBIA si tu Vendedor no usa 'Nombre'
-                .Select(x => new { value = x.VendedorId.ToString(), text = x.Nombre }) // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                .OrderBy(x => x.Nombre)
+                .Select(x => new { value = x.VendedorId.ToString(), text = x.Nombre })
                 .ToListAsync();
 
             return Json(new
             {
                 ok = true,
                 newId = v.VendedorId.ToString(),
-                newText = v.Nombre, // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                newText = v.Nombre,
                 tiendas
             });
         }
@@ -437,7 +433,7 @@ namespace Simone.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarSubcategoria(int categoriaID)
         {
-            var sub = await _subcategoriasManager.GetByIdAsync(categoriaID); // categoriaID == SubcategoriaID (legacy)
+            var sub = await _subcategoriasManager.GetByIdAsync(categoriaID);
             if (sub == null) return NotFound();
 
             if (!IsAdmin() && sub.VendedorID != CurrentUserId())
@@ -580,7 +576,39 @@ namespace Simone.Controllers
             int stock,
             IFormFile imagen)
         {
-            // Validar subcategoría: existe, pertenece a la categoría y (si no es admin) al vendedor actual
+            // ===== CORRECCIÓN: APLICAR 15% EXTRA AL PRECIO DE VENTA =====
+            decimal precioVentaCon15 = precioVenta * 1.15m;
+            decimal gananciaAdicional = precioVenta * 0.15m;
+
+            // Validar que el precio de venta con 15% sea mayor que el precio de compra
+            if (precioVentaCon15 <= precioCompra)
+            {
+                TempData["Err"] = "El precio de venta con 15% extra debe ser mayor que el precio de compra.";
+
+                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                ViewBag.Subcategorias = IsAdmin()
+                    ? await _subcategoriasManager.GetAllAsync()
+                    : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
+                ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
+
+                ViewBag.Producto = new Producto
+                {
+                    Nombre = nombreProducto,
+                    Descripcion = descripcion,
+                    Talla = talla,
+                    Color = color,
+                    Marca = marca,
+                    PrecioCompra = precioCompra,
+                    PrecioVenta = precioVenta, // Guardamos el precio base para mostrar en el formulario
+                    Stock = stock,
+                    ProveedorID = proveedorID,
+                    CategoriaID = categoriaID,
+                    SubcategoriaID = subcategoriaID
+                };
+                return View("ProductoForm");
+            }
+
+            // Validar subcategoría
             var sub = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
             if (sub == null || sub.CategoriaID != categoriaID || (!IsAdmin() && sub.VendedorID != CurrentUserId()))
             {
@@ -618,7 +646,8 @@ namespace Simone.Controllers
                 Color = color,
                 Marca = marca,
                 PrecioCompra = precioCompra,
-                PrecioVenta = precioVenta,
+                // ===== CORRECCIÓN: GUARDAR PRECIO CON 15% =====
+                PrecioVenta = Math.Round(precioVentaCon15, 2), // Redondear a 2 decimales
                 Stock = stock,
                 ProveedorID = proveedorID,
                 CategoriaID = categoriaID,
@@ -640,6 +669,10 @@ namespace Simone.Controllers
             }
 
             await _productosManager.AddAsync(producto);
+
+            // ===== CORRECCIÓN: MENSAJE DE CONFIRMACIÓN CON GANANCIA =====
+            TempData["Ok"] = $"Producto añadido correctamente. Precio final: ${precioVentaCon15:F2} (incluye ${gananciaAdicional:F2} de ganancia adicional)";
+
             return RedirectToAction("Productos");
         }
 
@@ -650,6 +683,11 @@ namespace Simone.Controllers
             if (producto == null) return NotFound();
             if (!IsAdmin() && producto.VendedorID != CurrentUserId())
                 return Forbid();
+
+            // ===== CORRECCIÓN: CALCULAR PRECIO BASE A PARTIR DEL PRECIO CON 15% =====
+            // El precio guardado en BD incluye el 15%, pero para el formulario necesitamos el precio base
+            decimal precioBase = producto.PrecioVenta / 1.15m;
+            producto.PrecioVenta = Math.Round(precioBase, 2);
 
             ViewBag.Categorias = await _categoriasManager.GetAllAsync();
             ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
@@ -671,7 +709,7 @@ namespace Simone.Controllers
             string marca,
             string existingImagenPath,
             decimal precioCompra,
-            decimal precioVenta,
+            decimal precioVenta, // Este es el precio BASE
             int proveedorID,
             int categoriaID,
             int subcategoriaID,
@@ -682,6 +720,24 @@ namespace Simone.Controllers
             if (producto == null) return NotFound();
             if (!IsAdmin() && producto.VendedorID != CurrentUserId())
                 return Forbid();
+
+            // ===== CORRECCIÓN: APLICAR 15% EXTRA AL PRECIO DE VENTA =====
+            decimal precioVentaCon15 = precioVenta * 1.15m;
+            decimal gananciaAdicional = precioVenta * 0.15m;
+
+            // Validar que el precio de venta con 15% sea mayor que el precio de compra
+            if (precioVentaCon15 <= precioCompra)
+            {
+                TempData["Err"] = "El precio de venta con 15% extra debe ser mayor que el precio de compra.";
+
+                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
+                ViewBag.Subcategorias = IsAdmin()
+                    ? await _subcategoriasManager.GetAllAsync()
+                    : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
+                ViewBag.Producto = producto;
+                return View("ProductoForm");
+            }
 
             // Validación de subcategoría coherente
             var sub = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
@@ -704,7 +760,8 @@ namespace Simone.Controllers
             producto.Color = color;
             producto.Marca = marca;
             producto.PrecioCompra = precioCompra;
-            producto.PrecioVenta = precioVenta;
+            // ===== CORRECCIÓN: GUARDAR PRECIO CON 15% =====
+            producto.PrecioVenta = Math.Round(precioVentaCon15, 2); // Redondear a 2 decimales
             producto.ProveedorID = proveedorID;
             producto.CategoriaID = categoriaID;
             producto.SubcategoriaID = subcategoriaID;
@@ -728,6 +785,10 @@ namespace Simone.Controllers
             }
 
             await _productosManager.UpdateAsync(producto);
+
+            // ===== CORRECCIÓN: MENSAJE DE CONFIRMACIÓN CON GANANCIA =====
+            TempData["Ok"] = $"Producto actualizado correctamente. Precio final: ${precioVentaCon15:F2} (incluye ${gananciaAdicional:F2} de ganancia adicional)";
+
             return RedirectToAction("Productos");
         }
 

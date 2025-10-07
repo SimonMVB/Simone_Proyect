@@ -5,7 +5,6 @@
     var producto = ViewBag.Producto as Producto;
     var categorias = ViewBag.Categorias as IEnumerable<Categorias> ?? Enumerable.Empty<Categorias>();
     var proveedores = ViewBag.Proveedores as IEnumerable<Proveedores> ?? Enumerable.Empty<Proveedores>();
-    // Soporta ambos nombres: Subcategorias / subcategorias (según el controlador que llame)
     var subcatsSrc = (IEnumerable<Subcategorias>)(ViewBag.Subcategorias ?? ViewBag.subcategorias ?? new List<Subcategorias>());
 }
 
@@ -18,6 +17,7 @@
     :root {
         --primary-light: #fff;
         --accent-purple: #4B0082;
+        --light-purple: #6A0DAD;
         --light-gray: #F8F8F8;
         --medium-gray: #E0E0E0;
         --dark-gray: #333;
@@ -25,47 +25,61 @@
         --danger: #dc3545;
         --ok: #28a745;
         --info: #17a2b8;
+        --warning: #ffc107;
+        --shadow: 0 10px 30px rgba(0,0,0,.08);
+        --shadow-hover: 0 15px 40px rgba(0,0,0,.12);
     }
 
     body {
-        font-family: 'Montserrat',sans-serif;
-        background: #f5f5f7;
-        color: var(--text)
+        font-family: 'Montserrat', sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+        color: var(--text);
+        line-height: 1.6;
     }
 
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Playfair Display',serif;
-        font-weight: 600
+        font-family: 'Playfair Display', serif;
+        font-weight: 600;
     }
 
     .form-container {
         max-width: 980px;
         margin: 2rem auto;
-        padding: 0 15px
+        padding: 0 15px;
     }
 
     .card {
         background: #fff;
-        border-radius: 14px;
-        box-shadow: 0 10px 30px rgba(0,0,0,.08);
-        overflow: hidden
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
 
     .card-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1.1rem 1.25rem;
+        padding: 1.25rem 1.5rem;
         border-bottom: 1px solid var(--medium-gray);
-        background: linear-gradient(135deg, rgba(75,0,130,.06), rgba(75,0,130,.02));
+        background: linear-gradient(135deg, rgba(75,0,130,.08), rgba(75,0,130,.03));
     }
 
     .title {
         display: flex;
         align-items: center;
         gap: .75rem;
-        color: var(--accent-purple)
+        color: var(--accent-purple);
     }
+
+        .title i {
+            font-size: 1.5rem;
+        }
 
     .back-link {
         display: inline-flex;
@@ -75,56 +89,122 @@
         font-weight: 600;
         color: var(--accent-purple);
         border: 1px solid rgba(75,0,130,.25);
-        padding: .45rem .75rem;
+        padding: .5rem .85rem;
         border-radius: 999px;
-        background: rgba(75,0,130,.05)
+        background: rgba(75,0,130,.05);
+        transition: all 0.2s ease;
     }
 
         .back-link:hover {
-            background: rgba(75,0,130,.12)
+            background: rgba(75,0,130,.12);
+            transform: translateX(-3px);
         }
 
     .card-body {
-        padding: 1.25rem
+        padding: 1.5rem;
     }
 
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(2,1fr);
-        gap: 1.2rem
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
     }
 
     .full {
-        grid-column: span 2
+        grid-column: span 2;
+    }
+
+    .form-group {
+        position: relative;
     }
 
     .form-label {
         display: block;
-        margin-bottom: .45rem;
+        margin-bottom: .5rem;
         font-weight: 600;
-        color: var(--dark-gray)
+        color: var(--dark-gray);
+        font-size: 0.95rem;
+    }
+
+    .required::after {
+        content: " *";
+        color: var(--danger);
     }
 
     .form-input, .form-select, .form-textarea {
         width: 100%;
-        padding: .75rem 1rem;
+        padding: .85rem 1rem;
         border: 1px solid var(--medium-gray);
         border-radius: 10px;
         font-size: 1rem;
         background: #fff;
-        transition: border-color .15s ease, box-shadow .15s ease
+        transition: border-color .15s ease, box-shadow .15s ease;
+        font-family: 'Montserrat', sans-serif;
     }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
             border-color: var(--accent-purple);
             box-shadow: 0 0 0 3px rgba(75,0,130,.12);
-            outline: none
+            outline: none;
         }
+
+        .form-input.valid {
+            border-color: var(--ok);
+            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.12);
+        }
+
+        .form-input.invalid {
+            border-color: var(--danger);
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
+        }
+
+    .price-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .price-info {
+        background: rgba(75,0,130,.05);
+        border-radius: 10px;
+        padding: 1rem;
+        border-left: 4px solid var(--accent-purple);
+    }
+
+    .price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+        .price-row:last-child {
+            margin-bottom: 0;
+        }
+
+    .price-label {
+        font-weight: 500;
+        color: var(--dark-gray);
+    }
+
+    .price-value {
+        font-weight: 600;
+    }
+
+    .profit {
+        color: var(--ok);
+    }
 
     .image-upload {
         display: flex;
         flex-direction: column;
-        gap: 1rem
+        gap: 1rem;
+    }
+
+    .image-preview-container {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
     }
 
     .image-preview {
@@ -132,8 +212,13 @@
         height: 170px;
         object-fit: cover;
         border-radius: 10px;
-        border: 1px solid var(--medium-gray)
+        border: 1px solid var(--medium-gray);
+        transition: transform 0.3s ease;
     }
+
+        .image-preview:hover {
+            transform: scale(1.03);
+        }
 
     .no-image {
         width: 170px;
@@ -142,31 +227,37 @@
         border-radius: 10px;
         display: grid;
         place-items: center;
-        color: #777
+        color: #777;
+        border: 2px dashed var(--medium-gray);
     }
 
     .file-input {
-        display: none
+        display: none;
     }
 
     .file-label {
         background: var(--light-gray);
-        padding: .6rem 1rem;
+        padding: .7rem 1.2rem;
         border-radius: 8px;
         cursor: pointer;
         display: inline-flex;
         gap: .5rem;
-        align-items: center
+        align-items: center;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: 1px solid transparent;
     }
 
         .file-label:hover {
-            background: var(--medium-gray)
+            background: var(--medium-gray);
+            border-color: var(--accent-purple);
         }
 
     .error-msg {
         color: var(--danger);
-        font-size: .9rem;
-        display: none
+        font-size: .85rem;
+        display: none;
+        margin-top: 0.5rem;
     }
 
     .btn {
@@ -175,59 +266,132 @@
         cursor: pointer;
         font-weight: 700;
         border-radius: 999px;
-        padding: .85rem 1.25rem;
+        padding: .9rem 1.5rem;
         display: inline-flex;
         align-items: center;
         gap: .5rem;
-        transition: transform .15s ease, box-shadow .15s ease, background .2s ease, color .2s ease
+        transition: transform .15s ease, box-shadow .15s ease, background .2s ease, color .2s ease;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 1rem;
     }
 
     .btn-primary {
-        background: linear-gradient(135deg,var(--accent-purple),#5E2D8C);
-        color: #fff
+        background: linear-gradient(135deg, var(--accent-purple), var(--light-purple));
+        color: #fff;
     }
 
         .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 22px rgba(75,0,130,.25)
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(75,0,130,.3);
         }
 
     .btn-secondary {
         background: #fff;
         color: var(--accent-purple);
-        border: 1px solid rgba(75,0,130,.3)
+        border: 1px solid rgba(75,0,130,.3);
     }
 
         .btn-secondary:hover {
-            background: rgba(75,0,130,.06)
+            background: rgba(75,0,130,.06);
+            transform: translateY(-1px);
         }
 
     .alert {
         border-radius: 12px;
-        padding: .9rem 1rem;
-        margin: .8rem 0;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
         display: flex;
         gap: .6rem;
         align-items: center;
-        font-weight: 500
+        font-weight: 500;
+        animation: fadeIn 0.5s ease;
+    }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
     }
 
     .alert-success {
         background: rgba(40,167,69,.1);
         color: var(--ok);
-        border: 1px solid rgba(40,167,69,.25)
+        border: 1px solid rgba(40,167,69,.25);
     }
 
     .alert-danger {
         background: rgba(220,53,69,.1);
         color: var(--danger);
-        border: 1px solid rgba(220,53,69,.25)
+        border: 1px solid rgba(220,53,69,.25);
     }
 
-    @@media (max-width:768px) {
-        .form-grid {
-            grid-template-columns: 1fr
+    .form-footer {
+        display: flex;
+        gap: .8rem;
+        flex-wrap: wrap;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--medium-gray);
+    }
+
+    .tooltip {
+        position: relative;
+        display: inline-block;
+    }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: var(--dark-gray);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            font-weight: normal;
         }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+    @@media (max-width: 768px) {
+        .form-grid
+
+    {
+        grid-template-columns: 1fr;
+    }
+
+    .full {
+        grid-column: span 1;
+    }
+
+    .form-footer {
+        flex-direction: column;
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
     }
 </style>
 
@@ -267,7 +431,7 @@
 
                 <!-- Nombre -->
                 <div class="form-group">
-                    <label for="Nombre" class="form-label">Nombre</label>
+                    <label for="Nombre" class="form-label required">Nombre</label>
                     <input type="text" name="nombreProducto" id="Nombre" class="form-input"
                            placeholder="Nombre del producto" maxlength="120" required
                            value="@(producto?.Nombre ?? "")" />
@@ -275,13 +439,14 @@
 
                 <!-- Descripción -->
                 <div class="form-group full">
-                    <label for="Descripcion" class="form-label">Descripción</label>
-                    <textarea name="descripcion" id="Descripcion" class="form-textarea" rows="4" required>@(producto?.Descripcion ?? "")</textarea>
+                    <label for="Descripcion" class="form-label required">Descripción</label>
+                    <textarea name="descripcion" id="Descripcion" class="form-textarea" rows="4" required
+                              placeholder="Describe las características principales del producto">@(producto?.Descripcion ?? "")</textarea>
                 </div>
 
                 <!-- Talla -->
                 <div class="form-group">
-                    <label for="Talla" class="form-label">Talla</label>
+                    <label for="Talla" class="form-label required">Talla</label>
                     <input type="text" name="talla" id="Talla" class="form-input"
                            placeholder="Ej. S, M, L, 38, XL…" maxlength="40" required
                            value="@(producto?.Talla ?? "")" />
@@ -289,7 +454,7 @@
 
                 <!-- Color -->
                 <div class="form-group">
-                    <label for="Color" class="form-label">Color</label>
+                    <label for="Color" class="form-label required">Color</label>
                     <input type="text" name="color" id="Color" class="form-input"
                            placeholder="Color del producto" maxlength="40" required
                            value="@(producto?.Color ?? "")" />
@@ -297,7 +462,7 @@
 
                 <!-- Marca -->
                 <div class="form-group">
-                    <label for="Marca" class="form-label">Marca</label>
+                    <label for="Marca" class="form-label required">Marca</label>
                     <input type="text" name="marca" id="Marca" class="form-input"
                            placeholder="Marca del producto" maxlength="80" required
                            value="@(producto?.Marca ?? "")" />
@@ -305,7 +470,7 @@
 
                 <!-- Precio Compra -->
                 <div class="form-group">
-                    <label for="PrecioCompra" class="form-label">Precio de Compra</label>
+                    <label for="PrecioCompra" class="form-label required">Precio de Compra</label>
                     <input type="number" name="precioCompra" id="PrecioCompra" class="form-input"
                            placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true" required
                            value="@(producto != null ? producto.PrecioCompra.ToString("0.##", CultureInfo.InvariantCulture) : "")" />
@@ -313,15 +478,25 @@
 
                 <!-- Precio Venta -->
                 <div class="form-group">
-                    <label for="PrecioVenta" class="form-label">Precio de Venta</label>
+                    <label for="PrecioVenta" class="form-label required">Precio de Venta</label>
                     <input type="number" name="precioVenta" id="PrecioVenta" class="form-input"
                            placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true" required
                            value="@(producto != null ? producto.PrecioVenta.ToString("0.##", CultureInfo.InvariantCulture) : "")" />
+                    <div class="price-info">
+                        <div class="price-row">
+                            <span class="price-label">Precio con 15% extra:</span>
+                            <span class="price-value" id="precioCon15">$0.00</span>
+                        </div>
+                        <div class="price-row">
+                            <span class="price-label">Ganancia adicional:</span>
+                            <span class="price-value profit" id="ganancia15">$0.00</span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Categoría -->
                 <div class="form-group">
-                    <label for="Categoria" class="form-label">Categoría</label>
+                    <label for="Categoria" class="form-label required">Categoría</label>
                     <select name="categoriaID" id="Categoria" class="form-select" required>
                         <option value="">Seleccione una categoría</option>
                         @foreach (var c in categorias)
@@ -335,7 +510,7 @@
 
                 <!-- Subcategoría (se llena según categoría) -->
                 <div class="form-group">
-                    <label for="Subcategoria" class="form-label">Subcategoría</label>
+                    <label for="Subcategoria" class="form-label required">Subcategoría</label>
                     <select name="subcategoriaID" id="Subcategoria" class="form-select" required disabled>
                         <option value="">Seleccione una subcategoría</option>
                     </select>
@@ -343,7 +518,7 @@
 
                 <!-- Proveedor -->
                 <div class="form-group">
-                    <label for="Proveedor" class="form-label">Proveedor</label>
+                    <label for="Proveedor" class="form-label required">Proveedor</label>
                     <select name="proveedorID" id="Proveedor" class="form-select" required>
                         <option value="">Seleccione un proveedor</option>
                         @foreach (var p in proveedores)
@@ -357,7 +532,7 @@
 
                 <!-- Stock -->
                 <div class="form-group">
-                    <label for="Stock" class="form-label">Stock</label>
+                    <label for="Stock" class="form-label required">Stock</label>
                     <input type="number" name="stock" id="Stock" class="form-input" min="0" step="1" placeholder="0" required
                            value="@(producto != null ? producto.Stock.ToString(CultureInfo.InvariantCulture) : "")" />
                 </div>
@@ -366,26 +541,36 @@
                 <div class="form-group full">
                     <label class="form-label">Imagen del Producto</label>
                     <div class="image-upload">
-                        @if (!string.IsNullOrWhiteSpace(producto?.ImagenPath))
-                        {
-                            <img src="@producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview" />
-                            <input type="hidden" name="existingImagenPath" value="@producto.ImagenPath" />
-                        }
-                        else
-                        {
-                            <div class="no-image" id="imagePreview">No hay imagen seleccionada</div>
-                        }
+                        <div class="image-preview-container">
+                            @if (!string.IsNullOrWhiteSpace(producto?.ImagenPath))
+                            {
+                                <img src="@producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview" />
+                                <input type="hidden" name="existingImagenPath" value="@producto.ImagenPath" />
+                            }
+                            else
+                            {
+                                <div class="no-image" id="imagePreview">
+                                    <i class="fas fa-image fa-2x"></i>
+                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">No hay imagen seleccionada</p>
+                                </div>
+                            }
 
-                        <input type="file" name="imagen" id="Imagen" class="file-input" accept="image/*">
-                        <label for="Imagen" class="file-label"><i class="fas fa-camera"></i> @(producto != null ? "Cambiar imagen" : "Seleccionar imagen")</label>
-                        <small class="error-msg" id="error-msg">El archivo debe ser imagen y pesar ≤ 2 MB.</small>
+                            <div>
+                                <input type="file" name="imagen" id="Imagen" class="file-input" accept="image/*">
+                                <label for="Imagen" class="file-label">
+                                    <i class="fas fa-camera"></i>
+                                    @(producto != null ? "Cambiar imagen" : "Seleccionar imagen")
+                                </label>
+                                <small class="error-msg" id="error-msg">El archivo debe ser imagen y pesar ≤ 2 MB.</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Acciones -->
-                <div class="full" style="display:flex;gap:.6rem;flex-wrap:wrap;margin-top:.25rem">
+                <div class="form-footer full">
                     <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <i class="fas @(producto != null ? "fa-save" : "fa-plus") me-2"></i>
+                        <i class="fas @(producto != null ? "fa-save" : "fa-plus")"></i>
                         @(producto != null ? "Guardar Cambios" : "Añadir Producto")
                     </button>
                     <a asp-controller="Panel" asp-action="Productos" class="btn btn-secondary">
@@ -402,8 +587,8 @@
         (function(){
             // ---------- Datos de subcategorías (server → cliente)
             const subsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                            subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
-                    ));
+                                                    subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
+                                    ));
 
         // ---------- Elementos clave
         const form     = document.getElementById('productoForm');
@@ -413,6 +598,23 @@
         const imgPrev  = document.getElementById('imagePreview');
         const errMsg   = document.getElementById('error-msg');
         const submit   = document.getElementById('submitBtn');
+        const precioVentaInput = document.getElementById('PrecioVenta');
+        const precioCon15Span = document.getElementById('precioCon15');
+        const ganancia15Span = document.getElementById('ganancia15');
+
+            // ---------- Cálculo del 15% extra
+            function calcular15Porciento() {
+                const precioVenta = parseFloat(precioVentaInput.value) || 0;
+                const ganancia = precioVenta * 0.15;
+                const precioCon15 = precioVenta + ganancia;
+
+                precioCon15Span.textContent = '$' + precioCon15.toFixed(2);
+                ganancia15Span.textContent = '$' + ganancia.toFixed(2);
+            }
+
+            // Ejecutar al cargar y cuando cambie el precio
+            calcular15Porciento();
+            precioVentaInput.addEventListener('input', calcular15Porciento);
 
             // ---------- Rellena subcategorías por categoría seleccionada
             function fillSubcats(catId, currentSubId){
@@ -421,7 +623,7 @@
 
                 if(!catId){ return; }
 
-                const list = (subsData || []).filter(s => s.CategoriaID === catId);
+                const list = (subsData || []).filter(s => s.CategoriaID == catId);
                 if(list.length === 0){
                     const opt = document.createElement('option');
                     opt.value = '';
@@ -434,7 +636,7 @@
                     const opt = document.createElement('option');
                     opt.value = s.SubcategoriaID;
                     opt.textContent = s.NombreSubcategoria;
-                    if(currentSubId && s.SubcategoriaID === currentSubId) opt.selected = true;
+                    if(currentSubId && s.SubcategoriaID == currentSubId) opt.selected = true;
                     subSel.appendChild(opt);
                 });
                 subSel.disabled = false;
@@ -485,6 +687,20 @@
                 reader.readAsDataURL(file);
             });
 
+            // ---------- Validación en tiempo real
+            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+            inputs.forEach(input => {
+                input.addEventListener('blur', function() {
+                    if (this.value.trim() === '') {
+                        this.classList.add('invalid');
+                        this.classList.remove('valid');
+                    } else {
+                        this.classList.add('valid');
+                        this.classList.remove('invalid');
+                    }
+                });
+            });
+
             // ---------- Normalización de decimales y doble submit
             form?.addEventListener('submit', e => {
                 // Normaliza decimal con punto
@@ -494,8 +710,21 @@
 
                 // Validación mínima cliente
                 if(!form.checkValidity()){
-                    e.preventDefault(); e.stopPropagation();
-                    alert('Revisa los campos: todos los requeridos deben estar completos y válidos.');
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Mostrar mensaje de error
+                    let emptyFields = [];
+                    inputs.forEach(input => {
+                        if (input.value.trim() === '') {
+                            input.classList.add('invalid');
+                            emptyFields.push(input.previousElementSibling.textContent.replace(' *', ''));
+                        }
+                    });
+
+                    if (emptyFields.length > 0) {
+                        alert('Por favor, complete los siguientes campos requeridos:\n\n• ' + emptyFields.join('\n• '));
+                    }
                     return;
                 }
 
@@ -503,7 +732,9 @@
                 if(submit){
                     submit.disabled = true;
                     const icon = submit.querySelector('i');
-                    if(icon){ icon.className = 'fa-solid fa-circle-notch fa-spin'; }
+                    if(icon){
+                        icon.className = 'fa-solid fa-circle-notch fa-spin';
+                    }
                     submit.lastChild && submit.lastChild.nodeType === 3 && (submit.lastChild.textContent = ' Guardando...');
                 }
             });
