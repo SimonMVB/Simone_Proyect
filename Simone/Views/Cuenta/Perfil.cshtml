@@ -277,6 +277,19 @@
         background: #f1f5f9
     }
 
+    /* Offcanvas UI */
+    #offProvinciaCiudad .list-group-item.active {
+        background-color: var(--peach);
+        border-color: var(--peach);
+        color: #1a1a1a;
+        font-weight: 700;
+    }
+
+    #offProvinciaCiudad .form-control:focus {
+        border-color: var(--peach);
+        box-shadow: 0 0 0 .2rem rgba(255,200,156,.25);
+    }
+
     @@media (max-width:680px) {
         .profile-card {
             padding: 1.2rem 1rem;
@@ -329,7 +342,6 @@
             <div id="personal-tab" class="tab-content active" role="tabpanel" aria-labelledby="personal">
                 <form asp-action="ActualizarPerfil" asp-controller="Cuenta" method="post" enctype="multipart/form-data" id="formPerfil" class="needs-validation" novalidate>
                     @Html.AntiForgeryToken()
-                    <!-- No usamos el Id posteado en servidor, pero no estorba si existe -->
                     <input asp-for="Id" type="hidden" />
 
                     <div class="profile-avatar-container">
@@ -378,7 +390,7 @@
                             <small class="text-muted">Para cambiar tu correo, contacta al administrador.</small>
                         </div>
 
-                        <!-- CÉDULA (10 dígitos) -->
+                        <!-- CÉDULA -->
                         <div class="form-group">
                             <label asp-for="Cedula" class="form-label">Cédula</label>
                             <div class="input-group">
@@ -413,20 +425,44 @@
                             <span asp-validation-for="Direccion" class="form-error"></span>
                         </div>
 
+                        <!-- Ciudad con selector -->
                         <div class="form-group">
                             <label asp-for="Ciudad" class="form-label"></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-city" aria-hidden="true"></i></span>
-                                <input asp-for="Ciudad" class="form-control" placeholder="Ciudad" autocomplete="address-level2" />
+                                <input asp-for="Ciudad"
+                                       class="form-control"
+                                       placeholder="Selecciona tu ciudad"
+                                       autocomplete="address-level2"
+                                       readonly />
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="offcanvas"
+                                        data-bs-target="#offProvinciaCiudad"
+                                        title="Elegir provincia y ciudad">
+                                    <i class="fa-solid fa-magnifying-glass-location"></i>
+                                </button>
                             </div>
                             <span asp-validation-for="Ciudad" class="form-error"></span>
                         </div>
 
+                        <!-- Provincia con selector -->
                         <div class="form-group">
                             <label asp-for="Provincia" class="form-label"></label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-globe-americas" aria-hidden="true"></i></span>
-                                <input asp-for="Provincia" class="form-control" placeholder="Provincia" autocomplete="address-level1" />
+                                <input asp-for="Provincia"
+                                       class="form-control"
+                                       placeholder="Selecciona tu provincia"
+                                       autocomplete="address-level1"
+                                       readonly />
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="offcanvas"
+                                        data-bs-target="#offProvinciaCiudad"
+                                        title="Elegir provincia y ciudad">
+                                    <i class="fa-solid fa-list"></i>
+                                </button>
                             </div>
                             <span asp-validation-for="Provincia" class="form-error"></span>
                         </div>
@@ -599,6 +635,36 @@
     </div>
 </div>
 
+<!-- Offcanvas Provincia/Ciudad -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offProvinciaCiudad" aria-labelledby="offProvinciaCiudadLabel">
+    <div class="offcanvas-header">
+        <h5 id="offProvinciaCiudadLabel" class="mb-0">
+            <i class="fa-solid fa-location-dot me-2"></i> Selecciona provincia y ciudad
+        </h5>
+        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="row g-3">
+            <div class="col-12 col-md-5">
+                <div class="mb-2 d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-map text-muted"></i>
+                    <input type="text" class="form-control form-control-sm" id="searchProv" placeholder="Filtrar provincias..." />
+                </div>
+                <div class="list-group small" id="provList" style="max-height: 60vh; overflow:auto;"></div>
+            </div>
+            <div class="col-12 col-md-7">
+                <div class="mb-2 d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-city text-muted"></i>
+                    <input type="text" class="form-control form-control-sm" id="searchCity" placeholder="Filtrar ciudades..." disabled />
+                </div>
+                <div class="list-group small" id="cityList" style="max-height: 60vh; overflow:auto;">
+                    <div class="text-muted ps-2">Elige primero una provincia.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
@@ -635,14 +701,13 @@
                     }
                     avatar.src=e.target.result; avatar.style.display='block';
                     wrap.querySelector('.avatar-placeholder')?.classList.add('d-none');
-                    // Si se había marcado eliminar, lo revertimos
                     const hidden=document.getElementById('EliminarFoto'); if(hidden) hidden.remove();
                     delBtn?.classList.remove('d-none');
                 };
                 reader.readAsDataURL(f);
             });
 
-            // Eliminar foto (marca hidden para que el controlador la quite)
+            // Eliminar foto
             delBtn?.addEventListener('click',()=>{
                 const wrap=document.querySelector('.avatar-wrapper');
                 const avatar=wrap.querySelector('.profile-avatar'); if(avatar) avatar.style.display='none';
@@ -672,10 +737,9 @@
                     formPerfil.classList.add('was-validated'); return;
                 }
                 btnPerfil.disabled=true;
-                const txt=btnPerfil.querySelector('.btn-text'); const prev=txt.textContent;
+                const txt=btnPerfil.querySelector('.btn-text');
                 txt.textContent='Guardando...';
                 btnPerfil.insertAdjacentHTML('afterbegin','<span class="spinner-border spinner-border-sm me-2"></span>');
-                // Se restablece tras postback
             });
 
             // Seguridad: mostrar/ocultar formulario
@@ -769,6 +833,114 @@
                     }
                 }catch{ toast('danger','Error de red.'); }
                 finally{ btnSave.disabled=false; btnSave.innerHTML=prev; }
+            });
+
+            // ====== Provincia / Ciudad (Offcanvas) ======
+            const inProv  = document.getElementById('@Html.IdFor(m => m.Provincia)');
+            const inCity  = document.getElementById('@Html.IdFor(m => m.Ciudad)');
+            const provList= document.getElementById('provList');
+            const cityList= document.getElementById('cityList');
+            const sProv   = document.getElementById('searchProv');
+            const sCity   = document.getElementById('searchCity');
+            let selectedProv = null;
+
+            // Catálogo Ecuador (mismo que en Registrar)
+            const EC_PROVINCIAS = {
+                "Azuay": ["Cuenca","Gualaceo","Paute","Sígsig","Chordeleg","Nabón","Sevilla de Oro","Santa Isabel","Oña","Camilo Ponce Enríquez"],
+                "Bolívar": ["Guaranda","Chillanes","Chimbo","Echeandía","San Miguel","Caluma","Las Naves"],
+                "Cañar": ["Azogues","Biblián","Cañar","La Troncal","El Tambo","Déleg","Suscal"],
+                "Carchi": ["Tulcán","Montúfar (San Gabriel)","Mira","Espejo (El Ángel)","Bolívar","Huaca"],
+                "Chimborazo": ["Riobamba","Alausí","Colta","Chambo","Guamote","Guano","Pallatanga","Penipe"],
+                "Cotopaxi": ["Latacunga","La Maná","Pujilí","Salcedo","Saquisilí","Sigchos"],
+                "El Oro": ["Machala","Arenillas","Atahualpa","Balsas","Chilla","El Guabo","Huaquillas","Las Lajas","Marcabelí","Pasaje","Piñas","Portovelo","Santa Rosa","Zaruma"],
+                "Esmeraldas": ["Esmeraldas","Atacames","Eloy Alfaro (San Lorenzo)","Muisne","Quinindé","Rioverde"],
+                "Galápagos": ["Puerto Ayora","Puerto Baquerizo Moreno","Puerto Villamil"],
+                "Guayas": ["Guayaquil","Daule","Samborondón","Durán","Milagro","Playas","Naranjal","Balao","Bucay","El Empalme","Salitre","Pedro Carbo","Yaguachi","Colimes","Isidro Ayora","Simón Bolívar","General Antonio Elizalde"],
+                "Imbabura": ["Ibarra","Atuntaqui (Antonio Ante)","Otavalo","Cotacachi","Pimampiro","Urcuquí"],
+                "Loja": ["Loja","Catamayo","Cariamanga (Calvas)","Catacocha (Paltas)","Cariamanga","Macará","Saraguro","Gonzanamá","Celica","Pindal","Zapotillo"],
+                "Los Ríos": ["Babahoyo","Quevedo","Ventanas","Vinces","Buena Fe","Mocache","Puebloviejo","Urdaneta","Montalvo","Quinsaloma","Palenque"],
+                "Manabí": ["Portoviejo","Manta","Chone","Jipijapa","Montecristi","Rocafuerte","El Carmen","Santa Ana","Bahía de Caráquez (Sucre)","Pedernales","Tosagua","Paján","24 de Mayo","Jama","San Vicente","Olmedo","Flavio Alfaro","Jaramijó","Puerto López"],
+                "Morona Santiago": ["Macas (Morona)","Gualaquiza","Sucúa","Huamboya","Santiago de Méndez","Logroño","Pablo Sexto","Palora","Taisha"],
+                "Napo": ["Tena","Archidona","El Chaco","Quijos","Carlos Julio Arosemena Tola"],
+                "Orellana": ["Coca (Francisco de Orellana)","Aguarico","La Joya de los Sachas","Loreto"],
+                "Pastaza": ["Puyo (Pastaza)","Mera","Santa Clara","Arajuno"],
+                "Pichincha": ["Quito","Cayambe","Mejía (Machachi)","Pedro Moncayo (Tabacundo)","Pedro Vicente Maldonado","Puerto Quito","Rumiñahui (Sangolquí)"],
+                "Santa Elena": ["La Libertad","Salinas","Santa Elena"],
+                "Santo Domingo de los Tsáchilas": ["Santo Domingo","La Concordia"],
+                "Sucumbíos": ["Nueva Loja (Lago Agrio)","Cascales","Cuyabeno","Gonzalo Pizarro","Putumayo","Shushufindi","Sucumbíos"],
+                "Tungurahua": ["Ambato","Baños de Agua Santa","Cevallos","Mocha","Patate","Quero","San Pedro de Pelileo","Tisaleo"],
+                "Zamora Chinchipe": ["Zamora","Yantzaza","Yacuambi","El Pangui","Centinela del Cóndor","Palanda","Paquisha","Chinchipe","Nangaritza"]
+            };
+
+            function renderProvinces(filter = '') {
+                const q = (filter || '').toLowerCase();
+                provList.innerHTML = '';
+                Object.keys(EC_PROVINCIAS).sort().forEach(p => {
+                    if (q && !p.toLowerCase().includes(q)) return;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action';
+                    btn.textContent = p;
+                    btn.dataset.prov = p;
+                    if (selectedProv === p) btn.classList.add('active');
+                    btn.addEventListener('click', () => {
+                        selectedProv = p;
+                        renderProvinces(sProv.value);
+                        renderCities('', p);
+                        sCity.disabled = false;
+                        sCity.focus();
+                    });
+                    provList.appendChild(btn);
+                });
+                if (!provList.children.length) {
+                    provList.innerHTML = '<div class="text-muted ps-2">Sin resultados.</div>';
+                }
+            }
+            function renderCities(filter = '', prov = selectedProv) {
+                cityList.innerHTML = '';
+                if (!prov) {
+                    cityList.innerHTML = '<div class="text-muted ps-2">Elige primero una provincia.</div>';
+                    return;
+                }
+                const q = (filter || '').toLowerCase();
+                const cities = (EC_PROVINCIAS[prov] || []).filter(c => !q || c.toLowerCase().includes(q));
+                if (!cities.length) {
+                    cityList.innerHTML = '<div class="text-muted ps-2">Sin resultados en ' + prov + '.</div>';
+                    return;
+                }
+                cities.forEach(c => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'list-group-item list-group-item-action';
+                    btn.textContent = c;
+                    btn.addEventListener('click', () => {
+                        setUbicacion(prov, c);
+                        closeOffcanvas();
+                    });
+                    cityList.appendChild(btn);
+                });
+            }
+            function setUbicacion(prov, city) {
+                if (inProv) inProv.value = prov || '';
+                if (inCity) inCity.value = city || '';
+            }
+            function closeOffcanvas() {
+                const el = document.getElementById('offProvinciaCiudad');
+                if (!el) return;
+                const inst = bootstrap.Offcanvas.getOrCreateInstance(el);
+                inst.hide();
+            }
+
+            sProv?.addEventListener('input', () => renderProvinces(sProv.value));
+            sCity?.addEventListener('input', () => renderCities(sCity.value));
+
+            // Abrir slide: precargar con valores actuales
+            document.querySelectorAll('[data-bs-target="#offProvinciaCiudad"]').forEach(btnOpen => {
+                btnOpen.addEventListener('click', () => {
+                    selectedProv = (inProv?.value || '') || null;
+                    renderProvinces(sProv?.value || '');
+                    renderCities(sCity?.value || '');
+                });
             });
         })();
     </script>

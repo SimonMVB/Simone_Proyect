@@ -1,0 +1,16 @@
+[
+  {
+    "provincia": "Guayas",
+    "ciudad": "Milagro",
+    "precio": 50,
+    "activo": true,
+    "nota": null
+  },
+  {
+    "provincia": "Imbabura",
+    "ciudad": "Ibarra",
+    "precio": 5,
+    "activo": true,
+    "nota": null
+  }
+]

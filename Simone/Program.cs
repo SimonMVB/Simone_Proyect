@@ -77,8 +77,15 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<CarritoActionFilter>();
 
-// 🔧 Bancos: usar Singleton (servicio sin estado que maneja IO a archivos)
+
+// 🔧 Bancos (IO a archivos)
 builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
+
+// 🔧 Envíos (IO a archivos + resolución + cálculo carrito)  👈 NUEVO
+builder.Services.AddSingleton<IEnviosConfigService, EnviosConfigService>();
+builder.Services.AddScoped<EnviosResolver>();
+builder.Services.AddScoped<EnviosCarritoService>();
+
 
 // ❌ No registrar resolvers duplicados bajo otros namespaces
 // builder.Services.AddScoped<Simone.ViewModels.Pagos.PagosResolver>();

@@ -68,4 +68,8 @@
     <Folder Include="wwwroot\images\panel\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="Services\EnviosResolvercs.cs" />
+  </ItemGroup>
+
 </Project>

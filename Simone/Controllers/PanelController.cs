@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
@@ -14,10 +16,6 @@ using Microsoft.AspNetCore.Http;
 namespace Simone.Controllers
 {
     [Authorize(Roles = "Administrador,Vendedor")]
-    /// <summary>
-    /// Controlador principal de la aplicación. Maneja el Panel (usuarios, categorías,
-    /// subcategorías, proveedores, productos).
-    /// </summary>
     public class PanelController : Controller
     {
         private readonly ILogger<PanelController> _logger;
@@ -60,39 +58,149 @@ namespace Simone.Controllers
         // ====================== USUARIOS (ADMIN) ======================
         [Authorize(Roles = "Administrador")]
         [HttpGet]
-        public IActionResult Usuarios()
+        public async Task<IActionResult> Usuarios(string? tiendaId = null)
         {
-            var usuariosConRoles =
-                from user in _userManager.Users
-                join userRole in _context.UserRoles on user.Id equals userRole.UserId
-                join role in _context.Roles on userRole.RoleId equals role.Id
-                select new
+            // Tiendas (Vendedores) para filtro y selects
+            var tiendasList = await _context.Vendedores
+                .AsNoTracking()
+                .OrderBy(v => v.Nombre) // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                .Select(v => new SelectListItem
                 {
-                    user.Id,
-                    user.Email,
-                    user.Telefono,
-                    user.Direccion,
-                    user.NombreCompleto,
-                    roleId = role.Id,
-                    roleName = role.Name
-                };
-
-            var usuariosList = usuariosConRoles
-                .AsEnumerable()
-                .Select(u => new Usuario
-                {
-                    Id = u.Id,
-                    Email = u.Email,
-                    Telefono = u.Telefono,
-                    Direccion = u.Direccion,
-                    NombreCompleto = u.NombreCompleto,
-                    RolID = u.roleId,
+                    Value = v.VendedorId.ToString(),
+                    Text = v.Nombre           // <-- CAMBIA si tu Vendedor no usa 'Nombre'
                 })
+                .ToListAsync();
+
+            // Usuarios + su rol actual
+            var usuariosConRol =
+                from u in _userManager.Users
+                join ur in _context.UserRoles on u.Id equals ur.UserId
+                join r in _context.Roles on ur.RoleId equals r.Id
+                select new { u, rolId = r.Id, rolName = r.Name };
+
+            // Filtro por tienda (VendedorId)
+            if (!string.IsNullOrWhiteSpace(tiendaId) && int.TryParse(tiendaId, out var vid))
+            {
+                usuariosConRol = usuariosConRol.Where(x => x.u.VendedorId == vid);
+            }
+
+            var lista = await usuariosConRol
+                .Select(x => new Usuario
+                {
+                    Id = x.u.Id,
+                    Email = x.u.Email,
+                    Telefono = x.u.Telefono,
+                    Direccion = x.u.Direccion,
+                    NombreCompleto = x.u.NombreCompleto,
+                    Activo = x.u.Activo,
+                    RolID = x.rolId,
+                    VendedorId = x.u.VendedorId
+                })
+                .ToListAsync();
+
+            ViewBag.Usuarios = lista;
+            ViewBag.Roles = _roleManager.Roles
+                .Select(r => new SelectListItem { Value = r.Id, Text = r.Name })
                 .ToList();
 
-            ViewBag.Usuarios = usuariosList;
-            ViewBag.Roles = _roleManager.Roles.ToList();
+            ViewBag.Tiendas = tiendasList;
+            ViewBag.FiltroTiendaId = tiendaId ?? "";
+
             return View();
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarTiendaUsuario(string usuarioID, int tiendaID, string? returnTiendaId = null)
+        {
+            if (string.IsNullOrWhiteSpace(usuarioID))
+            {
+                TempData["MensajeError"] = "Usuario inválido.";
+                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+            }
+
+            var user = await _userManager.FindByIdAsync(usuarioID);
+            if (user == null)
+            {
+                TempData["MensajeError"] = "Usuario no encontrado.";
+                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+            }
+
+            var vendedor = await _context.Vendedores.FindAsync(tiendaID);
+            if (vendedor == null)
+            {
+                TempData["MensajeError"] = "Tienda no válida.";
+                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+            }
+
+            user.VendedorId = tiendaID;
+            var res = await _userManager.UpdateAsync(user);
+            TempData[res.Succeeded ? "MensajeExito" : "MensajeError"] =
+                res.Succeeded ? "Tienda asignada correctamente." : "No se pudo asignar la tienda.";
+
+            return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuitarTiendaUsuario(string usuarioID, string? returnTiendaId = null)
+        {
+            if (string.IsNullOrWhiteSpace(usuarioID))
+            {
+                TempData["MensajeError"] = "Usuario inválido.";
+                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+            }
+
+            var user = await _userManager.FindByIdAsync(usuarioID);
+            if (user == null)
+            {
+                TempData["MensajeError"] = "Usuario no encontrado.";
+                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+            }
+
+            user.VendedorId = null;
+            var res = await _userManager.UpdateAsync(user);
+            TempData[res.Succeeded ? "MensajeExito" : "MensajeError"] =
+                res.Succeeded ? "Tienda quitada correctamente." : "No se pudo quitar la tienda.";
+
+            return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+        }
+
+        /// <summary>
+        /// Crea una tienda (Vendedor) con solo el nombre, y devuelve JSON con la lista de tiendas.
+        /// Usado por el offcanvas de “Añadir tienda”.
+        /// </summary>
+        [Authorize(Roles = "Administrador")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearTiendaSimple(string nombre)
+        {
+            if (string.IsNullOrWhiteSpace(nombre))
+                return Json(new { ok = false, msg = "Nombre requerido." });
+
+            var v = new Vendedor
+            {
+                Nombre = nombre.Trim() // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+            };
+
+            _context.Vendedores.Add(v);
+            await _context.SaveChangesAsync();
+
+            var tiendas = await _context.Vendedores
+                .AsNoTracking()
+                .OrderBy(x => x.Nombre) // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                .Select(x => new { value = x.VendedorId.ToString(), text = x.Nombre }) // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                .ToListAsync();
+
+            return Json(new
+            {
+                ok = true,
+                newId = v.VendedorId.ToString(),
+                newText = v.Nombre, // <-- CAMBIA si tu Vendedor no usa 'Nombre'
+                tiendas
+            });
         }
 
         [Authorize(Roles = "Administrador")]
@@ -101,17 +209,22 @@ namespace Simone.Controllers
         public async Task<IActionResult> EliminarUsuario(string id)
         {
             var usuario = await _userManager.FindByIdAsync(id);
-            if (usuario == null) return NotFound();
+            if (usuario == null)
+            {
+                TempData["MensajeError"] = "Usuario no encontrado.";
+                return RedirectToAction("Usuarios");
+            }
 
             var resultado = await _userManager.DeleteAsync(usuario);
             if (resultado.Succeeded)
             {
                 _logger.LogInformation("Administrador eliminó al usuario {Email}.", usuario.Email);
+                TempData["MensajeExito"] = "Usuario eliminado correctamente.";
                 return RedirectToAction("Usuarios");
             }
 
-            ModelState.AddModelError("", "Error al eliminar usuario.");
-            return View("Usuarios", _userManager.Users.ToList());
+            TempData["MensajeError"] = "Error al eliminar usuario.";
+            return RedirectToAction("Usuarios");
         }
 
         [Authorize(Roles = "Administrador")]
@@ -121,17 +234,21 @@ namespace Simone.Controllers
         {
             if (string.IsNullOrEmpty(nuevoRolID) || string.IsNullOrEmpty(usuarioID))
             {
-                ModelState.AddModelError("", "El rol seleccionado no es válido.");
+                TempData["MensajeError"] = "El rol seleccionado no es válido.";
                 return RedirectToAction("Usuarios");
             }
 
             var usuario = await _userManager.FindByIdAsync(usuarioID);
-            if (usuario == null) return NotFound();
+            if (usuario == null)
+            {
+                TempData["MensajeError"] = "Usuario no encontrado.";
+                return RedirectToAction("Usuarios");
+            }
 
             var nuevoRol = await _roleManager.FindByIdAsync(nuevoRolID);
             if (nuevoRol == null)
             {
-                ModelState.AddModelError("", "El rol seleccionado no existe.");
+                TempData["MensajeError"] = "El rol seleccionado no existe.";
                 return RedirectToAction("Usuarios");
             }
 
@@ -139,14 +256,14 @@ namespace Simone.Controllers
             var resultadoEliminar = await _userManager.RemoveFromRolesAsync(usuario, rolesActuales);
             if (!resultadoEliminar.Succeeded)
             {
-                ModelState.AddModelError("", "No se pudieron eliminar los roles anteriores.");
+                TempData["MensajeError"] = "No se pudieron eliminar los roles anteriores.";
                 return RedirectToAction("Usuarios");
             }
 
             var resultadoAsignar = await _userManager.AddToRoleAsync(usuario, nuevoRol.Name);
             if (!resultadoAsignar.Succeeded)
             {
-                ModelState.AddModelError("", "No se pudo asignar el nuevo rol.");
+                TempData["MensajeError"] = "No se pudo asignar el nuevo rol.";
                 return RedirectToAction("Usuarios");
             }
 
@@ -468,7 +585,7 @@ namespace Simone.Controllers
             if (sub == null || sub.CategoriaID != categoriaID || (!IsAdmin() && sub.VendedorID != CurrentUserId()))
             {
                 TempData["Err"] = "Subcategoría inválida para la categoría seleccionada o no pertenece a tu tienda.";
-                // Reponer combos y datos para la vista
+
                 ViewBag.Categorias = await _categoriasManager.GetAllAsync();
                 ViewBag.Subcategorias = IsAdmin()
                     ? await _subcategoriasManager.GetAllAsync()

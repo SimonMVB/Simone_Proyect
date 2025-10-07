@@ -4,6 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Simone.Data;
 using Simone.Extensions;
 using Simone.Models;
+using Simone.Services; // ⬅️ envíos
+using System.Collections.Generic;
 
 namespace Simone.Controllers
 {
@@ -12,15 +14,18 @@ namespace Simone.Controllers
         private readonly TiendaDbContext _context;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly UserManager<Usuario> _userManager;
+        private readonly EnviosCarritoService _enviosCarrito; // ⬅️ servicio de cálculo de envíos
 
         public CarritoController(
             TiendaDbContext context,
             IHttpContextAccessor httpContextAccessor,
-            UserManager<Usuario> user)
+            UserManager<Usuario> user,
+            EnviosCarritoService enviosCarrito) // ⬅️ inyectado
         {
             _context = context;
             _httpContextAccessor = httpContextAccessor;
             _userManager = user;
+            _enviosCarrito = enviosCarrito;
         }
 
         // -------- helpers --------
@@ -36,8 +41,7 @@ namespace Simone.Controllers
 
         private void GuardarCarrito(List<CarritoDetalle> carrito)
         {
-            // Nunca persistimos navegación Producto en sesión
-            foreach (var it in carrito) it.Producto = null;
+            foreach (var it in carrito) it.Producto = null; // no persistir navegación en sesión
             _httpContextAccessor.HttpContext!.Session.SetObjectAsJson("Carrito", carrito);
         }
 
@@ -52,33 +56,74 @@ namespace Simone.Controllers
 
         // -------- acciones --------
 
-        // Ver carrito (rehidrata Producto SOLO para la vista)
+        // Ver carrito (rehidrata Producto SOLO para la vista) + cálculo de envíos
         [HttpGet]
         public async Task<IActionResult> VerCarrito()
         {
             var carrito = ObtenerCarrito();
 
-            // Rehidratar Producto SOLO para la vista (no lo guardamos en sesión)
+            // Rehidratar productos para mostrar nombres/precios
             var ids = carrito.Select(c => c.ProductoID).Distinct().ToList();
-
             var productosDict = await _context.Productos
                 .AsNoTracking()
                 .Where(p => ids.Contains(p.ProductoID))
                 .ToDictionaryAsync(p => p.ProductoID, p => p);
 
             foreach (var it in carrito)
-            {
                 if (productosDict.TryGetValue(it.ProductoID, out var prod))
-                    it.Producto = prod; // ← asignamos después de sacar a 'prod'
-            }
+                    it.Producto = prod;
 
+            // Cupón (igual que antes)
             var cupon = ObtenerCupon();
             ViewBag.Descuento = cupon?.Descuento ?? 0m;
             ViewBag.CodigoCupon = cupon?.CodigoCupon;
 
+            // ================== NUEVO: cálculo de envío ==================
+            // 1) destino (si hay usuario logueado con provincia/ciudad)
+            var usuario = await _userManager.GetUserAsync(User);
+            var prov = usuario?.Provincia;
+            var city = usuario?.Ciudad;
+
+            ViewBag.DestinoProvincia = prov;
+            ViewBag.DestinoCiudad = city;
+
+            // 2) vendedores presentes en el carrito
+            var vendorIds = carrito
+                .Select(c => c.Producto?.VendedorID)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Cast<string>()
+                .Distinct()
+                .ToList();
+
+            // 3) nombres de vendedores para el desglose (opcional, si quieres mostrar “Juan Pérez”)
+            var vendorNames = await _userManager.Users
+                .Where(u => vendorIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.NombreCompleto, u.Email })
+                .ToDictionaryAsync(
+                    k => k.Id,
+                    v => string.IsNullOrWhiteSpace(v.NombreCompleto) ? (v.Email ?? v.Id) : v.NombreCompleto
+                );
+            ViewBag.VendedorNombres = vendorNames;
+
+            // 4) calcula envíos solo si hay destino y vendedores
+            decimal envioTotal = 0m;
+            Dictionary<string, decimal> envioPorVend = new();
+            List<string> envioMsgs = new();
+
+            if (!string.IsNullOrWhiteSpace(prov) && vendorIds.Count > 0)
+            {
+                var res = await _enviosCarrito.CalcularAsync(vendorIds, prov!, city);
+                envioTotal = res.TotalEnvio;
+                envioPorVend = res.PorVendedor;
+                envioMsgs = res.Mensajes;
+            }
+
+            ViewBag.EnvioTotal = envioTotal;                    // total $ del envío
+            ViewBag.EnvioPorVendedor = envioPorVend;            // diccionario {vendorId -> $}
+            ViewBag.EnvioMensajes = envioMsgs;                  // avisos (faltantes, etc.)
+
             return View(carrito);
         }
-
 
         // Mini resumen para navbar/widget
         [HttpGet]
@@ -206,7 +251,7 @@ namespace Simone.Controllers
             return RedirectToAction(nameof(VerCarrito));
         }
 
-        // Confirmar compra (sin cambios de negocio)
+        // Confirmar compra (sin cambios de negocio: NO suma envío a la venta)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarCompra(int carritoID)

@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -12,8 +5,16 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Simone.Data;
+using Simone.Extensions;
 using Simone.Models;
 using Simone.Services;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using ResolverPagos = Simone.Services.PagosResolver;
 
 namespace Simone.Controllers
@@ -32,6 +33,9 @@ namespace Simone.Controllers
         private readonly ResolverPagos _pagosResolver;     // mono/multi
         private readonly IBancosConfigService _bancosSvc;   // admin + tiendas
 
+        // Cálculo de envíos
+        private readonly EnviosCarritoService _enviosCarrito;
+
         private const int MAX_FILE_MB = 5;
         private static readonly HashSet<string> _extPermitidas =
             new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
@@ -46,7 +50,9 @@ namespace Simone.Controllers
             ILogger<ComprasController> logger,
             IWebHostEnvironment env,
             ResolverPagos pagosResolver,
-            IBancosConfigService bancosSvc)
+            IBancosConfigService bancosSvc,
+            EnviosCarritoService enviosCarrito
+        )
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _productos = productos ?? throw new ArgumentNullException(nameof(productos));
@@ -58,6 +64,7 @@ namespace Simone.Controllers
             _env = env ?? throw new ArgumentNullException(nameof(env));
             _pagosResolver = pagosResolver ?? throw new ArgumentNullException(nameof(pagosResolver));
             _bancosSvc = bancosSvc ?? throw new ArgumentNullException(nameof(bancosSvc));
+            _enviosCarrito = enviosCarrito ?? throw new ArgumentNullException(nameof(enviosCarrito));
         }
 
         // =========================
@@ -261,8 +268,14 @@ namespace Simone.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarArticulo(int carritoDetalleID, CancellationToken ct = default)
         {
-            await _carrito.BorrarProductoCarrito(carritoDetalleID);
-            TempData["MensajeExito"] = "Producto eliminado del carrito con éxito.";
+            var ok = await _carrito.BorrarProductoCarrito(carritoDetalleID);
+
+            if (EsAjax())
+                return Json(new { ok });
+
+            TempData["MensajeExito"] = ok
+                ? "Producto eliminado del carrito con éxito."
+                : "No se pudo eliminar el producto del carrito.";
             return RedirectToAction("Catalogo");
         }
 
@@ -302,15 +315,44 @@ namespace Simone.Controllers
             }
 
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            var totalCompra = detalles.Sum(cd => cd.Precio * cd.Cantidad);
+            var subtotal = detalles.Sum(cd => cd.Precio * cd.Cantidad);
+
+            // ---------- Envío por vendedor (vendedor = AspNetUsers.Id del que subió el producto) ----------
+            var vendedorUserIds = detalles
+                .Where(d => d.Producto != null && !string.IsNullOrWhiteSpace(d.Producto!.VendedorID))
+                .Select(d => d.Producto!.VendedorID!)
+                .Distinct()
+                .ToList();
+
+            decimal envioTotal = 0m;
+            Dictionary<string, decimal> envioPorVendedor = new();
+            List<string> envioMensajes = new();
+
+            if (!string.IsNullOrWhiteSpace(user.Provincia) && vendedorUserIds.Count > 0)
+            {
+                try
+                {
+                    var envRes = await _enviosCarrito
+                        .CalcularAsync(vendedorUserIds, user.Provincia, user.Ciudad, ct)
+                        .ConfigureAwait(false);
+
+                    envioTotal = envRes?.TotalEnvio ?? 0m;
+                    envioPorVendedor = envRes?.PorVendedor ?? new Dictionary<string, decimal>();
+                    envioMensajes = envRes?.Mensajes ?? new List<string>();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "No se pudo calcular el envío para el resumen.");
+                }
+            }
 
             // Resolver mono/multi
-            var decision = await _pagosResolver.ResolverAsync(user.Id, carrito.CarritoID, ct); // FIX: usar carrito actual
+            var decision = await _pagosResolver.ResolverAsync(user.Id, carrito.CarritoID, ct);
             ViewBag.EsMultiVendedor = decision.EsMultiVendedor;
             ViewBag.VendedorIdUnico = decision.VendedorIdUnico;
             ViewBag.VendedoresIds = decision.VendedoresIds;
 
-            // Cargar cuentas según el caso + fallback
+            // Cuentas
             if (!decision.EsMultiVendedor && !string.IsNullOrWhiteSpace(decision.VendedorIdUnico))
             {
                 var cuentasProv = new List<Simone.Configuration.CuentaBancaria>();
@@ -327,7 +369,6 @@ namespace Simone.Controllers
                 ViewBag.CuentasProveedor = cuentasProv;
                 if (cuentasProv.Count == 0)
                 {
-                    // Fallback a admin si la tienda no tiene
                     var admin = (await _bancosSvc.GetAdminAsync(ct)).Where(c => c?.Activo == true).ToList();
                     ViewBag.CuentasAdmin = admin;
                     ViewBag.FallbackAdmin = true;
@@ -341,11 +382,54 @@ namespace Simone.Controllers
             {
                 var admin = (await _bancosSvc.GetAdminAsync(ct)).Where(c => c?.Activo == true).ToList();
                 ViewBag.CuentasAdmin = admin;
-                ViewBag.FallbackAdmin = true; // en multi siempre admin
+                ViewBag.FallbackAdmin = true;
             }
 
+            // ---------- NUEVO: convertir {userId -> $} a {NombreTienda -> $} ----------
+            // 1) Traer (userId, VendedorId)
+            var usuarios = await _context.Users.AsNoTracking()
+                .Where(u => vendedorUserIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.VendedorId, u.NombreCompleto, u.Email })
+                .ToListAsync(ct);
+
+            // 2) Traer nombres de tienda por VendedorId
+            var tiendaIds = usuarios.Where(x => x.VendedorId.HasValue)
+                                    .Select(x => x.VendedorId!.Value)
+                                    .Distinct()
+                                    .ToList();
+
+            var mapTienda = tiendaIds.Count == 0
+                ? new Dictionary<int, string>()
+                : await _context.Vendedores.AsNoTracking()
+                    .Where(t => tiendaIds.Contains(t.VendedorId))
+                    .ToDictionaryAsync(t => t.VendedorId, t => t.Nombre, ct);
+
+            // 3) Construir {NombreTienda legible -> $}
+            var envioPorTienda = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in envioPorVendedor)
+            {
+                var u = usuarios.FirstOrDefault(x => x.Id == kv.Key);
+                string etiqueta;
+
+                if (u?.VendedorId != null && mapTienda.TryGetValue(u.VendedorId.Value, out var tiendaNombre) && !string.IsNullOrWhiteSpace(tiendaNombre))
+                    etiqueta = tiendaNombre;                                 // ✅ Nombre de la tienda
+                else
+                    etiqueta = u?.NombreCompleto ?? u?.Email ?? kv.Key;      // fallback
+
+                if (!envioPorTienda.ContainsKey(etiqueta))
+                    envioPorTienda[etiqueta] = 0m;
+                envioPorTienda[etiqueta] += kv.Value;
+            }
+
+            // Datos para la vista
             ViewBag.CarritoDetalles = detalles;
-            ViewBag.TotalCompra = totalCompra;
+            ViewBag.Subtotal = subtotal;
+            ViewBag.TotalCompra = subtotal;
+            ViewBag.EnvioTotal = envioTotal;
+            ViewBag.EnvioPorVendedor = envioPorVendedor; // por compatibilidad
+            ViewBag.EnvioPorTienda = envioPorTienda;     // ← usar este en la vista
+            ViewBag.EnvioMensajes = envioMensajes;
+            ViewBag.CanComputeShipping = !string.IsNullOrWhiteSpace(user.Provincia);
             ViewBag.HasAddress = !string.IsNullOrWhiteSpace(user.Direccion);
 
             return View(user);
@@ -401,7 +485,7 @@ namespace Simone.Controllers
                 return View("Resumen", user);
             }
 
-            // FIX: resolver con el carrito actual
+            // Resolver pagos (mono/multi)
             var decision = await _pagosResolver.ResolverAsync(user.Id, carrito.CarritoID, ct);
             var esDeposito = (MetodoPago ?? "").StartsWith("dep", StringComparison.OrdinalIgnoreCase);
 
@@ -424,7 +508,7 @@ namespace Simone.Controllers
 
             try
             {
-                // 1) Registrar venta
+                // 1) Registrar venta desde carrito
                 var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
                 if (!ok)
                 {
@@ -438,6 +522,30 @@ namespace Simone.Controllers
                     .OrderByDescending(v => v.FechaVenta)
                     .Select(v => v.VentaID)
                     .FirstOrDefaultAsync(ct);
+
+                // 2.b — cálculo de envío definitivo (opcional)
+                decimal envioTotal = 0m;
+                if (ventaId > 0)
+                {
+                    var vendedorIds = detalles
+                        .Where(d => d.Producto != null && !string.IsNullOrWhiteSpace(d.Producto.VendedorID))
+                        .Select(d => d.Producto!.VendedorID!)
+                        .Distinct()
+                        .ToList();
+
+                    if (vendedorIds.Count > 0 && !string.IsNullOrWhiteSpace(user.Provincia))
+                    {
+                        try
+                        {
+                            var envRes = await _enviosCarrito.CalcularAsync(vendedorIds, user.Provincia, user.Ciudad, ct);
+                            envioTotal = envRes?.TotalEnvio ?? 0m;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "No se pudo calcular el envío al confirmar compra.");
+                        }
+                    }
+                }
 
                 if (ventaId > 0)
                 {
@@ -461,13 +569,14 @@ namespace Simone.Controllers
                         return RedirectToAction(nameof(Resumen));
                     }
 
-                    // Metadatos del pago
+                    // Metadatos del pago + envío
                     var metaObj = new
                     {
                         metodo = MetodoPago,
                         destino = okBanco ? destinoPago : null,
                         bancoSeleccion = okBanco ? metaBancoObj : new { valor = BancoSeleccionado },
                         depositante = string.IsNullOrWhiteSpace(Depositante) ? null : Depositante.Trim(),
+                        envio = new { total = envioTotal },
                         ts = DateTime.UtcNow
                     };
                     var metaPath = Path.Combine(UploadsFolderAbs(), $"venta-{ventaId}.meta.json");
@@ -483,9 +592,22 @@ namespace Simone.Controllers
                             return RedirectToAction(nameof(Resumen));
                         }
                     }
+
+                    // 3) Actualizar total de la venta con envío (y cupón si corresponde)
+                    var venta = await _context.Ventas.FirstOrDefaultAsync(v => v.VentaID == ventaId, ct);
+                    if (venta != null)
+                    {
+                        var subtotal = detalles.Sum(c => c.Precio * c.Cantidad);
+                        var cupon = HttpContext.Session.GetObjectFromJson<Promocion>("Cupon");
+                        decimal descuento = cupon?.Descuento ?? 0m;
+                        decimal baseTotal = Math.Max(0m, subtotal - descuento);
+
+                        venta.Total = baseTotal + envioTotal;
+                        await _context.SaveChangesAsync(ct);
+                    }
                 }
 
-                // 3) Reiniciar carrito
+                // 4) Reiniciar carrito
                 await _carrito.AddAsync(user);
 
                 TempData["MensajeExito"] = "¡Gracias por tu compra!";
@@ -665,7 +787,7 @@ namespace Simone.Controllers
             System.IO.File.WriteAllText(metaPath, JsonSerializer.Serialize(metaObj));
         }
 
-        /// Resuelve admin/tienda con validación de Activo.
+        // Resuelve admin/tienda con validación de Activo.
         private async Task<(bool ok, object metaBanco, string destino, string? error)>
             ResolverBancoSeleccionadoAsync(string bancoSeleccionado, CancellationToken ct)
         {
@@ -674,7 +796,7 @@ namespace Simone.Controllers
 
             var raw = bancoSeleccionado.Trim();
             if (!raw.Contains(':', StringComparison.Ordinal))
-                raw = $"admin:{raw}"; // compat "pichincha" => "admin:pichincha"
+                raw = $"admin:{raw}";
 
             var parts = raw.Split(':', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2) return (false, new { }, "", "Formato de banco inválido.");

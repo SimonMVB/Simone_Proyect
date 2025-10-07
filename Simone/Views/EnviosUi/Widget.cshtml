@@ -1,0 +1,165 @@
+﻿@{
+    ViewData["Title"] = "Estimador de Envío";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+    .container-narrow {
+        max-width: 960px;
+        margin: 0 auto;
+    }
+
+    .card {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 6px 16px rgba(0,0,0,.06);
+    }
+
+    .card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e9ecef;
+        background: #f8f9fa;
+        border-radius: 12px 12px 0 0;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .text-mono {
+        font-family: ui-monospace,Menlo,Consolas,monospace;
+    }
+
+    .badge-dot {
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+        .badge-dot i {
+            font-size: .5rem;
+        }
+
+    .muted {
+        color: #6b7280;
+    }
+</style>
+
+<div class="container-narrow py-4">
+    <h2 class="mb-3"><i class="fa-solid fa-truck-fast me-2"></i>@ViewData["Title"]</h2>
+
+    <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div><strong><i class="fa-solid fa-calculator me-2"></i>Resultado</strong></div>
+            <div class="d-flex gap-2">
+                <button id="btnRecalc" class="btn btn-sm btn-outline-primary">
+                    <i class="fa-solid fa-rotate me-1"></i> Recalcular
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+
+            <div id="alert" class="alert d-none" role="alert"></div>
+
+            <div id="empty" class="alert alert-info d-none">
+                <i class="fa-regular fa-circle-info me-1"></i> No hay ítems en el carrito o no se pudo leer la sesión.
+            </div>
+
+            <div id="warning" class="alert alert-warning d-none">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                <span></span>
+            </div>
+
+            <div id="resultado" class="d-none">
+                <div class="table-responsive mb-3">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Vendedor</th>
+                                <th>Destino</th>
+                                <th class="text-end">Ítems</th>
+                                <th class="text-end">Tarifa</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody"></tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="3" class="text-end">Total envío</th>
+                                <th class="text-end text-mono">$ <span id="totalEnvio">0.00</span></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <small class="muted">
+                    <i class="fa-regular fa-lightbulb me-1"></i>
+                    Si hay productos de varios vendedores, se suma una tarifa por cada vendedor.
+                    Prioridad de reglas: <strong>Ciudad</strong> &gt; <strong>Provincia</strong>.
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+      const $ = s => document.querySelector(s);
+      const tbody = $("#tbody");
+      const totalEl = $("#totalEnvio");
+      const contRes = $("#resultado");
+      const alertBox = $("#alert");
+      const warnBox = $("#warning");
+      const emptyBox = $("#empty");
+
+      function show(el) { el.classList.remove("d-none"); }
+      function hide(el) { el.classList.add("d-none"); }
+
+      async function cargar() {
+        hide(alertBox); hide(warnBox); hide(emptyBox); hide(contRes);
+        alertBox.className = "alert d-none";
+
+        try {
+          const res = await fetch("/api/envios/estimar", { credentials: "same-origin" });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const data = await res.json();
+
+          // Carrito vacío
+          if (!data || !Array.isArray(data.detalle) || data.detalle.length === 0) {
+            show(emptyBox);
+            return;
+          }
+
+          // Warning de perfil
+          if (data.warning) {
+            warnBox.querySelector("span").textContent = data.warning;
+            show(warnBox);
+          }
+
+          // Render detalle
+          tbody.innerHTML = "";
+          data.detalle.forEach(d => {
+            const tr = document.createElement("tr");
+            const destino = [d.ciudad || null, d.provincia || null].filter(Boolean).join(", ");
+            tr.innerHTML = `
+              <td><code>${d.vendedorId || "-"}</code></td>
+              <td>${destino || "-"}</td>
+              <td class="text-end">${d.items ?? 0}</td>
+              <td class="text-end text-mono">$ ${(d.precio ?? 0).toFixed(2)}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+          totalEl.textContent = (data.totalEnvio ?? 0).toFixed(2);
+          show(contRes);
+
+        } catch (err) {
+          alertBox.textContent = "No se pudo calcular el envío. " + (err?.message || "");
+          alertBox.className = "alert alert-danger";
+          show(alertBox);
+        }
+      }
+
+      $("#btnRecalc")?.addEventListener("click", cargar);
+      document.addEventListener("DOMContentLoaded", cargar);
+    })();
+</script>

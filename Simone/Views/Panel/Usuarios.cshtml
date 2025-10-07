@@ -1,12 +1,16 @@
-﻿@{
+﻿@using Microsoft.AspNetCore.Mvc.Rendering
+@{
     ViewData["Type"] = "Usuario";
     ViewData["Title"] = "Gestión de " + ViewData["Type"];
+
+    // Tipado fuerte para evitar 'dynamic'
+    var usuarios = ViewBag.Usuarios as IEnumerable<Simone.Models.Usuario> ?? Enumerable.Empty<Simone.Models.Usuario>();
+    var roles = ViewBag.Roles as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    var tiendas = ViewBag.Tiendas as IEnumerable<SelectListItem> ?? Enumerable.Empty<SelectListItem>();
+    string filtroTiendaId = ViewBag.FiltroTiendaId as string ?? "";
 }
 
-<!-- Font Awesome -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
@@ -23,32 +27,34 @@
         --success-color: #28a745;
         --danger-color: #dc3545;
         --warning-color: #ffc107;
-        --info-color: #17a2b8;
+        --info-color: #17a2b8
     }
 
     body {
-        font-family: 'Montserrat', sans-serif;
-        background-color: #f5f5f7;
-        color: var(--text-color);
+        font-family: 'Montserrat',sans-serif;
+        background: #f5f5f7;
+        color: var(--text-color)
     }
 
     h1, h2, h3, h4, h5, h6 {
-        font-family: 'Playfair Display', serif;
-        font-weight: 600;
+        font-family: 'Playfair Display',serif;
+        font-weight: 600
     }
 
     .management-container {
         max-width: 1400px;
         margin: 2rem auto;
-        padding: 0 15px;
+        padding: 0 15px
     }
 
     .management-header {
         display: flex;
         align-items: center;
-        margin-bottom: 2rem;
+        gap: 1rem;
+        margin-bottom: 1rem;
         padding-bottom: 1rem;
         border-bottom: 1px solid var(--medium-gray);
+        flex-wrap: wrap
     }
 
     .management-title {
@@ -56,64 +62,77 @@
         color: var(--accent-purple);
         display: flex;
         align-items: center;
-        margin-bottom: 0;
+        margin-bottom: 0
     }
 
-    .management-title i {
-        margin-right: 1rem;
-        color: var(--accent-purple);
+        .management-title i {
+            margin-right: 1rem;
+            color: var(--accent-purple)
+        }
+
+    .toolbar {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        flex-wrap: wrap
     }
+
+        .toolbar .form-select {
+            min-width: 260px
+        }
 
     .management-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 0;
-        background-color: var(--primary-light);
+        background: #fff;
         border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 5px 15px rgba(0,0,0,.05)
     }
 
-    .management-table th {
-        background-color: var(--accent-purple);
-        color: white;
-        padding: 1rem;
-        text-align: left;
-        font-weight: 500;
-        position: sticky;
-        top: 0;
-    }
+        .management-table th {
+            background: var(--accent-purple);
+            color: #fff;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 1
+        }
 
-    .management-table td {
-        padding: 1rem;
-        border-bottom: 1px solid var(--medium-gray);
-        vertical-align: middle;
-    }
+        .management-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--medium-gray);
+            vertical-align: middle
+        }
 
-    .management-table tr:last-child td {
-        border-bottom: none;
-    }
+        .management-table tr:last-child td {
+            border-bottom: none
+        }
 
-    .management-table tr:hover td {
-        background-color: rgba(75, 0, 130, 0.03);
-    }
+        .management-table tr:hover td {
+            background: rgba(75,0,130,.03)
+        }
 
-    .role-select {
+    .role-select, .tienda-select {
         min-width: 180px;
-        padding: 0.5rem 1rem;
+        padding: .5rem 1rem;
         border: 1px solid var(--medium-gray);
         border-radius: 6px;
-        background-color: var(--primary-light);
+        background: #fff;
         color: var(--text-color);
-        font-size: 0.9rem;
-        transition: all 0.3s ease;
+        font-size: .9rem;
+        transition: .3s
     }
 
-    .role-select:focus {
-        border-color: var(--accent-purple);
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(75, 0, 130, 0.1);
-    }
+        .role-select:focus, .tienda-select:focus {
+            border-color: var(--accent-purple);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(75,0,130,.1)
+        }
 
     .action-btn {
         border: none;
@@ -123,102 +142,138 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-right: 0.5rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
+        margin-right: .5rem;
+        transition: .3s;
+        cursor: pointer
     }
 
     .delete-btn {
-        background-color: rgba(220, 53, 69, 0.1);
-        color: var(--danger-color);
+        background: rgba(220,53,69,.1);
+        color: var(--danger-color)
     }
 
-    .delete-btn:hover {
-        background-color: var(--danger-color);
-        color: white;
+        .delete-btn:hover {
+            background: var(--danger-color);
+            color: #fff
+        }
+
+    .remove-tienda-btn {
+        background: rgba(23,162,184,.12);
+        color: var(--info-color)
+    }
+
+        .remove-tienda-btn:hover {
+            background: var(--info-color);
+            color: #fff
+        }
+
+    .btn-add-tienda {
+        white-space: nowrap
     }
 
     .empty-state {
-        background-color: var(--primary-light);
+        background: #fff;
         border-radius: 12px;
         padding: 2rem;
         text-align: center;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 5px 15px rgba(0,0,0,.05)
     }
 
-    .empty-state i {
-        font-size: 3rem;
-        color: var(--medium-gray);
-        margin-bottom: 1rem;
-    }
+        .empty-state i {
+            font-size: 3rem;
+            color: var(--medium-gray);
+            margin-bottom: 1rem
+        }
 
-    .empty-state p {
-        color: var(--text-light);
-        font-size: 1.1rem;
+        .empty-state p {
+            color: var(--text-light);
+            font-size: 1.1rem
+        }
+
+    .status-active, .status-inactive {
+        display: inline-block;
+        padding: .25rem .5rem;
+        border-radius: 20px;
+        font-size: .75rem;
+        font-weight: 600;
+        margin-left: .5rem
     }
 
     .status-active {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        background-color: rgba(40, 167, 69, 0.1);
-        color: var(--success-color);
+        background: rgba(40,167,69,.1);
+        color: var(--success-color)
     }
 
     .status-inactive {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        background-color: rgba(220, 53, 69, 0.1);
-        color: var(--danger-color);
+        background: rgba(220,53,69,.1);
+        color: var(--danger-color)
     }
 
-    /* Responsive adjustments */
-    @@media (max-width: 1200px) {
+    @@media (max-width:1200px) {
         .management-container {
-            overflow-x: auto;
+            overflow-x: auto
         }
 
         .management-table {
-            min-width: 1000px;
+            min-width: 1100px
         }
     }
 
-    @@media (max-width: 768px) {
+    @@media (max-width:768px) {
         .management-title {
-            font-size: 1.5rem;
+            font-size: 1.5rem
         }
     }
 
     @@keyframes fadeIn {
         from {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateY(-20px)
         }
 
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateY(0)
         }
     }
 
     .fade-in {
-        animation: fadeIn 0.6s ease-out;
+        animation: fadeIn .6s ease-out
     }
 </style>
 
 <div class="management-container fade-in">
     <div class="management-header">
-        <h2 class="management-title">
-            <i class="fas fa-users"></i> @ViewData["Title"]
-        </h2>
+        <h2 class="management-title"><i class="fas fa-users"></i> @ViewData["Title"]</h2>
+
+        <!-- Filtro por tienda -->
+        <form method="get" asp-controller="Panel" asp-action="Usuarios" class="toolbar">
+            <label class="fw-semibold me-1">Filtrar por tienda:</label>
+            <select name="tiendaId" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="">(Todas)</option>
+                @foreach (var t in tiendas)
+                {
+                    <option value="@t.Value" selected="@(filtroTiendaId == t.Value ? "selected" : null)">@t.Text</option>
+                }
+            </select>
+            @if (!string.IsNullOrWhiteSpace(filtroTiendaId))
+            {
+                <a asp-controller="Panel" asp-action="Usuarios" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+            }
+        </form>
     </div>
 
-    @if (ViewBag.Usuarios.Count > 0)
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success">@TempData["MensajeExito"]</div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger">@TempData["MensajeError"]</div>
+    }
+
+    @if (usuarios.Any())
     {
         <table class="management-table">
             <thead>
@@ -227,14 +282,15 @@
                     <th>Email</th>
                     <th>Teléfono</th>
                     <th>Dirección</th>
-                    <th>Registro</th>
                     <th>Rol</th>
-                    <th>Acciones</th>
+                    <th>Tienda</th>
+                    <th style="width:120px">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var usuario in ViewBag.Usuarios)
+                @foreach (var usuario in usuarios)
                 {
+                    var vendedorIdStr = usuario.VendedorId.HasValue ? usuario.VendedorId.Value.ToString() : "";
                     <tr>
                         <td>
                             <strong>@usuario.NombreCompleto</strong>
@@ -244,31 +300,75 @@
                             }
                             else
                             {
+
                                 <span class="status-inactive">Inactivo</span>
                             }
                         </td>
                         <td>@usuario.Email</td>
                         <td>@(usuario.Telefono ?? "-")</td>
                         <td>@(usuario.Direccion ?? "-")</td>
-                        <td>@(usuario.FechaRegistro?.ToString("dd/MM/yyyy") ?? "-")</td>
+
+                        <!-- Rol -->
                         <td>
-                            <form method="post" asp-controller="Panel" asp-action="EditarRol" class="role-form">
+                            <form method="post" asp-controller="Panel" asp-action="EditarRol" class="role-form d-inline">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="usuarioID" value="@usuario.Id" />
                                 <select name="nuevoRolID" class="role-select" onchange="this.form.submit()">
                                     <option value="" disabled>Seleccionar rol</option>
-                                    @foreach (var role in ViewBag.Roles)
+                                    @foreach (var role in roles)
                                     {
-                                        <option value="@role.Id" selected="@(role.Id == usuario.RolID)">
-                                            @role.Name
-                                        </option>
+                                        <option value="@role.Value" selected="@(role.Value == usuario.RolID ? "selected" : null)">@role.Text</option>
                                     }
                                 </select>
                             </form>
                         </td>
+
+                        <!-- Tienda -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <!-- Asignar tienda existente -->
+                                <form method="post" asp-controller="Panel" asp-action="AsignarTiendaUsuario" class="d-flex align-items-center gap-2">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="usuarioID" value="@usuario.Id" />
+                                    <input type="hidden" name="returnTiendaId" value="@filtroTiendaId" />
+                                    <select name="tiendaID" class="tienda-select form-select-sm" onchange="this.form.submit()">
+                                        <option value="">(Seleccionar tienda)</option>
+                                        @foreach (var t in tiendas)
+                                        {
+                                            <option value="@t.Value" selected="@(vendedorIdStr == t.Value ? "selected" : null)">@t.Text</option>
+                                        }
+                                    </select>
+                                </form>
+
+                                <!-- Botón: abrir slide para crear tienda -->
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-primary btn-add-tienda"
+                                        data-user="@usuario.Id"
+                                        data-current="@vendedorIdStr"
+                                        data-bs-toggle="offcanvas"
+                                        data-bs-target="#offTienda"
+                                        aria-controls="offTienda">
+                                    Añadir tienda
+                                </button>
+
+                                @if (usuario.VendedorId.HasValue)
+                                {
+                                    <form method="post" asp-controller="Panel" asp-action="QuitarTiendaUsuario" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="usuarioID" value="@usuario.Id" />
+                                        <input type="hidden" name="returnTiendaId" value="@filtroTiendaId" />
+                                        <button type="submit" class="action-btn remove-tienda-btn" title="Quitar tienda">
+                                            <i class="fas fa-link-slash"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+
+                        <!-- Acciones -->
                         <td>
                             <form method="post" asp-controller="Panel" asp-action="EliminarUsuario"
-                                  onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                                  onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');" class="d-inline">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="id" value="@usuario.Id" />
                                 <button type="submit" class="action-btn delete-btn" title="Eliminar">
@@ -290,25 +390,126 @@
     }
 </div>
 
+<!-- Offcanvas: Gestionar Tiendas (Vendedor) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offTienda" aria-labelledby="offTiendaLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offTiendaLabel">Gestionar tiendas</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body">
+        <!-- Crear tienda (solo nombre) -->
+        <div class="mb-4">
+            <h6 class="mb-2">Nueva tienda</h6>
+            <form id="formCrearTienda" class="row g-2">
+                @Html.AntiForgeryToken()
+                <div class="col-12">
+                    <label class="form-label">Nombre de la tienda</label>
+                    <input name="nombre" class="form-control" maxlength="150" required />
+                </div>
+                <div class="col-12 d-grid">
+                    <button class="btn btn-primary" type="submit">Crear tienda</button>
+                </div>
+                <div id="crearTiendaMsg" class="small mt-2 text-muted"></div>
+            </form>
+        </div>
+
+        <hr class="my-3" />
+
+        <!-- Vincular tienda al usuario seleccionado -->
+        <div>
+            <h6 class="mb-2">Vincular a usuario</h6>
+            <form id="formVincular" method="post" asp-controller="Panel" asp-action="AsignarTiendaUsuario">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="usuarioID" id="offUsuarioId" value="" />
+                <input type="hidden" name="returnTiendaId" value="@filtroTiendaId" />
+                <select class="form-select mb-3" name="tiendaID" id="offTiendaSelect" required>
+                    <option value="">(Seleccionar tienda)</option>
+                    @foreach (var t in tiendas)
+                    {
+                        <option value="@t.Value">@t.Text</option>
+                    }
+                </select>
+                <div class="d-grid">
+                    <button class="btn btn-success" type="submit">Vincular</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize dropdowns
-            document.querySelectorAll('.role-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    this.closest('form').submit();
+        (function () {
+            // Preparar offcanvas con el usuario y su tienda actual
+            document.querySelectorAll('.btn-add-tienda').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var userId  = btn.getAttribute('data-user') || "";
+                    var current = btn.getAttribute('data-current') || "";
+                    document.getElementById('offUsuarioId').value = userId;
+                    var sel = document.getElementById('offTiendaSelect');
+                    sel.value = current || "";
                 });
             });
 
-            // Add confirmation for role changes
-            document.querySelectorAll('.role-form').forEach(form => {
-                form.addEventListener('submit', function(e) {
-                    if (!this.querySelector('select').value) {
-                        e.preventDefault();
+            // Crear tienda (solo nombre) por AJAX
+            var crearForm = document.getElementById('formCrearTienda');
+            crearForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                var fd  = new FormData(crearForm); // incluye __RequestVerificationToken
+                var msg = document.getElementById('crearTiendaMsg');
+                msg.className = 'small mt-2 text-muted';
+                msg.textContent = 'Creando...';
+
+                try {
+                    const url = '@Url.Action("CrearTiendaSimple", "Panel")'; // <-- acción que crea un Vendedor
+                    const res = await fetch(url, { method: 'POST', body: fd, credentials: 'same-origin' });
+                    const json = await res.json();
+
+                    if (!json.ok) {
+                        msg.className = 'small mt-2 text-danger';
+                        msg.textContent = json.msg || 'Error al crear la tienda.';
+                        return;
                     }
+
+                    // Refrescar opciones en offcanvas
+                    var offSel = document.getElementById('offTiendaSelect');
+                    offSel.innerHTML = '<option value="">(Seleccionar tienda)</option>';
+                    (json.tiendas || []).forEach(function (t) {
+                        var opt   = document.createElement('option');
+                        opt.value = t.value || t.Value;
+                        opt.text  = t.text  || t.Text;
+                        offSel.appendChild(opt);
+                    });
+                    offSel.value = json.newId;
+
+                    // Añadir la nueva a todos los selects de la tabla si falta
+                    document.querySelectorAll('select.tienda-select').forEach(function (s) {
+                        var exists = Array.from(s.options).some(function (o) { return o.value === json.newId; });
+                        if (!exists) {
+                            var opt = document.createElement('option');
+                            opt.value = json.newId;
+                            opt.text  = json.newText;
+                            s.appendChild(opt);
+                        }
+                    });
+
+                    msg.className = 'small mt-2 text-success';
+                    msg.textContent = 'Tienda creada correctamente.';
+                    crearForm.reset();
+                } catch (err) {
+                    msg.className = 'small mt-2 text-danger';
+                    msg.textContent = 'Error de red.';
+                }
+            });
+
+            // Evitar submit de cambio de rol sin selección
+            document.querySelectorAll('.role-form').forEach(function (form) {
+                form.addEventListener('submit', function (e) {
+                    var sel = form.querySelector('select[name="nuevoRolID"]');
+                    if (!sel || !sel.value) e.preventDefault();
                 });
             });
-        });
+        })();
     </script>
 }

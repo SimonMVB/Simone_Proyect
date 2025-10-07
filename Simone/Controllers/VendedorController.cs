@@ -32,18 +32,24 @@ namespace Simone.Controllers
         private readonly TiendaDbContext _context;
         private readonly IWebHostEnvironment _env;
 
+        // ===== NUEVO: servicio de envíos =====
+        private readonly IEnviosConfigService _envios;
+
         public VendedorController(
             UserManager<Usuario> userManager,
             ILogger<VendedorController> logger,
             IBancosConfigService bancos,
             TiendaDbContext context,                 // inyección DbContext
-            IWebHostEnvironment env)                 // inyección WebRoot
+            IWebHostEnvironment env,                 // inyección WebRoot
+            IEnviosConfigService envios             // NUEVO: inyección envíos
+        )
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _bancos = bancos ?? throw new ArgumentNullException(nameof(bancos));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+            _envios = envios ?? throw new ArgumentNullException(nameof(envios));
         }
 
         // -------------------- Helpers --------------------
@@ -372,6 +378,237 @@ namespace Simone.Controllers
             }
 
             return RedirectToAction(nameof(Bancos), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+        }
+
+        // ======================== NUEVO: Envios (vendedor) ========================
+        public sealed class EnvioUpsertVm
+        {
+            // claves de edición (hidden)
+            public string? OriginalProvincia { get; set; }
+            public string? OriginalCiudad { get; set; }
+
+            // datos editables
+            public string Provincia { get; set; } = string.Empty;
+            public string? Ciudad { get; set; }        // null/"" = regla por provincia
+            public decimal Precio { get; set; }        // >= 0
+            public bool Activo { get; set; } = true;
+            public string? Nota { get; set; }          // opcional
+        }
+
+        private static (bool ok, string? err) ValidateEnvio(EnvioUpsertVm vm)
+        {
+            if (string.IsNullOrWhiteSpace(vm.Provincia))
+                return (false, "La provincia es obligatoria.");
+            if (!string.IsNullOrWhiteSpace(vm.Provincia) && !Texto120Regex.IsMatch(vm.Provincia))
+                return (false, "Provincia inválida (máx. 120).");
+
+            if (!string.IsNullOrWhiteSpace(vm.Ciudad) && !Texto120Regex.IsMatch(vm.Ciudad!))
+                return (false, "Ciudad inválida (máx. 120).");
+
+            if (vm.Precio < 0m || vm.Precio > 9999.99m)
+                return (false, "El precio debe estar entre 0 y 9999.99.");
+
+            if (!string.IsNullOrWhiteSpace(vm.Nota) && !Texto120Regex.IsMatch(vm.Nota!))
+                return (false, "La nota supera el límite (máx. 120).");
+
+            return (true, null);
+        }
+
+        private static bool SameKey(Cfg.TarifaEnvioRegla a, string prov, string? city)
+            => K(a.Provincia) == K(prov) && K(a.Ciudad ?? "") == K(city ?? "");
+
+        // GET /Vendedor/Envios?vId=<opcional para Admin>
+        [HttpGet("Envios")]
+        public async Task<IActionResult> Envios([FromQuery] string? vId = null)
+        {
+            try
+            {
+                var vendorId = CurrentVendorId(vId);
+                var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
+                             ?? new List<Cfg.TarifaEnvioRegla>();
+
+                ViewBag.Reglas = reglas
+                    .OrderBy(r => r.Provincia)
+                    .ThenBy(r => r.Ciudad ?? string.Empty)
+                    .ThenBy(r => r.Precio)
+                    .ToList();
+
+                ViewBag.TargetVendorId = vendorId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cargando tarifas de envío del vendedor.");
+                ViewBag.Reglas = new List<Cfg.TarifaEnvioRegla>();
+                TempData["MensajeError"] = "No se pudieron cargar las tarifas de envío.";
+            }
+
+            ViewBag.MensajeExito = TempData["MensajeExito"];
+            ViewBag.MensajeError = TempData["MensajeError"];
+            ViewBag.ModelErrors = TempData["ModelErrors"];
+
+            return View(); // Views/Vendedor/Envios.cshtml
+        }
+
+        // POST /Vendedor/Envios/Save?vId=<opcional para Admin>
+        [HttpPost("Envios/Save")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnviosSave([FromForm] EnvioUpsertVm vm, [FromQuery] string? vId = null)
+        {
+            var vendorId = CurrentVendorId(vId);
+
+            // normalización
+            vm.OriginalProvincia = TN(vm.OriginalProvincia);
+            vm.OriginalCiudad = TN(vm.OriginalCiudad);
+
+            vm.Provincia = T(vm.Provincia);
+            vm.Ciudad = TN(vm.Ciudad);
+            vm.Nota = TN(vm.Nota);
+
+            var (ok, err) = ValidateEnvio(vm);
+            if (!ok)
+            {
+                TempData["MensajeError"] = err;
+                TempData["ModelErrors"] = err;
+                return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+            }
+
+            try
+            {
+                var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
+                            ?? new List<Cfg.TarifaEnvioRegla>();
+
+                bool IsDup(string prov, string? city, Cfg.TarifaEnvioRegla? exclude = null) =>
+                    reglas.Any(r => !ReferenceEquals(r, exclude) && SameKey(r, prov, city));
+
+                if (string.IsNullOrEmpty(vm.OriginalProvincia) && string.IsNullOrEmpty(vm.OriginalCiudad))
+                {
+                    // Crear
+                    if (IsDup(vm.Provincia, vm.Ciudad))
+                    {
+                        TempData["MensajeError"] = "Ya existe una regla para ese destino.";
+                        return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+                    }
+
+                    reglas.Add(new Cfg.TarifaEnvioRegla
+                    {
+                        Provincia = vm.Provincia,
+                        Ciudad = vm.Ciudad, // null o valor
+                        Precio = vm.Precio,
+                        Activo = vm.Activo,
+                        Nota = vm.Nota
+                    });
+                }
+                else
+                {
+                    // Editar: localizar por clave original
+                    var actual = reglas.FirstOrDefault(r => SameKey(r, vm.OriginalProvincia!, vm.OriginalCiudad));
+                    if (actual == null)
+                    {
+                        TempData["MensajeError"] = "No se encontró la regla original para editar.";
+                        return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+                    }
+
+                    // Cambió la clave? validar duplicado
+                    if (K(vm.Provincia) != K(vm.OriginalProvincia) || K(vm.Ciudad ?? "") != K(vm.OriginalCiudad ?? ""))
+                    {
+                        if (IsDup(vm.Provincia, vm.Ciudad, actual))
+                        {
+                            TempData["MensajeError"] = "Ya existe otra regla con ese destino.";
+                            return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+                        }
+                    }
+
+                    actual.Provincia = vm.Provincia;
+                    actual.Ciudad = vm.Ciudad;
+                    actual.Precio = vm.Precio;
+                    actual.Activo = vm.Activo;
+                    actual.Nota = vm.Nota;
+                }
+
+                await _envios.SetByProveedorAsync(vendorId, reglas);
+                TempData["MensajeExito"] = "Tarifa guardada correctamente.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al guardar tarifa de envío (VendorId: {VendorId})", vendorId);
+                TempData["MensajeError"] = "Ocurrió un error al guardar la tarifa.";
+            }
+
+            return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+        }
+
+        // POST /Vendedor/Envios/Delete?vId=<opcional para Admin>
+        [HttpPost("Envios/Delete")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnviosDelete([FromForm] string provincia, [FromForm] string? ciudad, [FromQuery] string? vId = null)
+        {
+            var vendorId = CurrentVendorId(vId);
+
+            if (string.IsNullOrWhiteSpace(provincia))
+            {
+                TempData["MensajeError"] = "Provincia inválida.";
+                return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+            }
+
+            try
+            {
+                var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
+                            ?? new List<Cfg.TarifaEnvioRegla>();
+
+                var item = reglas.FirstOrDefault(r => SameKey(r, provincia, ciudad));
+                if (item != null)
+                {
+                    reglas.Remove(item);
+                    await _envios.SetByProveedorAsync(vendorId, reglas);
+                    TempData["MensajeExito"] = "Tarifa eliminada correctamente.";
+                }
+                else
+                {
+                    TempData["MensajeError"] = "No se encontró la tarifa especificada.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar tarifa de envío (VendorId: {VendorId}, Prov: {Prov}, Ciudad: {Ciudad})",
+                    vendorId, provincia, ciudad);
+                TempData["MensajeError"] = "Ocurrió un error al eliminar la tarifa.";
+            }
+
+            return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
+        }
+
+        // POST /Vendedor/Envios/Toggle?vId=<opcional para Admin>
+        [HttpPost("Envios/Toggle")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EnviosToggle([FromForm] string provincia, [FromForm] string? ciudad, [FromQuery] string? vId = null)
+        {
+            var vendorId = CurrentVendorId(vId);
+
+            try
+            {
+                var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
+                            ?? new List<Cfg.TarifaEnvioRegla>();
+
+                var r = reglas.FirstOrDefault(x => SameKey(x, provincia, ciudad));
+                if (r != null)
+                {
+                    r.Activo = !r.Activo;
+                    await _envios.SetByProveedorAsync(vendorId, reglas);
+                    TempData["MensajeExito"] = "Estado actualizado.";
+                }
+                else
+                {
+                    TempData["MensajeError"] = "No se encontró la tarifa especificada.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error alternando estado de tarifa (VendorId: {VendorId}, Prov: {Prov}, Ciudad: {Ciudad})",
+                    vendorId, provincia, ciudad);
+                TempData["MensajeError"] = "No se pudo actualizar el estado.";
+            }
+
+            return RedirectToAction(nameof(Envios), new { vId = (User.IsInRole("Administrador") ? vendorId : null) });
         }
 
         // ======================== NUEVO: Reportes Vendedor ========================

@@ -193,46 +193,37 @@
     }
 
     @@media (max-width:992px) {
-        .dashboard-grid
-
-    {
-        grid-template-columns: repeat(auto-fill,minmax(300px,1fr))
-    }
-
+        .dashboard-grid {
+            grid-template-columns: repeat(auto-fill,minmax(300px,1fr))
+        }
     }
 
     @@media (max-width:768px) {
-        .dashboard-header
+        .dashboard-header {
+            padding: 1.5rem
+        }
 
-    {
-        padding: 1.5rem
-    }
+        .dashboard-content {
+            padding: 1.5rem
+        }
 
-    .dashboard-content {
-        padding: 1.5rem
-    }
-
-    .dashboard-title {
-        font-size: 1.75rem
-    }
-
+        .dashboard-title {
+            font-size: 1.75rem
+        }
     }
 
     @@media (max-width:576px) {
-        .dashboard-grid
+        .dashboard-grid {
+            grid-template-columns: 1fr
+        }
 
-    {
-        grid-template-columns: 1fr
-    }
+        .dashboard-title {
+            font-size: 1.5rem
+        }
 
-    .dashboard-title {
-        font-size: 1.5rem
-    }
-
-    .dashboard-subtitle {
-        font-size: .9rem
-    }
-
+        .dashboard-subtitle {
+            font-size: .9rem
+        }
     }
 </style>
 
@@ -426,7 +417,7 @@
                     </div>
                 </div>
 
-                <!-- (VENDEDOR) Mis Subcategorías  👈 NUEVO -->
+                <!-- (VENDEDOR) Mis Subcategorías -->
                 <div class="dashboard-card">
                     <div class="card-header">
                         <div class="card-icon"><i class="fas fa-tags"></i></div>
@@ -488,6 +479,28 @@
                     <div class="card-footer">
                         <a class="card-btn btn-primary" asp-controller="Vendedor" asp-action="Bancos">
                             <i class="fas fa-university me-2"></i> Configurar Bancos
+                        </a>
+                    </div>
+                </div>
+
+                <!-- (VENDEDOR) Tarifas de Envío)  👈 NUEVO -->
+                <div class="dashboard-card">
+                    <div class="card-header">
+                        <div class="card-icon"><i class="fa-solid fa-truck-fast"></i></div>
+                        <div>
+                            <h3 class="card-title">Tarifas de Envío</h3>
+                            <p class="card-subtitle">Por provincia / ciudad</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Define el costo de envío según el destino. Puedes crear reglas por <strong>provincia</strong>
+                            completa o específicas por <strong>ciudad</strong>. Prioridad: Ciudad &gt; Provincia.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-primary" asp-controller="Vendedor" asp-action="Envios">
+                            <i class="fa-solid fa-truck-fast me-2"></i> Configurar Envíos
                         </a>
                     </div>
                 </div>

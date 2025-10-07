@@ -61,7 +61,7 @@ namespace Simone.Data
             base.OnModelCreating(modelBuilder);
 
             // ------------------------------------------------------------
-            // 0) Usuario.Cedula → longitud/columna e índice único (opcional)
+            // 0) Usuario → configuración de cédula e índices + Asociación Tienda
             // ------------------------------------------------------------
             modelBuilder.Entity<Usuario>(entity =>
             {
@@ -69,10 +69,27 @@ namespace Simone.Data
                       .HasMaxLength(10)
                       .HasColumnType("nvarchar(10)");
 
-                // Única si no es null (SQL Server)
                 entity.HasIndex(u => u.Cedula)
                       .IsUnique()
                       .HasFilter("[Cedula] IS NOT NULL");
+
+                modelBuilder.Entity<Usuario>(entity =>
+                {
+                    entity.Property(u => u.Cedula)
+                          .HasMaxLength(10)
+                          .HasColumnType("nvarchar(10)");
+
+                    entity.HasIndex(u => u.Cedula)
+                          .IsUnique()
+                          .HasFilter("[Cedula] IS NOT NULL");
+
+                    // >>> NUEVO: relación opcional del usuario a la tienda (Vendedor)
+                    entity.HasOne(u => u.Vendedor)
+                          .WithMany() // no necesitas colección en Vendedor
+                          .HasForeignKey(u => u.VendedorId)
+                          .OnDelete(DeleteBehavior.SetNull);
+                });
+
             });
 
             // ------------------------------------------------------------

@@ -7,7 +7,10 @@
     var totalConDescuento = Math.Max(0m, totalCarrito - descuento);
 }
 
-<div class="ui container mt-5" id="cart-root" data-descuento="@descuento" data-cod="@codigoCupon">
+<div class="ui container mt-5" id="cart-root"
+     data-descuento="@descuento"
+     data-cod="@codigoCupon"
+     data-envio="0">
     <h2 class="ui header">
         <i class="shopping cart icon"></i>
         <div class="content">
@@ -78,6 +81,14 @@
                     </th>
                 </tr>
 
+                <tr id="ft-envio-row">
+                    <th colspan="3" class="right aligned">
+                        Envío:
+                        <span class="ui tiny label" id="envio-fuente-label" style="display:none;margin-left:6px;"></span>
+                    </th>
+                    <th colspan="2">$<span id="ft-envio">0.00</span></th>
+                </tr>
+
                 <tr>
                     <th colspan="3" class="right aligned">Total a Pagar:</th>
                     <th colspan="2"><strong>$<span id="ft-total">@totalConDescuento.ToString("F2")</span></strong></th>
@@ -100,15 +111,49 @@
                 </div>
 
                 <div id="coupon-msg" class="ui hidden message"></div>
+
+                <div class="ui segment">
+                    <h4 class="ui header"><i class="truck icon"></i> Envío</h4>
+                    <div class="ui form">
+                        <div class="two fields">
+                            <div class="field">
+                                <label>Provincia</label>
+                                <select id="ddl-provincia" class="ui dropdown">
+                                    <option value="">Selecciona provincia…</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Ciudad</label>
+                                <select id="ddl-ciudad" class="ui dropdown">
+                                    <option value="">(toda la provincia)</option>
+                                </select>
+                                <div class="ui tiny grey text">Si eliges ciudad, tiene prioridad sobre la tarifa de provincia.</div>
+                            </div>
+                        </div>
+                        <button type="button" class="ui button" id="btn-calc-envio">
+                            <i class="calculator icon"></i> Calcular envío
+                        </button>
+                        <div id="envio-msg" class="ui tiny hidden message" style="margin-top:8px;"></div>
+                    </div>
+                </div>
             </div>
 
             <div class="right aligned column">
                 <form asp-controller="Carrito" asp-action="ConfirmarCompra" method="post">
                     @Html.AntiForgeryToken()
+
+                    <!-- NUEVO: envío elegido -->
+                    <input type="hidden" name="EnvioProvincia" id="h-envio-prov" />
+                    <input type="hidden" name="EnvioCiudad" id="h-envio-ciudad" />
+                    <input type="hidden" name="EnvioPrecio" id="h-envio-precio" />
+
                     <button class="ui green huge button">
                         <i class="check icon"></i> Confirmar Compra
                     </button>
                 </form>
+                <div class="ui tiny grey text" style="margin-top:8px;">
+                    * El costo de envío se confirmará al registrar la orden.
+                </div>
             </div>
         </div>
     }
@@ -127,14 +172,14 @@
 @section Scripts {
     <script>
         (() => {
-          const $ = (s, root=document) => root.querySelector(s);
+          const $  = (s, root=document) => root.querySelector(s);
           const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
-          const root     = $('#cart-root');
-          if (!root) return;
+          const root = $('#cart-root'); if (!root) return;
 
-          // ===== util =====
+          // ===== Helpers =====
           const fmt = (n) => (Number(n||0)).toFixed(2);
           const token = () => $('#af-global input[name="__RequestVerificationToken"]')?.value;
+          const parseN = (s) => { const n = Number(String(s||'').replace(/[^0-9.-]/g,'')); return isNaN(n)?0:n; };
 
           async function refreshWidget(){
             try{
@@ -151,11 +196,12 @@
 
           function recomputeFooterFromDom(){
             // Suma todos los subtotales visibles en la tabla
-            const sum = $$('#cart-table [data-subtotal]').reduce((acc,el)=>acc + Number(el.textContent||0), 0);
+            const sum = $$('#cart-table [data-subtotal]').reduce((acc,el)=>acc + parseN(el.textContent), 0);
             $('#ft-subtotal').textContent = fmt(sum);
 
-            const desc  = Number(root.dataset.descuento || 0);
-            const total = Math.max(0, sum - desc);
+            const desc  = parseN(root.dataset.descuento);
+            const envio = parseN($('#ft-envio')?.textContent);
+            const total = Math.max(0, sum - desc) + envio;
             $('#ft-total').textContent = fmt(total);
 
             // Mostrar/ocultar filas de cupón
@@ -164,11 +210,11 @@
             $('#ft-cupon-actions')?.classList.toggle('d-none', !hasCoupon);
           }
 
-          function showCouponMsg(ok, msg){
-            const box = $('#coupon-msg');
-            if (!box) return;
-            box.className = 'ui message ' + (ok ? 'green' : 'red');
-            box.innerHTML = `<i class="${ok?'check':'times'} icon"></i> ${msg}`;
+          function showMsg(el, ok, msg){
+            if (!el) return;
+            el.className = 'ui tiny message ' + (ok ? 'green' : 'red');
+            el.innerHTML = `<i class="${ok?'check':'times'} icon"></i> ${msg}`;
+            el.classList.remove('hidden');
           }
 
           // ===== actualizar cantidad =====
@@ -192,7 +238,6 @@
             const data = r.ok ? await r.json() : null;
 
             if (data?.ok){
-              // actualizar subtotal fila y pie
               $('[data-subtotal]', row).textContent = fmt(data.subtotal);
               recomputeFooterFromDom();
               refreshWidget();
@@ -221,7 +266,6 @@
 
             if (data?.ok){
               row.remove();
-              // Si no quedan filas, recarga suave a la misma vista para mostrar el estado vacío
               if ($$('#cart-table tbody tr').length === 0) {
                 location.reload();
                 return;
@@ -248,15 +292,13 @@
             const data = r.ok ? await r.json() : null;
 
             if (data?.ok){
-              // Actualiza descuento y código
               root.dataset.descuento = data.descuento ?? 0;
               $('#ft-desc').textContent = fmt(data.descuento ?? 0);
               $('#ft-cupon-cod').textContent = data.codigo ?? '';
-              showCouponMsg(true, `Cupón aplicado: ${data.codigo}.`);
+              showMsg($('#coupon-msg'), true, `Cupón aplicado: ${data.codigo}.`);
               recomputeFooterFromDom();
             }else{
-              showCouponMsg(false, data?.error || 'Cupón inválido o expirado.');
-              // reset visual si estaba aplicado
+              showMsg($('#coupon-msg'), false, data?.error || 'Cupón inválido o expirado.');
               root.dataset.descuento = 0;
               $('#ft-desc').textContent = fmt(0);
               $('#ft-cupon-cod').textContent = '';
@@ -272,17 +314,145 @@
             const r = await fetch('/Carrito/QuitarCupon', {
               method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
             });
-            const data = r.ok ? await r.json() : null;
+            await (r.ok ? r.json() : null);
 
-            // En nuestro controller siempre devuelve {ok:true} por AJAX
             root.dataset.descuento = 0;
             $('#ft-desc').textContent = fmt(0);
             $('#ft-cupon-cod').textContent = '';
-            showCouponMsg(true, 'Cupón eliminado.');
+            showMsg($('#coupon-msg'), true, 'Cupón eliminado.');
             recomputeFooterFromDom();
           });
 
-          // Recalcula al cargar (por si hay cupon aplicado desde el server)
+          // ======== ENVÍOS ========
+          const CAT = {
+            "Azuay": ["Cuenca","Gualaceo","Paute","Sígsig","Nabón","Girón","Santa Isabel"],
+            "Bolívar": ["Guaranda","Chillanes","Echeandía"],
+            "Cañar": ["Azogues","La Troncal","El Tambo","Cañar"],
+            "Carchi": ["Tulcán","Montúfar","Mira"],
+            "Chimborazo": ["Riobamba","Guano","Alausí","Colta","Chambo"],
+            "Cotopaxi": ["Latacunga","Salcedo","Saquisilí","Pujilí"],
+            "El Oro": ["Machala","Santa Rosa","Pasaje","Huaquillas","Arenillas"],
+            "Esmeraldas": ["Esmeraldas","Atacames","Quinindé","Muisne"],
+            "Galápagos": ["Puerto Ayora","Puerto Baquerizo Moreno","Puerto Villamil"],
+            "Guayas": ["Guayaquil","Daule","Samborondón","Durán","Milagro","Playas","El Triunfo","Naranjal","Balao"],
+            "Imbabura": ["Ibarra","Otavalo","Cotacachi","Atuntaqui"],
+            "Loja": ["Loja","Catamayo","Macará","Cariamanga"],
+            "Los Ríos": ["Babahoyo","Quevedo","Vinces","Puebloviejo","Buena Fe"],
+            "Manabí": ["Portoviejo","Manta","Chone","Bahía de Caráquez","Jipijapa","El Carmen"],
+            "Morona Santiago": ["Macas","Sucúa","Gualaquiza","Taisha"],
+            "Napo": ["Tena","Archidona","El Chaco"],
+            "Orellana": ["Coca","La Joya de los Sachas","Loreto"],
+            "Pastaza": ["Puyo","Mera","Santa Clara"],
+            "Pichincha": ["Quito","Sangolquí","Cayambe","Machachi","San Antonio de Pichincha"],
+            "Santa Elena": ["La Libertad","Salinas","Santa Elena"],
+            "Santo Domingo de los Tsáchilas": ["Santo Domingo","La Concordia"],
+            "Sucumbíos": ["Lago Agrio","Shushufindi","Cuyabeno"],
+            "Tungurahua": ["Ambato","Baños","Pelileo","Tisaleo","Cevallos"],
+            "Zamora Chinchipe": ["Zamora","Yantzaza","Zumba"]
+          };
+
+          const ddlProv = $('#ddl-provincia');
+          const ddlCity = $('#ddl-ciudad');
+          const btnCalc = $('#btn-calc-envio');
+          const lblEnv  = $('#ft-envio');
+          const fuente  = $('#envio-fuente-label');
+          const envioMsg = $('#envio-msg');
+
+          const hProv = $('#h-envio-prov');
+          const hCity = $('#h-envio-ciudad');
+          const hPrecio = $('#h-envio-precio');
+
+          function fillProvinces() {
+            ddlProv.innerHTML = '<option value="">Selecciona provincia…</option>';
+            Object.keys(CAT).sort().forEach(p => {
+              const opt = document.createElement('option');
+              opt.value = p; opt.textContent = p; ddlProv.appendChild(opt);
+            });
+          }
+          function fillCities(prov, selected="") {
+            ddlCity.innerHTML = '<option value="">(toda la provincia)</option>';
+            (CAT[prov] || []).forEach(c => {
+              const opt = document.createElement('option');
+              opt.value = c; opt.textContent = c;
+              if (selected && selected.toLowerCase() === c.toLowerCase()) opt.selected = true;
+              ddlCity.appendChild(opt);
+            });
+          }
+
+          ddlProv?.addEventListener('change', () => {
+            fillCities(ddlProv.value, "");
+            // reset envío cuando cambie el destino
+            lblEnv.textContent = fmt(0);
+            fuente.style.display = 'none';
+            root.dataset.envio = "0";
+            hProv.value = ddlProv.value || "";
+            hCity.value = "";
+            hPrecio.value = "0";
+            recomputeFooterFromDom();
+          });
+          ddlCity?.addEventListener('change', () => {
+            lblEnv.textContent = fmt(0);
+            fuente.style.display = 'none';
+            root.dataset.envio = "0";
+            hCity.value = ddlCity.value || "";
+            hPrecio.value = "0";
+            recomputeFooterFromDom();
+          });
+
+          btnCalc?.addEventListener('click', async () => {
+            const prov = (ddlProv.value || '').trim();
+            const city = (ddlCity.value || '').trim();
+
+            if (!prov){
+              showMsg(envioMsg, false, 'Selecciona una provincia.');
+              return;
+            }
+
+            try{
+              const q = new URLSearchParams({ provincia: prov, ciudad: city || '' });
+              const r = await fetch(`/api/envios/estimar?${q.toString()}`, { credentials:'same-origin' });
+              const j = await r.json();
+
+              if (!r.ok || j?.ok === false){
+                lblEnv.textContent = fmt(0);
+                root.dataset.envio = "0";
+                fuente.style.display = 'none';
+                hPrecio.value = "0";
+                showMsg(envioMsg, false, j?.error || 'No hay tarifa para ese destino.');
+                recomputeFooterFromDom();
+                return;
+              }
+
+              const precio = Number(j?.precio ?? 0);
+              lblEnv.textContent = fmt(precio);
+              root.dataset.envio = String(precio);
+              hProv.value = prov;
+              hCity.value = city || "";
+              hPrecio.value = fmt(precio);
+
+              if (j?.fuente){
+                fuente.textContent = j.fuente === 'vendedor' ? 'Tarifa vendedor' : 'Tarifa admin';
+                fuente.className = 'ui tiny label ' + (j.fuente === 'vendedor' ? 'blue' : 'grey');
+                fuente.style.display = '';
+              } else {
+                fuente.style.display = 'none';
+              }
+
+              showMsg(envioMsg, true, `Envío calculado: $${fmt(precio)} ${city ? `(${prov} / ${city})` : `(${prov})`}.`);
+              recomputeFooterFromDom();
+            }catch(e){
+              lblEnv.textContent = fmt(0);
+              root.dataset.envio = "0";
+              fuente.style.display = 'none';
+              hPrecio.value = "0";
+              showMsg(envioMsg, false, 'No se pudo calcular el envío en este momento.');
+              recomputeFooterFromDom();
+            }
+          });
+
+          // ===== init =====
+          fillProvinces();
+          fillCities("", "");
           recomputeFooterFromDom();
         })();
     </script>

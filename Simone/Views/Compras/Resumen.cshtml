@@ -3,18 +3,27 @@
 @using System.Text.Json
 @using SimoneCfg = Simone.Configuration
 @using Simone.Configuration
+
 @{
     ViewData["Title"] = "Resumen de Compra";
 
-    // Totales
+    // Totales base
     decimal totalCompra = 0m;
     if (ViewBag.TotalCompra is decimal d) totalCompra = d;
     else if (ViewBag.TotalCompra != null) totalCompra = Convert.ToDecimal(ViewBag.TotalCompra);
 
     var culture = new CultureInfo("es-EC");
-    decimal serviceFee = Math.Round(totalCompra * 0.05m, 2);
-    decimal taxFee = Math.Round(totalCompra * 0.15m, 2);
-    decimal grandTotal = totalCompra + serviceFee + taxFee;
+
+    // Envío
+    decimal envioTotal = 0m;
+    if (ViewBag.EnvioTotal is decimal e) envioTotal = e;
+    else if (ViewBag.EnvioTotal != null) envioTotal = Convert.ToDecimal(ViewBag.EnvioTotal);
+
+    bool canComputeShipping = ((bool?)ViewBag.CanComputeShipping == true);
+    var envioMensajes = (ViewBag.EnvioMensajes as IEnumerable<string>) ?? Enumerable.Empty<string>();
+    var envioPorTienda = (ViewBag.EnvioPorTienda as IDictionary<string, decimal>) ?? new Dictionary<string, decimal>();
+
+    decimal grandTotal = totalCompra + (canComputeShipping ? envioTotal : 0m);
 
     // Carrito
     var items = ViewBag.CarritoDetalles as IEnumerable<dynamic>;
@@ -23,7 +32,7 @@
     bool esMulti = ((bool?)ViewBag.EsMultiVendedor == true);
     string vendedorIdUnico = ViewBag.VendedorIdUnico as string ?? "";
 
-    // Cuentas (solo activas)
+    // Cuentas activas
     var cuentasProv = (ViewBag.CuentasProveedor as IEnumerable<SimoneCfg.CuentaBancaria> ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>())
                         .Where(c => c?.Activo == true)
                         .ToList();
@@ -34,13 +43,11 @@
     bool hayProv = cuentasProv.Any();
     bool hayAdm = cuentasAdmin.Any();
     bool hayCuentas = esMulti ? hayAdm : (hayProv || hayAdm);
-
-    // Para auto-selección si hay 1 sola opción real.
     int numCtas = esMulti ? cuentasAdmin.Count : (hayProv ? cuentasProv.Count : cuentasAdmin.Count);
 
-    // Diccionario para JS (solo lo que se renderiza)
+    // Diccionario para JS
     var bankItems = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-    string fallbackLogo = "/images/product-placeholder.png"; // mismo placeholder que usas en Admin
+    string fallbackLogo = "/images/product-placeholder.png";
 
     if (esMulti || (!hayProv && hayAdm))
     {
@@ -50,12 +57,12 @@
             bankItems[key] = new
             {
                 scope = "admin",
-                codigo = c.Codigo,
-                nombre = c.Nombre,
-                numero = c.Numero,
-                tipo = c.Tipo,
-                titular = c.Titular,
-                ruc = c.Ruc,
+                c.Codigo,
+                c.Nombre,
+                c.Numero,
+                c.Tipo,
+                c.Titular,
+                c.Ruc,
                 logo = string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath
             };
         }
@@ -68,33 +75,30 @@
             bankItems[key] = new
             {
                 scope = "tienda",
-                codigo = c.Codigo,
-                nombre = c.Nombre,
-                numero = c.Numero,
-                tipo = c.Tipo,
-                titular = c.Titular,
-                ruc = c.Ruc,
+                c.Codigo,
+                c.Nombre,
+                c.Numero,
+                c.Tipo,
+                c.Titular,
+                c.Ruc,
                 logo = string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath
             };
         }
     }
 
-    var bankItemsJson = JsonSerializer.Serialize(bankItems);
+    // 👇 CLAVE: enviamos camelCase para que JS pueda leer b.nombre, b.numero, etc.
+    var bankItemsJson = JsonSerializer.Serialize(
+        bankItems,
+        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+    );
 }
 
 @section Styles {
     <style>
         :root {
             --primary: #e8b4b8;
-            --primary-dark: #d99a9f;
-            --secondary: #f8f1f1;
-            --accent: #a49393;
-            --text: #3d3d3d;
-            --text-light: #7a7a7a;
-            --success: #8fc4b4;
             --border: #e8e8e8;
             --shadow: 0 10px 30px rgba(0,0,0,.08);
-            --radius: 16px
         }
 
         .summary-card {
@@ -145,10 +149,7 @@
 
             .bank-card:hover, .bank-card.selected {
                 border-color: var(--primary);
-                background-color: rgba(232,180,184,.05)
-            }
-
-            .bank-card.selected {
+                background-color: rgba(232,180,184,.05);
                 box-shadow: 0 4px 12px rgba(232,180,184,.2)
             }
 
@@ -159,7 +160,7 @@
         }
 
         .text-mono {
-            font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace
+            font-family: ui-monospace,Consolas,monospace
         }
 
         .pay-destination {
@@ -207,17 +208,23 @@
 
         .sticky-summary {
             position: sticky;
-            top: 20px;
+            top: 20px
+        }
+
+        .envio-detail {
+            background: #f9fafb;
+            border: 1px dashed #e5e7eb;
+            border-radius: 8px;
+            padding: 8px 10px
         }
     </style>
 }
 
 <div class="container pb-5">
-    <!-- Progreso (simple) -->
     <div class="my-3 small text-muted">Pago &rsaquo; Confirmación</div>
 
     <div class="row g-4">
-        <!-- IZQ -->
+        <!-- IZQUIERDA -->
         <div class="col-12 col-lg-8 order-lg-1">
             <!-- Dirección -->
             <div class="summary-card">
@@ -234,11 +241,7 @@
                             </h5>
                             <p class="mb-1"><i class="fas fa-id-card me-2"></i>@(string.IsNullOrWhiteSpace(Model.Cedula) ? "Sin cédula" : Model.Cedula)</p>
                             <p class="mb-1"><i class="fas fa-home me-2"></i>@(string.IsNullOrWhiteSpace(Model.Direccion) ? "Sin dirección" : Model.Direccion)</p>
-                            <p class="mb-1">
-                                <i class="fas fa-city me-2"></i>
-                                @(string.IsNullOrWhiteSpace(Model.Ciudad) ? "Sin ciudad" : Model.Ciudad),
-                                @(string.IsNullOrWhiteSpace(Model.Provincia) ? "Sin provincia" : Model.Provincia)
-                            </p>
+                            <p class="mb-1"><i class="fas fa-city me-2"></i>@(string.IsNullOrWhiteSpace(Model.Ciudad) ? "Sin ciudad" : Model.Ciudad), @(string.IsNullOrWhiteSpace(Model.Provincia) ? "Sin provincia" : Model.Provincia)</p>
                             <p class="mb-0"><i class="fas fa-phone me-2"></i>@(string.IsNullOrWhiteSpace(Model.Telefono) ? "Sin teléfono" : Model.Telefono)</p>
                             <a asp-controller="Cuenta" asp-action="Perfil" class="btn btn-outline-primary btn-sm mt-2">
                                 <i class="fas fa-pen-to-square me-1"></i> Editar Dirección
@@ -262,7 +265,6 @@
                     <h3 class="summary-title"><i class="fas fa-credit-card"></i> Método de Pago</h3>
                 </div>
                 <div class="summary-body">
-                    <!-- Destino -->
                     <div class="pay-destination mb-3">
                         @if (esMulti)
                         {
@@ -280,7 +282,7 @@
                         }
                     </div>
 
-                    <!-- Métodos (solo depósito habilitado) -->
+                    <!-- Métodos (solo depósito activo) -->
                     <div class="row mb-4">
                         <div class="col-md-4 mb-3">
                             <div class="payment-method text-center" data-method="card" tabindex="0" role="button" aria-label="Pago con tarjeta (próximamente)">
@@ -319,7 +321,6 @@
                             </ol>
                         </div>
 
-                        <!-- Selección de Banco -->
                         @{
                             bool renderAdmin = esMulti || (!hayProv && hayAdm);
                         }
@@ -416,7 +417,7 @@
                             </div>
                         </div>
 
-                        <!-- Detalles de la cuenta seleccionada -->
+                        <!-- Detalle de la cuenta elegida -->
                         <div id="bank-details" class="mb-3 d-none">
                             <h5 class="d-flex align-items-center"><i class="fas fa-university me-2"></i> Detalles de la Cuenta</h5>
                             <div class="p-3 border rounded" style="background:#f0f9ff;">
@@ -436,7 +437,7 @@
                             </div>
                         </div>
 
-                        <!-- Campos que se envían (en el form de la derecha) -->
+                        <!-- Campos del depósito -->
                         <div class="mb-3">
                             <label for="depositName" class="form-label">Nombre de quien deposita</label>
                             <div class="input-group">
@@ -452,12 +453,12 @@
                             </div>
                             <div class="form-text text-muted">Formatos aceptados: JPG, PNG, WEBP, PDF (máximo 5MB)</div>
                         </div>
-                    </div><!-- /form-deposit -->
-                </div><!-- /summary-body -->
-            </div><!-- /summary-card -->
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- DER -->
+        <!-- DERECHA -->
         <div class="col-12 col-lg-4 order-lg-2">
             <div class="sticky-summary">
                 <div class="summary-card">
@@ -479,15 +480,12 @@
                                     var lineTotal = precioUnit * cant;
 
                                     <div class="product-item">
-                                        <img src="@img" alt="@(item?.Producto?.Nombre as string ?? "Producto")" class="product-img" loading="lazy"
-                                             onerror="this.src='/images/product-placeholder.png'">
+                                        <img src="@img" alt="@(item?.Producto?.Nombre as string ?? "Producto")" class="product-img" loading="lazy" onerror="this.src='/images/product-placeholder.png'">
                                         <div class="product-info">
                                             <div class="product-name">@((item?.Producto?.Nombre as string) ?? "Producto")</div>
                                             <div class="product-details">Cantidad: @cant</div>
                                         </div>
-                                        <div class="product-price">
-                                            @lineTotal.ToString("C", culture)
-                                        </div>
+                                        <div class="product-price">@lineTotal.ToString("C", culture)</div>
                                     </div>
                                 }
                             </div>
@@ -502,9 +500,58 @@
 
                         <div class="total-section mt-3">
                             <div class="d-flex justify-content-between"><span>Subtotal:</span><span>@totalCompra.ToString("C", culture)</span></div>
-                            <div class="d-flex justify-content-between"><span>Servicio (5%):</span><span>@serviceFee.ToString("C", culture)</span></div>
-                            <div class="d-flex justify-content-between"><span>Impuestos (15%):</span><span>@taxFee.ToString("C", culture)</span></div>
-                            <div class="d-flex justify-content-between"><span>Total:</span><span class="fw-bold" style="color:var(--primary);">@grandTotal.ToString("C", culture)</span></div>
+
+                            <div class="d-flex justify-content-between align-items-start">
+                                <span>Envío:</span>
+                                <span>
+                                    @if (canComputeShipping)
+                                    {
+                                        @envioTotal.ToString("C", culture)
+                                    }
+                                    else
+                                    {
+
+                                        <span class="text-muted">—</span>
+                                    }
+                                </span>
+                            </div>
+
+                            @if (canComputeShipping && (envioMensajes.Any() || envioPorTienda.Any()))
+                            {
+                                <div class="envio-detail mt-2">
+                                    @if (envioPorTienda.Any())
+                                    {
+                                        <div class="small mb-1"><strong>Desglose por tienda</strong></div>
+                                        <ul class="mb-2" style="padding-left:18px;">
+                                            @foreach (var kv in envioPorTienda)
+                                            {
+                                                <li class="small">@kv.Key: @kv.Value.ToString("C", culture)</li>
+                                            }
+                                        </ul>
+                                    }
+                                    @if (envioMensajes.Any())
+                                    {
+                                        <div class="small text-muted">
+                                            @foreach (var m in envioMensajes)
+                                            {
+                                                <div><i class="fas fa-info-circle me-1"></i>@m</div>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else if (!canComputeShipping)
+                            {
+                                <div class="small text-muted mt-1">
+                                    <i class="fas fa-location-dot me-1"></i>
+                                    Agrega/actualiza tu dirección para calcular el costo de envío.
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between">
+                                <span>Total:</span>
+                                <span class="fw-bold" style="color:var(--primary);">@grandTotal.ToString("C", culture)</span>
+                            </div>
                         </div>
 
                         <div class="text-center mt-3">
@@ -539,14 +586,15 @@
                 </form>
             </div>
         </div>
-    </div><!-- /row -->
-</div><!-- /container -->
+    </div>
+</div>
+
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const esMultiVendedor = @(esMulti.ToString().ToLowerInvariant());
-            const bankMap = @Html.Raw(bankItemsJson); // { "admin:...": {...}, "tienda:...": {...} }
+            const esMultiVendedor = @(esMulti ? "true" : "false");
+            const bankMap = @Html.Raw(bankItemsJson); // camelCase
 
             // Métodos de pago (solo Depósito activo)
             const methods = document.querySelectorAll('.payment-method');
@@ -554,7 +602,7 @@
             methods.forEach(m => {
                 const handler = () => {
                     const name = m.dataset.method;
-                    if (name === 'card' || name === 'paypal') {
+                    if (name !== 'deposit') {
                         Swal.fire({icon:'info', title:'¡Próximamente!', text:'Por favor elige Depósito.', confirmButtonColor:'#e8b4b8'});
                         return;
                     }
@@ -568,7 +616,7 @@
                 m.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); handler(); } });
             });
 
-            // Datos de disponibilidad / autoselección
+            // Disponibilidad / autoselección
             const bankSelEl = document.getElementById('bank-selection');
             const hayCuentas = (bankSelEl?.dataset.hayCuentas === '1');
             const numCuentas = parseInt(bankSelEl?.dataset.numCuentas || '0', 10);
@@ -597,7 +645,8 @@
                 const key = card.getAttribute('data-bank');
                 if (esMultiVendedor && key.startsWith('tienda:')) {
                     Swal.fire({icon:'warning', title:'No permitido', text:'Para carritos con varias tiendas, paga a la cuenta del administrador.', confirmButtonColor:'#e8b4b8'});
-                    card.classList.remove('selected'); return;
+                    card.classList.remove('selected');
+                    return;
                 }
                 hiddenBank.value = key; // admin:{codigo} | tienda:{vId}:{codigo}
                 paintDetails(key);
@@ -608,7 +657,7 @@
                 card.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectCard(card);} });
             });
 
-            // Autoselección (una sola tarjeta)
+            // Autoselección si hay una sola opción visible
             if (hayCuentas && numCuentas === 1 && bankCards.length === 1) {
                 selectCard(bankCards[0]);
             }
@@ -619,7 +668,9 @@
                 const n = document.getElementById('account-number')?.textContent?.trim();
                 if (!n || n === '-') return;
                 navigator.clipboard.writeText(n).then(()=>{
-                    const prev = copyBtn.textContent; copyBtn.textContent='¡Copiado!'; setTimeout(()=>copyBtn.textContent=prev,1500);
+                    const prev = copyBtn.textContent;
+                    copyBtn.textContent='¡Copiado!';
+                    setTimeout(()=>copyBtn.textContent=prev,1500);
                 });
             });
 

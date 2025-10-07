@@ -1324,6 +1324,9 @@ namespace Simone.Data.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<int?>("VendedorId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Cedula")
@@ -1337,6 +1340,8 @@ namespace Simone.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("VendedorId");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -1887,6 +1892,16 @@ namespace Simone.Data.Migrations
                     b.Navigation("Categoria");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Simone.Models.Usuario", b =>
+                {
+                    b.HasOne("Simone.Models.Vendedor", "Vendedor")
+                        .WithMany()
+                        .HasForeignKey("VendedorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Vendedor");
                 });
 
             modelBuilder.Entity("Simone.Models.Ventas", b =>

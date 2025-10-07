@@ -798,6 +798,51 @@
 
     <!-- Script unificado: paneles, wishlist, carrito, accesibilidad -->
     <script>
+        (function(){
+          const CART_LOCKED = document.body.dataset.cartLocked === '1';
+
+          // 1) Evitar abrir el panel del carrito
+          if (CART_LOCKED) {
+            // Botones/links que abren el mini-carrito (ajusta selectores a los tuyos si difieren)
+            document.querySelectorAll('.cart-toggle, .cart-open, [data-cart-open]').forEach(el=>{
+              el.addEventListener('click', (e)=>{
+                e.preventDefault();
+                if (window.Swal) Swal.fire({icon:'info', title:'Carrito bloqueado', text:'Ya estás en pago. Para modificar el carrito, sal del pago.', confirmButtonColor:'#e8b4b8'});
+              }, true);
+            });
+          }
+
+          // 2) Bloquear envíos de formularios del mini-carrito (eliminar/actualizar)
+          document.addEventListener('submit', (e)=>{
+            if (!CART_LOCKED) return;
+            const form = e.target;
+
+            // Si es un form del mini-carrito o apunta a acciones típicas del carrito
+            const isMiniCartForm = form.closest('.mini-cart, #mini-cart, [data-mini-cart]') != null;
+            const hitsCartAction = /Compras\/(EliminarArticulo|ActualizarCantidad|Vaciar|Agregar)/i.test(form.action || "");
+
+            if (isMiniCartForm || hitsCartAction) {
+              e.preventDefault();
+              if (window.Swal) Swal.fire({icon:'info', title:'Carrito bloqueado', text:'No puedes modificarlo mientras finalizas tu compra.', confirmButtonColor:'#e8b4b8'});
+            }
+          }, true);
+
+          // 3) Deshabilitar visualmente botones de eliminar / qty en el panel si está montado
+          if (CART_LOCKED) {
+            document.querySelectorAll('.cart-remove, .cart-qty button, .cart-qty input').forEach(el=>{
+              el.setAttribute('disabled', 'disabled');
+              el.classList.add('disabled');
+            });
+          }
+        })();
+   
+
+
+
+
+
+
+
         (() => {
           const qs  = (s, r=document) => r.querySelector(s);
           const qsa = (s, r=document) => r.querySelectorAll(s);
