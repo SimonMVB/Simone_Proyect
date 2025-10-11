@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using SimoneCfg = Simone.Configuration
 @using Simone.Configuration
+@using Simone.Models
 
 @{
     ViewData["Title"] = "Resumen de Compra";
@@ -26,9 +27,9 @@
     decimal grandTotal = totalCompra + (canComputeShipping ? envioTotal : 0m);
 
     // Carrito
-    var items = ViewBag.CarritoDetalles as IEnumerable<dynamic>;
+    var items = (ViewBag.CarritoDetalles as IEnumerable<CarritoDetalle>) ?? Enumerable.Empty<CarritoDetalle>();
 
-    // Resolver de pagos
+    // Resolver pagos
     bool esMulti = ((bool?)ViewBag.EsMultiVendedor == true);
     string vendedorIdUnico = ViewBag.VendedorIdUnico as string ?? "";
 
@@ -47,7 +48,7 @@
 
     // Diccionario para JS
     var bankItems = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
-    string fallbackLogo = "/images/product-placeholder.png";
+    string fallbackLogo = Url.Content("~/images/product-placeholder.png");
 
     if (esMulti || (!hayProv && hayAdm))
     {
@@ -86,7 +87,7 @@
         }
     }
 
-    // 👇 CLAVE: enviamos camelCase para que JS pueda leer b.nombre, b.numero, etc.
+    // camelCase para que JS lea b.nombre, b.numero, etc.
     var bankItemsJson = JsonSerializer.Serialize(
         bankItems,
         new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
@@ -308,7 +309,7 @@
                     </div>
 
                     <!-- Depósito -->
-                    <div id="form-deposit" class="payment-form">
+                    <div id="form-deposit" class="payment-form" aria-live="polite">
                         <div class="alert alert-light border">
                             <h5 class="d-flex align-items-center mb-1">
                                 <i class="fas fa-info-circle me-2 text-primary"></i> Instrucciones de Pago
@@ -418,7 +419,7 @@
                         </div>
 
                         <!-- Detalle de la cuenta elegida -->
-                        <div id="bank-details" class="mb-3 d-none">
+                        <div id="bank-details" class="mb-3 d-none" aria-live="polite">
                             <h5 class="d-flex align-items-center"><i class="fas fa-university me-2"></i> Detalles de la Cuenta</h5>
                             <div class="p-3 border rounded" style="background:#f0f9ff;">
                                 <div class="d-flex justify-content-between align-items-start">
@@ -426,7 +427,7 @@
                                         <p class="mb-1"><strong>Banco:</strong> <span id="bank-name">-</span></p>
                                         <p class="mb-1">
                                             <strong>N° de cuenta:</strong> <span id="account-number" class="text-mono">-</span>
-                                            <button type="button" class="ms-2 copy-btn btn-sm" id="copy-account">Copiar</button>
+                                            <button type="button" class="ms-2 copy-btn btn-sm" id="copy-account" aria-label="Copiar número de cuenta">Copiar</button>
                                         </p>
                                         <p class="mb-1"><strong>Tipo:</strong> <span id="account-type">-</span></p>
                                         <p class="mb-1"><strong>Titular:</strong> <span id="account-owner">-</span></p>
@@ -442,7 +443,9 @@
                             <label for="depositName" class="form-label">Nombre de quien deposita</label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
-                                <input type="text" class="form-control" id="depositName" name="Depositante" form="form-finalizar" placeholder="Ingresa tu nombre completo" required autocomplete="name">
+                                <input type="text" class="form-control" id="depositName" name="Depositante" form="form-finalizar"
+                                       placeholder="Ingresa tu nombre completo" required autocomplete="name"
+                                       value="@(string.IsNullOrWhiteSpace(Model?.NombreCompleto) ? "" : Model.NombreCompleto)">
                             </div>
                         </div>
 
@@ -471,19 +474,50 @@
                             <div class="productos-container">
                                 @foreach (var item in items)
                                 {
-                                    var img = (item?.Producto?.ImagenPath as string);
-                                    img = string.IsNullOrWhiteSpace(img) ? "/images/product-placeholder.png" : img;
+                                    var vimg = item?.Variante?.ImagenPath;
+                                    var pimg = item?.Producto?.ImagenPath;
+                                    var img = !string.IsNullOrWhiteSpace(vimg) ? vimg : (!string.IsNullOrWhiteSpace(pimg) ? pimg : Url.Content("~/images/product-placeholder.png"));
 
-                                    decimal precioUnit = 0m; int cant = 0;
-                                    try { precioUnit = Convert.ToDecimal(item?.Precio); } catch { }
-                                    try { cant = Convert.ToInt32(item?.Cantidad); } catch { }
+                                    var color = item?.Variante?.Color;
+                                    var talla = item?.Variante?.Talla;
+                                    var hasCT = !string.IsNullOrWhiteSpace(color) || !string.IsNullOrWhiteSpace(talla);
+
+                                    decimal precioUnit = item?.Precio ?? 0m;
+                                    int cant = item?.Cantidad ?? 0;
                                     var lineTotal = precioUnit * cant;
 
                                     <div class="product-item">
-                                        <img src="@img" alt="@(item?.Producto?.Nombre as string ?? "Producto")" class="product-img" loading="lazy" onerror="this.src='/images/product-placeholder.png'">
+                                        <img src="@img" alt="@(item?.Producto?.Nombre ?? "Producto")" class="product-img" loading="lazy" onerror="this.src='@Url.Content("~/images/product-placeholder.png")'">
                                         <div class="product-info">
-                                            <div class="product-name">@((item?.Producto?.Nombre as string) ?? "Producto")</div>
-                                            <div class="product-details">Cantidad: @cant</div>
+                                            <div class="product-name">
+                                                @((item?.Producto?.Nombre) ?? "Producto")
+                                                @if (hasCT)
+                                                {
+                                                    <span class="text-muted small">
+                                                        [
+                                                        @if (!string.IsNullOrWhiteSpace(color))
+                                                        {
+                                                            @color
+                                                            ;
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(color) && !string.IsNullOrWhiteSpace(talla))
+                                                        {
+                                                            <text>/</text>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(talla))
+                                                        {
+                                                            @talla
+                                                            ;
+                                                        }
+                                                        ]
+                                                    </span>
+                                                }
+                                            </div>
+                                            <div class="product-details">
+                                                Cantidad: @cant
+                                                <span class="text-muted">·</span>
+                                                <span>@precioUnit.ToString("C", culture)</span>
+                                            </div>
                                         </div>
                                         <div class="product-price">@lineTotal.ToString("C", culture)</div>
                                     </div>
@@ -566,7 +600,8 @@
                 <!-- Finalizar -->
                 <form id="form-finalizar" asp-controller="Compras" asp-action="ConfirmarCompra" method="post" enctype="multipart/form-data" novalidate>
                     @Html.AntiForgeryToken()
-                    <input type="hidden" id="MetodoPagoInput" name="MetodoPago" value="Deposito" />
+                    <!-- Debe empezar por "dep": -->
+                    <input type="hidden" id="MetodoPagoInput" name="MetodoPago" value="deposito_transferencia" />
                     <input type="hidden" id="BancoSeleccionado" name="BancoSeleccionado" value="" />
                     <button type="submit"
                             class="btn btn-primary w-100 py-3"
@@ -594,9 +629,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const esMultiVendedor = @(esMulti ? "true" : "false");
-            const bankMap = @Html.Raw(bankItemsJson); // camelCase
+            const bankMap = @Html.Raw(bankItemsJson);
 
-            // Métodos de pago (solo Depósito activo)
+            // Métodos (solo Depósito)
             const methods = document.querySelectorAll('.payment-method');
             const forms   = document.querySelectorAll('.payment-form');
             methods.forEach(m => {
@@ -609,19 +644,18 @@
                     methods.forEach(x => x.classList.remove('active'));
                     m.classList.add('active');
                     forms.forEach(f => f.classList.add('d-none'));
-                    document.getElementById(`form-${name}`).classList.remove('d-none');
-                    document.getElementById('MetodoPagoInput').value = 'Deposito';
+                    document.getElementById('form-deposit').classList.remove('d-none');
+                    // Mantener formato que espera el controlador (empieza por 'dep')
+                    document.getElementById('MetodoPagoInput').value = 'deposito_transferencia';
                 };
                 m.addEventListener('click', handler);
                 m.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); handler(); } });
             });
 
-            // Disponibilidad / autoselección
             const bankSelEl = document.getElementById('bank-selection');
             const hayCuentas = (bankSelEl?.dataset.hayCuentas === '1');
             const numCuentas = parseInt(bankSelEl?.dataset.numCuentas || '0', 10);
 
-            // Selección de banco
             const bankCards   = Array.from(document.querySelectorAll('.bank-card'));
             const bankDetails = document.getElementById('bank-details');
             const hiddenBank  = document.getElementById('BancoSeleccionado');
@@ -646,6 +680,8 @@
                 if (esMultiVendedor && key.startsWith('tienda:')) {
                     Swal.fire({icon:'warning', title:'No permitido', text:'Para carritos con varias tiendas, paga a la cuenta del administrador.', confirmButtonColor:'#e8b4b8'});
                     card.classList.remove('selected');
+                    hiddenBank.value = '';
+                    bankDetails.classList.add('d-none');
                     return;
                 }
                 hiddenBank.value = key; // admin:{codigo} | tienda:{vId}:{codigo}
@@ -681,7 +717,7 @@
                 const btn = document.getElementById('btnFinalizar');
                 if (btn?.disabled) { e.preventDefault(); return; }
 
-                if (metodo === 'deposito') {
+                if (metodo.startsWith('dep')) {
                     const nombre  = document.getElementById('depositName')?.value.trim();
                     const archivo = document.getElementById('depositReceipt')?.files[0];
                     const banco   = hiddenBank.value;

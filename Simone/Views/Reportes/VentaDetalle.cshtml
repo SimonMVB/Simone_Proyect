@@ -8,7 +8,7 @@
     string Safe(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
     string JoinNonEmpty(params string?[] xs) => string.Join(", ", xs.Where(s => !string.IsNullOrWhiteSpace(s)));
 
-    // Bonito para banco
+    // Banco: pretty name + icono
     string BankPretty(string? b)
     {
         if (string.IsNullOrWhiteSpace(b)) return "";
@@ -19,7 +19,28 @@
             "guayaquil" => "Banco Guayaquil",
             "pacifico" => "Banco del Pacífico",
             "jep" => "Banco JEP",
+            "produbanco" => "Produbanco",
+            "bolivariano" => "Banco Bolivariano",
+            "austro" => "Banco del Austro",
+            "machala" => "Banco de Machala",
             _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(b)
+        };
+    }
+    string BankIcon(string? b)
+    {
+        if (string.IsNullOrWhiteSpace(b)) return "fa-building-columns";
+        var k = b.Trim().ToLowerInvariant();
+        return k switch
+        {
+            "pichincha" => "fa-landmark",
+            "guayaquil" => "fa-piggy-bank",
+            "pacifico" => "fa-water",
+            "jep" => "fa-hand-holding-dollar",
+            "produbanco" => "fa-seedling",
+            "bolivariano" => "fa-university",
+            "austro" => "fa-city",
+            "machala" => "fa-bank",
+            _ => "fa-building-columns"
         };
     }
 
@@ -44,7 +65,9 @@
     var estadoUsado = string.IsNullOrWhiteSpace(dirUsada?.EstadoProvincia) ? provPerf : dirUsada!.EstadoProvincia;
     var cpUsado = string.IsNullOrWhiteSpace(dirUsada?.CodigoPostal) ? null : dirUsada!.CodigoPostal;
     var telUsado = string.IsNullOrWhiteSpace(dirUsada?.TelefonoContacto) ? telPerfil : dirUsada!.TelefonoContacto;
-    var refUsada = dirUsada != null ? null : refPerf;
+
+    // Mejora: si tenemos referencia de perfil, mostrarla aunque exista dirUsada
+    var refUsada = string.IsNullOrWhiteSpace(refPerf) ? null : refPerf;
 
     var linea2Usada = JoinNonEmpty(ciudadUsada, estadoUsado) + (string.IsNullOrWhiteSpace(cpUsado) ? "" : $" ({cpUsado})");
 
@@ -59,14 +82,23 @@
         string.IsNullOrWhiteSpace(telUsado)     ? null : $"Tel.: {telUsado}"
     }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-    var yaEnviado = string.Equals(Model.Estado, "Enviado", StringComparison.OrdinalIgnoreCase);
+    // Estado → badge
+    var estadoNorm = (Model.Estado ?? "").Trim().ToLowerInvariant();
+    string estadoClase = estadoNorm.Contains("cancel") ? "status-cancel"
+                        : estadoNorm.Equals("enviado") ? "status-shipped"
+                        : "status-pending";
+    string estadoTexto = estadoNorm.Contains("cancel") ? "Cancelada"
+                        : estadoNorm.Equals("enviado") ? "Enviado"
+                        : "Pendiente";
+
     var bancoNice = BankPretty(Model.Banco);
+    var bancoIcon = BankIcon(Model.Banco);
 
     // Mostrar sección Pago si hay pista
     var showPago = !string.IsNullOrWhiteSpace(Model.Depositante)
                 || !string.IsNullOrWhiteSpace(Model.ComprobanteUrl)
+                || !string.IsNullOrWhiteSpace(Model.Banco)
                 || (!string.IsNullOrWhiteSpace(Model.MetodoPago) && Model.MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase));
-
 
     // Normaliza URL del comprobante
     string? compUrl = null;
@@ -83,6 +115,16 @@
     // UI: depositante
     var hasDepos = !string.IsNullOrWhiteSpace(Model.Depositante);
     var deposText = hasDepos ? Model.Depositante!.Trim() : "—";
+
+    // Util para actions
+    string TelSoloDigitos(string? t) => new string((t ?? "").Where(char.IsDigit).ToArray());
+    var telDigits = TelSoloDigitos(telUsado);
+    var hasTel = !string.IsNullOrWhiteSpace(telDigits) && telDigits.Length >= 8;
+    var whatsUrl = hasTel ? $"https://wa.me/{telDigits}?text={Uri.EscapeDataString($"Hola {Model.Nombre}, sobre tu compra #{Model.VentaID}")}" : null;
+
+    // URL Maps
+    string fullAddrForMaps = string.Join(", ", new[] { calleUsada, ciudadUsada, estadoUsado }.Where(s => !string.IsNullOrWhiteSpace(s)));
+    var mapsUrl = string.IsNullOrWhiteSpace(fullAddrForMaps) ? null : $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(fullAddrForMaps)}";
 }
 
 <div class="main-container">
@@ -90,9 +132,32 @@
         <div class="logo">
             <i class="fas fa-store"></i><span>SIMONE</span>
         </div>
-        <a asp-controller="Panel" asp-action="Reportes" class="back-btn">
-            <i class="fas fa-arrow-left"></i> Volver a compradores
-        </a>
+
+        <div class="header-actions">
+            <button class="btn-action btn-outline" id="copyOrder"><i class="fas fa-copy"></i> Copiar #pedido</button>
+            @if (!string.IsNullOrWhiteSpace(mapsUrl))
+            {
+                <a class="btn-action btn-outline" href="@mapsUrl" target="_blank" rel="noopener"><i class="fas fa-map-location-dot"></i> Abrir en Maps</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(whatsUrl))
+            {
+                <a class="btn-action btn-success" href="@whatsUrl" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+            }
+            @{
+                // destino por defecto (cliente)
+                var backHref = Url.Action("Index", "MisCompras");
+
+                if (User.IsInRole("Administrador"))
+                    backHref = Url.Content("~/Panel/Reportes");          // listado admin
+                else if (User.IsInRole("Vendedor"))
+                    backHref = Url.Content("~/Vendedor/Reportes");       // listado vendedor
+            }
+
+            <a class="btn btn-primary-modern" href="@backHref">
+                <i class="fas fa-arrow-left"></i> Volver a compradores
+            </a>
+
+        </div>
     </div>
 
     <h1 class="page-title">Detalle de Venta #@Model.VentaID</h1>
@@ -108,16 +173,36 @@
                     <div class="info-grid">
                         <div class="info-item"><span class="info-label">Nombre</span>   <span class="info-value">@Safe(Model.Nombre)</span></div>
                         <div class="info-item"><span class="info-label">Cédula</span>   <span class="info-value">@Safe(Model.Cedula)</span></div>
-                        <div class="info-item"><span class="info-label">Email</span>    <span class="info-value">@Safe(Model.Email)</span></div>
-                        <div class="info-item"><span class="info-label">Teléfono</span> <span class="info-value">@Safe(Model.Telefono)</span></div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value d-flex align-items-center gap-2">
+                                @Safe(Model.Email)
+                                @if (!string.IsNullOrWhiteSpace(Model.Email))
+                                {
+                                    <a class="btn-chip no-print" href="mailto:@Model.Email" title="Enviar correo"><i class="fas fa-envelope"></i></a>
+                                    <button class="btn-chip no-print" data-copy="@Model.Email" title="Copiar email"><i class="fas fa-copy"></i></button>
+                                }
+                            </span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Teléfono</span>
+                            <span class="info-value d-flex align-items-center gap-2">
+                                @Safe(Model.Telefono)
+                                @if (hasTel)
+                                {
+                                    <a class="btn-chip no-print" href="tel:@telDigits" title="Llamar"><i class="fas fa-phone"></i></a>
+                                    <button class="btn-chip no-print" data-copy="@telDigits" title="Copiar teléfono"><i class="fas fa-copy"></i></button>
+                                }
+                            </span>
+                        </div>
                         <div class="info-item"><span class="info-label">Dirección (perfil)</span><span class="info-value">@Safe(Model.Direccion)</span></div>
                         <div class="info-item"><span class="info-label">Venta #</span>  <span class="info-value">@Model.VentaID</span></div>
                         <div class="info-item"><span class="info-label">Fecha</span>    <span class="info-value">@Model.Fecha.ToString("dd/MM/yyyy HH:mm")</span></div>
                         <div class="info-item"><span class="info-label">Método de pago</span><span class="info-value">@Safe(Model.MetodoPago)</span></div>
                         <div class="info-item">
                             <span class="info-label">Estado</span>
-                            <span class="status-badge @(yaEnviado ? "status-shipped" : "status-pending")">
-                                <i class="fas @(yaEnviado ? "fa-check-circle" : "fa-clock")"></i> @(yaEnviado ? "Enviado" : "Pendiente")
+                            <span class="status-badge @estadoClase">
+                                <i class="fas @(estadoClase == "status-shipped" ? "fa-check-circle" : estadoClase == "status-cancel" ? "fa-times-circle" : "fa-clock")"></i> @estadoTexto
                             </span>
                         </div>
                     </div>
@@ -126,7 +211,7 @@
                         <form id="markShippedForm" method="post" asp-controller="Panel" asp-action="MarcarEnviada" class="d-inline">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@Model.VentaID" />
-                            <button id="btnMarkShipped" type="submit" class="btn-action btn-success" @(yaEnviado ? "disabled" : null)>
+                            <button id="btnMarkShipped" type="submit" class="btn-action btn-success" @(estadoClase == "status-shipped" ? "disabled" : null)>
                                 <i class="fas fa-truck-fast"></i> Marcar como enviado
                             </button>
                         </form>
@@ -157,7 +242,14 @@
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Banco</span>
-                                <span class="info-value">@Safe(bancoNice)</span>
+                                <span class="info-value d-flex align-items-center gap-2">
+                                    <i class="fas @bancoIcon" aria-hidden="true"></i>
+                                    <span>@Safe(bancoNice)</span>
+                                    @if (!string.IsNullOrWhiteSpace(bancoNice))
+                                    {
+                                        <button class="btn-chip no-print" data-copy="@bancoNice" title="Copiar banco"><i class="fas fa-copy"></i></button>
+                                    }
+                                </span>
                             </div>
                         </div>
 
@@ -178,7 +270,7 @@
                                 else
                                 {
                                     <a href="#" data-bs-toggle="modal" data-bs-target="#modalComprobante">
-                                        <img src="@compUrl" alt="Comprobante de depósito" class="deposit-proof" />
+                                        <img src="@compUrl" alt="Comprobante de depósito" class="deposit-proof" loading="lazy" />
                                     </a>
                                     <div class="text-muted mt-2"><small>Clic para ver en grande</small></div>
                                     <div class="deposit-actions mt-2 no-print">
@@ -213,6 +305,10 @@
                             @if (!string.IsNullOrWhiteSpace(linea2Usada))
                             {
                                 <div class="address-line"><span>@linea2Usada</span></div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(refUsada))
+                            {
+                                <div class="address-line"><span class="address-label">Ref:</span><span>@refUsada</span></div>
                             }
                             @if (!string.IsNullOrWhiteSpace(telUsado))
                             {
@@ -258,7 +354,10 @@
                     <div class="section-title"><i class="fas fa-copy"></i><span>Etiqueta de envío</span></div>
                     <div class="copy-box">
                         <pre id="copyContent" class="copy-content">@etiquetaEnvio</pre>
-                        <button id="btnCopy" class="btn-action btn-outline copy-btn no-print"><i class="fas fa-copy"></i> Copiar</button>
+                        <div class="d-flex gap-2">
+                            <button id="btnCopy" class="btn-action btn-outline copy-btn no-print"><i class="fas fa-copy"></i> Copiar</button>
+                            <button id="btnDownloadEtiqueta" class="btn-action btn-outline no-print"><i class="fas fa-file-arrow-down"></i> Descargar .txt</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -347,6 +446,12 @@
         display: flex;
         align-items: center;
         gap: 10px
+    }
+
+    .header-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px
     }
 
     .back-btn {
@@ -457,6 +562,11 @@
         color: var(--success)
     }
 
+    .status-cancel {
+        background: #fdecea;
+        color: #b71c1c
+    }
+
     .btn-action {
         padding: 8px 16px;
         border-radius: 8px;
@@ -501,6 +611,18 @@
             background: var(--primary);
             color: #fff
         }
+
+    .btn-chip {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 999px;
+        padding: 4px 8px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer
+    }
 
     .address-box {
         background: #f8f9fa;
@@ -557,7 +679,7 @@
     .copy-content {
         font-family: monospace;
         white-space: pre-wrap;
-        margin-bottom: 15px
+        margin-bottom: 10px
     }
 
     .copy-btn {
@@ -616,58 +738,47 @@
         justify-content: center
     }
 
-    /* Responsive */
     @@media (max-width:992px) {
-        .info-grid
-
-    {
-        grid-template-columns: 1fr 1fr
-    }
-
+        .info-grid {
+            grid-template-columns: 1fr 1fr
+        }
     }
 
     @@media (max-width:768px) {
-        .info-grid
+        .info-grid {
+            grid-template-columns: 1fr
+        }
 
-    {
-        grid-template-columns: 1fr
+        .header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px
+        }
     }
-
-    .header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px
-    }
-
-    }
-
     /* Impresión */
     @@media print {
-        .no-print, .no-print *
+        .no-print, .no-print * {
+            display: none !important;
+        }
 
-    {
-        display: none !important;
-    }
+        body {
+            background: #fff;
+        }
 
-    body {
-        background: #fff;
-    }
+        .main-container {
+            max-width: 100%;
+            padding: 0;
+        }
 
-    .main-container {
-        max-width: 100%;
-        padding: 0;
-    }
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #e5e7eb;
+            page-break-inside: avoid;
+        }
 
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #e5e7eb;
-        page-break-inside: avoid;
-    }
-
-    .page-title, .page-subtitle {
-        margin-left: 10px;
-    }
-
+        .page-title, .page-subtitle {
+            margin-left: 10px;
+        }
     }
 </style>
 
@@ -685,7 +796,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <img src="@compUrl" alt="Comprobante de depósito" class="img-fluid" />
+                    <img src="@compUrl" alt="Comprobante de depósito" class="img-fluid" loading="lazy" />
                 </div>
                 <div class="modal-footer">
                     <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
@@ -703,6 +814,19 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // genérico: copiar cualquier botón con data-copy
+            document.querySelectorAll('[data-copy]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const text = btn.getAttribute('data-copy') || '';
+                    if (!text) return;
+                    navigator.clipboard.writeText(text).then(() => {
+                        const prev = btn.innerHTML;
+                        btn.innerHTML = '<i class="fas fa-check"></i>';
+                        setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 1200);
+                    });
+                });
+            });
+
             // Copiar etiqueta envío
             const btnCopy = document.getElementById('btnCopy');
             if (btnCopy) {
@@ -711,11 +835,32 @@
                     navigator.clipboard.writeText(textToCopy).then(() => {
                         const prev = btnCopy.innerHTML;
                         btnCopy.innerHTML = '<i class="fas fa-check"></i> Copiado';
-                        setTimeout(() => btnCopy.innerHTML = prev, 1800);
+                        setTimeout(() => btnCopy.innerHTML = '<i class="fas fa-copy"></i> Copiar', 1800);
                     });
                 });
             }
-            // Copiar depositante
+
+                    // Descargar etiqueta como .txt
+        const btnDownload = document.getElementById('btnDownloadEtiqueta');
+        if (btnDownload) {
+          btnDownload.addEventListener('click', () => {
+            const text = document.getElementById('copyContent').innerText;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+
+            // ✅ usa backticks para interpolar
+            const ventaId = @Model.VentaID;
+            a.download = `etiqueta-venta-${ventaId}.txt`;
+
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+          });
+        }
+
+
+            // Copiar depositante (botón dedicado)
             const btnDep = document.getElementById('copyDepositante');
             if (btnDep) {
                 btnDep.addEventListener('click', () => {
@@ -728,6 +873,20 @@
                     });
                 });
             }
+
+            // Copiar número de pedido
+            const btnOrder = document.getElementById('copyOrder');
+            if (btnOrder) {
+                btnOrder.addEventListener('click', () => {
+                    const text = '#@Model.VentaID';
+                    navigator.clipboard.writeText(text).then(() => {
+                        const prev = btnOrder.innerHTML;
+                        btnOrder.innerHTML = '<i class="fas fa-check"></i> Copiado';
+                        setTimeout(() => btnOrder.innerHTML = '<i class="fas fa-copy"></i> Copiar #pedido', 1500);
+                    });
+                });
+            }
+
             // Marcar como enviado (AJAX)
             const form = document.getElementById('markShippedForm');
             const btn  = document.getElementById('btnMarkShipped');

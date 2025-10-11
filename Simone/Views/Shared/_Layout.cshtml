@@ -27,11 +27,13 @@
             --nav-h: 68px;
             --z-navbar: 1100;
             --z-overlay: 1080;
+            --z-modal: 1200;
             /* Tema base */
             --simone-bg: #000;
             --simone-fg: #fff;
             --simone-accent: #0d6efd;
             --simone-danger: #dc3545;
+            --simone-success: #198754;
         }
 
         /* Base */
@@ -41,22 +43,48 @@
 
         html {
             scroll-padding-top: var(--nav-h);
+            scroll-behavior: smooth;
         }
 
         body {
             padding-top: var(--nav-h);
             overflow-x: hidden;
             background-color: #f8f9fa;
+            position: relative;
         }
+
+            body.no-scroll {
+                overflow: hidden;
+                position: fixed;
+                width: 100%;
+                height: 100%;
+            }
 
         main {
             padding-top: 8px;
             position: relative;
             z-index: 1;
+            min-height: 60vh;
         }
 
-            main.container {
-                min-height: 60vh;
+        /* ================= OVERLAY GLOBAL ================= */
+        .global-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: calc(var(--z-overlay) - 1);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+            .global-overlay.show {
+                opacity: 0;
+                visibility: visible;
             }
 
         /* ================= NAVBAR + DROPDOWN ================= */
@@ -71,6 +99,7 @@
 
         .navbar {
             min-height: var(--nav-h);
+            background: var(--simone-bg) !important;
         }
 
             .navbar .nav-item.dropdown {
@@ -87,6 +116,7 @@
                 padding: 8px 0;
                 box-shadow: 0 12px 28px rgba(0,0,0,.12);
                 margin-top: 0;
+                border: 1px solid rgba(0,0,0,.1);
             }
 
                 .navbar .dropdown-menu.dropdown-menu-start {
@@ -98,6 +128,7 @@
             border-radius: 8px;
             margin: 2px 8px;
             transition: all .2s ease;
+            padding: 0.5rem 1rem;
         }
 
             .dropdown-item:hover {
@@ -126,7 +157,7 @@
                 background-repeat: repeat;
                 animation: glitterFall 15s linear infinite;
                 z-index: 0;
-                opacity: .6;
+                opacity: .0;
             }
 
         @@keyframes glitterFall {
@@ -149,7 +180,7 @@
             color: var(--simone-fg) !important;
         }
 
-        /* ============== HERO / CAROUSEL ajuste navbar ============== */
+        /* ============== HERO / CAROUSEL ============== */
         .carousel, .carousel-inner, .swiper, .swiper-wrapper {
             overflow: visible;
             z-index: 1;
@@ -158,14 +189,6 @@
             .carousel .carousel-caption {
                 margin-top: 14px;
             }
-
-                .carousel .carousel-caption > .rounded,
-                .carousel .carousel-caption > .rounded-4,
-                .hero .overlay, .banner .overlay,
-                .hero [class*="overlay"], .banner [class*="overlay"] {
-                    border-top-left-radius: 0 !important;
-                    border-top-right-radius: 0 !important;
-                }
 
         .hero, .banner, .carousel {
             position: relative;
@@ -187,6 +210,7 @@
             padding: 1.25rem;
             box-shadow: 0 8px 24px rgba(0,0,0,.35);
             margin-top: var(--nav-h);
+            overflow-y: auto;
         }
 
             #sidebar.show {
@@ -206,10 +230,12 @@
                 align-items: center;
                 padding: .35rem .25rem;
                 border-radius: .5rem;
+                transition: all 0.2s ease;
             }
 
                 #sidebar a:hover {
                     background: rgba(255,255,255,.08);
+                    transform: translateX(5px);
                 }
 
         /* Botón Uiverse (catálogo) */
@@ -226,11 +252,13 @@
             border-radius: 10rem;
             font-weight: 600;
             padding: .75rem 1.5rem .75rem 1.25rem;
-            transition: background-color .3s;
+            transition: all 0.3s ease;
         }
 
             .button:hover {
                 background: #000;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,.2);
             }
 
         .button__icon-wrapper {
@@ -273,6 +301,7 @@
             z-index: var(--z-overlay);
             box-shadow: -8px 0 24px rgba(0,0,0,.1);
             margin-top: var(--nav-h);
+            overflow-y: auto;
         }
 
             #cartPanel.show {
@@ -292,6 +321,7 @@
             position: absolute;
             top: -6px;
             right: -10px;
+            background: var(--simone-danger);
         }
 
         /* ====================== FOOTER – Redes ====================== */
@@ -316,6 +346,7 @@
                 box-shadow: 0 10px 10px rgba(0,0,0,.1);
                 color: #000;
                 transition: all .3s ease;
+                cursor: pointer;
             }
 
             .wrapper .tooltip {
@@ -330,6 +361,7 @@
                 opacity: 0;
                 pointer-events: none;
                 transition: .3s ease;
+                white-space: nowrap;
             }
 
                 .wrapper .tooltip::before {
@@ -345,7 +377,7 @@
 
             .wrapper .icon:hover .tooltip {
                 top: -35px;
-                opacity: 1;
+                opacity: 0;
             }
 
             .wrapper .facebook:hover, .wrapper .facebook:hover .tooltip, .wrapper .facebook:hover .tooltip::before {
@@ -382,7 +414,13 @@
             border-radius: 999px;
             box-shadow: 0 2px 4px rgba(0,0,0,.2);
             user-select: none;
+            transition: all 0.3s ease;
         }
+
+            .version-badge:hover {
+                transform: scale(1.05);
+                box-shadow: 0 4px 8px rgba(0,0,0,.3);
+            }
 
             .version-badge span {
                 width: 25px;
@@ -445,7 +483,12 @@
             padding-bottom: 2em;
             cursor: pointer;
             z-index: calc(var(--z-overlay) - 1);
+            transition: all 0.3s ease;
         }
+
+            .back-to-top:hover {
+                transform: translateY(-3px);
+            }
 
             .back-to-top > div, .back-to-top > svg {
                 position: absolute;
@@ -473,7 +516,7 @@
             }
 
             .back-to-top .clone > *, .back-to-top .text > * {
-                opacity: 1;
+                opacity: 0;
                 font-size: 1.3rem;
                 transition: .2s;
                 margin-left: 4px;
@@ -517,16 +560,57 @@
                 transform: translateY(-50%) rotate(-90deg);
             }
 
+        /* Modal fixes */
+        .modal-backdrop {
+            z-index: calc(var(--z-modal) - 1);
+        }
+
+        .modal {
+            z-index: var(--z-modal);
+        }
+
+        /* Loading states */
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        .btn-loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+            .btn-loading::after {
+                content: "";
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                top: 50%;
+                left: 50%;
+                margin-left: -8px;
+                margin-top: -8px;
+                border: 2px solid transparent;
+                border-top-color: currentColor;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+
+        @@keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
         /* Motion reducido */
         @@media (prefers-reduced-motion: reduce) {
-            .back-to-top:before,
-            .button:hover .button__icon-svg:first-child,
-            .button:hover .button__icon-svg--copy,
-            .version-badge:hover span:after,
-            .version-badge:hover span:before,
-            .nav-snowglitter::before {
-                transition: none !important;
-                animation: none !important;
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
             }
         }
 
@@ -553,6 +637,12 @@
                 right: -6px;
                 top: -6px;
             }
+
+            .back-to-top {
+                bottom: 20px;
+                right: 20px;
+                transform: scale(0.9);
+            }
         }
 
         @@media (min-width: 576px) and (max-width: 991.98px) {
@@ -570,12 +660,40 @@
             .navbar .dropdown-menu {
                 position: static !important;
                 margin-top: .5rem;
+                border: none;
+                box-shadow: none;
             }
+        }
+
+        /* Accessibility */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        /* Focus styles */
+        button:focus-visible,
+        a:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid var(--simone-accent);
+            outline-offset: 2px;
         }
     </style>
 </head>
 
-<body>
+<body data-cart-locked="@(Context.Items["CartLocked"]?.ToString() ?? "0")">
+    <!-- Overlay Global -->
+    <div class="global-overlay" id="globalOverlay" aria-hidden="true"></div>
+
     <!-- Navbar Superior -->
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark nav-snowglitter" role="navigation" aria-label="Barra principal">
@@ -784,277 +902,469 @@
             </div>
 
             <div>
-                <a href="@Url.Action("AvisoLegal", "Legal")" class="text-light text-decoration-underline mx-2">Aviso Legal</a>
-                <a href="@Url.Action("PoliticaPrivacidad", "Legal")" class="text-light text-decoration-underline mx-2">Política de Privacidad</a>
-                <a href="@Url.Action("TerminosCondiciones", "Legal")" class="text-light text-decoration-underline mx-2">Términos y Condiciones</a>
-                <a href="@Url.Action("PoliticaCookies", "Legal")" class="text-light text-decoration-underline mx-2">Política de Cookies</a>
+                <a href="@Url.Action("InformacionGeneral", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Información General
+                </a>
+                <a href="@Url.Action("TerminosCondiciones", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Términos y Condiciones
+                </a>
+                <a href="@Url.Action("AvisoPrivacidad", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Aviso de Privacidad
+                </a>
+                
+                <a href="@Url.Action("MetodoPago", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Métodos de Pago
+                </a>
+                <a href="@Url.Action("PoliticaCookies", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Política de Cookies
+                </a>
+                <a href="@Url.Action("PoliticaPrivacidad", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Política de Privacidad
+                </a>
+                <a href="@Url.Action("PoliticasEnvio", "Legal")" class="text-light text-decoration-underline mx-2">
+                    Políticas de Envío
+                </a>
+               
             </div>
+
         </div>
     </footer>
 
     <!-- Scripts base -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script defer src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
-    <!-- Script unificado: paneles, wishlist, carrito, accesibilidad -->
+    <!-- Script mejorado: Gestión de paneles y carrito -->
     <script>
-        (function(){
-          const CART_LOCKED = document.body.dataset.cartLocked === '1';
+        (function () {
+            'use strict';
 
-          // 1) Evitar abrir el panel del carrito
-          if (CART_LOCKED) {
-            // Botones/links que abren el mini-carrito (ajusta selectores a los tuyos si difieren)
-            document.querySelectorAll('.cart-toggle, .cart-open, [data-cart-open]').forEach(el=>{
-              el.addEventListener('click', (e)=>{
-                e.preventDefault();
-                if (window.Swal) Swal.fire({icon:'info', title:'Carrito bloqueado', text:'Ya estás en pago. Para modificar el carrito, sal del pago.', confirmButtonColor:'#e8b4b8'});
-              }, true);
-            });
-          }
-
-          // 2) Bloquear envíos de formularios del mini-carrito (eliminar/actualizar)
-          document.addEventListener('submit', (e)=>{
-            if (!CART_LOCKED) return;
-            const form = e.target;
-
-            // Si es un form del mini-carrito o apunta a acciones típicas del carrito
-            const isMiniCartForm = form.closest('.mini-cart, #mini-cart, [data-mini-cart]') != null;
-            const hitsCartAction = /Compras\/(EliminarArticulo|ActualizarCantidad|Vaciar|Agregar)/i.test(form.action || "");
-
-            if (isMiniCartForm || hitsCartAction) {
-              e.preventDefault();
-              if (window.Swal) Swal.fire({icon:'info', title:'Carrito bloqueado', text:'No puedes modificarlo mientras finalizas tu compra.', confirmButtonColor:'#e8b4b8'});
-            }
-          }, true);
-
-          // 3) Deshabilitar visualmente botones de eliminar / qty en el panel si está montado
-          if (CART_LOCKED) {
-            document.querySelectorAll('.cart-remove, .cart-qty button, .cart-qty input').forEach(el=>{
-              el.setAttribute('disabled', 'disabled');
-              el.classList.add('disabled');
-            });
-          }
-        })();
-   
-
-
-
-
-
-
-
-        (() => {
-          const qs  = (s, r=document) => r.querySelector(s);
-          const qsa = (s, r=document) => r.querySelectorAll(s);
-          const fx  = new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'});
-          const AJAX_HDRS = { 'X-Requested-With':'XMLHttpRequest' };
-
-          /* ===== Utils ===== */
-          const setAriaExp = (btn, open) => { if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false'); };
-          const lockScroll  = (on) => {
-            document.documentElement.classList.toggle('no-scroll', on);
-            document.body.classList.toggle('no-scroll', on);
-          };
-          const firstFocusable = (root) => root?.querySelector('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
-
-          async function getJSON(url){
-            const r = await fetch(url, { credentials:'same-origin', headers: AJAX_HDRS });
-            if(!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-          }
-
-          /* ===== Badge + total global ===== */
-          async function updateCartBadge(){
-            let d = { count:null, subtotal:null };
-            try { d = await getJSON('/Compras/CartInfo'); }
-            catch { try { d = await getJSON('/Carrito/CartInfo'); } catch {} }
-
-            const countEl = document.getElementById('cart-count') || document.getElementById('cartCount') || document.getElementById('nav-cart-count');
-            const totalEl = document.getElementById('cart-total') || document.getElementById('cartTotal');
-            if (countEl && d.count    != null) countEl.textContent = d.count;
-            if (totalEl && d.subtotal != null) totalEl.textContent = fx.format(d.subtotal);
-            // si tu parcial imprime <span id="mini-cart-total">, también lo actualizamos:
-            const inline = document.getElementById('mini-cart-total');
-            if (inline && d.subtotal != null) inline.textContent = fx.format(d.subtotal);
-          }
-
-          /* ===== Refrescar HTML del panel de carrito ===== */
-          async function refreshCartHtml(){
-            try{
-              const r = await fetch('/Compras/Mini', {
-                credentials: 'same-origin',
-                headers: AJAX_HDRS
-              });
-              if (!r.ok) return;
-              const html = await r.text();
-              const host = document.getElementById('cart-content'); // contenedor del partial en el panel
-              if (host) host.innerHTML = html;
-            }catch{}
-          }
-
-          /* Acción compuesta tras mutar carrito */
-          async function afterCartMutation(){
-            await updateCartBadge();
-            await refreshCartHtml();
-            try { localStorage.setItem('simone_cart_ping', String(Date.now())); } catch {}
-          }
-
-          /* ===== Paneles (sidebar / carrito) ===== */
-          const sidebar = qs('#sidebar');
-          const cart    = qs('#cartPanel');
-          const btnOpenSidebar = qs('#open-sidebar');
-          const btnCloseSidebar = qs('#close-sidebar');
-          const btnOpenCart = qs('#open-cart');
-          const btnCloseCart = qs('#close-cart');
-
-          function togglePanel(panel, open, triggerBtn){
-            if (!panel) return;
-            panel.classList.toggle('show', open);
-            setAriaExp(triggerBtn, open);
-            lockScroll(open);
-            if (open) firstFocusable(panel)?.focus();
-            else triggerBtn?.focus();
-          }
-
-          btnOpenSidebar?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); togglePanel(sidebar, true, btnOpenSidebar); });
-          btnCloseSidebar?.addEventListener('click', (e)=>{ e.preventDefault(); togglePanel(sidebar, false, btnOpenSidebar); });
-
-          btnOpenCart?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); togglePanel(cart, true, btnOpenCart); });
-          btnCloseCart?.addEventListener('click', (e)=>{ e.preventDefault(); togglePanel(cart, false, btnOpenCart); });
-
-          // Cerrar por click fuera
-          document.addEventListener('click', (e) => {
-            const t = e.target;
-            if (sidebar?.classList.contains('show') && !sidebar.contains(t) && !(btnOpenSidebar && btnOpenSidebar.contains(t))) {
-              togglePanel(sidebar, false, btnOpenSidebar);
-            }
-            if (cart?.classList.contains('show') && !cart.contains(t) && !(btnOpenCart && btnOpenCart.contains(t))) {
-              togglePanel(cart, false, btnOpenCart);
-            }
-          });
-
-          // Cerrar con ESC
-          document.addEventListener('keydown', (e) => {
-            if (e.key !== 'Escape') return;
-            if (sidebar?.classList.contains('show')) togglePanel(sidebar, false, btnOpenSidebar);
-            if (cart?.classList.contains('show')) togglePanel(cart, false, btnOpenCart);
-          });
-
-          /* ===== Delegación: wishlist + add-to-cart + eliminar mini ===== */
-          document.addEventListener('submit', async (e) => {
-            const form = e.target;
-            if (!(form instanceof HTMLFormElement)) return;
-
-            // Token anti-forgery si existe
-            const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
-            const commonHeaders = { ...AJAX_HDRS };
-            if (token) commonHeaders['RequestVerificationToken'] = token;
-
-            // Wishlist
-            if (form.matches('.wishlist-form')) {
-              e.preventDefault();
-              try{
-                const res = await fetch(form.action, { method:'POST', body:new FormData(form), credentials:'same-origin', headers: commonHeaders });
-                const data = res.ok ? await res.json() : null;
-                const btn = form.querySelector('button');
-                const ic  = btn?.querySelector('i');
-                if (data?.esFavorito && ic && btn){
-                  ic.classList.remove('far'); ic.classList.add('fas');
-                  btn.title = 'Eliminar de favoritos'; btn.classList.add('active');
-                }else if (ic && btn){
-                  ic.classList.remove('fas'); ic.classList.add('far');
-                  btn.title = 'Añadir a favoritos'; btn.classList.remove('active');
+            // ======= CONFIGURACIÓN =======
+            const CONFIG = {
+                selectors: {
+                    sidebar: '#sidebar',
+                    cartPanel: '#cartPanel',
+                    overlay: '#globalOverlay',
+                    openSidebar: '#open-sidebar',
+                    closeSidebar: '#close-sidebar',
+                    openCart: '#open-cart',
+                    closeCart: '#close-cart',
+                    cartContent: '#cart-content',
+                    cartCount: '#cart-count'
+                },
+                classes: {
+                    show: 'show',
+                    loading: 'loading',
+                    noScroll: 'no-scroll'
+                },
+                endpoints: {
+                    cartInfo: '/Compras/CartInfo',
+                    cartMini: '/Compras/Mini'
                 }
-              }catch(err){ console.error('Error en favoritos:', err); }
-              return;
+            };
+
+            // ======= ESTADO GLOBAL =======
+            const STATE = {
+                isCartLocked: document.body.dataset.cartLocked === '1',
+                activePanel: null,
+                isLoading: false
+            };
+
+            // ======= ELEMENTOS DEL DOM =======
+            const DOM = {};
+
+            function initializeDOM() {
+                Object.keys(CONFIG.selectors).forEach(key => {
+                    DOM[key] = document.querySelector(CONFIG.selectors[key]);
+                });
             }
 
-            // (3.2) Añadir al carrito (unificado)
-            if (form.matches('[data-add-to-cart], #formAdd, form[action$="/Compras/AnadirAlCarrito"]')) {
-              e.preventDefault();
-              const btn = form.querySelector('[data-role="add-btn"], button[type="submit"]');
-              const prevHTML = btn?.innerHTML;
-              if (btn){ btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Agregando...'; }
-              try{
-                const res  = await fetch(form.action, { method:'POST', body:new FormData(form), credentials:'same-origin', headers: commonHeaders });
-                const data = res.ok ? await res.json() : null;
-                if (data?.needLogin){ location.href = '/Cuenta/Login'; return; }
-                if (!data?.ok) throw new Error(data?.error || 'No se pudo añadir.');
-                const toastEl = qs('#toastOk');
-                if (toastEl && window.bootstrap) bootstrap.Toast.getOrCreateInstance(toastEl).show();
-                await afterCartMutation(); // <<--- refresca badge + panel
-                // togglePanel(cart, true, btnOpenCart); // (opcional) abre el panel al añadir
-              }catch(err){
-                console.error(err);
-                const msgEl = qs('#toastErrMsg');
-                if (msgEl) msgEl.textContent = err.message || 'Error de red.';
-                const toastErr = qs('#toastErr');
-                if (toastErr && window.bootstrap) bootstrap.Toast.getOrCreateInstance(toastErr).show();
-              }finally{
-                if (btn){ btn.disabled = false; btn.innerHTML = prevHTML; }
-              }
-              return;
+            // ======= UTILIDADES =======
+            const utils = {
+                // Formateador de moneda
+                formatCurrency: (amount) => {
+                    return new Intl.NumberFormat('es-EC', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(amount || 0);
+                },
+
+                // Fetch con manejo de errores
+                fetchJSON: async (url, options = {}) => {
+                    try {
+                        const response = await fetch(url, {
+                            credentials: 'same-origin',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                ...options.headers
+                            },
+                            ...options
+                        });
+
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        return await response.json();
+                    } catch (error) {
+                        console.error('Fetch error:', error);
+                        throw error;
+                    }
+                },
+
+                // Bloquear/desbloquear scroll
+                lockScroll: (lock) => {
+                    document.body.classList.toggle(CONFIG.classes.noScroll, lock);
+                },
+
+                // Set aria-expanded
+                setAriaExpanded: (element, expanded) => {
+                    if (element) element.setAttribute('aria-expanded', expanded.toString());
+                },
+
+                // Mostrar loading
+                showLoading: (element) => {
+                    if (element) {
+                        element.classList.add(CONFIG.classes.loading);
+                        element.disabled = true;
+                    }
+                },
+
+                // Ocultar loading
+                hideLoading: (element) => {
+                    if (element) {
+                        element.classList.remove(CONFIG.classes.loading);
+                        element.disabled = false;
+                    }
+                }
+            };
+
+            // ======= GESTIÓN DE PANELES =======
+            const panelManager = {
+                // Abrir panel
+                open: (panel, trigger) => {
+                    if (!panel || STATE.isLoading) return;
+
+                    // Cerrar panel activo si existe
+                    if (STATE.activePanel && STATE.activePanel !== panel) {
+                        panelManager.close(STATE.activePanel);
+                    }
+
+                    panel.classList.add(CONFIG.classes.show);
+                    utils.setAriaExpanded(trigger, true);
+                    utils.lockScroll(true);
+
+                    // Mostrar overlay
+                    if (DOM.overlay) {
+                        DOM.overlay.classList.add(CONFIG.classes.show);
+                        DOM.overlay.setAttribute('aria-hidden', 'false');
+                    }
+
+                    STATE.activePanel = panel;
+                },
+
+                // Cerrar panel
+                close: (panel) => {
+                    if (!panel) return;
+
+                    panel.classList.remove(CONFIG.classes.show);
+                    utils.lockScroll(false);
+
+                    // Ocultar overlay si no hay paneles activos
+                    if (DOM.overlay) {
+                        DOM.overlay.classList.remove(CONFIG.classes.show);
+                        DOM.overlay.setAttribute('aria-hidden', 'true');
+                    }
+
+                    STATE.activePanel = null;
+                },
+
+                // Cerrar todos los paneles
+                closeAll: () => {
+                    [DOM.sidebar, DOM.cartPanel].forEach(panel => {
+                        if (panel) panel.classList.remove(CONFIG.classes.show);
+                    });
+
+                    utils.lockScroll(false);
+                    if (DOM.overlay) {
+                        DOM.overlay.classList.remove(CONFIG.classes.show);
+                        DOM.overlay.setAttribute('aria-hidden', 'true');
+                    }
+
+                    STATE.activePanel = null;
+                },
+
+                // Toggle panel
+                toggle: (panel, trigger) => {
+                    if (panel.classList.contains(CONFIG.classes.show)) {
+                        panelManager.close(panel);
+                    } else {
+                        panelManager.open(panel, trigger);
+                    }
+                }
+            };
+
+            // ======= GESTIÓN DEL CARRITO =======
+            const cartManager = {
+                // Actualizar badge del carrito
+                updateBadge: async () => {
+                    try {
+                        const data = await utils.fetchJSON(CONFIG.endpoints.cartInfo);
+                        if (DOM.cartCount && data.count != null) {
+                            DOM.cartCount.textContent = data.count;
+                        }
+                    } catch (error) {
+                        console.warn('No se pudo actualizar el badge del carrito');
+                    }
+                },
+
+                // Refrescar contenido del carrito
+                refreshContent: async () => {
+                    try {
+                        const response = await fetch(CONFIG.endpoints.cartMini, {
+                            credentials: 'same-origin',
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+
+                        if (response.ok) {
+                            const html = await response.text();
+                            if (DOM.cartContent) DOM.cartContent.innerHTML = html;
+                        }
+                    } catch (error) {
+                        console.warn('No se pudo actualizar el contenido del carrito');
+                    }
+                },
+
+                // Acción después de modificar el carrito
+                afterMutation: async () => {
+                    await cartManager.updateBadge();
+                    await cartManager.refreshContent();
+
+                    // Sincronizar entre pestañas
+                    try {
+                        localStorage.setItem('simone_cart_updated', Date.now().toString());
+                    } catch (e) {}
+                },
+
+                // Manejar bloqueo del carrito
+                handleLock: () => {
+                    if (!STATE.isCartLocked) return;
+
+                    // Deshabilitar interacciones con el carrito
+                    const cartElements = document.querySelectorAll('#open-cart, [data-cart-open], .cart-toggle');
+                    cartElements.forEach(el => {
+                        el.style.pointerEvents = 'none';
+                        el.style.opacity = '0.5';
+                        el.title = 'Carrito bloqueado durante el pago';
+                    });
+
+                    // Prevenir apertura del panel
+                    if (DOM.openCart) {
+                        DOM.openCart.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Puedes mostrar un toast o alerta aquí
+                            console.log('Carrito bloqueado durante el pago');
+                        }, true);
+                    }
+                }
+            };
+
+            // ======= MANEJO DE EVENTOS =======
+            const eventManager = {
+                initialize: () => {
+                    // Eventos de apertura/cierre de paneles
+                    if (DOM.openSidebar) {
+                        DOM.openSidebar.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            panelManager.toggle(DOM.sidebar, DOM.openSidebar);
+                        });
+                    }
+
+                    if (DOM.closeSidebar) {
+                        DOM.closeSidebar.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            panelManager.close(DOM.sidebar);
+                        });
+                    }
+
+                    if (DOM.openCart) {
+                        DOM.openCart.addEventListener('click', (e) => {
+                            if (STATE.isCartLocked) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return;
+                            }
+                            e.preventDefault();
+                            e.stopPropagation();
+                            panelManager.toggle(DOM.cartPanel, DOM.openCart);
+                        });
+                    }
+
+                    if (DOM.closeCart) {
+                        DOM.closeCart.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            panelManager.close(DOM.cartPanel);
+                        });
+                    }
+
+                    // Cerrar paneles al hacer clic fuera
+                    document.addEventListener('click', (e) => {
+                        const target = e.target;
+
+                        if (DOM.sidebar?.classList.contains(CONFIG.classes.show) &&
+                            !DOM.sidebar.contains(target) &&
+                            !(DOM.openSidebar && DOM.openSidebar.contains(target))) {
+                            panelManager.close(DOM.sidebar);
+                        }
+
+                        if (DOM.cartPanel?.classList.contains(CONFIG.classes.show) &&
+                            !DOM.cartPanel.contains(target) &&
+                            !(DOM.openCart && DOM.openCart.contains(target))) {
+                            panelManager.close(DOM.cartPanel);
+                        }
+                    });
+
+                    // Cerrar paneles con ESC
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') {
+                            panelManager.closeAll();
+                        }
+                    });
+
+                    // Cerrar paneles con overlay
+                    if (DOM.overlay) {
+                        DOM.overlay.addEventListener('click', () => {
+                            panelManager.closeAll();
+                        });
+                    }
+
+                    // Sincronización entre pestañas
+                    window.addEventListener('storage', (e) => {
+                        if (e.key === 'simone_cart_updated') {
+                            cartManager.afterMutation();
+                        }
+                    });
+
+                    // Sincronización al volver a la pestaña
+                    document.addEventListener('visibilitychange', () => {
+                        if (!document.hidden) {
+                            cartManager.updateBadge();
+                        }
+                    });
+                }
+            };
+
+            // ======= INICIALIZACIÓN =======
+            function initialize() {
+                initializeDOM();
+                eventManager.initialize();
+                cartManager.handleLock();
+
+                // Cargar datos iniciales
+                cartManager.updateBadge();
+
+                // Exponer API global
+                window.NeoAgora = {
+                    panels: panelManager,
+                    cart: cartManager,
+                    utils: utils
+                };
             }
 
-            // (3.3) Eliminar/actualizar desde el mini-panel (acciones del panel derecho)
-            if (form.matches('#cartPanel form[action$="/Compras/EliminarArticulo"], #cartPanel form[action$="/Compras/ActualizarCantidad"]')) {
-              e.preventDefault();
-
-              const fd = new FormData(form);
-              const tokenHidden = document.querySelector('#mini-cart-af input[name="__RequestVerificationToken"]')?.value
-                               || form.querySelector('input[name="__RequestVerificationToken"]')?.value;
-              if (tokenHidden && !fd.has('__RequestVerificationToken')) {
-                fd.append('__RequestVerificationToken', tokenHidden);
-              }
-
-              try{
-                const res = await fetch(form.action, { method:'POST', body: fd, credentials:'same-origin', headers: AJAX_HDRS });
-                const data = res.ok ? await res.json() : null;
-                if (!data?.ok && !res.ok) throw new Error(data?.error || 'Operación no realizada.');
-                await afterCartMutation();
-              }catch(err){
-                console.error(err);
-                alert(err.message || 'No se pudo completar la operación.');
-              }
-              return;
+            // Inicializar cuando el DOM esté listo
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initialize);
+            } else {
+                initialize();
             }
-          });
-
-          // Fallback por click en el botón de borrar del mini (por si el navegador no dispara submit)
-          document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('#cartPanel [data-role="mini-remove"]');
-            if (!btn) return;
-            const form = btn.closest('form');
-            if (!form) return;
-            e.preventDefault();
-            const fd = new FormData(form);
-            const tokenHidden = document.querySelector('#mini-cart-af input[name="__RequestVerificationToken"]')?.value
-                             || form.querySelector('input[name="__RequestVerificationToken"]')?.value;
-            if (tokenHidden && !fd.has('__RequestVerificationToken')) {
-              fd.append('__RequestVerificationToken', tokenHidden);
-            }
-            await fetch(form.action, { method:'POST', body: fd, credentials:'same-origin', headers: AJAX_HDRS }).catch(()=>{});
-            await afterCartMutation();
-          });
-
-          /* (3.4) Sincroniza al cargar / volver de background */
-          document.addEventListener('DOMContentLoaded', () => {
-            updateCartBadge();
-            // refreshCartHtml(); // descomenta si quieres que el panel siempre se repinte al cargar
-          });
-          document.addEventListener('visibilitychange', () => {
-            if (!document.hidden){ updateCartBadge(); /* refreshCartHtml(); */ }
-          });
-          window.addEventListener('focus', () => { updateCartBadge(); });
-
-          /* Exponer si alguna vista lo llama explícitamente */
-          window.SimoneCart = { updateCartBadge, refreshCartHtml };
         })();
     </script>
 
+    <!-- Script para funcionalidades adicionales -->
+    <script>
+        // Back to top functionality
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        // Mostrar/ocultar botón back to top
+        window.addEventListener('scroll', () => {
+            const backToTop = document.querySelector('.back-to-top');
+            if (backToTop) {
+                if (window.pageYOffset > 300) {
+                    backToTop.style.opacity = '1';
+                    backToTop.style.visibility = 'visible';
+                } else {
+                    backToTop.style.opacity = '0';
+                    backToTop.style.visibility = 'hidden';
+                }
+            }
+        });
+
+        // Manejo de modales de Bootstrap
+        document.addEventListener('DOMContentLoaded', () => {
+            // Prevenir problemas con múltiples backdrops
+            const originalModal = bootstrap.Modal.prototype.constructor;
+
+            bootstrap.Modal = class extends originalModal {
+                _showBackdrop() {
+                    super._showBackdrop();
+                    // Asegurar que el backdrop tenga el z-index correcto
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.style.zIndex = '1079';
+                    }
+                }
+            };
+
+            // Limpiar backdrops al cerrar modales
+            document.addEventListener('hidden.bs.modal', () => {
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                if (backdrops.length > 1) {
+                    backdrops.forEach((backdrop, index) => {
+                        if (index > 0) backdrop.remove();
+                    });
+                }
+            });
+        });
+
+        // Mejorar accesibilidad
+        document.addEventListener('keydown', (e) => {
+            // Atajos de teclado
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case '1':
+                        e.preventDefault();
+                        window.location.href = '/';
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        document.querySelector('#open-sidebar')?.click();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        if (!document.body.dataset.cartLocked) {
+                            document.querySelector('#open-cart')?.click();
+                        }
+                        break;
+                }
+            }
+        });
+
+        // Mejorar performance en móviles
+        if ('connection' in navigator) {
+            const connection = navigator.connection;
+            if (connection.saveData || connection.effectiveType.includes('2g')) {
+                // Deshabilitar animaciones pesadas en conexiones lentas
+                document.documentElement.style.setProperty('--animation-duration', '0.01s');
+            }
+        }
+    </script>
 
     <!-- Botón flotante Back to Top -->
-    <button class="back-to-top" onclick="scrollToTop()" aria-label="Volver arriba" title="Volver arriba">
+    <button class="back-to-top" onclick="scrollToTop()" aria-label="Volver arriba" title="Volver arriba" style="opacity: 0; visibility: hidden;">
         <div class="text"><span>Back</span><span>to</span><span>top</span></div>
         <div class="clone"><span>Back</span><span>to</span><span>top</span></div>
         <svg stroke-width="2" stroke="currentColor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20">

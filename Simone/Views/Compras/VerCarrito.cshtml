@@ -32,6 +32,7 @@
             <thead>
                 <tr>
                     <th>Producto</th>
+                    <th>Variante</th>
                     <th style="width: 160px;">Cantidad</th>
                     <th>Precio Unitario</th>
                     <th>Total</th>
@@ -41,8 +42,32 @@
             <tbody>
                 @foreach (var item in Model)
                 {
-                    <tr data-row data-id="@item.ProductoID">
-                        <td>@item.Producto?.Nombre</td>
+                    <tr data-row
+                        data-id="@item.CarritoDetalleID"
+                        data-product-id="@item.ProductoID"
+                        data-variant-id="@(item.ProductoVarianteID?.ToString() ?? "")">
+                        <td>
+                            <div>
+                                <div>@item.Producto?.Nombre</div>
+                                @* Si quieres, aquí se puede mostrar imagen o código de producto *@
+                            </div>
+                        </td>
+                        <td>
+                            @if (item.Variante != null)
+                            {
+                                <!-- Ajusta los nombres de propiedades si en tu entidad difieren -->
+                                <span class="ui tiny label">
+                                    @(string.Join(" / ", new[] {
+                                                (item.Variante.Color ?? "").Trim(),
+                                                (item.Variante.Talla ?? "").Trim()
+                                                }.Where(s => !string.IsNullOrWhiteSpace(s))))
+                    </span>
+                                        }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
                         <td>
                             <div class="ui action input">
                                 <input type="number" data-qty min="1" value="@item.Cantidad" style="width:80px" />
@@ -63,18 +88,18 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <th colspan="3" class="right aligned">Subtotal:</th>
+                    <th colspan="4" class="right aligned">Subtotal:</th>
                     <th colspan="2">$<span id="ft-subtotal">@totalCarrito.ToString("F2")</span></th>
                 </tr>
 
                 <tr id="ft-cupon-row" class="@(descuento > 0 ? "" : "d-none")">
-                    <th colspan="3" class="right aligned">
+                    <th colspan="4" class="right aligned">
                         Cupón aplicado (<span id="ft-cupon-cod">@codigoCupon</span>):
                     </th>
                     <th colspan="2" class="negative">- $<span id="ft-desc">@descuento.ToString("F2")</span></th>
                 </tr>
                 <tr id="ft-cupon-actions" class="@(descuento > 0 ? "" : "d-none")">
-                    <th colspan="5" class="right aligned">
+                    <th colspan="6" class="right aligned">
                         <button type="button" class="ui tiny button red" id="btn-remove-coupon">
                             <i class="close icon"></i> Quitar Cupón
                         </button>
@@ -82,7 +107,7 @@
                 </tr>
 
                 <tr id="ft-envio-row">
-                    <th colspan="3" class="right aligned">
+                    <th colspan="4" class="right aligned">
                         Envío:
                         <span class="ui tiny label" id="envio-fuente-label" style="display:none;margin-left:6px;"></span>
                     </th>
@@ -90,7 +115,7 @@
                 </tr>
 
                 <tr>
-                    <th colspan="3" class="right aligned">Total a Pagar:</th>
+                    <th colspan="4" class="right aligned">Total a Pagar:</th>
                     <th colspan="2"><strong>$<span id="ft-total">@totalConDescuento.ToString("F2")</span></strong></th>
                 </tr>
             </tfoot>
@@ -195,7 +220,6 @@
           }
 
           function recomputeFooterFromDom(){
-            // Suma todos los subtotales visibles en la tabla
             const sum = $$('#cart-table [data-subtotal]').reduce((acc,el)=>acc + parseN(el.textContent), 0);
             $('#ft-subtotal').textContent = fmt(sum);
 
@@ -204,7 +228,6 @@
             const total = Math.max(0, sum - desc) + envio;
             $('#ft-total').textContent = fmt(total);
 
-            // Mostrar/ocultar filas de cupón
             const hasCoupon = desc > 0;
             $('#ft-cupon-row')?.classList.toggle('d-none', !hasCoupon);
             $('#ft-cupon-actions')?.classList.toggle('d-none', !hasCoupon);
@@ -223,12 +246,14 @@
             if (!btn) return;
 
             const row = btn.closest('[data-row]');
-            const id  = row?.dataset.id;
-            const qty = Number($('[data-qty]', row).value || 1);
+            const id  = row?.dataset.id;                 // CarritoDetalleID
+            const pid = row?.dataset.productId;          // ProductoID (compatibilidad)
+            const qty = Math.max(1, Number($('[data-qty]', row).value || 1));
             if (!id || !qty) return;
 
             const fd = new FormData();
-            fd.append('productoId', id);
+            fd.append('carritoDetalleId', id);
+            if (pid) fd.append('productoId', pid); // compatibilidad hacia atrás
             fd.append('cantidad', qty);
             const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
 
@@ -238,7 +263,9 @@
             const data = r.ok ? await r.json() : null;
 
             if (data?.ok){
-              $('[data-subtotal]', row).textContent = fmt(data.subtotal);
+              const price = parseN($('[data-price]', row).textContent);
+              const lineSub = (data.lineSubtotal ?? data.subtotal ?? (qty * price));
+              $('[data-subtotal]', row).textContent = fmt(lineSub);
               recomputeFooterFromDom();
               refreshWidget();
             }else{
@@ -252,11 +279,13 @@
             if (!btn) return;
 
             const row = btn.closest('[data-row]');
-            const id  = row?.dataset.id;
+            const id  = row?.dataset.id;                 // CarritoDetalleID
+            const pid = row?.dataset.productId;          // ProductoID (compatibilidad)
             if (!id) return;
 
             const fd = new FormData();
-            fd.append('productoId', id);
+            fd.append('carritoDetalleId', id);
+            if (pid) fd.append('productoId', pid);
             const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
 
             const r = await fetch('/Carrito/EliminarDelCarrito', {

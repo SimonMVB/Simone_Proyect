@@ -8,7 +8,6 @@
     ViewData["Title"] = $"Detalle de Venta #{Model.VentaID}";
     var culture = new CultureInfo("es-EC");
 
-    // Badge por estado
     Func<string, (string badge, string icon, string color)> EstadoInfo = e =>
     {
         if (string.IsNullOrWhiteSpace(e)) return ("text-bg-secondary", "fas fa-question-circle", "#6c757d");
@@ -22,33 +21,36 @@
     };
     var estadoInfo = EstadoInfo(Model.Estado ?? "");
 
-    // Pretty para banco
     string BankPretty(string? b)
     {
         if (string.IsNullOrWhiteSpace(b)) return "—";
-        var k = b.Trim().ToLowerInvariant();
+        var raw = b.Trim();
+
+        // Si viene con prefijo "admin:xxx" o "tienda:vid:xxx" me quedo con el último segmento
+        var last = raw.Contains(':') ? raw.Split(':').Last() : raw;
+        var k = last.ToLowerInvariant();
+
         return k switch
         {
             "pichincha" => "Banco Pichincha",
             "guayaquil" => "Banco Guayaquil",
             "pacifico" => "Banco del Pacífico",
             "jep" => "Banco JEP",
-            _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(b)
+            _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(last)
         };
     }
 
-    // Datos que puede inyectar el controlador
+    // Datos opcionales desde el controlador
     var depositante = (ViewBag.Depositante as string);
     var bancoRaw = (ViewBag.Banco as string);
     var urlComprobante = (ViewBag.ComprobanteUrl as string);
 
-    // Fallback (compatibilidad con versiones anteriores que añadían props dinámicas)
+    // Fallback antiguos (si alguien populó dinámicos en el modelo)
     depositante ??= Model?.GetType().GetProperty("DepositanteNombre")?.GetValue(Model, null)?.ToString()
                  ?? Model?.GetType().GetProperty("NombreDepositante")?.GetValue(Model, null)?.ToString();
     urlComprobante ??= Model?.GetType().GetProperty("ComprobanteImagenUrl")?.GetValue(Model, null)?.ToString()
                   ?? Model?.GetType().GetProperty("ComprobanteUrl")?.GetValue(Model, null)?.ToString();
 
-    // Totales (null-safe)
     var detalle = Model?.DetalleVentas != null ? Model.DetalleVentas.ToList() : new List<DetalleVentas>();
     var subtotal = detalle.Sum(d => d.PrecioUnitario * d.Cantidad);
     var descuentos = detalle.Sum(d => d.Descuento ?? 0m);
@@ -65,220 +67,293 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #1f6feb;
-            --primary-light: #e8f0fe;
-            --primary-dark: #0d5bc2;
-            --secondary: #f8f9fa;
-            --success: #28a745;
+            --primary: #6f42c1;
+            --primary-light: #8c68d3;
+            --primary-dark: #5a2d9c;
+            --secondary: #6c757d;
+            --success: #198754;
             --warning: #ffc107;
             --danger: #dc3545;
-            --text: #2d3748;
-            --text-light: #718096;
-            --border: #e2e8f0;
-            --radius: 16px;
-            --shadow: 0 10px 30px rgba(0,0,0,.08);
-            --shadow-hover: 0 20px 40px rgba(0,0,0,.12);
-            --gradient: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray-100: #f8f9fa;
+            --gray-200: #e9ecef;
+            --gray-300: #dee2e6;
+            --gray-400: #ced4da;
+            --gray-500: #adb5bd;
+            --gray-600: #6c757d;
+            --gray-700: #495057;
+            --gray-800: #343a40;
+            --gray-900: #212529;
+            --border-radius: 0.75rem;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
         }
 
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
             font-family: 'Montserrat', sans-serif;
-            color: var(--text);
+            background-color: #f9fafb;
+            color: var(--gray-800);
             line-height: 1.6;
-            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 600;
         }
 
         .header-gradient {
-            background: var(--gradient);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             color: white;
-            padding: 40px 0;
-            margin-bottom: 40px;
-            border-radius: 0 0 var(--radius) var(--radius);
-            box-shadow: var(--shadow);
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            box-shadow: var(--box-shadow);
         }
 
         .page-title {
-            font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
-            font-weight: 600;
-            margin-bottom: 8px;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
         }
 
         .page-subtitle {
             font-size: 1.1rem;
             opacity: 0.9;
+            margin-bottom: 0;
         }
 
         .card-modern {
-            background: #fff;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
             border: none;
-            transition: all 0.3s ease;
             overflow: hidden;
+            transition: var(--transition);
+            margin-bottom: 1.5rem;
         }
 
             .card-modern:hover {
-                transform: translateY(-5px);
-                box-shadow: var(--shadow-hover);
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+                transform: translateY(-2px);
             }
 
         .card-header-modern {
-            background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
-            border-bottom: 1px solid var(--border);
-            padding: 20px 25px;
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            color: white;
+            padding: 1.25rem 1.5rem;
             font-weight: 600;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
+            border-bottom: none;
         }
 
             .card-header-modern i {
-                color: var(--primary);
-                margin-right: 10px;
+                margin-right: 0.75rem;
+                font-size: 1.1rem;
             }
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            padding: 25px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
         }
 
         .info-item {
-            padding: 15px;
-            background: var(--secondary);
-            border-radius: 12px;
-            border-left: 4px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
         }
+
+            .info-item:last-child {
+                border-bottom: none;
+            }
 
         .info-label {
             font-size: 0.85rem;
-            color: var(--text-light);
+            color: var(--gray-600);
             font-weight: 500;
-            margin-bottom: 5px;
+            margin-bottom: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .info-value {
-            font-weight: 600;
             font-size: 1.1rem;
-            color: var(--text);
+            font-weight: 600;
+            color: var(--gray-800);
         }
 
-        .comprobante-container {
-            padding: 25px;
-            text-align: center;
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-left: 4px solid;
         }
 
-        .comprobante-img {
-            max-height: 300px;
-            max-width: 100%;
-            border-radius: 12px;
-            box-shadow: 0 8px 25px rgba(0,0,0,.15);
-            transition: all 0.3s ease;
-            cursor: pointer;
+        .btn-primary-modern {
+            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
         }
 
-            .comprobante-img:hover {
-                transform: scale(1.02);
-                box-shadow: 0 12px 35px rgba(0,0,0,.2);
+            .btn-primary-modern:hover {
+                background: linear-gradient(to right, var(--primary-dark), var(--primary));
+                color: white;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
             }
 
-        .comprobante-pdf {
-            width: 100%;
-            height: 400px;
-            border-radius: 12px;
-            border: none;
-            box-shadow: 0 8px 25px rgba(0,0,0,.15);
+        .btn-outline-modern {
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            background: transparent;
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: var(--transition);
         }
 
+            .btn-outline-modern:hover {
+                background: var(--primary);
+                color: white;
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+            }
+
         .table-modern {
-            border-radius: var(--radius);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-            margin: 0;
+            margin-bottom: 0;
         }
 
             .table-modern thead th {
-                background: var(--gradient);
-                color: white;
-                border: none;
-                padding: 18px 20px;
+                background-color: var(--gray-100);
+                color: var(--gray-700);
                 font-weight: 600;
-                font-size: 0.95rem;
+                text-transform: uppercase;
+                font-size: 0.85rem;
+                letter-spacing: 0.5px;
+                border-bottom: 2px solid var(--gray-300);
+                padding: 1rem 1.5rem;
             }
 
             .table-modern tbody td {
-                padding: 16px 20px;
-                border-color: var(--border);
+                padding: 1.25rem 1.5rem;
                 vertical-align: middle;
-                transition: background-color 0.2s ease;
+                border-bottom: 1px solid var(--gray-200);
             }
 
-            .table-modern tbody tr:hover td {
-                background-color: rgba(31, 111, 235, 0.03);
+            .table-modern tbody tr:last-child td {
+                border-bottom: none;
             }
+
+            .table-modern tbody tr:hover {
+                background-color: rgba(111, 66, 193, 0.03);
+            }
+
+        .product-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
 
         .product-img {
             width: 60px;
             height: 60px;
             object-fit: cover;
-            border-radius: 8px;
-            margin-right: 15px;
-            border: 1px solid var(--border);
-        }
-
-        .product-info {
-            display: flex;
-            align-items: center;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         }
 
         .product-name {
             font-weight: 600;
-            margin-bottom: 4px;
+            margin-bottom: 0.25rem;
         }
 
         .product-desc {
-            font-size: 0.85rem;
-            color: var(--text-light);
+            font-size: 0.9rem;
+            color: var(--gray-600);
+            line-height: 1.4;
         }
+
+        .comprobante-container {
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .comprobante-img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+        }
+
+            .comprobante-img:hover {
+                transform: scale(1.02);
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            }
+
+        .comprobante-pdf {
+            width: 100%;
+            height: 400px;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .empty-state {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: var(--gray-500);
+        }
+
+            .empty-state i {
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                opacity: 0.5;
+            }
 
         .total-display {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: var(--radius);
-            padding: 25px;
-            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
 
         .timeline-container {
-            padding: 25px;
+            padding: 1.5rem;
         }
 
         .timeline {
             position: relative;
-            padding-left: 30px;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
             .timeline::before {
                 content: '';
                 position: absolute;
-                left: 15px;
                 top: 0;
                 bottom: 0;
-                width: 2px;
-                background: linear-gradient(to bottom, var(--primary) 0%, transparent 100%);
+                left: 20px;
+                width: 4px;
+                background: var(--gray-300);
+                border-radius: 2px;
             }
 
         .timeline-step {
             position: relative;
-            margin-bottom: 30px;
-            padding: 15px 20px;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 15px rgba(0,0,0,.08);
-            border-left: 4px solid #e2e8f0;
-            transition: all 0.3s ease;
+            margin-bottom: 2rem;
+            padding-left: 60px;
         }
 
             .timeline-step:last-child {
@@ -288,175 +363,106 @@
             .timeline-step::before {
                 content: '';
                 position: absolute;
-                left: -37px;
-                top: 24px;
-                width: 16px;
-                height: 16px;
+                left: 12px;
+                top: 0;
+                width: 20px;
+                height: 20px;
                 border-radius: 50%;
-                background: #e2e8f0;
-                z-index: 2;
-                transition: all 0.3s ease;
+                background: white;
+                border: 4px solid var(--gray-400);
+                z-index: 1;
             }
 
-            .timeline-step.active {
-                border-left-color: var(--primary);
-                background: linear-gradient(135deg, #fff 0%, var(--primary-light) 100%);
+            .timeline-step.completed::before {
+                border-color: var(--success);
+                background: var(--success);
             }
 
-                .timeline-step.active::before {
-                    background: var(--primary);
-                    box-shadow: 0 0 0 4px rgba(31, 111, 235, 0.2);
-                }
-
-            .timeline-step.completed {
-                border-left-color: var(--success);
-            }
-
-                .timeline-step.completed::before {
-                    background: var(--success);
-                    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.2);
-                }
-
-            .timeline-step.future {
-                opacity: 0.7;
+            .timeline-step.active::before {
+                border-color: var(--primary);
+                background: var(--primary);
+                box-shadow: 0 0 0 6px rgba(111, 66, 193, 0.2);
             }
 
         .step-title {
             font-weight: 600;
-            margin-bottom: 5px;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--gray-800);
         }
 
         .step-status {
-            font-size: 0.85rem;
-            color: var(--text-light);
-        }
-
-        .btn-modern {
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn-primary-modern {
-            background: var(--gradient);
-            color: white;
-            box-shadow: 0 4px 15px rgba(31, 111, 235, 0.3);
-        }
-
-            .btn-primary-modern:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(31, 111, 235, 0.4);
-                color: white;
-            }
-
-        .btn-outline-modern {
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            background: transparent;
-        }
-
-            .btn-outline-modern:hover {
-                background: var(--primary);
-                color: white;
-                transform: translateY(-2px);
-            }
-
-        .badge-modern {
-            padding: 8px 16px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .empty-state {
-            padding: 60px 20px;
-            text-align: center;
-            color: var(--text-light);
-        }
-
-            .empty-state i {
-                font-size: 4rem;
-                margin-bottom: 20px;
-                opacity: 0.3;
-            }
-
-        .print-only {
-            display: none;
+            font-size: 0.9rem;
+            color: var(--gray-600);
         }
 
         .action-buttons {
             display: flex;
-            gap: 15px;
+            gap: 1rem;
             flex-wrap: wrap;
         }
 
-        .status-badge {
-            font-size: 0.9rem;
-            padding: 8px 16px;
+        .badge-rounded {
             border-radius: 50px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
         }
 
         @@media (max-width: 768px) {
-            .page-title {
-                font-size: 2rem;
-            }
+            .page-title
 
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
+        {
+            font-size: 2rem;
+        }
 
-            .action-buttons {
-                flex-direction: column;
-            }
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
 
-            .btn-modern {
+        .action-buttons {
+            flex-direction: column;
+        }
+
+            .action-buttons .btn {
                 width: 100%;
-                justify-content: center;
             }
 
-            .timeline {
-                padding-left: 20px;
-            }
+        .timeline::before {
+            left: 15px;
+        }
+
+        .timeline-step {
+            padding-left: 50px;
+        }
 
             .timeline-step::before {
-                left: -27px;
+                left: 7px;
             }
+
         }
 
         @@media print {
-            .no-print {
-                display: none !important;
-            }
+            .no-print
 
-            .print-only {
-                display: block;
-            }
+        {
+            display: none !important;
+        }
 
-            body {
-                background: white;
-            }
+        .header-gradient {
+            background: none;
+            color: black;
+            box-shadow: none;
+        }
 
-            .card-modern {
-                box-shadow: none;
-                border: 1px solid #ddd;
-            }
+        .card-modern {
+            box-shadow: none;
+            border: 1px solid #ddd;
+        }
 
-            .header-gradient {
-                background: #f8f9fa !important;
-                color: black !important;
-                box-shadow: none !important;
-            }
+        .btn {
+            display: none;
+        }
+
         }
     </style>
 </head>
@@ -486,16 +492,9 @@
         </div>
     </div>
 
-    <div class="container pb-5">
-        <!-- Print Header -->
-        <div class="print-only mb-4">
-            <h3>Comprobante de Venta #@Model.VentaID</h3>
-            <p>Fecha: @Model.FechaVenta.ToString("dd/MM/yyyy HH:mm")</p>
-            <hr>
-        </div>
-
+    <div class="container pb-5" data-venta-id="@Model.VentaID">
         <div class="row g-4 mb-4">
-            <!-- Información de la venta -->
+            <!-- Información -->
             <div class="col-12 col-lg-8">
                 <div class="card-modern h-100">
                     <div class="card-header-modern">
@@ -534,12 +533,12 @@
 
                         <div class="info-item">
                             <div class="info-label">Depositante</div>
-                            <div class="info-value">@(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")</div>
+                            <div class="info-value"><span id="depositanteVal">@(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")</span></div>
                         </div>
 
                         <div class="info-item">
                             <div class="info-label">Banco</div>
-                            <div class="info-value">@BankPretty(bancoRaw)</div>
+                            <div class="info-value"><span id="bancoVal">@BankPretty(bancoRaw)</span></div>
                         </div>
 
                         <div class="info-item">
@@ -564,9 +563,7 @@
             <div class="col-12 col-lg-4">
                 <div class="card-modern h-100">
                     <div class="card-header-modern d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-receipt"></i>Comprobante
-                        </div>
+                        <div><i class="fas fa-receipt"></i>Comprobante</div>
                         <div id="compBtns" class="btn-group @(string.IsNullOrWhiteSpace(urlComprobante) ? "d-none" : "") no-print">
                             <a id="compLink" href="@urlComprobante" target="_blank" class="btn btn-sm btn-outline-modern" title="Ver comprobante">
                                 <i class="fas fa-external-link-alt"></i>
@@ -633,7 +630,6 @@
                         {
                             var sub = det.Subtotal ?? ((det.PrecioUnitario * det.Cantidad) - (det.Descuento ?? 0m));
                             var productImage = det.Producto?.ImagenPath ?? "/images/product-placeholder.png";
-
                             <tr>
                                 <td>
                                     <div class="product-info">
@@ -647,9 +643,7 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="text-center">
-                                    <span class="badge bg-primary rounded-pill">@det.Cantidad</span>
-                                </td>
+                                <td class="text-center"><span class="badge bg-primary rounded-pill">@det.Cantidad</span></td>
                                 <td class="text-end">@det.PrecioUnitario.ToString("C", culture)</td>
                                 <td class="text-end text-danger">@((det.Descuento ?? 0m).ToString("C", culture))</td>
                                 <td class="text-end fw-bold">@sub.ToString("C", culture)</td>
@@ -672,7 +666,6 @@
                         <div class="col-4 text-end text-danger">-@descuentos.ToString("C", culture)</div>
 
                         <hr class="my-3" />
-
                         <div class="col-8 fw-bold fs-5">Total:</div>
                         <div class="col-4 text-end fw-bold fs-5 text-primary">@Model.Total.ToString("C", culture)</div>
                     </div>
@@ -682,19 +675,16 @@
 
         <!-- Timeline -->
         <div class="card-modern mt-4">
-            <div class="card-header-modern">
-                <i class="fas fa-clock"></i>Progreso de la Venta
-            </div>
+            <div class="card-header-modern"><i class="fas fa-clock"></i>Progreso de la Venta</div>
             <div class="timeline-container">
                 <div class="timeline">
                     @{
                         var estados = new[] {
-                                        ("Pendiente", "fas fa-clock", "Esperando confirmación de pago"),
-                                        ("Procesando", "fas fa-cog", "Verificando información"),
-                                        ("Despachando", "fas fa-shipping-fast", "Preparando envío"),
-                                        ("Entregado", "fas fa-check-circle", "Pedido completado")
+                                        ("Pendiente","fas fa-clock","Esperando confirmación de pago"),
+                                        ("Procesando","fas fa-cog","Verificando información"),
+                                        ("Despachando","fas fa-shipping-fast","Preparando envío"),
+                                        ("Entregado","fas fa-check-circle","Pedido completado")
                                         };
-
                         var estadoActual = Model.Estado?.ToLowerInvariant() ?? "";
                         var estadoIndex = estadoActual.Contains("pend") ? 0
                         : (estadoActual.Contains("proc") || estadoActual.Contains("pago")) ? 1
@@ -702,14 +692,11 @@
                         : (estadoActual.Contains("entr") || estadoActual.Contains("compl")) ? 3
                         : -1;
                     }
-
                     @for (int i = 0; i < estados.Length; i++)
                     {
                         var stepClass = i < estadoIndex ? "completed" : (i == estadoIndex ? "active" : "future");
                         <div class="timeline-step @stepClass">
-                            <div class="step-title">
-                                <i class="@estados[i].Item2 me-2"></i>@estados[i].Item1
-                            </div>
+                            <div class="step-title"><i class="@estados[i].Item2 me-2"></i>@estados[i].Item1</div>
                             <div class="step-status">
                                 @if (i < estadoIndex)
                                 {
@@ -733,7 +720,7 @@
             </div>
         </div>
 
-        <!-- Acciones Footer -->
+        <!-- Acciones -->
         <div class="action-buttons mt-4 no-print">
             <a class="btn btn-outline-modern" href="@Url.Action("Index", "MisCompras")">
                 <i class="fas fa-arrow-left me-2"></i>Volver a mis compras
@@ -751,9 +738,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         (function(){
-            // Auto-detección de comprobante
-            const ventaId = @Model.VentaID;
-            const baseUrl = `/uploads/comprobantes/venta-${ventaId}`;
+            const ventaId = document.querySelector('.container[data-venta-id]')?.getAttribute('data-venta-id');
+            const baseFolder = '@Url.Content("~/uploads/comprobantes")';
+            const baseUrl = `${baseFolder}/venta-${ventaId}`;
             const tryExts = ['.jpg','.png','.jpeg','.webp','.pdf'];
 
             const compContainer = document.querySelector('.comprobante-container');
@@ -761,6 +748,9 @@
             const compLink      = document.getElementById('compLink');
             const compDownload  = document.getElementById('compDownload');
             const btnDescargar  = document.getElementById('btnDescargar');
+
+            const depSpan  = document.getElementById('depositanteVal');
+            const bankSpan = document.getElementById('bancoVal');
 
             const hasServerUrl = !!('@(urlComprobante ?? "")');
 
@@ -771,26 +761,30 @@
                 }catch{ return false; }
             }
 
-            async function detectComprobante(){
-                if (hasServerUrl) return;
-                for (const ext of tryExts){
-                    const url = `${baseUrl}${ext}`;
-                    if (await headOk(url)){
-                        renderComprobante(url);
-                        // Intentar meta JSON
-                        fetch(`${baseUrl}.meta.json`, { cache:'no-store' })
-                            .then(r => r.ok ? r.json() : null)
-                            .then(meta => {
-                                if (!meta) return;
-                                const dep = (meta.depositante || meta.Depositante || meta.nombreDepositante || '').toString().trim();
-                                const bank = (meta.banco || meta.Banco || '').toString().trim();
-                                if (dep) document.getElementById('depositanteVal').textContent = dep;
-                                if (bank) document.getElementById('bancoVal').textContent = bank;
-                            })
-                            .catch(()=>{});
-                        break;
-                    }
+            function bankPretty(s){
+                if(!s) return '';
+                const raw = String(s).trim();
+                const last = raw.includes(':') ? raw.split(':').pop() : raw;
+                const k = last.toLowerCase();
+                const map = { pichincha:'Banco Pichincha', guayaquil:'Banco Guayaquil', pacifico:'Banco del Pacífico', jep:'Banco JEP' };
+                return map[k] || last.charAt(0).toUpperCase() + last.slice(1);
+            }
+
+            function bankFromMeta(meta){
+                if (!meta) return '';
+                // Puede venir:
+                //  - meta.banco: "pichincha"
+                //  - meta.bancoSeleccion: "admin:pichincha"
+                //  - meta.bancoSeleccion: { banco:{ nombre,codigo,... } }  (ConfirmarCompra)
+                const bs = meta.bancoSeleccion ?? meta.BancoSeleccion ?? meta.banco ?? meta.Banco;
+                if (!bs) return '';
+
+                if (typeof bs === 'string'){
+                    return bankPretty(bs);
                 }
+                // objeto
+                const bobj = bs.banco ?? bs;
+                return bankPretty(bobj.nombre || bobj.codigo || bobj.valor || '');
             }
 
             function renderComprobante(url){
@@ -802,19 +796,18 @@
                     ifr.title = 'Comprobante PDF';
                     ifr.src = `${url}#toolbar=0`;
                     compContainer.appendChild(ifr);
+
                     const linkDiv = document.createElement('div');
                     linkDiv.className = 'mt-3';
                     const link = document.createElement('a');
-                    link.href = url;
-                    link.target = '_blank';
+                    link.href = url; link.target = '_blank';
                     link.className = 'btn btn-outline-modern btn-sm';
                     link.innerHTML = '<i class="fas fa-external-link-alt me-2"></i>Abrir PDF';
                     linkDiv.appendChild(link);
                     compContainer.appendChild(linkDiv);
                 }else{
                     const a = document.createElement('a');
-                    a.href = url;
-                    a.target = '_blank';
+                    a.href = url; a.target = '_blank';
                     a.title = 'Ver comprobante en tamaño completo';
                     const img = document.createElement('img');
                     img.className = 'comprobante-img';
@@ -829,8 +822,8 @@
                 }
                 if (compBtns){
                     compBtns.classList.remove('d-none');
-                    compLink.href = url;
-                    compDownload.href = url;
+                    if (compLink) compLink.href = url;
+                    if (compDownload) compDownload.href = url;
                 }
                 if (btnDescargar){
                     btnDescargar.classList.remove('d-none');
@@ -838,7 +831,38 @@
                 }
             }
 
-            detectComprobante();
+            async function tryDetectEverything(){
+                // 1) Comprobante (si el servidor no lo puso)
+                if (!hasServerUrl){
+                    for (const ext of tryExts){
+                        const url = `${baseUrl}${ext}`;
+                        if (await headOk(url)){ renderComprobante(url); break; }
+                    }
+                }
+
+                // 2) Metadatos (si faltan en la vista)
+                const needDep  = !depSpan || depSpan.textContent.trim() === '—' || depSpan.textContent.trim() === '';
+                const needBank = !bankSpan || bankSpan.textContent.trim() === '—' || bankSpan.textContent.trim() === '';
+
+                if (needDep || needBank){
+                    try{
+                        const r = await fetch(`${baseUrl}.meta.json`, { cache:'no-store' });
+                        if (r.ok){
+                            const meta = await r.json();
+                            if (needDep){
+                                const dep = (meta.depositante ?? meta.Depositante ?? meta.nombreDepositante ?? '').toString().trim();
+                                if (dep && depSpan) depSpan.textContent = dep;
+                            }
+                            if (needBank){
+                                const pretty = bankFromMeta(meta);
+                                if (pretty && bankSpan) bankSpan.textContent = pretty;
+                            }
+                        }
+                    }catch{}
+                }
+            }
+
+            tryDetectEverything();
         })();
     </script>
 </body>

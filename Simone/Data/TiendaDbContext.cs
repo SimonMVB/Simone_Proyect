@@ -1,8 +1,7 @@
-﻿using System;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Simone.Models;
+using System;
 
 namespace Simone.Data
 {
@@ -17,6 +16,7 @@ namespace Simone.Data
         public DbSet<Usuario> Usuarios { get; set; }
 
         // ✅ Tablas del dominio (existentes)
+        public DbSet<ProductoImagen> ProductoImagenes { get; set; }
         public DbSet<ActividadUsuario> ActividadesUsuarios { get; set; }
         public DbSet<LogIniciosSesion> LogIniciosSesion { get; set; }
         public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
@@ -34,7 +34,7 @@ namespace Simone.Data
         public DbSet<DetallesCompra> DetallesCompra { get; set; }
         public DbSet<DetallesPedido> DetallesPedido { get; set; }
         public DbSet<DetalleVentas> DetalleVentas { get; set; }
-        public DbSet<Devoluciones> Devoluciones { get; set; } = default!;
+        public DbSet<Devoluciones> Devoluciones { get; set; }
         public DbSet<Empleados> Empleados { get; set; }
         public DbSet<Gastos> Gastos { get; set; }
         public DbSet<HistorialPrecios> HistorialPrecios { get; set; }
@@ -44,7 +44,7 @@ namespace Simone.Data
         public DbSet<Producto> Productos { get; set; }
         public DbSet<ProgramasFidelizacion> ProgramasFidelizacion { get; set; }
         public DbSet<Proveedores> Proveedores { get; set; }
-        public DbSet<Reseñas> Reseñas { get; set; } // Mantiene el nombre del modelo con ñ
+        public DbSet<Reseñas> Reseñas { get; set; }
         public DbSet<Subcategorias> Subcategorias { get; set; }
         public DbSet<Ventas> Ventas { get; set; }
         public DbSet<Favorito> Favoritos { get; set; }
@@ -55,6 +55,9 @@ namespace Simone.Data
         public DbSet<Banco> Bancos { get; set; }
         public DbSet<CuentaBancaria> CuentasBancarias { get; set; }
         public DbSet<ContactoTienda> ContactosTiendas { get; set; }
+
+        // ✅ Variantes
+        public DbSet<ProductoVariante> ProductoVariantes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -73,27 +76,14 @@ namespace Simone.Data
                       .IsUnique()
                       .HasFilter("[Cedula] IS NOT NULL");
 
-                modelBuilder.Entity<Usuario>(entity =>
-                {
-                    entity.Property(u => u.Cedula)
-                          .HasMaxLength(10)
-                          .HasColumnType("nvarchar(10)");
-
-                    entity.HasIndex(u => u.Cedula)
-                          .IsUnique()
-                          .HasFilter("[Cedula] IS NOT NULL");
-
-                    // >>> NUEVO: relación opcional del usuario a la tienda (Vendedor)
-                    entity.HasOne(u => u.Vendedor)
-                          .WithMany() // no necesitas colección en Vendedor
-                          .HasForeignKey(u => u.VendedorId)
-                          .OnDelete(DeleteBehavior.SetNull);
-                });
-
+                entity.HasOne(u => u.Vendedor)
+                      .WithMany()
+                      .HasForeignKey(u => u.VendedorId)
+                      .OnDelete(DeleteBehavior.SetNull);
             });
 
             // ------------------------------------------------------------
-            // 1) Claves primarias compuestas (N:M) + FKs
+            // 1) Claves compuestas / FKs (varias entidades)
             // ------------------------------------------------------------
             modelBuilder.Entity<Devoluciones>()
                .HasOne(d => d.DetalleVenta)
@@ -127,15 +117,33 @@ namespace Simone.Data
             });
 
             // ------------------------------------------------------------
-            // 2) Índices únicos de negocio
+            // 2) Índices ÚNICOS correctos para CarritoDetalle
+            //    (separar productos simples de variantes con filtros)
             // ------------------------------------------------------------
+            // Producto simple (sin variante) único por carrito
             modelBuilder.Entity<CarritoDetalle>()
                 .HasIndex(cd => new { cd.CarritoID, cd.ProductoID })
+                .HasFilter("[ProductoVarianteID] IS NULL")
                 .IsUnique();
 
-            modelBuilder.Entity<Favorito>()
-                .HasIndex(f => new { f.UsuarioId, f.ProductoId })
+            // Variante específica única por carrito
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasIndex(cd => new { cd.CarritoID, cd.ProductoVarianteID })
+                .HasFilter("[ProductoVarianteID] IS NOT NULL")
                 .IsUnique();
+
+            // Relación con Variante y Producto
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Variante)
+                .WithMany(v => v.CarritoDetalles)
+                .HasForeignKey(cd => cd.ProductoVarianteID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Producto)
+                .WithMany(p => p.CarritoDetalles)
+                .HasForeignKey(cd => cd.ProductoID)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // ------------------------------------------------------------
             // 3) Relaciones + DeleteBehavior
@@ -147,12 +155,6 @@ namespace Simone.Data
                       .HasForeignKey(c => c.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
-
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Producto)
-                .WithMany(p => p.CarritoDetalles)
-                .HasForeignKey(cd => cd.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CarritoDetalle>()
                 .HasOne(cd => cd.Carrito)
@@ -172,25 +174,42 @@ namespace Simone.Data
                 .HasForeignKey(p => p.SubcategoriaID)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // ✅ Relación explícita: Producto → Usuario (VendedorID)
+            modelBuilder.Entity<Producto>(entity =>
+            {
+                entity.HasOne(p => p.Usuario)
+                      .WithMany()
+                      .HasForeignKey(p => p.VendedorID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<ProductoImagen>(e =>
+            {
+                e.HasKey(pi => pi.ProductoImagenID);
+                e.Property(pi => pi.Path).IsRequired().HasMaxLength(300);
+
+                e.HasOne(pi => pi.Producto)
+                 .WithMany(p => p.Imagenes)
+                 .HasForeignKey(pi => pi.ProductoID)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // ===== Subcategorias (multi-vendedor) =====
             modelBuilder.Entity<Subcategorias>(entity =>
             {
-                // Relación con Categorías (respeta tu navegación actual)
                 entity.HasOne(s => s.Categoria)
                       .WithMany(c => c.Subcategoria)
                       .HasForeignKey(s => s.CategoriaID)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Vendedor dueño (FK -> AspNetUsers.Id)
                 entity.Property(s => s.VendedorID)
-                      .HasMaxLength(450); // nvarchar(450) de Identity
+                      .HasMaxLength(450);
 
                 entity.HasOne(s => s.Usuario)
                       .WithMany()
                       .HasForeignKey(s => s.VendedorID)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Unicidad por vendedor + categoría + nombre
                 entity.HasIndex(s => new { s.VendedorID, s.CategoriaID, s.NombreSubcategoria })
                       .IsUnique();
             });
@@ -207,10 +226,22 @@ namespace Simone.Data
                 .HasForeignKey(r => r.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<MovimientosInventario>()
+                .HasOne(mi => mi.Producto)
+                .WithMany(p => p.MovimientosInventario)
+                .HasForeignKey(mi => mi.ProductoID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MovimientosInventario>()
+                .HasOne(mi => mi.Variante)
+                .WithMany(v => v.MovimientosInventario)
+                .HasForeignKey(mi => mi.ProductoVarianteID)
+                .OnDelete(DeleteBehavior.Restrict);
+
             modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Venta)
+                .HasOne(dv => dv.Variante)
                 .WithMany(v => v.DetalleVentas)
-                .HasForeignKey(dv => dv.VentaID)
+                .HasForeignKey(dv => dv.ProductoVarianteID)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<DetalleVentas>()
@@ -238,9 +269,8 @@ namespace Simone.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ------------------------------------------------------------
-            // 3.b) Multi-vendedor: Vendedor/Banco/Cuenta/Contacto
+            // 3.b) Multi-vendedor
             // ------------------------------------------------------------
-            // Vendedor
             modelBuilder.Entity<Vendedor>(entity =>
             {
                 entity.HasKey(v => v.VendedorId);
@@ -256,14 +286,12 @@ namespace Simone.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // Banco
             modelBuilder.Entity<Banco>(entity =>
             {
                 entity.HasKey(b => b.BancoId);
-                entity.HasIndex(b => b.Codigo).IsUnique(); // ej.: "pichincha"
+                entity.HasIndex(b => b.Codigo).IsUnique();
             });
 
-            // CuentaBancaria
             modelBuilder.Entity<CuentaBancaria>(entity =>
             {
                 entity.HasKey(c => c.CuentaBancariaId);
@@ -273,19 +301,36 @@ namespace Simone.Data
                       .HasForeignKey(c => c.BancoId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Evita duplicados de misma cuenta por vendedor/banco
                 entity.HasIndex(c => new { c.VendedorId, c.BancoId, c.Numero })
                       .IsUnique();
             });
 
-            // ContactoTienda
             modelBuilder.Entity<ContactoTienda>(entity =>
             {
                 entity.HasKey(c => c.ContactoTiendaId);
             });
 
             // ------------------------------------------------------------
-            // 4) Estandarizar DECIMAL(18,2) en campos financieros
+            // 3.c) Variantes de Producto
+            // ------------------------------------------------------------
+            modelBuilder.Entity<ProductoVariante>(entity =>
+            {
+                entity.HasKey(v => v.ProductoVarianteID);
+
+                entity.Property(v => v.Color).HasMaxLength(50).IsRequired();
+                entity.Property(v => v.Talla).HasMaxLength(20).IsRequired();
+
+                entity.HasOne(v => v.Producto)
+                      .WithMany(p => p.Variantes)
+                      .HasForeignKey(v => v.ProductoID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(v => new { v.ProductoID, v.Color, v.Talla })
+                      .IsUnique();
+            });
+
+            // ------------------------------------------------------------
+            // 4) DECIMAL(18,2) en todas las entidades relevantes
             // ------------------------------------------------------------
             var decimalProps = new (Type entity, string[] props)[]
             {
@@ -302,20 +347,15 @@ namespace Simone.Data
                 (typeof(ProgramasFidelizacion), new[] { "Descuento" }),
                 (typeof(Promocion),             new[] { "Descuento" }),
                 (typeof(Ventas),                new[] { "Total" }),
+                (typeof(ProductoVariante),      new[] { "PrecioCompra", "PrecioVenta" }),
             };
 
             foreach (var (entity, props) in decimalProps)
-            {
                 foreach (var prop in props)
-                {
-                    modelBuilder.Entity(entity)
-                                .Property(prop)
-                                .HasColumnType("decimal(18,2)");
-                }
-            }
+                    modelBuilder.Entity(entity).Property(prop).HasColumnType("decimal(18,2)");
 
             // ------------------------------------------------------------
-            // 5) Defaults en BD para timestamps
+            // 5) Defaults
             // ------------------------------------------------------------
             modelBuilder.Entity<Favorito>()
                 .Property(f => f.FechaGuardado)
@@ -326,7 +366,7 @@ namespace Simone.Data
                 .HasDefaultValueSql("GETUTCDATE()");
 
             // ------------------------------------------------------------
-            // 6) Logs / auditoría
+            // 6) Logs
             // ------------------------------------------------------------
             modelBuilder.Entity<LogIniciosSesion>(entity =>
             {

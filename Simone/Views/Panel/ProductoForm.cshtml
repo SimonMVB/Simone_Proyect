@@ -1,743 +1,1663 @@
 @using System.Globalization
+@using System.Text.Json
 @using Simone.Models
 @{
     ViewData["Title"] = ViewBag.Producto != null ? "Editar Producto" : "Añadir Producto";
+
     var producto = ViewBag.Producto as Producto;
+
     var categorias = ViewBag.Categorias as IEnumerable<Categorias> ?? Enumerable.Empty<Categorias>();
     var proveedores = ViewBag.Proveedores as IEnumerable<Proveedores> ?? Enumerable.Empty<Proveedores>();
-    var subcatsSrc = (IEnumerable<Subcategorias>)(ViewBag.Subcategorias ?? ViewBag.subcategorias ?? new List<Subcategorias>());
+    var subcatsSrc = (IEnumerable<Subcategorias>)(ViewBag.Subcategorias as IEnumerable<Subcategorias>
+                      ?? ViewBag.subcategorias as IEnumerable<Subcategorias> ?? new List<Subcategorias>());
+
+    // Variantes (si estás editando)
+    var variantesInit = (ViewBag.Variantes as IEnumerable<ProductoVariante>)?.ToList() ?? new List<ProductoVariante>();
+    var hasVariantesInit = variantesInit.Any();
+
+    // Galería
+    var galListTop = ViewBag.Galeria as IEnumerable<string>;
+    int imgCountInit = galListTop?.Count() ?? (string.IsNullOrWhiteSpace(producto?.ImagenPath) ? 0 : 1);
+
+    var culture = CultureInfo.CreateSpecificCulture("es-EC");
 }
 
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" rel="stylesheet" />
 
 <style>
     :root {
-        --primary-light: #fff;
-        --accent-purple: #4B0082;
-        --light-purple: #6A0DAD;
-        --light-gray: #F8F8F8;
-        --medium-gray: #E0E0E0;
-        --dark-gray: #333;
-        --text: #333;
-        --danger: #dc3545;
-        --ok: #28a745;
-        --info: #17a2b8;
-        --warning: #ffc107;
-        --shadow: 0 10px 30px rgba(0,0,0,.08);
-        --shadow-hover: 0 15px 40px rgba(0,0,0,.12);
+        --primary: #7c3aed;
+        --primary-light: #8b5cf6;
+        --primary-dark: #6d28d9;
+        --secondary: #f8fafc;
+        --accent: #e879f9;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --surface: #fff;
+        --border: #e2e8f0;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --shadow-sm: 0 1px 2px 0 rgba(0,0,0,.05);
+        --shadow: 0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
+        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
+        --radius: 12px;
+        --radius-sm: 8px;
+        --transition: all .2s ease-in-out
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0
     }
 
     body {
-        font-family: 'Montserrat', sans-serif;
-        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
-        color: var(--text);
+        font-family: 'Inter',system-ui,-apple-system,sans-serif;
         line-height: 1.6;
+        color: var(--text-primary);
+        background: #f8fafc
     }
 
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Playfair Display', serif;
-        font-weight: 600;
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 16px
     }
 
-    .form-container {
-        max-width: 980px;
-        margin: 2rem auto;
-        padding: 0 15px;
-    }
-
-    .card {
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-hover);
-        }
-
-    .card-header {
+    .page-header {
         display: flex;
-        align-items: center;
         justify-content: space-between;
-        padding: 1.25rem 1.5rem;
-        border-bottom: 1px solid var(--medium-gray);
-        background: linear-gradient(135deg, rgba(75,0,130,.08), rgba(75,0,130,.03));
+        align-items: center;
+        margin-bottom: 24px;
+        padding: 16px 0
     }
 
-    .title {
+    .page-title {
         display: flex;
         align-items: center;
-        gap: .75rem;
-        color: var(--accent-purple);
+        gap: 12px;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-primary)
     }
 
-        .title i {
-            font-size: 1.5rem;
+        .page-title i {
+            color: var(--primary);
+            font-size: 28px
         }
 
-    .back-link {
+    .back-btn {
         display: inline-flex;
         align-items: center;
-        gap: .5rem;
+        gap: 8px;
+        padding: 10px 16px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--text-secondary);
         text-decoration: none;
-        font-weight: 600;
-        color: var(--accent-purple);
-        border: 1px solid rgba(75,0,130,.25);
-        padding: .5rem .85rem;
-        border-radius: 999px;
-        background: rgba(75,0,130,.05);
-        transition: all 0.2s ease;
+        font-weight: 500;
+        transition: var(--transition)
     }
 
-        .back-link:hover {
-            background: rgba(75,0,130,.12);
-            transform: translateX(-3px);
+        .back-btn:hover {
+            background: #f8fafc;
+            border-color: var(--primary);
+            color: var(--primary)
         }
 
-    .card-body {
-        padding: 1.5rem;
+    .product-form-container {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 24px
+    }
+
+    .form-section {
+        background: var(--surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+        margin-bottom: 24px
+    }
+
+    .section-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(90deg,#f8fafc,#fff);
+        display: flex;
+        justify-content: space-between;
+        align-items: center
+    }
+
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 8px
+    }
+
+        .section-title i {
+            color: var(--primary)
+        }
+
+    .section-badge {
+        background: var(--primary);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-left: 8px
+    }
+
+    .section-content {
+        padding: 20px
     }
 
     .form-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1.5rem;
+        grid-template-columns: repeat(2,1fr);
+        gap: 16px
     }
 
-    .full {
-        grid-column: span 2;
+    .form-grid-full {
+        grid-column: 1 / -1
     }
 
     .form-group {
-        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 6px
     }
 
     .form-label {
-        display: block;
-        margin-bottom: .5rem;
-        font-weight: 600;
-        color: var(--dark-gray);
-        font-size: 0.95rem;
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 4px
     }
 
     .required::after {
-        content: " *";
-        color: var(--danger);
+        content: "*";
+        color: var(--error);
+        margin-left: 2px
     }
 
     .form-input, .form-select, .form-textarea {
-        width: 100%;
-        padding: .85rem 1rem;
-        border: 1px solid var(--medium-gray);
-        border-radius: 10px;
-        font-size: 1rem;
-        background: #fff;
-        transition: border-color .15s ease, box-shadow .15s ease;
-        font-family: 'Montserrat', sans-serif;
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-family: inherit;
+        font-size: 14px;
+        background: var(--surface);
+        transition: var(--transition);
+        width: 100%
     }
 
         .form-input:focus, .form-select:focus, .form-textarea:focus {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 0 3px rgba(75,0,130,.12);
             outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(124,58,237,.1)
         }
 
-        .form-input.valid {
-            border-color: var(--ok);
-            box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.12);
+        .form-input.error, .form-select.error, .form-textarea.error {
+            border-color: var(--error);
+            box-shadow: 0 0 0 3px rgba(239,68,68,.1)
         }
 
-        .form-input.invalid {
-            border-color: var(--danger);
-            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.12);
-        }
-
-    .price-container {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
+    .form-textarea {
+        min-height: 120px;
+        resize: vertical
     }
 
-    .price-info {
-        background: rgba(75,0,130,.05);
-        border-radius: 10px;
-        padding: 1rem;
-        border-left: 4px solid var(--accent-purple);
+    .form-note {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px
     }
 
-    .price-row {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 0.5rem;
+    .form-error {
+        font-size: 12px;
+        color: var(--error);
+        margin-top: 4px;
+        display: none
     }
 
-        .price-row:last-child {
-            margin-bottom: 0;
-        }
-
-    .price-label {
-        font-weight: 500;
-        color: var(--dark-gray);
+    .input-has-error {
+        border-color: var(--error) !important
     }
-
-    .price-value {
-        font-weight: 600;
-    }
-
-    .profit {
-        color: var(--ok);
-    }
-
-    .image-upload {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .image-preview-container {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-        flex-wrap: wrap;
-    }
-
-    .image-preview {
-        width: 170px;
-        height: 170px;
-        object-fit: cover;
-        border-radius: 10px;
-        border: 1px solid var(--medium-gray);
-        transition: transform 0.3s ease;
-    }
-
-        .image-preview:hover {
-            transform: scale(1.03);
-        }
-
-    .no-image {
-        width: 170px;
-        height: 170px;
-        background: var(--light-gray);
-        border-radius: 10px;
-        display: grid;
-        place-items: center;
-        color: #777;
-        border: 2px dashed var(--medium-gray);
-    }
-
-    .file-input {
-        display: none;
-    }
-
-    .file-label {
-        background: var(--light-gray);
-        padding: .7rem 1.2rem;
-        border-radius: 8px;
+    /* Imágenes */
+    .image-upload-area {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius-sm);
+        background: #f8fafc;
+        padding: 32px 20px;
+        text-align: center;
+        transition: var(--transition);
         cursor: pointer;
-        display: inline-flex;
-        gap: .5rem;
-        align-items: center;
-        font-weight: 500;
-        transition: all 0.2s ease;
-        border: 1px solid transparent;
+        position: relative
     }
 
-        .file-label:hover {
-            background: var(--medium-gray);
-            border-color: var(--accent-purple);
+        .image-upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(124,58,237,.02)
         }
 
-    .error-msg {
-        color: var(--danger);
-        font-size: .85rem;
-        display: none;
-        margin-top: 0.5rem;
+        .image-upload-area.drag-over {
+            border-color: var(--primary);
+            background: rgba(124,58,237,.05)
+        }
+
+        .image-upload-area i {
+            font-size: 40px;
+            color: var(--text-muted);
+            margin-bottom: 12px
+        }
+
+    .gallery-preview {
+        display: grid;
+        grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
+        gap: 16px;
+        margin-top: 16px
+    }
+
+    .image-thumbnail {
+        position: relative;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        border: 1px solid var(--border);
+        aspect-ratio: 1/1;
+        transition: var(--transition)
+    }
+
+        .image-thumbnail:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg)
+        }
+
+        .image-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block
+        }
+
+    .image-actions {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        display: flex;
+        gap: 6px;
+        opacity: 0;
+        transition: var(--transition)
+    }
+
+    .image-thumbnail:hover .image-actions {
+        opacity: 1
+    }
+
+    .image-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(255,255,255,.9);
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm)
+    }
+
+        .image-btn:hover {
+            background: var(--surface);
+            color: var(--primary);
+            transform: translateY(-1px)
+        }
+
+        .image-btn.active {
+            background: var(--primary);
+            color: #fff
+        }
+
+    .image-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 4px;
+        padding: 2px 6px;
+        font-size: 10px;
+        font-weight: 600
+    }
+    /* Variantes */
+    .toggle-section {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: var(--radius-sm)
+    }
+
+    .toggle-label {
+        font-weight: 500;
+        color: var(--text-primary)
+    }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 26px
+    }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0
+        }
+
+    .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #cbd5e1;
+        transition: var(--transition);
+        border-radius: 34px
+    }
+
+        .toggle-slider:before {
+            content: "";
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background: #fff;
+            transition: var(--transition);
+            border-radius: 50%
+        }
+
+    input:checked + .toggle-slider {
+        background: var(--primary)
+    }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px)
+        }
+
+    .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px
+    }
+
+    .tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 20px;
+        font-size: 13px;
+        color: var(--text-primary);
+        transition: var(--transition)
+    }
+
+    .tag-remove {
+        border: none;
+        background: none;
+        color: var(--text-muted);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        transition: var(--transition)
+    }
+
+        .tag-remove:hover {
+            background: var(--error);
+            color: #fff
+        }
+
+    .variants-table-container {
+        overflow-x: auto;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        margin-top: 16px;
+        max-height: 400px;
+        overflow-y: auto
+    }
+
+    .variants-table {
+        width: 100%;
+        border-collapse: collapse
+    }
+
+        .variants-table th {
+            background: #f8fafc;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 13px;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0
+        }
+
+        .variants-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px
+        }
+
+        .variants-table tr:last-child td {
+            border-bottom: none
+        }
+
+        .variants-table tr:hover td {
+            background: rgba(124,58,237,.02)
+        }
+
+    .variant-actions {
+        display: flex;
+        gap: 8px
+    }
+
+    .variant-input {
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 6px 8px;
+        font-size: 13px;
+        width: 100%;
+        transition: var(--transition)
+    }
+
+        .variant-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(124,58,237,.1)
+        }
+
+        .variant-input.error {
+            border-color: var(--error)
+        }
+
+    .price-rules {
+        background: #f8fafc;
+        border-radius: var(--radius-sm);
+        padding: 16px;
+        margin-bottom: 16px
+    }
+
+    .price-rule {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding: 12px;
+        background: #fff;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border)
+    }
+
+        .price-rule:last-child {
+            margin-bottom: 0
+        }
+
+    .price-rule-input {
+        width: 120px !important
+    }
+
+    .form-sidebar {
+        position: sticky;
+        top: 24px;
+        height: fit-content
+    }
+
+    .action-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 20px;
+        margin-bottom: 24px
+    }
+
+    .action-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: var(--text-primary)
+    }
+
+    .form-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px
     }
 
     .btn {
-        appearance: none;
-        border: none;
-        cursor: pointer;
-        font-weight: 700;
-        border-radius: 999px;
-        padding: .9rem 1.5rem;
         display: inline-flex;
         align-items: center;
-        gap: .5rem;
-        transition: transform .15s ease, box-shadow .15s ease, background .2s ease, color .2s ease;
-        font-family: 'Montserrat', sans-serif;
-        font-size: 1rem;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+        text-decoration: none
     }
 
     .btn-primary {
-        background: linear-gradient(135deg, var(--accent-purple), var(--light-purple));
-        color: #fff;
+        background: var(--primary);
+        color: #fff
     }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 22px rgba(75,0,130,.3);
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow)
         }
 
     .btn-secondary {
-        background: #fff;
-        color: var(--accent-purple);
-        border: 1px solid rgba(75,0,130,.3);
+        background: #f1f5f9;
+        color: var(--text-primary);
+        border: 1px solid var(--border)
     }
 
         .btn-secondary:hover {
-            background: rgba(75,0,130,.06);
-            transform: translateY(-1px);
+            background: #e2e8f0
         }
 
+    .btn-success {
+        background: var(--success);
+        color: #fff
+    }
+
+        .btn-success:hover {
+            background: #059669
+        }
+
+    .btn:disabled {
+        opacity: .6;
+        cursor: not-allowed;
+        transform: none !important
+    }
+
     .alert {
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        margin: 1rem 0;
+        padding: 12px 16px;
+        border-radius: var(--radius-sm);
+        margin-bottom: 20px;
         display: flex;
-        gap: .6rem;
         align-items: center;
-        font-weight: 500;
-        animation: fadeIn 0.5s ease;
-    }
-
-    @@keyframes fadeIn {
-        from
-
-    {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
+        gap: 8px
     }
 
     .alert-success {
-        background: rgba(40,167,69,.1);
-        color: var(--ok);
-        border: 1px solid rgba(40,167,69,.25);
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        color: #065f46
     }
 
-    .alert-danger {
-        background: rgba(220,53,69,.1);
-        color: var(--danger);
-        border: 1px solid rgba(220,53,69,.25);
+    .alert-error {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b
     }
 
-    .form-footer {
+    .summary-item {
         display: flex;
-        gap: .8rem;
-        flex-wrap: wrap;
-        margin-top: 1.5rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--medium-gray);
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border)
     }
 
-    .tooltip {
-        position: relative;
-        display: inline-block;
+        .summary-item:last-child {
+            border-bottom: none
+        }
+    @@media (max-width:1024px) {
+        .product-form-container
+
+    {
+        grid-template-columns: 1fr
     }
 
-        .tooltip .tooltiptext {
-            visibility: hidden;
-            width: 200px;
-            background-color: var(--dark-gray);
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 8px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -100px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.85rem;
-            font-weight: normal;
-        }
+    .form-sidebar {
+        position: static
+    }
 
-        .tooltip:hover .tooltiptext {
-            visibility: visible;
-            opacity: 1;
-        }
-
-    @@media (max-width: 768px) {
+    }
+    @@media (max-width:768px) {
         .form-grid
 
     {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr
     }
 
-    .full {
-        grid-column: span 1;
-    }
-
-    .form-footer {
+    .page-header {
         flex-direction: column;
+        align-items: flex-start;
+        gap: 16px
     }
 
-    .btn {
-        width: 100%;
-        justify-content: center;
+    .toggle-section {
+        flex-direction: column;
+        align-items: flex-start
+    }
+
+    }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid transparent;
+        border-top: 2px solid currentColor;
+        border-radius: 50%;
+        animation: spin 1s linear infinite
+    }
+    @@keyframes spin {
+        0%
+
+    {
+        transform: rotate(0)
+    }
+
+    100% {
+        transform: rotate(360deg)
     }
 
     }
 </style>
 
-<div class="form-container">
-    <div class="card">
-        <div class="card-header">
-            <div class="title">
-                <i class="fas fa-box-open"></i>
-                <h2 style="margin:0">@ViewData["Title"]</h2>
-            </div>
-            <a class="back-link" asp-controller="Panel" asp-action="Productos">
-                <i class="fa-solid fa-arrow-left"></i> Volver al listado
-            </a>
+<div class="container">
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-box-open"></i>
+            <h1>@ViewData["Title"]</h1>
         </div>
+        <a class="back-btn" asp-controller="Panel" asp-action="Productos">
+            <i class="fas fa-arrow-left"></i> Volver a Productos
+        </a>
+    </div>
 
-        <div class="card-body">
-            @* Mensajes de servidor *@
-            @if (TempData["Ok"] != null)
-            {
-                <div class="alert alert-success"><i class="fa-solid fa-circle-check"></i><span>@TempData["Ok"]</span></div>
-            }
-            @if (TempData["Err"] != null)
-            {
-                <div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation"></i><span>@TempData["Err"]</span></div>
-            }
+    @if (TempData["Ok"] != null)
+    {
+        <div class="alert alert-success"><i class="fas fa-check-circle"></i>@TempData["Ok"]</div>
+    }
+    @if (TempData["Err"] != null)
+    {
+        <div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i>@TempData["Err"]</div>
+    }
 
-            <form class="form-grid" method="post"
+    <div class="product-form-container">
+        <!-- MAIN -->
+        <div class="form-main">
+            <form method="post"
                   asp-controller="Panel"
                   asp-action="@(producto != null ? "EditarProducto" : "AnadirProducto")"
-                  enctype="multipart/form-data" id="productoForm" novalidate>
-                @Html.AntiForgeryToken()
+                  enctype="multipart/form-data"
+                  id="productoForm"
+                  novalidate
+                  onsubmit="return validateForm()">
 
+                @Html.AntiForgeryToken()
                 @if (producto != null)
                 {
-                    <input type="hidden" name="productoID" value="@producto.ProductoID" />
+                    <input type="hidden" name="ProductoID" value="@producto.ProductoID" />
                 }
 
-                <!-- Nombre -->
-                <div class="form-group">
-                    <label for="Nombre" class="form-label required">Nombre</label>
-                    <input type="text" name="nombreProducto" id="Nombre" class="form-input"
-                           placeholder="Nombre del producto" maxlength="120" required
-                           value="@(producto?.Nombre ?? "")" />
-                </div>
-
-                <!-- Descripción -->
-                <div class="form-group full">
-                    <label for="Descripcion" class="form-label required">Descripción</label>
-                    <textarea name="descripcion" id="Descripcion" class="form-textarea" rows="4" required
-                              placeholder="Describe las características principales del producto">@(producto?.Descripcion ?? "")</textarea>
-                </div>
-
-                <!-- Talla -->
-                <div class="form-group">
-                    <label for="Talla" class="form-label required">Talla</label>
-                    <input type="text" name="talla" id="Talla" class="form-input"
-                           placeholder="Ej. S, M, L, 38, XL…" maxlength="40" required
-                           value="@(producto?.Talla ?? "")" />
-                </div>
-
-                <!-- Color -->
-                <div class="form-group">
-                    <label for="Color" class="form-label required">Color</label>
-                    <input type="text" name="color" id="Color" class="form-input"
-                           placeholder="Color del producto" maxlength="40" required
-                           value="@(producto?.Color ?? "")" />
-                </div>
-
-                <!-- Marca -->
-                <div class="form-group">
-                    <label for="Marca" class="form-label required">Marca</label>
-                    <input type="text" name="marca" id="Marca" class="form-input"
-                           placeholder="Marca del producto" maxlength="80" required
-                           value="@(producto?.Marca ?? "")" />
-                </div>
-
-                <!-- Precio Compra -->
-                <div class="form-group">
-                    <label for="PrecioCompra" class="form-label required">Precio de Compra</label>
-                    <input type="number" name="precioCompra" id="PrecioCompra" class="form-input"
-                           placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true" required
-                           value="@(producto != null ? producto.PrecioCompra.ToString("0.##", CultureInfo.InvariantCulture) : "")" />
-                </div>
-
-                <!-- Precio Venta -->
-                <div class="form-group">
-                    <label for="PrecioVenta" class="form-label required">Precio de Venta</label>
-                    <input type="number" name="precioVenta" id="PrecioVenta" class="form-input"
-                           placeholder="0.00" step="0.01" min="0" inputmode="decimal" data-decimal="true" required
-                           value="@(producto != null ? producto.PrecioVenta.ToString("0.##", CultureInfo.InvariantCulture) : "")" />
-                    <div class="price-info">
-                        <div class="price-row">
-                            <span class="price-label">Precio con 15% extra:</span>
-                            <span class="price-value" id="precioCon15">$0.00</span>
-                        </div>
-                        <div class="price-row">
-                            <span class="price-label">Ganancia adicional:</span>
-                            <span class="price-value profit" id="ganancia15">$0.00</span>
-                        </div>
+                <!-- Información Básica -->
+                <div class="form-section" aria-labelledby="sec-basic">
+                    <div class="section-header">
+                        <h2 class="section-title" id="sec-basic"><i class="fas fa-info-circle"></i>Información Básica</h2>
+                        <span class="section-badge" id="productTypeBadge">@(hasVariantesInit ? "Con Variantes" : "Producto Simple")</span>
                     </div>
-                </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="form-label required" for="NombreProducto">Nombre del Producto</label>
+                                <input class="form-input" id="NombreProducto" name="NombreProducto" maxlength="120" required
+                                       value="@(producto?.Nombre ?? "")" data-validation="required" />
+                                <div class="form-error" id="NombreProductoError">El nombre del producto es requerido</div>
+                            </div>
 
-                <!-- Categoría -->
-                <div class="form-group">
-                    <label for="Categoria" class="form-label required">Categoría</label>
-                    <select name="categoriaID" id="Categoria" class="form-select" required>
-                        <option value="">Seleccione una categoría</option>
-                        @foreach (var c in categorias)
-                        {
-                            <option value="@c.CategoriaID" selected="@(producto != null && producto.CategoriaID == c.CategoriaID)">
-                                @c.Nombre
-                            </option>
-                        }
-                    </select>
-                </div>
+                            <div class="form-group">
+                                <label class="form-label required" for="Marca">Marca</label>
+                                <input class="form-input" id="Marca" name="Marca" maxlength="80" required
+                                       value="@(producto?.Marca ?? "")" data-validation="required" />
+                                <div class="form-error" id="MarcaError">La marca es requerida</div>
+                            </div>
 
-                <!-- Subcategoría (se llena según categoría) -->
-                <div class="form-group">
-                    <label for="Subcategoria" class="form-label required">Subcategoría</label>
-                    <select name="subcategoriaID" id="Subcategoria" class="form-select" required disabled>
-                        <option value="">Seleccione una subcategoría</option>
-                    </select>
-                </div>
+                            <div class="form-group">
+                                <label class="form-label required" for="CategoriaID">Categoría</label>
+                                <select class="form-select" id="CategoriaID" name="CategoriaID" required data-validation="required">
+                                    <option value="">Seleccione una categoría</option>
+                                    @foreach (var c in categorias)
+                                    {
+                                        <option value="@c.CategoriaID" selected="@(producto?.CategoriaID == c.CategoriaID ? "selected" : null)">@c.Nombre</option>
+                                    }
+                                </select>
+                                <div class="form-error" id="CategoriaIDError">La categoría es requerida</div>
+                            </div>
 
-                <!-- Proveedor -->
-                <div class="form-group">
-                    <label for="Proveedor" class="form-label required">Proveedor</label>
-                    <select name="proveedorID" id="Proveedor" class="form-select" required>
-                        <option value="">Seleccione un proveedor</option>
-                        @foreach (var p in proveedores)
-                        {
-                            <option value="@p.ProveedorID" selected="@(producto != null && producto.ProveedorID == p.ProveedorID)">
-                                @p.NombreProveedor
-                            </option>
-                        }
-                    </select>
-                </div>
+                            <div class="form-group">
+                                <label class="form-label required" for="SubcategoriaID">Subcategoría</label>
+                                <select class="form-select" id="SubcategoriaID" name="SubcategoriaID" required data-validation="required">
+                                    <option value="">Seleccione una subcategoría</option>
+                                    @if (producto != null)
+                                    {
+                                        foreach (var s in subcatsSrc.Where(x => x.CategoriaID == producto.CategoriaID))
+                                        {
+                                            <option value="@s.SubcategoriaID" selected="@(producto.SubcategoriaID == s.SubcategoriaID ? "selected" : null)">@s.NombreSubcategoria</option>
+                                        }
+                                    }
+                                </select>
+                                <div class="form-note" id="subcategoriaNote">Seleccione primero una categoría</div>
+                                <div class="form-error" id="SubcategoriaIDError">La subcategoría es requerida</div>
+                            </div>
 
-                <!-- Stock -->
-                <div class="form-group">
-                    <label for="Stock" class="form-label required">Stock</label>
-                    <input type="number" name="stock" id="Stock" class="form-input" min="0" step="1" placeholder="0" required
-                           value="@(producto != null ? producto.Stock.ToString(CultureInfo.InvariantCulture) : "")" />
-                </div>
+                            <div class="form-group">
+                                <label class="form-label required" for="ProveedorID">Proveedor</label>
+                                <select class="form-select" id="ProveedorID" name="ProveedorID" required data-validation="required">
+                                    <option value="">Seleccione un proveedor</option>
+                                    @foreach (var p in proveedores)
+                                    {
+                                        <option value="@p.ProveedorID" selected="@(producto?.ProveedorID == p.ProveedorID ? "selected" : null)">@p.NombreProveedor</option>
+                                    }
+                                </select>
+                                <div class="form-error" id="ProveedorIDError">El proveedor es requerido</div>
+                            </div>
 
-                <!-- Imagen -->
-                <div class="form-group full">
-                    <label class="form-label">Imagen del Producto</label>
-                    <div class="image-upload">
-                        <div class="image-preview-container">
-                            @if (!string.IsNullOrWhiteSpace(producto?.ImagenPath))
-                            {
-                                <img src="@producto.ImagenPath" alt="Imagen actual" class="image-preview" id="imagePreview" />
-                                <input type="hidden" name="existingImagenPath" value="@producto.ImagenPath" />
-                            }
-                            else
-                            {
-                                <div class="no-image" id="imagePreview">
-                                    <i class="fas fa-image fa-2x"></i>
-                                    <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem;">No hay imagen seleccionada</p>
+                            <div class="form-group">
+                                <label class="form-label required" for="PrecioCompra">Precio de Compra</label>
+                                <input class="form-input" id="PrecioCompra" name="PrecioCompra" type="number" step="0.01" min="0.01" required
+                                       value="@(producto != null ? producto.PrecioCompra.ToString("0.00", CultureInfo.InvariantCulture) : "")"
+                                       inputmode="decimal" data-validation="required,number,min:0.01" />
+                                <div class="form-error" id="PrecioCompraError">El precio de compra debe ser mayor a 0</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label required" for="PrecioVenta">Precio de Venta</label>
+                                <input class="form-input" id="PrecioVenta" name="PrecioVenta" type="number" step="0.01" min="0.01" required
+                                       value="@(producto != null ? producto.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture) : "")"
+                                       inputmode="decimal" data-validation="required,number,min:0.01" />
+                                <div class="form-note" id="pvMargin" aria-live="polite"></div>
+                                <div class="form-error" id="PrecioVentaError">El precio de venta debe ser mayor a 0</div>
+                            </div>
+
+                            <div class="form-group base-only">
+                                <label class="form-label" for="Color">Color</label>
+                                <input class="form-input" id="Color" name="Color" maxlength="40" value="@(producto?.Color ?? "")" />
+                            </div>
+
+                            <div class="form-group base-only">
+                                <label class="form-label" for="Talla">Talla</label>
+                                <input class="form-input" id="Talla" name="Talla" maxlength="40" value="@(producto?.Talla ?? "")" />
+                            </div>
+
+                            <div class="form-group base-only">
+                                <label class="form-label required" for="Stock">Stock</label>
+                                <input class="form-input" id="Stock" name="Stock" type="number" min="0" step="1" required
+                                       value="@(producto?.Stock ?? 0)" data-validation="required,number,min:0" />
+                                <div class="form-error" id="StockError">El stock debe ser 0 o mayor</div>
+                            </div>
+
+                            <div class="form-group form-grid-full">
+                                <label class="form-label required" for="Descripcion">Descripción</label>
+                                <textarea class="form-textarea" id="Descripcion" name="Descripcion" maxlength="500" required
+                                          data-validation="required">@((producto?.Descripcion ?? ""))</textarea>
+                                <div class="form-error" id="DescripcionError">La descripción es requerida</div>
+                                <div class="form-note" style="text-align:right;">
+                                    <span id="charCount">@((producto?.Descripcion?.Length ?? 0))</span>/500 caracteres
                                 </div>
-                            }
-
-                            <div>
-                                <input type="file" name="imagen" id="Imagen" class="file-input" accept="image/*">
-                                <label for="Imagen" class="file-label">
-                                    <i class="fas fa-camera"></i>
-                                    @(producto != null ? "Cambiar imagen" : "Seleccionar imagen")
-                                </label>
-                                <small class="error-msg" id="error-msg">El archivo debe ser imagen y pesar ≤ 2 MB.</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Acciones -->
-                <div class="form-footer full">
-                    <button type="submit" class="btn btn-primary" id="submitBtn">
-                        <i class="fas @(producto != null ? "fa-save" : "fa-plus")"></i>
-                        @(producto != null ? "Guardar Cambios" : "Añadir Producto")
+                <!-- Imágenes -->
+                <div class="form-section" aria-labelledby="sec-images">
+                    <div class="section-header">
+                        <h2 class="section-title" id="sec-images"><i class="fas fa-images"></i>Imágenes del Producto</h2>
+                        <span class="section-badge" id="imageCountBadge">@imgCountInit/8 imágenes</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="image-upload-area" id="imageUploadArea" tabindex="0">
+                            <i class="fas fa-cloud-arrow-up"></i>
+                            <p>Arrastra y suelta las imágenes aquí</p>
+                            <span>o haz clic para seleccionar archivos</span>
+
+                            <input type="file" id="Imagenes" name="Imagenes" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none" />
+                            <input type="file" id="ImagenLegacy" name="Imagen" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" />
+
+                            <input type="hidden" id="ImagenPrincipalIndex" name="ImagenPrincipalIndex" value="0" />
+                            <input type="hidden" id="ExistingImagenPath" name="ExistingImagenPath" value="@(ViewBag.Portada ?? producto?.ImagenPath ?? "")" />
+                            <input type="hidden" id="ImagenesIgnore" name="ImagenesIgnore" />
+                        </div>
+
+                        <div id="galeria" class="gallery-preview" aria-live="polite">
+                            @if (galListTop != null && galListTop.Any())
+                            {
+                                var portada = ViewBag.Portada as string ?? producto?.ImagenPath ?? "";
+                                foreach (var url in galListTop)
+                                {
+                                    var isCover = string.Equals(portada, url, StringComparison.OrdinalIgnoreCase);
+                                    <div class="image-thumbnail" data-existing="1" data-url="@url">
+                                        @if (isCover)
+                                        {
+                                            <span class="image-badge">Principal</span>
+                                        }
+                                        <img src="@url" alt="Imagen del producto" loading="lazy" />
+                                        <div class="image-actions">
+                                            <button type="button" class="image-btn @(isCover ? "active" : "")" onclick="markExistingCover(this, '@url')" title="Marcar como principal"><i class="fas fa-star"></i></button>
+                                            <button type="button" class="image-btn" onclick="flagExistingRemoval(this, '@url')" title="Eliminar imagen"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else if (!string.IsNullOrWhiteSpace(producto?.ImagenPath))
+                            {
+                                <div class="image-thumbnail" data-existing="1" data-url="@producto.ImagenPath">
+                                    <span class="image-badge">Principal</span>
+                                    <img src="@producto.ImagenPath" alt="Imagen actual del producto" loading="lazy" />
+                                    <div class="image-actions">
+                                        <button type="button" class="image-btn active" onclick="markExistingCover(this, '@producto.ImagenPath')" title="Marcar como principal"><i class="fas fa-star"></i></button>
+                                        <button type="button" class="image-btn" onclick="flagExistingRemoval(this, '@producto.ImagenPath')" title="Eliminar imagen"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Variantes -->
+                @{
+                    decimal minVarPrice = 0m, maxVarPrice = 0m;
+                    if (hasVariantesInit && variantesInit.Any())
+                    {
+                        minVarPrice = variantesInit.Min(v => (v.PrecioVenta ?? 0m));
+                        maxVarPrice = variantesInit.Max(v => (v.PrecioVenta ?? 0m));
+                    }
+                }
+                <div class="form-section" aria-labelledby="sec-variants">
+                    <div class="section-header">
+                        <h2 class="section-title" id="sec-variants"><i class="fas fa-layer-group"></i>Variantes del Producto</h2>
+                        <span class="section-badge" id="variantCountBadge">@(hasVariantesInit? variantesInit.Count + " variantes" : "0 variantes")</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="toggle-section">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="chkVariantes" @(hasVariantesInit ? "checked" : "") />
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span class="toggle-label">Activar variantes (Color × Talla)</span>
+                            <span class="form-note">Con variantes, ingresa el <strong>precio final</strong> por combinación.</span>
+                        </div>
+
+                        <div id="boxVariantes" style="display:@(hasVariantesInit ? "block" : "none");">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="inpColores">Colores</label>
+                                    <input class="form-input" id="inpColores" placeholder="Negro, Vino, Marrón" />
+                                    <div class="tags-container" id="tagsColores">
+                                        @if (hasVariantesInit)
+                                        {
+                                            foreach (var color in variantesInit.Select(v => v.Color).Distinct())
+                                            {
+                                                <span class="tag">
+                                                    @color
+                                                    <button type="button" class="tag-remove" onclick="removeTag(this, 'color')"><i class="fas fa-times"></i></button>
+                                                    <input type="hidden" name="Colores" value="@color" />
+                                                </span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="inpTallas">Tallas</label>
+                                    <input class="form-input" id="inpTallas" placeholder="S, M, L, XL" />
+                                    <div class="tags-container" id="tagsTallas">
+                                        @if (hasVariantesInit)
+                                        {
+                                            foreach (var talla in variantesInit.Select(v => v.Talla).Distinct())
+                                            {
+                                                <span class="tag">
+                                                    @talla
+                                                    <button type="button" class="tag-remove" onclick="removeTag(this, 'talla')"><i class="fas fa-times"></i></button>
+                                                    <input type="hidden" name="Tallas" value="@talla" />
+                                                </span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="price-rules">
+                                <div class="price-rule">
+                                    <label class="toggle-switch"><input type="checkbox" id="chkPrecioGlobal" /><span class="toggle-slider"></span></label>
+                                    <span class="toggle-label">Un solo precio para todas</span>
+                                    <div style="display:flex;gap:8px;align-items:center">
+                                        <input class="form-input price-rule-input" id="inpPrecioGlobal" type="number" step="0.01" min="0" placeholder="0.00" disabled />
+                                        <button type="button" class="btn btn-success" id="btnApplyGlobal" disabled>Aplicar</button>
+                                    </div>
+                                </div>
+
+                                <div class="price-rule">
+                                    <label class="toggle-switch"><input type="checkbox" id="chkPrecioPorTalla" /><span class="toggle-slider"></span></label>
+                                    <span class="toggle-label">Mismo precio por talla</span>
+                                </div>
+                                <div id="boxPrecioPorTalla" style="display:none;margin-top:8px;"></div>
+                            </div>
+
+                            <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+                                <button type="button" class="btn btn-primary" id="btnGen"><i class="fas fa-table"></i> Generar combinaciones</button>
+                                <button type="button" class="btn btn-secondary" id="btnClearVars" title="Limpiar"><i class="fas fa-eraser"></i> Limpiar</button>
+                            </div>
+
+                            <div class="variants-table-container">
+                                <table class="variants-table" id="tblVars" aria-live="polite">
+                                    <thead>
+                                        <tr>
+                                            <th>Color</th>
+                                            <th>Talla</th>
+                                            <th>Precio</th>
+                                            <th>Stock</th>
+                                            <th>Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (hasVariantesInit)
+                                        {
+                                            var i = 0;
+                                            foreach (var variante in variantesInit)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <input type="hidden" name="Variantes[@i].Color" value="@variante.Color" />
+                                                        <span>@variante.Color</span>
+                                                    </td>
+                                                    <td>
+                                                        <input type="hidden" name="Variantes[@i].Talla" value="@variante.Talla" />
+                                                        <span>@variante.Talla</span>
+                                                    </td>
+                                                    <td>
+                                                        <input class="variant-input" name="Variantes[@i].Precio" type="number" step="0.01" min="0.01"
+                                                               value="@((variante.PrecioVenta ?? 0m).ToString("0.00", CultureInfo.InvariantCulture))" required />
+                                                    </td>
+                                                    <td>
+                                                        <input class="variant-input" name="Variantes[@i].Stock" type="number" step="1" min="0" value="@variante.Stock" required />
+                                                    </td>
+                                                    <td>
+                                                        <div class="variant-actions">
+                                                            <button type="button" class="image-btn" title="Eliminar" onclick="removeVariant(this)"><i class="fas fa-trash"></i></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                i++;
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                                <div class="form-note" id="noteVars" style="padding:16px;text-align:center;@(hasVariantesInit ? "display:none" : "")">No hay variantes generadas.</div>
+                            </div>
+
+                            <div id="variantSummary" style="display:@(hasVariantesInit ? "block" : "none");margin-top:16px;padding:16px;background:#f8fafc;border-radius:12px;">
+                                <h4 style="margin-bottom:12px;font-size:14px;font-weight:600;">Resumen de Variantes</h4>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+                                    <div class="summary-item"><span>Total de combinaciones:</span><span class="summary-value" id="summaryTotal">@(hasVariantesInit? variantesInit.Count: 0)</span></div>
+                                    <div class="summary-item"><span>Stock total:</span><span class="summary-value" id="summaryStock">@(hasVariantesInit? variantesInit.Sum(v => v.Stock) : 0)</span></div>
+                                    <div class="summary-item"><span>Precio mínimo:</span><span class="summary-value" id="summaryMinPrice">@minVarPrice.ToString("C2", culture)</span></div>
+                                    <div class="summary-item"><span>Precio máximo:</span><span class="summary-value" id="summaryMaxPrice">@maxVarPrice.ToString("C2", culture)</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="form-sidebar">
+            <div class="action-card">
+                <h3 class="action-title">Acciones</h3>
+                <div class="form-actions">
+                    <button class="btn btn-primary" id="btnSubmit" type="submit" form="productoForm">
+                        <i class="fas fa-floppy-disk"></i>Guardar Producto
                     </button>
                     <a asp-controller="Panel" asp-action="Productos" class="btn btn-secondary">
-                        <i class="fa-solid fa-arrow-left"></i> Cancelar
+                        <i class="fas fa-times"></i>Cancelar
                     </a>
                 </div>
-            </form>
+                <div class="form-note" style="margin-top:12px;text-align:center;">
+                    <i class="fas fa-clock"></i> <span id="lastSaved">No guardado</span>
+                </div>
+            </div>
+
+            <div class="action-card">
+                <h3 class="action-title">Vista Previa</h3>
+                <div class="form-note">
+                    <div class="summary-item"><span>Tipo:</span><span class="summary-value" id="previewType">@(hasVariantesInit ? "Con Variantes" : "Producto Simple")</span></div>
+                    <div class="summary-item"><span>Stock total:</span><span class="summary-value" id="previewStock">@(producto?.Stock ?? 0) unidades</span></div>
+                    <div class="summary-item"><span>Precio final:</span><span class="summary-value" id="previewPrice">@((producto?.PrecioVenta ?? 0m).ToString("C2", culture))</span></div>
+                    <div class="summary-item"><span>Margen:</span><span class="summary-value" id="previewMargin">@(((producto?.PrecioVenta ?? 0m) - (producto?.PrecioCompra ?? 0m)).ToString("C2", culture))</span></div>
+                    <div class="summary-item"><span>Imágenes:</span><span class="summary-value" id="previewImages">@imgCountInit</span></div>
+                </div>
+            </div>
+
+            <div class="action-card" id="validationCard" style="display:none;">
+                <h3 class="action-title" style="color:var(--error);"><i class="fas fa-exclamation-triangle"></i> Errores de Validación</h3>
+                <div class="form-note"><ul id="validationErrors" style="color:var(--error);font-size:13px;padding-left:16px;"></ul></div>
+            </div>
         </div>
     </div>
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
     <script>
-        (function(){
-            // ---------- Datos de subcategorías (server → cliente)
-            const subsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                                                    subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
-                                    ));
+        (() => {
+            "use strict";
 
-        // ---------- Elementos clave
-        const form     = document.getElementById('productoForm');
-        const catSel   = document.getElementById('Categoria');
-        const subSel   = document.getElementById('Subcategoria');
-        const imgInput = document.getElementById('Imagen');
-        const imgPrev  = document.getElementById('imagePreview');
-        const errMsg   = document.getElementById('error-msg');
-        const submit   = document.getElementById('submitBtn');
-        const precioVentaInput = document.getElementById('PrecioVenta');
-        const precioCon15Span = document.getElementById('precioCon15');
-        const ganancia15Span = document.getElementById('ganancia15');
+            // ---------- Helpers ----------
+            const $  = (id) => document.getElementById(id);
+            const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-            // ---------- Cálculo del 15% extra
-            function calcular15Porciento() {
-                const precioVenta = parseFloat(precioVentaInput.value) || 0;
-                const ganancia = precioVenta * 0.15;
-                const precioCon15 = precioVenta + ganancia;
+            // Convierte "15,00" o "15" a número real
+            const toNum = (x) => {
+                const s = (x ?? "").toString()
+                    .replace(/\s+/g, "")
+                    .replace(/\.(?=\d{3}(?:\D|$))/g, "")  // quita separadores de miles con punto
+                    .replace(/,(?=\d{1,2}(?:\D|$))/g, "."); // coma decimal -> punto
+                const n = parseFloat(s);
+                return Number.isFinite(n) ? n : 0;
+            };
+            const toEs = n => (Number.isFinite(n) ? n : 0)
+                .toLocaleString('es-EC', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }); // FIX: render uniforme
+            const fmtUSD  = (n) => new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2}).format(n||0);
+            const debounce= (fn, ms=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms);} };
+            const toast   = (t,k="info",ms=3600)=>{
+                const bg = {info:"linear-gradient(135deg,var(--primary),var(--primary-light))",
+                            success:"linear-gradient(135deg,var(--success),#34d399)",
+                            warning:"linear-gradient(135deg,var(--warning),#fbbf24)",
+                            error:"linear-gradient(135deg,var(--error),#f87171)"}[k];
+                Toastify({text:t,duration:ms,gravity:"top",position:"right",stopOnFocus:true,style:{background:bg}}).showToast();
+            };
 
-                precioCon15Span.textContent = '$' + precioCon15.toFixed(2);
-                ganancia15Span.textContent = '$' + ganancia.toFixed(2);
-            }
+            const STATE = {
+                hasVariants: @(hasVariantesInit ? "true" : "false"),
+                isSubmitting: false,
+                validationErrors: [],
+                objectUrls: new Set(),
+                initialCatId: @(producto != null ? producto.CategoriaID : 0),
+                initialSubId: @(producto != null ? producto.SubcategoriaID : 0),
+                subcategorias: @Html.Raw(JsonSerializer.Serialize(
+                                    subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
+                            ))
+        };
 
-            // Ejecutar al cargar y cuando cambie el precio
-            calcular15Porciento();
-            precioVentaInput.addEventListener('input', calcular15Porciento);
-
-            // ---------- Rellena subcategorías por categoría seleccionada
-            function fillSubcats(catId, currentSubId){
-                subSel.innerHTML = '<option value="">Seleccione una subcategoría</option>';
-                subSel.disabled = true;
-
-                if(!catId){ return; }
-
-                const list = (subsData || []).filter(s => s.CategoriaID == catId);
-                if(list.length === 0){
-                    const opt = document.createElement('option');
-                    opt.value = '';
-                    opt.textContent = 'No hay subcategorías disponibles';
-                    subSel.appendChild(opt);
-                    return;
-                }
-
-                list.forEach(s => {
-                    const opt = document.createElement('option');
-                    opt.value = s.SubcategoriaID;
-                    opt.textContent = s.NombreSubcategoria;
-                    if(currentSubId && s.SubcategoriaID == currentSubId) opt.selected = true;
-                    subSel.appendChild(opt);
-                });
-                subSel.disabled = false;
-            }
-
-            // Al cargar: si hay categoría seleccionada (modo edición), prellenar
-            const initialCat = parseInt(catSel?.value || '0', 10);
-            const currentSubId = @((producto != null) ? producto.SubcategoriaID : 0);
-            if(initialCat) fillSubcats(initialCat, currentSubId);
-
-            catSel?.addEventListener('change', e => {
-                const catId = parseInt(e.target.value || '0', 10);
-                fillSubcats(catId, 0);
+            document.addEventListener("DOMContentLoaded", () => {
+                initializeForm();
+                setupEventListeners();
+                updatePreview();
             });
 
-            // ---------- Imagen: validación y previsualización
-            const MAX = 2 * 1024 * 1024; // 2MB
-            imgInput?.addEventListener('change', function(){
-                const file = this.files?.[0];
-                if(!file) return;
-                errMsg.style.display = 'none';
+            function initializeForm(){
+                initializeSubcategories();
+                initializePricing();
+                initializeImages();
+                initializeVariants();
+                initializeValidation();
+                hookFormSubmit();
+            }
 
-                if(!file.type.startsWith('image/')){
-                    errMsg.textContent = 'El archivo debe ser una imagen.';
-                    errMsg.style.display = 'block';
-                    this.value = '';
-                    return;
-                }
-                if(file.size > MAX){
-                    errMsg.textContent = 'El archivo debe pesar ≤ 2 MB.';
-                    errMsg.style.display = 'block';
-                    this.value = '';
-                    return;
+            // ---------- Subcategorías ----------
+            function initializeSubcategories(){
+                const selCat=$("CategoriaID"), selSub=$("SubcategoriaID");
+                if(!selCat||!selSub) return;
+
+                const fillSubs=(catId)=>{
+                    selSub.innerHTML='<option value="">Seleccione una subcategoría</option>';
+                    const note=$("subcategoriaNote");
+                    if(!catId){ selSub.disabled=true; if(note) note.style.display="block"; return; }
+                    const list = STATE.subcategorias.filter(x=>x.CategoriaID==catId);
+                    for(const s of list){
+                        const o=document.createElement("option");
+                        o.value=s.SubcategoriaID; o.textContent=s.NombreSubcategoria;
+                        selSub.appendChild(o);
+                    }
+                    selSub.disabled = list.length===0;
+                    if(note) note.style.display = list.length===0 ? "block":"none";
+                    if(!list.length) toast("No hay subcategorías para esta categoría","warning");
+                };
+
+                const currentCat = parseInt(selCat.value||"0",10);
+                if(currentCat){
+                    fillSubs(currentCat);
+                    if (STATE.initialSubId) selSub.value = String(STATE.initialSubId);
                 }
 
-                const reader = new FileReader();
-                reader.onload = e => {
-                    if(imgPrev.tagName === 'IMG'){
-                        imgPrev.src = e.target.result;
+                selCat.addEventListener("change", e=>{
+                    const newCatId = parseInt(e.target.value||"0",10);
+                    fillSubs(newCatId);
+
+                    // si la subcategoría anterior existe bajo la nueva categoría, consérvala
+                    const keep = Array.from(selSub.options).some(o=>o.value===String(STATE.initialSubId));
+                    selSub.value = keep ? String(STATE.initialSubId) : "";
+                    validateField(selCat);
+                });
+                selSub.addEventListener("change", ()=>validateField(selSub));
+            }
+
+            // ---------- Precios ----------
+            function initializePricing(){
+                const pc=$("PrecioCompra"), pv=$("PrecioVenta"), pvMargin=$("pvMargin");
+                if(!pc||!pv||!pvMargin) return;
+
+                const refresh=()=>{
+                    const a=toNum(pc.value), b=toNum(pv.value);
+                    if(!STATE.hasVariants){
+                        const ok=b>a;
+                        pvMargin.textContent = `Margen vs compra: ${fmtUSD(b-a)} ${ok?"":"(insuficiente)"}`;
+                        pvMargin.style.color = ok ? "var(--text-muted)" : "var(--error)";
                     }else{
-                        const img = document.createElement('img');
-                        img.src = e.target.result;
-                        img.className = 'image-preview';
-                        img.id = 'imagePreview';
-                        imgPrev.replaceWith(img);
+                        pvMargin.textContent="Con variantes, ingresa el precio final por combinación.";
+                        pvMargin.style.color="var(--text-muted)";
+                    }
+                    updatePreview();
+                };
+
+                ["input","change","blur"].forEach(ev=>{
+                    pc.addEventListener(ev,debounce(refresh,80));
+                    pv.addEventListener(ev,debounce(refresh,80));
+                });
+
+                refresh();
+            }
+
+            // ---------- Imágenes ----------
+            function initializeImages(){
+                const MAX_FILES=8, MAX_MB=8;
+                const ALLOWED_TYPES=["image/jpeg","image/png","image/webp","image/gif"];
+                const gal=$("galeria"), uploadArea=$("imageUploadArea"), filesInput=$("Imagenes");
+                const portadaIdx=$("ImagenPrincipalIndex"), imgAlert=$("imgAlert");
+                const imageCountBadge=$("imageCountBadge"), progressBar=$("uploadProgress"), progressFill=$("progressFill");
+                if(!gal||!uploadArea||!filesInput) return;
+
+                let files=[];
+
+                const showError=(m)=>{
+                    if(imgAlert){ imgAlert.textContent=m; imgAlert.style.display="block"; setTimeout(()=>imgAlert.style.display="none",5000); }
+                };
+
+                const validateFile=(f)=>{
+                    if(!ALLOWED_TYPES.includes(f.type)){ showError("Formato no permitido. Use JPEG, PNG, WebP o GIF."); return false; }
+                    if(f.size > MAX_MB*1024*1024){ showError(`El archivo es demasiado grande. Máximo ${MAX_MB}MB.`); return false; }
+                    return true;
+                };
+
+                const updateImageCount=()=>{
+                    const existingCount = $$('#galeria .image-thumbnail[data-existing="1"]:not(.removed)').length;
+                    const newCount      = files.length;
+                    const total         = existingCount + newCount;
+                    if(imageCountBadge) imageCountBadge.textContent = `${total}/${MAX_FILES} imágenes`;
+                    const preview=$("previewImages"); if(preview) preview.textContent = total;
+                    return total;
+                };
+
+                const createImageThumbnail=(file,isNew=true)=>{
+                    const card=document.createElement("div");
+                    card.className="image-thumbnail";
+                    if(isNew) card.dataset.new="1";
+
+                    const img=document.createElement("img");
+                    const url=URL.createObjectURL(file); STATE.objectUrls.add(url);
+                    img.src=url; img.alt="Vista previa de imagen"; img.loading="lazy";
+
+                    const actions=document.createElement("div"); actions.className="image-actions";
+                    const starBtn=document.createElement("button"); starBtn.type="button"; starBtn.className="image-btn"; starBtn.title="Marcar como principal"; starBtn.innerHTML='<i class="fas fa-star"></i>';
+                    starBtn.onclick=()=>markAsCover(card,isNew);
+                    const delBtn=document.createElement("button"); delBtn.type="button"; delBtn.className="image-btn"; delBtn.title="Eliminar imagen"; delBtn.innerHTML='<i class="fas fa-trash"></i>';
+                    delBtn.onclick=()=>removeImage(card,isNew,url);
+
+                    actions.appendChild(starBtn); actions.appendChild(delBtn);
+                    card.appendChild(img); card.appendChild(actions);
+                    return card;
+                };
+
+                const markAsCover=(card,isNew)=>{
+                    $$('.image-badge').forEach(b=>b.remove());
+                    $$('.image-btn.active').forEach(b=>b.classList.remove('active'));
+
+                    const badge=document.createElement("span"); badge.className="image-badge"; badge.textContent="Principal";
+                    card.appendChild(badge);
+                    const starBtn=card.querySelector('.image-btn'); if(starBtn) starBtn.classList.add('active');
+
+                    if(isNew){
+                        // índice relativo dentro de las NUEVAS
+                        const newCards = $$('#galeria .image-thumbnail[data-new="1"]');
+                        const index = newCards.indexOf(card);
+                        if(portadaIdx) portadaIdx.value = String(index >= 0 ? index : 0);
+                        const existing = $("ExistingImagenPath"); if(existing) existing.value = "";
+                    }else{
+                        const url=card.dataset.url;
+                        const existing=$("ExistingImagenPath"); if(existing) existing.value = url || "";
+                        if(portadaIdx) portadaIdx.value = "-1";
                     }
                 };
-                reader.readAsDataURL(file);
-            });
 
-            // ---------- Validación en tiempo real
-            const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-            inputs.forEach(input => {
-                input.addEventListener('blur', function() {
-                    if (this.value.trim() === '') {
-                        this.classList.add('invalid');
-                        this.classList.remove('valid');
-                    } else {
-                        this.classList.add('valid');
-                        this.classList.remove('invalid');
-                    }
-                });
-            });
-
-            // ---------- Normalización de decimales y doble submit
-            form?.addEventListener('submit', e => {
-                // Normaliza decimal con punto
-                form.querySelectorAll('input[type="number"][data-decimal="true"]').forEach(i => {
-                    if(i.value) i.value = i.value.replace(',', '.');
-                });
-
-                // Validación mínima cliente
-                if(!form.checkValidity()){
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    // Mostrar mensaje de error
-                    let emptyFields = [];
-                    inputs.forEach(input => {
-                        if (input.value.trim() === '') {
-                            input.classList.add('invalid');
-                            emptyFields.push(input.previousElementSibling.textContent.replace(' *', ''));
+                const removeImage=(card,isNew,url)=>{
+                    if(!confirm("¿Está seguro de que desea eliminar esta imagen?")) return;
+                    if(isNew){
+                        const idx = $$('#galeria .image-thumbnail[data-new="1"]').indexOf(card);
+                        if(idx>=0) files.splice(idx,1);
+                        if(url){ URL.revokeObjectURL(url); STATE.objectUrls.delete(url); }
+                    }else{
+                        card.classList.add('removed'); card.style.opacity="0.4";
+                        const ignore = $("ImagenesIgnore");
+                        if(ignore){
+                            let arr=[]; try{ arr=JSON.parse(ignore.value||"[]"); }catch{ arr=[]; }
+                            const u = card.dataset.url; if(u) arr.push(u);
+                            ignore.value = JSON.stringify(arr);
                         }
+                    }
+                    card.remove(); updateImageCount();
+                };
+
+                const handleFileSelection=(fileList)=>{
+                    const newFiles = Array.from(fileList).filter(validateFile);
+                    const current  = updateImageCount();
+                    const slots    = MAX_FILES - current;
+                    if(slots<=0){ showError(`Límite de ${MAX_FILES} imágenes alcanzado.`); return; }
+                    const toAdd    = newFiles.slice(0,slots);
+                    if(!toAdd.length) return;
+
+                    if(progressBar && progressFill){
+                        progressBar.style.display="block"; progressFill.style.width="0%";
+                        let p=0; const it=setInterval(()=>{ p+=Math.random()*30; if(p>=100){p=100;clearInterval(it);setTimeout(()=>progressBar.style.display="none",400);} progressFill.style.width=p+"%"; },100);
+                    }
+
+                    files.push(...toAdd);
+                    toAdd.forEach(f=>gal.appendChild(createImageThumbnail(f,true)));
+                    updateImageCount();
+
+                    const dt=new DataTransfer();
+                    files.forEach(f=>dt.items.add(f));
+                    filesInput.files=dt.files;
+                };
+
+                uploadArea.addEventListener("click",()=>filesInput.click());
+                uploadArea.addEventListener("dragover",e=>{e.preventDefault();uploadArea.classList.add("drag-over");});
+                uploadArea.addEventListener("dragleave",()=>uploadArea.classList.remove("drag-over"));
+                uploadArea.addEventListener("drop",e=>{e.preventDefault();uploadArea.classList.remove("drag-over");handleFileSelection(e.dataTransfer.files);});
+                filesInput.addEventListener("change",e=>{handleFileSelection(e.target.files); e.target.value="";});
+
+                window.addEventListener("beforeunload",(e)=>{
+                    // FIX: no mostrar diálogo si estamos enviando
+                    if (STATE.isSubmitting) return;
+                    const form=$("productoForm");
+                    if(form && form.checkValidity && !form.checkValidity()){ e.preventDefault(); e.returnValue=""; }
+                });
+
+                updateImageCount();
+            }
+
+            // Globales para imágenes existentes
+            window.markExistingCover=(btn,url)=>{
+                const card=btn.closest('.image-thumbnail'); if(!card) return;
+                $$('.image-badge').forEach(b=>b.remove());
+                $$('.image-btn.active').forEach(b=>b.classList.remove('active'));
+                const badge=document.createElement("span"); badge.className="image-badge"; badge.textContent="Principal"; card.appendChild(badge);
+                btn.classList.add('active');
+                const existing=$("ExistingImagenPath"); if(existing) existing.value=url||"";
+                const idx=$("ImagenPrincipalIndex"); if(idx) idx.value="-1";
+            };
+            window.flagExistingRemoval=(btn,url)=>{
+                const card=btn.closest('.image-thumbnail'); if(!card||!confirm("¿Eliminar esta imagen?")) return;
+                card.classList.add('removed'); card.style.opacity="0.4";
+                const ignore=$("ImagenesIgnore");
+                if(ignore){
+                    let arr=[]; try{arr=JSON.parse(ignore.value||"[]");}catch{arr=[];}
+                    arr.push(url); ignore.value=JSON.stringify(arr);
+                }
+            };
+
+            // ---------- Variantes ----------
+            function initializeVariants(){
+                const box=$("boxVariantes"), chk=$("chkVariantes");
+                if(!box||!chk) return;
+
+                const baseOnly = $$(".base-only"), badge=$("productTypeBadge");
+
+                const toggle=()=>{
+                    const on=chk.checked; STATE.hasVariants=on;
+                    box.style.display = on ? "block":"none";
+                    baseOnly.forEach(x=>x.style.display = on ? "none":"flex");
+                    if(badge) badge.textContent = on ? "Con Variantes":"Producto Simple";
+                    const pt=$("previewType"); if(pt) pt.textContent = on ? "Con Variantes":"Producto Simple";
+                    updatePreview();
+                };
+                chk.addEventListener("change",toggle);
+
+                const inpCol=$("inpColores"), inpTal=$("inpTallas");
+                const tagsCol=$("tagsColores"), tagsTal=$("tagsTallas");
+
+                const addTag=(val,cont,type)=>{
+                    if(!val.trim()) return;
+                    const t=document.createElement("span");
+                    t.className="tag";
+                    t.innerHTML = `${val.trim()}
+                        <button type="button" class="tag-remove" onclick="removeTag(this,'${type}')"><i class="fas fa-times"></i></button>
+                        <input type="hidden" name="${type==='color'?'Colores':'Tallas'}" value="${val.trim()}" />`;
+                    cont.appendChild(t);
+                };
+                const handleTag=(input,container,type)=>{
+                    if(!input||!container) return;
+                    input.addEventListener("keydown",e=>{
+                        if(e.key==="Enter"||e.key===","){ e.preventDefault(); addTag(input.value,container,type); input.value=""; updateVariantCount(); }
                     });
+                    input.addEventListener("blur",()=>{ if(input.value.trim()){ addTag(input.value,container,type); input.value=""; updateVariantCount(); } });
+                };
+                handleTag(inpCol,tagsCol,'color'); handleTag(inpTal,tagsTal,'talla');
 
-                    if (emptyFields.length > 0) {
-                        alert('Por favor, complete los siguientes campos requeridos:\n\n• ' + emptyFields.join('\n• '));
-                    }
-                    return;
+                const btnGen=$("btnGen"), btnClear=$("btnClearVars");
+                if(btnGen) btnGen.addEventListener("click",generateCombinations);
+                if(btnClear){
+                    btnClear.addEventListener("click",()=>{
+                        if(!confirm("¿Está seguro de limpiar todas las variantes?")) return;
+                        const tb=document.querySelector("#tblVars tbody"); if(tb) tb.innerHTML="";
+                        $("noteVars").style.display="block"; $("variantSummary").style.display="none";
+                        updateVariantCount();
+                    });
                 }
 
-                // Evitar doble submit
-                if(submit){
-                    submit.disabled = true;
-                    const icon = submit.querySelector('i');
-                    if(icon){
-                        icon.className = 'fa-solid fa-circle-notch fa-spin';
-                    }
-                    submit.lastChild && submit.lastChild.nodeType === 3 && (submit.lastChild.textContent = ' Guardando...');
+                // Reglas de precio
+                const chkGlobal=$("chkPrecioGlobal"), inpGlobal=$("inpPrecioGlobal"), btnApplyGlobal=$("btnApplyGlobal");
+                if(chkGlobal && inpGlobal && btnApplyGlobal){
+                    chkGlobal.addEventListener("change",()=>{ inpGlobal.disabled=!chkGlobal.checked; btnApplyGlobal.disabled=!chkGlobal.checked; });
+                    btnApplyGlobal.addEventListener("click",()=>{
+                        const price=toNum(inpGlobal.value);
+                        if(price<=0){ toast("Ingrese un precio válido para aplicar","warning"); return; }
+                        $$('input[name$=".Precio"]').forEach(i=>i.value=toEs(price)); // FIX: set 2 decimales
+                        updateVariantSummary(); toast("Precio aplicado a todas las variantes","success");
+                    });
                 }
-            });
+
+                const chkPorTalla=$("chkPrecioPorTalla"), boxPorTalla=$("boxPrecioPorTalla");
+                if(chkPorTalla && boxPorTalla){
+                    chkPorTalla.addEventListener("change",()=>{
+                        boxPorTalla.style.display = chkPorTalla.checked ? "block":"none";
+                        if(!chkPorTalla.checked) return;
+
+                        const tallas = $$('#tagsTallas .tag input').map(i=>i.value);
+                        boxPorTalla.innerHTML="";
+                        tallas.forEach(t=>{
+                            const row=document.createElement("div");
+                            row.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:8px";
+                            row.innerHTML=`<span style="min-width:80px;">${t}</span><input type="number" step="0.01" class="form-input price-rule-input" data-talla="${t}" placeholder="0.00" />`;
+                            boxPorTalla.appendChild(row);
+                        });
+                        const apply=document.createElement("button");
+                        apply.type="button"; apply.className="btn btn-success"; apply.textContent="Aplicar"; apply.style.marginTop="8px";
+                        apply.onclick=()=>{
+                            const map={}; $$("input[data-talla]").forEach(i=>{ const v=toNum(i.value); if(v>0) map[i.getAttribute("data-talla")] = v; });
+                            $$("#tblVars tbody tr").forEach(tr=>{
+                                const talla = tr.querySelector('input[name$=".Talla"]')?.value;
+                                const priceInput = tr.querySelector('input[name$=".Precio"]');
+                                if(talla && map[talla] && priceInput) priceInput.value = toEs(map[talla]); // FIX
+                            });
+                            updateVariantSummary(); toast("Precios aplicados por talla","success");
+                        };
+                        boxPorTalla.appendChild(apply);
+                    });
+                }
+
+                updateVariantCount();
+            }
+
+            window.removeTag=(btn)=>{ const tag=btn.closest('.tag'); if(tag) tag.remove(); updateVariantCount(); };
+
+            function generateCombinations(){
+                const colors=$$('#tagsColores .tag input').map(i=>i.value.trim()).filter(Boolean);
+                const sizes =$$('#tagsTallas  .tag input').map(i=>i.value.trim()).filter(Boolean);
+                const tb=document.querySelector("#tblVars tbody"); const note=$("noteVars");
+                if(!tb) return;
+                if(!colors.length||!sizes.length){ toast("Agregue al menos un color y una talla","warning"); return; }
+                tb.innerHTML="";
+                colors.forEach(color=>{
+                    sizes.forEach(size=>{
+                        const tr=document.createElement("tr");
+                        tr.innerHTML=`
+                            <td><span>${color}</span><input type="hidden" name="Variantes[0].Color" value="${color}"></td>
+                            <td><span>${size}</span><input type="hidden"  name="Variantes[0].Talla" value="${size}"></td>
+                            <td><input class="variant-input" name="Variantes[0].Precio" type="number" step="0.01" min="0.01" placeholder="0.00" required oninput="validateVariantInput(this)"></td>
+                            <td><input class="variant-input" name="Variantes[0].Stock"  type="number" step="1"   min="0"    placeholder="0"    required oninput="validateVariantInput(this)"></td>
+                            <td><div class="variant-actions"><button type="button" class="image-btn" title="Eliminar" onclick="removeVariant(this)"><i class="fas fa-trash"></i></button></div></td>`;
+                        tb.appendChild(tr);
+                    });
+                });
+                reindexVariantRows();
+                if(note) note.style.display="none";
+                $("variantSummary").style.display="block";
+                updateVariantCount(); updateVariantSummary();
+                toast(`${colors.length * sizes.length} combinaciones generadas`,"success");
+            }
+
+            function reindexVariantRows(){
+                $$("#tblVars tbody tr").forEach((tr,i)=>{
+                    const setName=(sel,prop)=>{ const el=tr.querySelector(sel); if(el) el.name=`Variantes[${i}].${prop}`; };
+                    setName('input[name$=".Color"]',"Color");
+                    setName('input[name$=".Talla"]',"Talla");
+                    setName('input[name$=".Precio"]',"Precio");
+                    setName('input[name$=".Stock"]',"Stock");
+                });
+            }
+
+            window.removeVariant=(btn)=>{
+                const tr=btn.closest('tr'); if(!tr) return;
+                if(!confirm("¿Eliminar esta variante?")) return;
+                tr.remove(); reindexVariantRows(); updateVariantCount(); updateVariantSummary();
+                if(!$("tblVars").querySelector("tbody tr")){ $("noteVars").style.display="block"; $("variantSummary").style.display="none"; }
+            };
+
+            window.validateVariantInput=(input)=>{
+                const value=toNum(input.value), min=toNum(input.getAttribute("min")||0);
+                if(value<min) input.classList.add("error"); else input.classList.remove("error");
+                updateVariantSummary();
+            };
+
+            function updateVariantCount(){
+                const count=$$("#tblVars tbody tr").length;
+                const badge=$("variantCountBadge"); if(badge) badge.textContent=`${count} variante${count!==1?'s':''}`;
+            }
+
+            function updateVariantSummary(){
+                const rows=$$("#tblVars tbody tr");
+                const summary=$("variantSummary");
+                if(!rows.length){ if(summary) summary.style.display="none"; return; }
+                let totalStock=0, minPrice=Infinity, maxPrice=0;
+                rows.forEach(row=>{
+                    const price=toNum(row.querySelector('input[name$=".Precio"]')?.value);
+                    const stock=toNum(row.querySelector('input[name$=".Stock"]')?.value);
+                    totalStock+=stock;
+                    if(price>0){ minPrice=Math.min(minPrice,price); maxPrice=Math.max(maxPrice,price); }
+                });
+                $("summaryTotal").textContent=rows.length;
+                $("summaryStock").textContent=totalStock;
+                $("summaryMinPrice").textContent=fmtUSD(minPrice===Infinity?0:minPrice);
+                $("summaryMaxPrice").textContent=fmtUSD(maxPrice);
+                summary.style.display="block";
+                const previewStock=$("previewStock"); if(previewStock) previewStock.textContent=`${totalStock} unidades`;
+            }
+
+            // ---------- Validación / Envío ----------
+            function initializeValidation(){
+                const desc=$("Descripcion"), cc=$("charCount");
+                if(cc) cc.textContent=(desc?.value??"").length;
+                if(desc && cc){
+                    desc.addEventListener("input",debounce(()=>{
+                        const len=(desc.value||"").length;
+                        cc.textContent=len; cc.style.color = len>500 ? "var(--error)":"var(--text-muted)";
+                        validateField(desc);
+                    },100));
+                }
+                $$("[data-validation]").forEach(f=>{
+                    f.addEventListener("blur",()=>validateField(f));
+                    f.addEventListener("input",()=>{ f.classList.remove("input-has-error","error"); const e=$(f.id+"Error"); if(e) e.style.display="none"; });
+                });
+            }
+
+            function validateField(field){
+                const rules=field.getAttribute("data-validation")||"";
+                const value=(field.value||"").trim(); const errorEl=$(field.id+"Error");
+                let ok=true, msg="";
+                if(rules.includes("required") && !value){ ok=false; msg=errorEl?.textContent || "Este campo es requerido"; }
+                else if(rules.includes("number") && value){
+                    const num=toNum(value);
+                    if(isNaN(num)) { ok=false; msg="Debe ser un número válido"; }
+                    else if(rules.includes("min:0.01") && num<0.01){ ok=false; msg="Debe ser mayor a 0"; }
+                    else if(rules.includes("min:0") && num<0){ ok=false; msg="Debe ser mayor o igual a 0"; }
+                }
+                if(ok){ field.classList.remove("input-has-error","error"); if(errorEl) errorEl.style.display="none"; }
+                else { field.classList.add("input-has-error","error"); if(errorEl){ errorEl.textContent=msg; errorEl.style.display="block"; } }
+                return ok;
+            }
+
+            function showValidationErrors(){
+                const card=$("validationCard"), list=$("validationErrors"); if(!card||!list) return;
+                list.innerHTML=""; STATE.validationErrors.forEach(e=>{ const li=document.createElement("li"); li.textContent=e; list.appendChild(li); });
+                card.style.display = STATE.validationErrors.length>0 ? "block":"none";
+                const first=document.querySelector(".input-has-error,.error"); if(first){ first.scrollIntoView({behavior:"smooth",block:"center"}); first.focus?.(); }
+            }
+
+            function normalizeNumbersBeforeSubmit(){ // FIX crítico: normalizar justo antes del POST
+                // Precios base
+                ['PrecioCompra','PrecioVenta'].forEach(id=>{
+                    const el=$(id);
+                    if(el && el.value) el.value = toEs(toNum(el.value)); // "15,00" -> "15.00"
+                });
+                // Variantes
+                $$('input[name^="Variantes"][name$=".Precio"]').forEach(i=>{
+                    if(i.value) i.value = toEs(toNum(i.value));
+                });
+            }
+
+            function updatePreview(){
+                const pc=toNum($("PrecioCompra")?.value), pv=toNum($("PrecioVenta")?.value);
+                const stock = STATE.hasVariants ? (toNum($("summaryStock")?.textContent||0)) : toNum($("Stock")?.value);
+                const finalPrice=pv, margin=finalPrice-pc;
+                if($("previewPrice"))  $("previewPrice").textContent = fmtUSD(finalPrice);
+                if($("previewMargin")) $("previewMargin").textContent= fmtUSD(margin);
+                if($("previewStock"))  $("previewStock").textContent = `${stock} unidades`;
+                if($("lastSaved"))     $("lastSaved").textContent    = `Editado: ${new Date().toLocaleTimeString()}`;
+            }
+
+            function validateForm(){
+                if(STATE.isSubmitting){ toast("El formulario ya se está enviando...","warning"); return false; }
+                STATE.validationErrors=[];
+
+                $$("[data-validation]").forEach(f=>{
+                    if(!validateField(f)){
+                        const label=f.previousElementSibling?.textContent?.replace('*','')?.trim() || f.name;
+                        STATE.validationErrors.push(`${label} es requerido o inválido`);
+                    }
+                });
+
+                if(!STATE.hasVariants){
+                    const pc=toNum($("PrecioCompra")?.value), pv=toNum($("PrecioVenta")?.value);
+                    if(!(pv>pc)){
+                        STATE.validationErrors.push("El precio de venta debe ser mayor al precio de compra");
+                        $("PrecioVenta")?.classList.add("input-has-error","error");
+                    }
+                }else{
+                    const rows=$$("#tblVars tbody tr");
+                    if(!rows.length){
+                        STATE.validationErrors.push("Debe agregar al menos una variante cuando las variantes están activadas");
+                    }else{
+                        let hasErr=false, pc=toNum($("PrecioCompra")?.value);
+                        rows.forEach(row=>{
+                            const p=row.querySelector('input[name$=".Precio"]');
+                            const s=row.querySelector('input[name$=".Stock"]');
+                            const price=toNum(p?.value), stock=toNum(s?.value);
+                            if(!p?.value || price<=0 || price<=pc){ p?.classList.add("error"); hasErr=true; }
+                            if(!s?.value || stock<0){ s?.classList.add("error"); hasErr=true; }
+                        });
+                        if(hasErr) STATE.validationErrors.push("Algunas variantes tienen precios o stocks inválidos (el precio debe ser > compra)");
+                    }
+                }
+
+                const imageCount = $$('#galeria .image-thumbnail:not(.removed)').length;
+                if(imageCount===0) STATE.validationErrors.push("Debe agregar al menos una imagen");
+
+                if(STATE.validationErrors.length>0){ showValidationErrors(); toast("Corrija los errores antes de enviar","error"); return false; }
+
+                // FIX: normalizar valores numéricos justo antes de enviar
+                normalizeNumbersBeforeSubmit();
+
+                STATE.isSubmitting=true;
+                const btn=$("btnSubmit"); if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner spinner"></i> Guardando...'; }
+
+                // Si no hay variantes, elimina inputs de Variantes (evita que el servidor interprete listas vacías)
+                if(!STATE.hasVariants) $$('input[name^="Variantes["]').forEach(i=>i.remove());
+
+                toast("Guardando producto...","info");
+                return true;
+            }
+
+            function hookFormSubmit(){
+                const form=$("productoForm"); if(!form) return;
+                form.addEventListener("submit",(e)=>{
+                    if(!validateForm()){
+                        e.preventDefault(); STATE.isSubmitting=false;
+                        const btn=$("btnSubmit"); if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-floppy-disk"></i> Guardar Producto'; }
+                    }
+                });
+            }
+
+            // ---------- Otros listeners ----------
+            function setupEventListeners(){
+                setInterval(()=>{ if(document.activeElement?.form===$("productoForm")){ const ls=$("lastSaved"); if(ls) ls.textContent=`Auto-guardado: ${new Date().toLocaleTimeString()}`; } },30000);
+
+                if(window.innerWidth<768){
+                    $$(".form-input,.form-select,.form-textarea").forEach(i=>{
+                        i.addEventListener("focus",function(){ this.scrollIntoView({behavior:"smooth",block:"center"}); });
+                    });
+                }
+
+                $$("#NombreProducto,#Marca,#Stock,#PrecioCompra,#PrecioVenta").forEach(i=>{
+                    i.addEventListener("input",debounce(updatePreview,200));
+                });
+            }
         })();
     </script>
 }

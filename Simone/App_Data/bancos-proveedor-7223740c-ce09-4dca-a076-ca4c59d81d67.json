@@ -8,5 +8,15 @@
     "ruc": "0987654321",
     "logoPath": "/images/Bancos/pichincha.webp",
     "activo": true
+  },
+  {
+    "codigo": "guayaquil",
+    "nombre": "Banco Guayaquil",
+    "numero": "999999999999999999",
+    "tipo": "Cuenta Corriente",
+    "titular": "ubibibi",
+    "ruc": "9898989898999",
+    "logoPath": "/images/Bancos/guayaquil.png",
+    "activo": true
   }
 ]

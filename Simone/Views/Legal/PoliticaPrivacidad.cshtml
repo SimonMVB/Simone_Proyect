@@ -1,42 +1,859 @@
 ﻿@{
-    ViewData["Title"] = "Política de Privacidad";
-    Layout = "~/Views/Shared/_Layout.cshtml"; // o tu layout general
+    ViewData["Title"] = "Politicas de privacidad";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-5 mb-5" style="max-width: 800px;">
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-header bg-primary text-white text-center rounded-top-4">
-            <h3 class="mb-0">@ViewData["Title"]</h3>
-        </div>
-        <div class="card-body p-4" style="text-align: justify; font-size: 1.05rem;">
-            <p>
-                <!-- Aquí va el contenido específico -->
-                Bienvenido a nuestra Política de Privacidad. En esta sección explicamos cómo recopilamos, usamos y protegemos los datos personales que nos proporciona al utilizar nuestro sitio web.
-            </p>
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #6c757d;
+        --accent-color: #e74c3c;
+        --light-bg: #f8f9fa;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-            <p>
-                Al acceder a nuestro sitio, usted acepta los términos descritos en esta política. Si tiene preguntas, puede contactarnos a través del correo electrónico proporcionado en nuestro Aviso Legal.
-            </p>
+    .info-container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+    }
 
-            <h5 class="mt-4">1. Datos recopilados</h5>
-            <p>
-                Podemos recopilar información como su nombre, correo electrónico, dirección IP y datos de navegación mediante formularios o cookies.
-            </p>
+    .info-header {
+        background: linear-gradient(135deg, var(--primary-color), #495057);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        text-align: center;
+        margin-bottom: 0;
+    }
 
-            <h5 class="mt-4">2. Uso de los datos</h5>
-            <p>
-                Utilizamos sus datos para mejorar la experiencia del usuario, procesar pedidos, enviar notificaciones y cumplir con nuestras obligaciones legales.
-            </p>
+        .info-header h1 {
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
 
-            <h5 class="mt-4">3. Protección de la información</h5>
-            <p>
-                Adoptamos medidas de seguridad técnicas y organizativas para proteger sus datos frente a accesos no autorizados.
-            </p>
+        .info-header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
 
-            <h5 class="mt-4">4. Derechos del usuario</h5>
-            <p>
-                Usted tiene derecho a acceder, rectificar o eliminar sus datos personales. Para ejercer estos derechos, contáctenos por correo.
-            </p>
-        </div>
+    .info-content {
+        display: flex;
+        gap: 2rem;
+        margin-top: 0;
+    }
+
+    @@media (max-width: 768px) {
+        .info-content {
+            flex-direction: column;
+        }
+    }
+
+    .info-sidebar {
+        flex: 0 0 280px;
+        position: sticky;
+        top: 2rem;
+        height: fit-content;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+    }
+
+    .info-main {
+        flex: 1;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem;
+    }
+
+    .table-of-contents {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .table-of-contents li {
+            margin-bottom: 0.75rem;
+        }
+
+        .table-of-contents a {
+            color: var(--primary-color);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+            .table-of-contents a:hover,
+            .table-of-contents a.active {
+                background-color: var(--light-bg);
+                border-left-color: var(--secondary-color);
+                color: var(--secondary-color);
+            }
+
+    .section-title {
+        color: var(--primary-color);
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--light-bg);
+        font-weight: 600;
+    }
+
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+    .highlight-box {
+        background-color: var(--light-bg);
+        border-left: 4px solid var(--secondary-color);
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .info-card {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+        .info-card h4 {
+            color: var(--primary-color);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .info-card h4 i {
+                color: var(--secondary-color);
+            }
+
+    .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .contact-item {
+        flex: 1;
+        min-width: 200px;
+        background-color: var(--light-bg);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        text-align: center;
+    }
+
+        .contact-item i {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+    .info-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-info {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-continue {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+    }
+
+        .btn-continue:hover {
+            background-color: #5a6268;
+            transform: translateY(-2px);
+        }
+
+    .progress-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background-color: var(--secondary-color);
+        width: 0%;
+        z-index: 1000;
+        transition: width 0.3s ease;
+    }
+
+    .last-updated {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-align: right;
+        margin-top: 1rem;
+    }
+
+    .data-categories {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .data-category {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+        .data-category i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+    .warning-box {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        color: #856404;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .security-box {
+        background-color: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        color: #0c5460;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .privacy-box {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+        color: #155724;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .data-flow {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .flow-step {
+        flex: 1;
+        min-width: 150px;
+        text-align: center;
+        padding: 1rem;
+        background-color: var(--light-bg);
+        border-radius: var(--border-radius);
+        position: relative;
+    }
+
+        .flow-step:not(:last-child):after {
+            content: "→";
+            position: absolute;
+            right: -1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+    @@media (max-width: 768px) {
+        .flow-step:not(:last-child):after {
+            display: none;
+        }
+    }
+
+    .flow-step i {
+        font-size: 1.5rem;
+        color: var(--secondary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .security-features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .security-feature {
+        text-align: center;
+        padding: 1rem;
+        background-color: var(--light-bg);
+        border-radius: var(--border-radius);
+    }
+
+        .security-feature i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+</style>
+
+<div class="progress-indicator" id="readingProgress"></div>
+
+<div class="info-container">
+    <div class="info-header">
+        <h1>@ViewData["Title"]</h1>
+        <p>Información completa sobre cómo gestionamos tus datos, procesos de compra y medidas de seguridad en Neo Ágora.</p>
+        <div class="last-updated">Última actualización: @DateTime.Now.ToString("dd/MM/yyyy")</div>
+    </div>
+
+    <div class="info-content">
+        <aside class="info-sidebar">
+            <h3>Contenido</h3>
+            <ul class="table-of-contents" id="tableOfContents">
+                <!-- Los elementos de la tabla de contenidos se generarán con JavaScript -->
+            </ul>
+
+            <div class="highlight-box">
+                <h4>¿Necesitas ayuda?</h4>
+                <p>Estamos aquí para resolver tus dudas:</p>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i>📧</i>
+                        <div>melinafuentesduarte11@gmail.com</div>
+                    </div>
+                    <div class="contact-item">
+                        <i>📱</i>
+                        <div>0991570376</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="info-main">
+            <section id="identificacion">
+                <h2 class="section-title">Identificación y Contacto</h2>
+
+                <div class="info-card">
+                    <h4><i>👤</i> Datos de Identificación Personal</h4>
+                    <p>Recopilamos y utilizamos tus datos personales para procesar compras, gestionar envíos y ofrecerte atención al cliente de calidad.</p>
+
+                    <div class="data-categories">
+                        <div class="data-category">
+                            <i>📝</i>
+                            <h5>Información Personal</h5>
+                            <p>Nombres y apellidos completos, cédula/RUC para facturación electrónica</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>📧</i>
+                            <h5>Contacto</h5>
+                            <p>Correo electrónico y número de teléfono</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>📍</i>
+                            <h5>Ubicación</h5>
+                            <p>Dirección de entrega y facturación, ciudad y referencias de envío</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="pedido-facturacion">
+                <h2 class="section-title">Información de Pedido y Facturación</h2>
+
+                <div class="info-card">
+                    <h4><i>📦</i> Detalles del Pedido</h4>
+                    <p>Para procesar tus pedidos y emitir facturas electrónicas, recopilamos la siguiente información:</p>
+
+                    <ul>
+                        <li><strong>Número de pedido</strong> único para identificación</li>
+                        <li><strong>Fecha y hora</strong> exacta de la transacción</li>
+                        <li><strong>Productos adquiridos</strong> con sus especificaciones</li>
+                        <li><strong>Cantidades</strong> solicitadas de cada producto</li>
+                        <li><strong>Importes</strong> y detalle del IVA aplicado</li>
+                    </ul>
+
+                    <div class="security-box">
+                        <p><strong>Facturación electrónica:</strong> Utilizamos tus datos tributarios para la emisión de factura electrónica y enviamos la factura al correo que nos proporcionas.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="pago-transferencia">
+                <h2 class="section-title">Pago por Transferencia</h2>
+
+                <div class="info-card">
+                    <h4><i>🏦</i> Proceso de Validación de Pagos</h4>
+                    <p>Para validar tus pagos por transferencia bancaria, requerimos la siguiente información:</p>
+
+                    <ul>
+                        <li><strong>Banco de origen</strong> de la transferencia</li>
+                        <li><strong>Número o referencia</strong> de la transferencia</li>
+                        <li><strong>Fecha</strong> de la transacción bancaria</li>
+                        <li><strong>Monto transferido</strong></li>
+                        <li><strong>Comprobante de pago</strong> para validar la acreditación</li>
+                    </ul>
+
+                    <div class="warning-box">
+                        <h4>🛡️ Importante: Seguridad Bancaria</h4>
+                        <p><strong>No solicitamos ni almacenamos contraseñas bancarias ni accesos a banca en línea.</strong> Solo procesamos la información necesaria para validar tu pago.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="logistica">
+                <h2 class="section-title">Logística y Entrega</h2>
+
+                <div class="info-card">
+                    <h4><i>🚚</i> Gestionamos tu Entrega con Servientrega</h4>
+                    <p>Para garantizar la entrega exitosa de tus productos, compartimos información con nuestro socio logístico:</p>
+
+                    <div class="data-categories">
+                        <div class="data-category">
+                            <i>📮</i>
+                            <h5>Dirección Completa</h5>
+                            <p>Incluyendo punto de referencia para ubicación precisa</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>👥</i>
+                            <h5>Persona Autorizada</h5>
+                            <p>Nombre de quien puede recibir el paquete</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>📋</i>
+                            <h5>Seguimiento</h5>
+                            <p>Número de guía, estados de envío y confirmación de entrega</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="preferencias">
+                <h2 class="section-title">Preferencias y Marketing</h2>
+
+                <div class="info-card">
+                    <h4><i>📢</i> Comunicaciones Comerciales</h4>
+                    <p>Respetamos tus preferencias de comunicación y te mantenemos informado solo si así lo autorizas:</p>
+
+                    <ul>
+                        <li><strong>Tu autorización explícita</strong> para recibir novedades y promociones</li>
+                        <li><strong>Categorías de interés</strong> que nos indicas</li>
+                        <li><strong>Registro de alta</strong> en comunicaciones comerciales</li>
+                        <li><strong>Registro de baja</strong> cuando solicitas dejar de recibir información</li>
+                    </ul>
+
+                    <div class="privacy-box">
+                        <p>Puedes modificar tus preferencias de marketing en cualquier momento a través de nuestro centro de preferencias o contactándonos directamente.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="navegacion">
+                <h2 class="section-title">Navegación y Cookies</h2>
+
+                <div class="info-card">
+                    <h4><i>🌐</i> Tecnologías de Seguimiento</h4>
+                    <p>Para mejorar tu experiencia en nuestro sitio web, utilizamos diferentes tecnologías:</p>
+
+                    <div class="data-categories">
+                        <div class="data-category">
+                            <i>🔧</i>
+                            <h5>Datos Técnicos</h5>
+                            <p>Identificadores técnicos, dirección IP, agente de navegador</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>📊</i>
+                            <h5>Análisis de Uso</h5>
+                            <p>Páginas visitadas y tiempos de visita</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>🍪</i>
+                            <h5>Cookies</h5>
+                            <p>Necesarias para operar el sitio y analíticas con tu consentimiento</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="seguridad">
+                <h2 class="section-title">Seguridad y Prevención de Fraude</h2>
+
+                <div class="info-card">
+                    <h4><i>🛡️</i> Protección Integral</h4>
+                    <p>Implementamos múltiples capas de seguridad para proteger tu información:</p>
+
+                    <div class="security-features">
+                        <div class="security-feature">
+                            <i>📝</i>
+                            <h5>Registros de Actividad</h5>
+                            <p>Monitoreo constante de todas las operaciones</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>⏰</i>
+                            <h5>Marcas de Tiempo</h5>
+                            <p>Registro preciso de todas las transacciones</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>✅</i>
+                            <h5>Validaciones de Pago</h5>
+                            <p>Verificación exhaustiva de cada transacción</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>🚨</i>
+                            <h5>Eventos de Seguridad</h5>
+                            <p>Detección y respuesta ante incidentes</p>
+                        </div>
+                    </div>
+
+                    <div class="security-box">
+                        <p>Estas medidas están específicamente diseñadas para <strong>proteger tu cuenta, tus pedidos y la operación de Neo Ágora</strong> contra accesos no autorizados y actividades fraudulentas.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="datos-no-tratados">
+                <h2 class="section-title">Datos que No Tratamos</h2>
+
+                <div class="info-card">
+                    <h4><i>🚫</i> Límites de Recopilación</h4>
+                    <p>Nos comprometemos a no recopilar ni almacenar ciertos tipos de información sensible:</p>
+
+                    <div class="warning-box">
+                        <ul>
+                            <li><strong>Información de tarjetas de crédito/débito</strong></li>
+                            <li><strong>Contraseñas bancarias</strong> de cualquier tipo</li>
+                            <li><strong>Datos sensibles</strong> como información de salud o biometría</li>
+                            <li><strong>Datos de personas menores de 18 años</strong></li>
+                        </ul>
+                    </div>
+
+                    <p>Mantenemos estos límites éticos como parte fundamental de nuestro compromiso con tu privacidad y seguridad.</p>
+                </div>
+            </section>
+
+            <section id="origen-datos">
+                <h2 class="section-title">Origen de los Datos</h2>
+
+                <div class="info-card">
+                    <h4><i>🔍</i> Fuentes de Información</h4>
+                    <p>Tu información personal proviene de diferentes fuentes, siempre con tu consentimiento:</p>
+
+                    <div class="data-flow">
+                        <div class="flow-step">
+                            <i>🛒</i>
+                            <h5>Proceso de Compra</h5>
+                            <p>Información que proporcionas al realizar pedidos</p>
+                        </div>
+                        <div class="flow-step">
+                            <i>📞</i>
+                            <h5>Atención al Cliente</h5>
+                            <p>Datos compartidos al contactarnos</p>
+                        </div>
+                        <div class="flow-step">
+                            <i>🌐</i>
+                            <h5>Navegación</h5>
+                            <p>Información generada por el uso del sitio</p>
+                        </div>
+                        <div class="flow-step">
+                            <i>🚚</i>
+                            <h5>Logística</h5>
+                            <p>Datos de Servientrega para seguimiento</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="caracter-datos">
+                <h2 class="section-title">Carácter Obligatorio u Opcional</h2>
+
+                <div class="info-card">
+                    <h4><i>📋</i> Clasificación de Datos</h4>
+                    <p>Clasificamos la información según su necesidad para prestar nuestros servicios:</p>
+
+                    <div class="data-categories">
+                        <div class="data-category">
+                            <i>✅</i>
+                            <h5>Datos Obligatorios</h5>
+                            <p>Necesarios para vender, facturar y entregar tus productos</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>⚙️</i>
+                            <h5>Datos Opcionales</h5>
+                            <p>Para marketing y cookies analíticas (requieren consentimiento)</p>
+                        </div>
+                    </div>
+
+                    <div class="privacy-box">
+                        <p>Puedes <strong>retirar tu consentimiento</strong> para los datos opcionales en cualquier momento contactándonos o mediante los ajustes de tu cuenta.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="medidas-tecnicas">
+                <h2 class="section-title">Medidas Técnicas y Organizativas</h2>
+
+                <div class="info-card">
+                    <h4><i>🔒</i> Protección de Datos</h4>
+                    <p>Implementamos múltiples capas de seguridad para proteger tu información:</p>
+
+                    <div class="security-features">
+                        <div class="security-feature">
+                            <i>🔐</i>
+                            <h5>Controles de Acceso</h5>
+                            <p>Autenticación estricta de administradores</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>📊</i>
+                            <h5>Registro de Actividad</h5>
+                            <p>Logs detallados de todas las operaciones</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>🔏</i>
+                            <h5>Cifrado HTTPS</h5>
+                            <p>Protección de datos en tránsito</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>💾</i>
+                            <h5>Cifrado en Reposo</h5>
+                            <p>Protección de datos almacenados</p>
+                        </div>
+                    </div>
+
+                    <p>Limitamos el acceso a los datos a personal y proveedores que necesitan conocerlos para cumplir finalidades legítimas, aplicando el principio de mínimo privilegio.</p>
+                </div>
+            </section>
+
+            <section id="gestion-proveedores">
+                <h2 class="section-title">Gestión de Proveedores</h2>
+
+                <div class="info-card">
+                    <h4><i>🤝</i> Relaciones con Terceros</h4>
+                    <p>Trabajamos con proveedores que comparten nuestros estándares de seguridad:</p>
+
+                    <ul>
+                        <li><strong>Acuerdos de confidencialidad</strong> con todos los proveedores</li>
+                        <li><strong>Prácticas de protección de datos</strong> verificadas</li>
+                        <li><strong>Auditorías periódicas</strong> para verificar el cumplimiento</li>
+                        <li><strong>Supervisión constante</strong> de su desempeño en seguridad</li>
+                    </ul>
+
+                    <div class="security-box">
+                        <p>Nuestros prestadores actúan como encargados de tratamiento bajo estrictos acuerdos de confidencialidad y seguridad.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="retencion">
+                <h2 class="section-title">Retención Mínima y Eliminación</h2>
+
+                <div class="info-card">
+                    <h4><i>⏰</i> Política de Conservación</h4>
+                    <p>Mantenemos tus datos solo durante el tiempo estrictamente necesario:</p>
+
+                    <div class="data-categories">
+                        <div class="data-category">
+                            <i>📅</i>
+                            <h5>Finalidades Declaradas</h5>
+                            <p>Conservación durante el tiempo necesario para los fines específicos</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>⚖️</i>
+                            <h5>Plazos Legales</h5>
+                            <p>Cumplimiento de requisitos legales y regulatorios</p>
+                        </div>
+
+                        <div class="data-category">
+                            <i>🗑️</i>
+                            <h5>Eliminación Segura</h5>
+                            <p>Destrucción segura una vez cumplidos los plazos</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="buenas-practicas">
+                <h2 class="section-title">Buenas Prácticas del Usuario</h2>
+
+                <div class="info-card">
+                    <h4><i>💡</i> Recomendaciones de Seguridad</h4>
+                    <p>Te recomendamos seguir estas prácticas para proteger tu información:</p>
+
+                    <div class="security-features">
+                        <div class="security-feature">
+                            <i>📱</i>
+                            <h5>Dispositivos Actualizados</h5>
+                            <p>Mantén tu sistema operativo y aplicaciones actualizadas</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>🌐</i>
+                            <h5>Redes Seguras</h5>
+                            <p>Evita redes públicas no seguras para transacciones</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>🔒</i>
+                            <h5>Verificación HTTPS</h5>
+                            <p>Revisa que el navegador muestre el candado de seguridad</p>
+                        </div>
+
+                        <div class="security-feature">
+                            <i>📄</i>
+                            <h5>Resguardo de Documentos</h5>
+                            <p>Protege comprobantes de pago y datos de contacto</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="limitaciones">
+                <h2 class="section-title">Limitaciones y Mejora Continua</h2>
+
+                <div class="info-card">
+                    <h4><i>🔄</i> Enfoque de Seguridad</h4>
+                    <p>Reconocemos que ningún entorno tecnológico puede garantizar una protección absoluta:</p>
+
+                    <div class="warning-box">
+                        <p>Aunque aplicamos medidas de seguridad robustas, mantenemos un enfoque realista sobre las limitaciones de cualquier sistema de seguridad.</p>
+                    </div>
+
+                    <p>Por ello implementamos un programa de mejora continua basado en:</p>
+
+                    <ul>
+                        <li><strong>Gestión proactiva de riesgos</strong> y evaluación constante</li>
+                        <li><strong>Monitoreo y pruebas periódicas</strong> de nuestros sistemas</li>
+                        <li><strong>Fortalecimiento continuo</strong> de controles técnicos y organizativos</li>
+                        <li><strong>Capacitación constante</strong> del personal en seguridad</li>
+                    </ul>
+
+                    <div class="security-box">
+                        <p>Nuestro objetivo es <strong>prevenir, detectar y mitigar oportunamente</strong> posibles incidentes de seguridad, manteniendo siempre la transparencia con nuestros clientes.</p>
+                    </div>
+                </div>
+            </section>
+
+            <div class="info-actions">
+                <button class="btn-info btn-continue" id="continueShopping">Continuar Comprando</button>
+            </div>
+        </main>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generar tabla de contenidos automáticamente
+        const sections = document.querySelectorAll('section');
+        const toc = document.getElementById('tableOfContents');
+
+        sections.forEach(section => {
+            const title = section.querySelector('.section-title');
+            if (title) {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${section.id}`;
+                link.textContent = title.textContent;
+                listItem.appendChild(link);
+                toc.appendChild(listItem);
+            }
+        });
+
+        // Scroll suave para los enlaces de la tabla de contenidos
+        document.querySelectorAll('.table-of-contents a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Actualizar la barra de progreso de lectura
+        window.addEventListener('scroll', function() {
+            const winHeight = window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.pageYOffset;
+            const scrollPercent = (scrollTop / (docHeight - winHeight)) * 100;
+            document.getElementById('readingProgress').style.width = scrollPercent + '%';
+        });
+
+        // Resaltar sección activa en la tabla de contenidos
+        window.addEventListener('scroll', function() {
+            const scrollPos = window.scrollY + 100;
+
+            document.querySelectorAll('section').forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+
+                if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                    const currentId = section.getAttribute('id');
+                    document.querySelectorAll('.table-of-contents a').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${currentId}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Manejar botón de continuar comprando
+        document.getElementById('continueShopping').addEventListener('click', function() {
+            alert('¡Gracias por conocer nuestra información general! Serás redirigido a nuestro catálogo de productos.');
+            // window.location.href = '/Productos';
+        });
+
+        // Marcar como leída cuando llegan al final
+        window.addEventListener('scroll', function() {
+            const scrollTop = window.pageYOffset;
+            const windowHeight = window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+
+            if (scrollTop + windowHeight >= docHeight - 100) {
+                localStorage.setItem('generalInfoRead', new Date().toISOString());
+            }
+        });
+
+        // Verificar si ya fue leída anteriormente
+        const alreadyRead = localStorage.getItem('generalInfoRead');
+        if (alreadyRead) {
+            console.log('El usuario ya ha leído la información general anteriormente');
+        }
+    });
+</script>script>

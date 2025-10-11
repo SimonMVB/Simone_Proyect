@@ -2,9 +2,15 @@
 @using System.Globalization
 @{
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
+
     string Img(string? src) => string.IsNullOrWhiteSpace(src)
         ? Url.Content("~/images/Productos/default.jpg")
         : src!;
+
+    // Escoge imagen de variante si existe; si no, la del producto
+    string ImgFor(Simone.Models.CarritoDetalle it)
+        => Img(it?.Variante?.ImagenPath ?? it?.Producto?.ImagenPath);
+
     decimal total = Model?.Sum(x => x.Precio * x.Cantidad) ?? 0m;
 }
 
@@ -27,17 +33,18 @@
             @foreach (var item in Model)
             {
                 var p = item.Producto;
-                <li class="list-group-item" data-row data-id="@item.ProductoID" data-det-id="@item.CarritoDetalleID">
-                    <div class="row align-items-center g-2">
-                        <!-- Imagen -->
-                        <div class="col-3">
-                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID">
-                                <img src="@Img(p?.ImagenPath)"
-                                     alt="@p?.Nombre"
-                                     class="img-fluid rounded"
-                                     onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
-                            </a>
-                        </div>
+                var v = item.Variante; // puede ser null
+                                       <li class="list-group-item" data-row data-id="@item.ProductoID" data-det-id="@item.CarritoDetalleID">
+                                           <div class="row align-items-center g-2">
+                                               <!-- Imagen (variante -> producto -> default) -->
+                                               <div class="col-3">
+                                                   <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID">
+                                                       <img src="@ImgFor(item)"
+                                                            alt="@(p?.Nombre ?? "Producto")"
+                                                            class="img-fluid rounded"
+                                                            onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+                                                   </a>
+                                               </div>
 
                         <!-- Detalles -->
                         <div class="col-6">
@@ -45,7 +52,28 @@
                                 <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID" class="text-decoration-none">
                                     @(p?.Nombre ?? "Producto")
                                 </a>
+                                @* Variante: [Color/Talla] *@
+                                @if (v != null && (!string.IsNullOrWhiteSpace(v.Color) || !string.IsNullOrWhiteSpace(v.Talla)))
+                                {
+                                    <span class="text-muted small">
+                                        [
+                                        @if (!string.IsNullOrWhiteSpace(v.Color))
+                                        {
+                                            @v.Color
+                                        }
+             @if (!string.IsNullOrWhiteSpace(v.Color) && !string.IsNullOrWhiteSpace(v.Talla))
+            {
+                                            <text>/</text>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(v.Talla))
+                                        {
+                                            @v.Talla
+                                        }
+                                        ]
+                                    </span>
+                                }
                             </h6>
+
                             <div class="small text-muted">Cantidad: <span data-qty>@item.Cantidad</span></div>
                             <div class="small">Precio: @item.Precio.ToString("C", culture)</div>
                         </div>

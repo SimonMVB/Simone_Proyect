@@ -14,11 +14,16 @@ namespace Simone.Controllers
     {
         private readonly IBancosConfigService _svc;
         private readonly ILogger<AdminBancosController> _logger;
+        private readonly IWebHostEnvironment _env;
 
-        public AdminBancosController(IBancosConfigService svc, ILogger<AdminBancosController> logger)
+        public AdminBancosController(
+            IBancosConfigService svc,
+            ILogger<AdminBancosController> logger,
+            IWebHostEnvironment env)
         {
             _svc = svc ?? throw new ArgumentNullException(nameof(svc));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _env = env ?? throw new ArgumentNullException(nameof(env));
         }
 
         // -----------------------------
@@ -45,7 +50,6 @@ namespace Simone.Controllers
         private static readonly Regex Texto40Regex = new(@"^.{1,40}$", RegexOptions.Compiled);
         private static readonly Regex Texto120Regex = new(@"^.{1,120}$", RegexOptions.Compiled);
         private static readonly Regex RucRegex = new(@"^\d{10}(\d{3})?$", RegexOptions.Compiled);
-        private static readonly Regex LogoPathRegex = new(@"^[A-Za-z0-9_\-/\.]{1,200}$", RegexOptions.Compiled);
 
         private (bool IsValid, string? ErrorMessage) ValidateViewModel(AdminUpsertVm vm)
         {
@@ -70,10 +74,22 @@ namespace Simone.Controllers
             if (!string.IsNullOrWhiteSpace(vm.Ruc) && !RucRegex.IsMatch(vm.Ruc))
                 return (false, "RUC/Cédula inválido (debe tener 10 o 13 dígitos).");
 
+            // Validación mejorada para LogoPath
             if (!string.IsNullOrWhiteSpace(vm.LogoPath))
             {
-                if (!LogoPathRegex.IsMatch(vm.LogoPath) || vm.LogoPath.Contains("..") || vm.LogoPath.Contains("://"))
-                    return (false, "Ruta del logo inválida (debe ser una ruta relativa válida).");
+                // Verificar que la ruta sea segura y válida
+                if (vm.LogoPath.Contains("..") || vm.LogoPath.Contains("://") ||
+                    vm.LogoPath.Contains("\\") || vm.LogoPath.Length > 200)
+                    return (false, "Ruta del logo inválida.");
+
+                // Verificar que el archivo exista físicamente
+                var fullPath = Path.Combine(_env.WebRootPath, vm.LogoPath.TrimStart('/'));
+                if (!System.IO.File.Exists(fullPath))
+                {
+                    _logger.LogWarning("Logo no encontrado en ruta: {LogoPath}", fullPath);
+                    // No fallamos aquí, solo usamos placeholder
+                    vm.LogoPath = "/images/Bancos/placeholder.png";
+                }
             }
 
             return (true, null);
@@ -87,6 +103,7 @@ namespace Simone.Controllers
         {
             if (User.IsInRole("Vendedor") && !User.IsInRole("Administrador"))
                 return RedirectToAction("Bancos", "Vendedor");
+
             try
             {
                 var cuentas = await _svc.GetAdminAsync();
@@ -143,7 +160,7 @@ namespace Simone.Controllers
         }
 
         // -----------------------------
-        // Actions
+        // Actions - CORREGIDO EL PROBLEMA DEL CHECKBOX
         // -----------------------------
         [HttpPost("SaveAdmin")]
         [ValidateAntiForgeryToken]
@@ -155,6 +172,11 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
+            // **CORRECCIÓN CRÍTICA: Manejo correcto del checkbox Activo**
+            // En ASP.NET Core, los checkboxes solo se envían cuando están marcados
+            // Si no está marcado, la propiedad viene como false por defecto
+            // No necesitamos manipular Request.Form manualmente
+
             // Normalize input
             vm.OriginalCodigo = TrimOrNull(vm.OriginalCodigo);
             vm.Codigo = TrimOrEmpty(vm.Codigo).ToLowerInvariant();
@@ -165,20 +187,12 @@ namespace Simone.Controllers
             vm.Ruc = TrimOrNull(vm.Ruc);
             vm.LogoPath = TrimOrNull(vm.LogoPath);
 
-            // Handle checkbox (ASP.NET Core model binding issue with checkboxes)
-            if (Request.Form.TryGetValue(nameof(AdminUpsertVm.Activo), out var activoValues) &&
-                activoValues.Count > 0 &&
-                (activoValues[0] == "true" || activoValues[0] == "on"))
-            {
-                vm.Activo = true;
-            }
-            else
-            {
-                vm.Activo = false;
-            }
+            // **ELIMINADO: Manipulación manual del checkbox que causaba el problema**
+            // El model binding de ASP.NET Core ya maneja correctamente el valor del checkbox
 
             // Remove OriginalCodigo from ModelState to avoid validation issues
             ModelState.Remove(nameof(AdminUpsertVm.OriginalCodigo));
+            ModelState.Remove(nameof(AdminUpsertVm.Activo)); // También removemos Activo del ModelState
 
             // Basic model validation
             if (!ModelState.IsValid)
@@ -231,10 +245,11 @@ namespace Simone.Controllers
                         Titular = vm.Titular,
                         Ruc = vm.Ruc,
                         LogoPath = vm.LogoPath,
-                        Activo = vm.Activo
+                        Activo = vm.Activo // **AHORA SE PRESERVA CORRECTAMENTE**
                     };
 
                     cuentas.Add(nuevaCuenta);
+                    _logger.LogInformation("Nueva cuenta bancaria creada: {Codigo}, Activo: {Activo}", vm.Codigo, vm.Activo);
                 }
                 else
                 {
@@ -263,15 +278,17 @@ namespace Simone.Controllers
                     cuentaExistente.Titular = vm.Titular;
                     cuentaExistente.Ruc = vm.Ruc;
                     cuentaExistente.LogoPath = vm.LogoPath;
-                    cuentaExistente.Activo = vm.Activo;
+                    cuentaExistente.Activo = vm.Activo; // **AHORA SE ACTUALIZA CORRECTAMENTE**
+
+                    _logger.LogInformation("Cuenta bancaria actualizada: {Codigo}, Activo: {Activo}", vm.Codigo, vm.Activo);
                 }
 
                 await _svc.SetAdminAsync(cuentas);
-                TempData["MensajeExito"] = "Cuenta guardada correctamente.";
+                TempData["MensajeExito"] = $"Cuenta {(string.IsNullOrEmpty(vm.OriginalCodigo) ? "creada" : "actualizada")} correctamente. Estado: {(vm.Activo ? "Activa" : "Inactiva")}";
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar cuenta bancaria (Código: {Codigo})", vm.Codigo);
+                _logger.LogError(ex, "Error al guardar cuenta bancaria (Código: {Codigo}, Activo: {Activo})", vm.Codigo, vm.Activo);
                 TempData["MensajeError"] = "Ocurrió un error inesperado al guardar la cuenta bancaria.";
             }
 
@@ -314,6 +331,16 @@ namespace Simone.Controllers
             }
 
             return RedirectToAction(nameof(Index));
+        }
+
+        // Nuevo método para manejar imágenes faltantes
+        private string GetSafeLogoPath(string? logoPath)
+        {
+            if (string.IsNullOrWhiteSpace(logoPath))
+                return "/images/Bancos/placeholder.png";
+
+            var fullPath = Path.Combine(_env.WebRootPath, logoPath.TrimStart('/'));
+            return System.IO.File.Exists(fullPath) ? logoPath : "/images/Bancos/placeholder.png";
         }
     }
 }

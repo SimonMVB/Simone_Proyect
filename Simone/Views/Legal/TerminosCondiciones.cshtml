@@ -3,40 +3,451 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="container mt-5 mb-5" style="max-width: 800px;">
-    <div class="card shadow-sm border-0 rounded-4">
-        <div class="card-header bg-secondary text-white text-center rounded-top-4">
-            <h3 class="mb-0">@ViewData["Title"]</h3>
-        </div>
-        <div class="card-body p-4" style="text-align: justify; font-size: 1.05rem;">
-            <p>
-                Al acceder y utilizar este sitio web, usted acepta cumplir con los presentes Términos y Condiciones. Si no está de acuerdo, le recomendamos no continuar navegando por el sitio.
-            </p>
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #3498db;
+        --accent-color: #e74c3c;
+        --light-bg: #f8f9fa;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-            <h5 class="mt-4">1. Uso del Sitio</h5>
-            <p>
-                Usted se compromete a utilizar este sitio solo para fines legales y de forma que no infrinja los derechos de terceros, ni limite o inhiba su uso del sitio.
-            </p>
+    .legal-container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+    }
 
-            <h5 class="mt-4">2. Registro de Usuario</h5>
-            <p>
-                Para acceder a ciertas funciones, puede ser necesario crear una cuenta. Usted es responsable de mantener la confidencialidad de su contraseña y de todas las actividades bajo su cuenta.
-            </p>
+    .legal-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        text-align: center;
+        margin-bottom: 0;
+    }
 
-            <h5 class="mt-4">3. Propiedad Intelectual</h5>
-            <p>
-                Todos los contenidos del sitio, como textos, imágenes y logotipos, son propiedad de la empresa o se usan con autorización. Está prohibida su reproducción sin consentimiento previo.
-            </p>
+        .legal-header h1 {
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
 
-            <h5 class="mt-4">4. Modificaciones</h5>
-            <p>
-                Nos reservamos el derecho de modificar estos términos en cualquier momento. Las modificaciones entrarán en vigor una vez publicadas en esta página.
-            </p>
+        .legal-header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
 
-            <h5 class="mt-4">5. Responsabilidad</h5>
-            <p>
-                No garantizamos que el sitio esté libre de errores o interrupciones. No somos responsables por daños derivados del uso del sitio o la imposibilidad de acceder a él.
-            </p>
-        </div>
+    .legal-content {
+        display: flex;
+        gap: 2rem;
+        margin-top: 0;
+    }
+
+    @@media (max-width: 768px) {
+        .legal-content
+
+    {
+        flex-direction: column;
+    }
+
+    }
+
+    .legal-sidebar {
+        flex: 0 0 280px;
+        position: sticky;
+        top: 2rem;
+        height: fit-content;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+    }
+
+    .legal-main {
+        flex: 1;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem;
+    }
+
+    .table-of-contents {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .table-of-contents li {
+            margin-bottom: 0.75rem;
+        }
+
+        .table-of-contents a {
+            color: var(--primary-color);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+            .table-of-contents a:hover,
+            .table-of-contents a.active {
+                background-color: var(--light-bg);
+                border-left-color: var(--secondary-color);
+                color: var(--secondary-color);
+            }
+
+    .section-title {
+        color: var(--primary-color);
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--light-bg);
+        font-weight: 600;
+    }
+
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+    .highlight-box {
+        background-color: var(--light-bg);
+        border-left: 4px solid var(--secondary-color);
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .contact-item {
+        flex: 1;
+        min-width: 200px;
+        background-color: var(--light-bg);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        text-align: center;
+    }
+
+        .contact-item i {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+    .legal-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-legal {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-accept {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+    }
+
+        .btn-accept:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+
+    .btn-decline {
+        background-color: white;
+        color: var(--accent-color);
+        border: 1px solid var(--accent-color);
+    }
+
+        .btn-decline:hover {
+            background-color: #fff5f5;
+        }
+
+    .progress-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background-color: var(--secondary-color);
+        width: 0%;
+        z-index: 1000;
+        transition: width 0.3s ease;
+    }
+
+    .last-updated {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-align: right;
+        margin-top: 1rem;
+    }
+
+    .definition-list {
+        margin: 1rem 0;
+    }
+
+        .definition-list dt {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-top: 1rem;
+        }
+
+        .definition-list dd {
+            margin-left: 1rem;
+            margin-bottom: 0.5rem;
+        }
+</style>
+
+<div class="progress-indicator" id="readingProgress"></div>
+
+<div class="legal-container">
+    <div class="legal-header">
+        <h1>@ViewData["Title"]</h1>
+        <p>Por favor, lea atentamente estos términos antes de utilizar nuestros servicios</p>
+        <div class="last-updated">Última actualización: @DateTime.Now.ToString("dd/MM/yyyy")</div>
+    </div>
+
+    <div class="legal-content">
+        <aside class="legal-sidebar">
+            <h3>Contenido</h3>
+            <ul class="table-of-contents" id="tableOfContents">
+                <!-- Los elementos de la tabla de contenidos se generarán con JavaScript -->
+            </ul>
+
+            <div class="highlight-box">
+                <h4>¿Necesitas ayuda?</h4>
+                <p>Si tienes alguna duda sobre estos términos, contáctanos:</p>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i>📧</i>
+                        <div>melinafuentesduarte11@gmail.com</div>
+                    </div>
+                    <div class="contact-item">
+                        <i>📱</i>
+                        <div>0991570376</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="legal-main">
+            <section id="identificacion">
+                <h2 class="section-title">1. Identificación del titular del Sitio</h2>
+                <p><strong>Neo Ágora</strong>, con domicilio en la ciudad de Milagro, provincia del Guayas, Ecuador, es titular del presente sitio web.</p>
+                <div class="highlight-box">
+                    <p><strong>RUC:</strong> 0941984890001</p>
+                    <p><strong>Medios de contacto:</strong> melinafuentesduarte11@gmail.com</p>
+                    <p><strong>Teléfono:</strong> 0991570376</p>
+                </div>
+            </section>
+
+            <section id="aceptacion">
+                <h2 class="section-title">2. Aceptación de los términos</h2>
+                <p>Al acceder y utilizar este sitio, el usuario declara haber leído y aceptado estos Términos y Condiciones. Si no está de acuerdo con alguno de los términos establecidos, debe abstenerse de usar el sitio.</p>
+            </section>
+
+            <section id="naturaleza">
+                <h2 class="section-title">3. Naturaleza del acuerdo</h2>
+                <p>Neo Ágora opera un canal de comercio electrónico para la venta de prendas de vestir y artículos afines (los "Productos"), dirigido exclusivamente al territorio ecuatoriano.</p>
+                <p>Cada ficha de producto detalla características, tallas, materiales, cuidados de lavado y otras especificaciones relevantes; dichas descripciones son referenciales y se entienden complementadas por las fotografías ilustrativas del Sitio.</p>
+            </section>
+
+            <section id="formas-aceptacion">
+                <h2 class="section-title">4. Formas de aceptación</h2>
+                <p>La aceptación puede manifestarse por cualquiera de los siguientes actos:</p>
+                <div class="definition-list">
+                    <dl>
+                        <dt>Clickwrap</dt>
+                        <dd>Marcar una casilla o botón "Acepto" / "He leído y acepto".</dd>
+
+                        <dt>Browsewrap</dt>
+                        <dd>Continuar navegando y usando el Sitio cuando se informa el acceso condicionado a la aceptación.</dd>
+
+                        <dt>Firma electrónica</dt>
+                        <dd>Respuesta por canales digitales que indiquen conformidad.</dd>
+
+                        <dt>Consumo efectivo</dt>
+                        <dd>Consumir los Servicios (por ejemplo, cursar un pedido) tras la puesta a disposición de estos Términos.</dd>
+                    </dl>
+                </div>
+                <p>En todos los casos se entiende otorgado un consentimiento libre, específico e informado.</p>
+            </section>
+
+            <section id="capacidad">
+                <h2 class="section-title">5. Capacidad y mayoría de edad</h2>
+                <p>Al aceptar, el Usuario declara tener 18 años o más y contar con capacidad legal suficiente para obligarse.</p>
+                <p>Si actúa en representación de una persona jurídica, manifiesta contar con poderes suficientes para aceptar en su nombre, asumiendo las obligaciones resultantes.</p>
+            </section>
+
+            <section id="ambito">
+                <h2 class="section-title">6. Ámbito territorial</h2>
+                <p>El usuario reconoce y acepta que los Servicios están limitados al territorio de la República del Ecuador y que cualquier transacción se entiende realizada en dicho territorio con domicilio en el cantón Milagro, provincia del Guayas para efectos legales.</p>
+            </section>
+
+            <section id="vinculacion">
+                <h2 class="section-title">7. Vinculación con otras políticas</h2>
+                <p>La aceptación se extiende a los documentos complementarios que regulan aspectos específicos del uso del Sitio, incluyendo:</p>
+                <ul>
+                    <li>Política de Privacidad y Cookies</li>
+                    <li>Políticas de cambios y devoluciones</li>
+                    <li>Cualquier instrucción operativa publicada en el Sitio</li>
+                </ul>
+                <p>En caso de conflicto, prevalecerá lo previsto en estos Términos, sin perjuicio de las normas imperativas aplicables.</p>
+            </section>
+
+            <section id="actualizaciones">
+                <h2 class="section-title">8. Actualizaciones y modificaciones</h2>
+                <p>Neo Ágora podrá modificar, actualizar o sustituir estos Términos cuando resulte necesario (por cambios normativos, mejoras del Servicio, ajustes operativos, nuevas funcionalidades o políticas internas).</p>
+                <p>Las versiones vigentes estarán siempre disponibles en el Sitio con su fecha de actualización. El uso continuado del Sitio con posterioridad a la publicación de cambios constituye aceptación de la nueva versión.</p>
+            </section>
+
+            <section id="registro">
+                <h2 class="section-title">9. Registro de la aceptación</h2>
+                <p>Neo Ágora podrá conservar evidencias electrónicas de la aceptación como logs, marcas de tiempo, dirección IP, versión aceptada y mecanismos de consentimiento, las cuales el Usuario reconoce como prueba válida del acuerdo y de la versión de Términos vigente al momento de su manifestación.</p>
+            </section>
+
+            <section id="comunicaciones">
+                <h2 class="section-title">10. Comunicaciones electrónicas</h2>
+                <p>El Usuario consiente recibir información relacionada con su cuenta o pedidos, como confirmaciones, facturas electrónicas, avisos de envío, cambios en los Términos o políticas, por medios electrónicos, ya sea correo electrónico, mensajes instantáneos o notificaciones dentro del Sitio.</p>
+            </section>
+
+            <section id="exactitud">
+                <h2 class="section-title">11. Exactitud de la información</h2>
+                <p>El Usuario declara que los datos proporcionados durante el registro, compra y postventa son verdaderos, exactos y actualizados, comprometiéndose a corregir o actualizar oportunamente cualquier información que cambie (dirección, teléfono, correo, datos de facturación).</p>
+                <p>La aceptación de estos Términos implica la responsabilidad del Usuario por las consecuencias derivadas de datos incorrectos o incompletos.</p>
+            </section>
+
+            <section id="responsabilidad">
+                <h2 class="section-title">12. Responsabilidad sobre credenciales y dispositivos</h2>
+                <p>Si el Sitio habilita cuentas, el Usuario es responsable de mantener la confidencialidad de sus credenciales y del uso de sus dispositivos.</p>
+                <p>Todo acceso o transacción realizados mediante sus credenciales o desde sus dispositivos se presume efectuado por el Usuario. Debe notificar de inmediato a Neo Ágora ante cualquier uso no autorizado o incidente de seguridad.</p>
+            </section>
+
+            <section id="conducta">
+                <h2 class="section-title">13. Conducta del Usuario</h2>
+                <p>La aceptación conlleva el compromiso de utilizar el Sitio y los Servicios de forma lícita, diligente y respetuosa, absteniéndose de:</p>
+                <ul>
+                    <li>Vulnerar derechos de terceros (propiedad intelectual, datos personales, imagen, reputación)</li>
+                    <li>Intentar acceder sin autorización a sistemas, bases de datos o cuentas</li>
+                    <li>Realizar actividades de fraude o engaño</li>
+                    <li>Introducir contenido ilícito, ofensivo o que contravenga estos Términos o la ley aplicable</li>
+                </ul>
+            </section>
+
+            <section id="aceptacion-prev">
+                <h2 class="section-title">14. Aceptación previa a cada transacción</h2>
+                <p>Antes de cerrar una compra, el Sitio exhibirá o pondrá a disposición la versión vigente de estos Términos.</p>
+                <p>Al finalizar el pedido o continuar usando el Sitio, el Usuario ratifica su aceptación para esa transacción concreta, incluyendo:</p>
+                <div class="highlight-box">
+                    <ul>
+                        <li>Políticas de precios con IVA</li>
+                        <li>Facturación en 48 horas</li>
+                        <li>Envíos por Servientrega con plazo estimado de 2 días</li>
+                        <li>Cambios en 7 días bajo las condiciones establecidas</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="ley">
+                <h2 class="section-title">15. Ley aplicable y jurisdicción</h2>
+                <p>El Usuario acepta que este acuerdo se rige por la ley ecuatoriana y que, para cualquier divergencia relacionada con la validez, interpretación, ejecución o terminación de estos Términos, serán competentes los juzgados del cantón Milagro, provincia del Guayas, sin perjuicio de los mecanismos amistosos de solución de controversias que las partes puedan explorar previamente.</p>
+            </section>
+
+            <div class="legal-actions">
+                <button class="btn-legal btn-decline">No Acepto</button>
+                <button class="btn-legal btn-accept">Acepto los Términos</button>
+            </div>
+        </main>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generar tabla de contenidos automáticamente
+        const sections = document.querySelectorAll('section');
+        const toc = document.getElementById('tableOfContents');
+
+        sections.forEach(section => {
+            const title = section.querySelector('.section-title');
+            if (title) {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${section.id}`;
+                link.textContent = title.textContent;
+                listItem.appendChild(link);
+                toc.appendChild(listItem);
+            }
+        });
+
+        // Scroll suave para los enlaces de la tabla de contenidos
+        document.querySelectorAll('.table-of-contents a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Actualizar la barra de progreso de lectura
+        window.addEventListener('scroll', function() {
+            const winHeight = window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.pageYOffset;
+            const scrollPercent = (scrollTop / (docHeight - winHeight)) * 100;
+            document.getElementById('readingProgress').style.width = scrollPercent + '%';
+        });
+
+        // Resaltar sección activa en la tabla de contenidos
+        window.addEventListener('scroll', function() {
+            const scrollPos = window.scrollY + 100;
+
+            document.querySelectorAll('section').forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+
+                if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                    const currentId = section.getAttribute('id');
+                    document.querySelectorAll('.table-of-contents a').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${currentId}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Manejar botones de aceptación
+        document.querySelector('.btn-accept').addEventListener('click', function() {
+            alert('¡Gracias por aceptar nuestros términos y condiciones!');
+            // Aquí puedes redirigir o realizar otras acciones
+        });
+
+        document.querySelector('.btn-decline').addEventListener('click', function() {
+            if (confirm('Si no acepta nuestros términos y condiciones, no podrá utilizar nuestros servicios. ¿Está seguro?')) {
+                window.location.href = '/'; // Redirigir a la página principal
+            }
+        });
+    });
+</script>

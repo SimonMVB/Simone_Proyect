@@ -25,6 +25,10 @@ namespace Simone.Controllers
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<ReportesController> _logger;
 
+        // Comprobantes permitidos
+        private static readonly HashSet<string> _allowExt = new(StringComparer.OrdinalIgnoreCase)
+        { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
+
         public ReportesController(
             TiendaDbContext context,
             IWebHostEnvironment env,
@@ -37,16 +41,17 @@ namespace Simone.Controllers
 
         // ----------------------- Helpers (comprobante / metadata) -----------------------
 
+        private string WebRootAbs()
+            => _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
         private string UploadsFolderAbs()
-            => Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"),
-                            "uploads", "comprobantes");
+            => Path.Combine(WebRootAbs(), "uploads", "comprobantes");
 
         /// <summary>
         /// Normaliza una ruta o URL del comprobante hacia algo servible por el navegador.
         /// - http/https: se devuelve tal cual.
-        /// - ~/ o / : se devuelve vía Url.Content (si aplica).
+        /// - ~/ o / : se devuelve vía Url.Content (si aplica) o tal cual.
         /// - relativa (p.ej. "images/.."): se antepone "/".
-        /// Opcional: verifica existencia física si es ruta relativa a wwwroot.
         /// </summary>
         private string? NormalizarCompUrl(string? raw)
         {
@@ -58,23 +63,13 @@ namespace Simone.Controllers
                 v.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
                 return v;
 
-            // ~/ o /
+            // ~/ o / (dejar que StaticFiles lo sirva)
             if (v.StartsWith("~/")) return Url.Content(v);
-            if (v.StartsWith("/"))
-            {
-                // si existe físicamente, bien; si no, igual devolvemos (puede ser CDN/proxy)
-                return v;
-            }
+            if (v.StartsWith("/")) return v;
 
             // Relativa a wwwroot
             var rel = "/" + v.TrimStart('/');
-            try
-            {
-                var abs = Path.Combine(_env.WebRootPath, rel.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-                // No forzamos a existir para no romper rutas virtuales; solo retornamos.
-                return rel;
-            }
-            catch { return rel; }
+            return rel;
         }
 
         /// <summary>
@@ -86,25 +81,65 @@ namespace Simone.Controllers
             var folder = UploadsFolderAbs();
             if (!Directory.Exists(folder)) return null;
 
-            var allow = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { ".jpg", ".jpeg", ".png", ".webp", ".pdf" };
-
             var files = Directory.EnumerateFiles(folder, $"venta-{ventaId}.*", SearchOption.TopDirectoryOnly)
-                                 .Where(f => allow.Contains(Path.GetExtension(f)))
+                                 .Where(f => _allowExt.Contains(Path.GetExtension(f)))
                                  .OrderByDescending(f => System.IO.File.GetLastWriteTimeUtc(f))
                                  .ToList();
             if (files.Count == 0) return null;
 
-            var webroot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var webroot = WebRootAbs();
             var rel = Path.GetRelativePath(webroot, files[0]).Replace("\\", "/");
-            return NormalizarCompUrl("/" + rel.TrimStart('/'));
+            var url = NormalizarCompUrl("/" + rel.TrimStart('/'));
+            _logger.LogInformation("Comprobante para venta {VentaID}: {Url}", ventaId, url ?? "(ninguno)");
+            return url;
         }
 
+        // ---- utilidades de parseo JSON (case-insensitive y tolerantes) ----
 
+        /// <summary>Lee el primer string cuyo nombre coincida (CI) en el elemento dado.</summary>
+        private static string? ReadStrCI(JsonElement el, params string[] names)
+        {
+            foreach (var p in el.EnumerateObject())
+                foreach (var n in names)
+                    if (string.Equals(p.Name, n, StringComparison.OrdinalIgnoreCase))
+                        return p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : p.Value.ToString();
+            return null;
+        }
+
+        /// <summary>Intenta extraer el "banco" desde múltiples formas posibles.</summary>
+        private static string? TryExtractBanco(JsonElement root)
+        {
+            // 1) "banco":"pichincha"  o  "Banco":"..."
+            var bank = ReadStrCI(root, "banco");
+            if (!string.IsNullOrWhiteSpace(bank)) return bank;
+
+            // 2) "bancoSeleccion": "pichincha"
+            if (root.TryGetProperty("bancoSeleccion", out var sel))
+            {
+                if (sel.ValueKind == JsonValueKind.String)
+                    return sel.GetString();
+
+                if (sel.ValueKind == JsonValueKind.Object)
+                {
+                    // 2.a) { "bancoSeleccion": { "codigo"/"nombre"/"valor": "..." } }
+                    bank = ReadStrCI(sel, "codigo", "nombre", "valor");
+                    if (!string.IsNullOrWhiteSpace(bank)) return bank;
+
+                    // 2.b) { "bancoSeleccion": { "banco": { "codigo"/"nombre"/"valor": "..." }, ... } }
+                    if (sel.TryGetProperty("banco", out var bancoObj) && bancoObj.ValueKind == JsonValueKind.Object)
+                    {
+                        bank = ReadStrCI(bancoObj, "codigo", "nombre", "valor");
+                        if (!string.IsNullOrWhiteSpace(bank)) return bank;
+                    }
+                }
+            }
+            return null;
+        }
 
         /// <summary>
         /// Lee metadatos (depositante, banco) en:
         ///   JSON: venta-{id}.meta.json  -> { "depositante": "...", "banco": "..." }
+        ///         o cualquier variante con "bancoSeleccion" (string / objeto / anidado .banco)
         ///   TXT:  venta-{id}.txt        -> (solo depositante)
         /// Prioriza JSON; si no hay, intenta TXT.
         /// </summary>
@@ -121,41 +156,24 @@ namespace Simone.Controllers
                     using var doc = JsonDocument.Parse(System.IO.File.ReadAllText(jsonMeta));
                     var root = doc.RootElement;
 
-                    string? dep = null;
-                    string? bank = null;
+                    // depositante admite "depositante"/"Depositante"
+                    var dep = ReadStrCI(root, "depositante");
 
-                    // depositante: string en la raíz
-                    if (root.TryGetProperty("depositante", out var pDep))
-                        dep = pDep.ValueKind == JsonValueKind.String ? pDep.GetString() : pDep.ToString();
-
-                    // banco puede venir como "banco": "pichincha"  (SubirComprobante)
-                    // o como "bancoSeleccion": { codigo/nombre/valor: ... } (ConfirmarCompra)
-                    if (root.TryGetProperty("banco", out var pBanco))
-                    {
-                        bank = pBanco.ValueKind == JsonValueKind.String ? pBanco.GetString() : pBanco.ToString();
-                    }
-                    else if (root.TryGetProperty("bancoSeleccion", out var pSel))
-                    {
-                        if (pSel.ValueKind == JsonValueKind.String)
-                            bank = pSel.GetString();
-                        else if (pSel.ValueKind == JsonValueKind.Object)
-                        {
-                            if (pSel.TryGetProperty("codigo", out var pCodigo) && pCodigo.ValueKind == JsonValueKind.String)
-                                bank = pCodigo.GetString();
-                            else if (pSel.TryGetProperty("nombre", out var pNombre) && pNombre.ValueKind == JsonValueKind.String)
-                                bank = pNombre.GetString();
-                            else if (pSel.TryGetProperty("valor", out var pValor) && pValor.ValueKind == JsonValueKind.String)
-                                bank = pValor.GetString();
-                        }
-                    }
+                    // banco en sus variantes
+                    var bank = TryExtractBanco(root);
 
                     dep = string.IsNullOrWhiteSpace(dep) ? null : dep.Trim();
                     bank = string.IsNullOrWhiteSpace(bank) ? null : bank.Trim();
+
+                    if (dep == null && bank == null)
+                        _logger.LogWarning("Meta JSON sin datos útiles para venta {VentaID}. Archivo: {Path}", ventaId, jsonMeta);
+
                     return (dep, bank);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Si el JSON tiene formato inesperado, probamos el TXT
+                    _logger.LogWarning(ex, "No se pudo parsear el meta JSON de venta {VentaID}. Path: {Path}", ventaId, jsonMeta);
+                    // Caerá a TXT
                 }
             }
 
@@ -166,6 +184,7 @@ namespace Simone.Controllers
                 if (!string.IsNullOrWhiteSpace(val)) return (val, null);
             }
 
+            _logger.LogWarning("Sin metadatos de depósito para venta {VentaID}. Buscado en {Folder}", ventaId, folder);
             return (null, null);
         }
 
@@ -187,6 +206,7 @@ namespace Simone.Controllers
             var metaPath = Path.Combine(folder, $"venta-{ventaId}.meta.json");
             var json = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = false });
             System.IO.File.WriteAllText(metaPath, json);
+            _logger.LogInformation("Meta de depósito guardado para venta {VentaID} en {Path}", ventaId, metaPath);
         }
 
         // ------------------------------- Reportes (listado y detalle) -------------------------------
@@ -216,8 +236,8 @@ namespace Simone.Controllers
                     VentaID = v.VentaID,
                     UsuarioId = v.UsuarioId!,
                     Nombre = v.Usuario != null && !string.IsNullOrWhiteSpace(v.Usuario.NombreCompleto)
-                ? v.Usuario.NombreCompleto
-                : "(sin usuario)",
+                        ? v.Usuario.NombreCompleto
+                        : "(sin usuario)",
                     Email = v.Usuario != null ? v.Usuario.Email : null,
                     Telefono = v.Usuario != null ? (v.Usuario.Telefono ?? v.Usuario.PhoneNumber) : null,
                     Fecha = v.FechaVenta,
@@ -318,8 +338,6 @@ namespace Simone.Controllers
 
             return View("~/Views/Reportes/VentaDetalle.cshtml", vm);
         }
-
-
 
         // ------------------------------- Acciones rápidas -------------------------------
 

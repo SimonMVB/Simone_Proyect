@@ -14,411 +14,739 @@
     string? targetVendorId = ViewBag.TargetVendorId as string;
 }
 
-<!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewData["Title"] - Simone</title>
 
-<!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-<style>
-    :root {
-        --primary-dark: #1A1A1A;
-        --primary-light: #FFFFFF;
-        --accent-purple: #4B0082;
-        --accent-gold: #D4AF37;
-        --light-gray: #F8F8F8;
-        --medium-gray: #E0E0E0;
-        --dark-gray: #333333;
-        --text-color: #333333;
-        --text-light: #777777;
-        --success-color: #28a745;
-        --danger-color: #dc3545;
-        --warning-color: #ffc107;
-        --info-color: #17a2b8;
-    }
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    body {
-        font-family: 'Montserrat', sans-serif;
-        background-color: #f5f5f7;
-        color: var(--text-color);
-    }
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --success-gradient: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            --warning-gradient: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            --dark-gradient: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            --primary-dark: #1a1a2e;
+            --primary-light: #ffffff;
+            --accent-purple: #6c63ff;
+            --accent-blue: #24aee9;
+            --accent-gold: #ffd700;
+            --light-bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-light: #e8e8e8;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --text-muted: #a0aec0;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.03);
+            --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 40px rgba(0,0,0,0.12);
+            --border-radius: 16px;
+            --border-radius-sm: 8px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
 
-    h1, h2, h3, h4, h5, h6 {
-        font-family: 'Playfair Display', serif;
-        font-weight: 600;
-    }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    .management-container {
-        max-width: 1200px;
-        margin: 2rem auto;
-        padding: 0 15px;
-    }
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf5 100%);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-    .management-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--medium-gray);
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: var(--primary-dark);
+        }
 
-    .management-title {
-        font-size: 1.8rem;
-        color: var(--accent-purple);
-        display: flex;
-        align-items: center;
-        gap: .75rem;
-    }
+        .glass-container {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(10px);
+            border-radius: var(--border-radius);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
 
-    .add-btn {
-        background: linear-gradient(135deg, var(--accent-purple), #5E2D8C);
-        color: white;
-        border: none;
-        padding: 0.7rem 1.25rem;
-        border-radius: 999px;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: .5rem;
-        transition: all 0.25s ease;
-        text-decoration: none;
-        white-space: nowrap;
-    }
+        .management-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 20px;
+        }
 
-        .add-btn:hover {
-            background: linear-gradient(135deg, #5E2D8C, var(--accent-purple));
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(75, 0, 130, 0.25);
+        .management-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--border-light);
+            flex-wrap: wrap;
+            gap: 1.5rem;
+        }
+
+        .management-title {
+            font-size: 2.2rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+            .management-title i {
+                background: var(--primary-gradient);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                font-size: 2rem;
+            }
+
+        .toolbar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-left: auto;
+        }
+
+        .search-box {
+            position: relative;
+            min-width: 280px;
+        }
+
+            .search-box input {
+                width: 100%;
+                padding: 0.8rem 1rem 0.8rem 3rem;
+                border: 1px solid var(--border-light);
+                border-radius: 50px;
+                background: var(--primary-light);
+                font-size: 0.95rem;
+                transition: var(--transition);
+                box-shadow: var(--shadow-sm);
+            }
+
+                .search-box input:focus {
+                    outline: none;
+                    border-color: var(--accent-purple);
+                    box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+                }
+
+            .search-box i {
+                position: absolute;
+                left: 1.2rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--text-muted);
+            }
+
+        .filter-select {
+            position: relative;
+            min-width: 200px;
+        }
+
+            .filter-select select {
+                width: 100%;
+                padding: 0.8rem 1rem;
+                border: 1px solid var(--border-light);
+                border-radius: 50px;
+                background: var(--primary-light);
+                font-size: 0.95rem;
+                appearance: none;
+                transition: var(--transition);
+                box-shadow: var(--shadow-sm);
+                cursor: pointer;
+            }
+
+            .filter-select:after {
+                content: '\f078';
+                font-family: 'Font Awesome 6 Free';
+                font-weight: 900;
+                position: absolute;
+                right: 1.2rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--text-muted);
+                pointer-events: none;
+            }
+
+            .filter-select select:focus {
+                outline: none;
+                border-color: var(--accent-purple);
+                box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.1);
+            }
+
+        .vendor-badge {
+            background: var(--accent-gradient);
             color: white;
-        }
-
-    .toolbar {
-        display: flex;
-        gap: .5rem;
-        align-items: center;
-        flex-wrap: wrap;
-        margin: .5rem 0 1rem 0;
-    }
-
-        .toolbar input[type="search"],
-        .toolbar select {
-            border: 1px solid var(--medium-gray);
-            border-radius: 10px;
-            padding: .55rem .75rem;
-            background: var(--primary-light);
-            min-width: 220px;
-            outline: none;
-        }
-
-        .toolbar .vendor-badge {
-            background: rgba(23,162,184,.1);
-            color: var(--info-color);
-            border: 1px solid rgba(23,162,184,.25);
-            border-radius: 14px;
-            padding: .35rem .6rem;
-            font-size: .85rem;
-            white-space: nowrap;
-        }
-
-    .management-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0;
-        background-color: var(--primary-light);
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 5px 15px rgba(0,0,0,.06);
-    }
-
-        .management-table th {
-            position: sticky;
-            top: 0;
-            background-color: var(--accent-purple);
-            color: white;
-            padding: .9rem 1rem;
-            text-align: left;
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
             font-weight: 600;
-            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: var(--shadow-sm);
         }
 
-        .management-table td {
-            padding: .9rem 1rem;
-            border-bottom: 1px solid var(--medium-gray);
-            vertical-align: middle;
-        }
-
-        .management-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .management-table tr:hover td {
-            background-color: rgba(75,0,130,.035);
-        }
-
-    .action-btn {
-        border: none;
-        border-radius: 50%;
-        width: 36px;
-        height: 36px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: .35rem;
-        transition: all .2s ease;
-        cursor: pointer;
-    }
-
-    .edit-btn {
-        background-color: rgba(23,162,184,.12);
-        color: var(--info-color);
-    }
-
-        .edit-btn:hover {
-            background-color: var(--info-color);
+        .add-btn {
+            background: var(--primary-gradient);
             color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.7rem;
+            transition: var(--transition);
+            text-decoration: none;
+            white-space: nowrap;
+            box-shadow: var(--shadow-md);
         }
 
-    .delete-btn {
-        background-color: rgba(220,53,69,.12);
-        color: var(--danger-color);
-    }
+            .add-btn:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+                color: white;
+            }
 
-        .delete-btn:hover {
-            background-color: var(--danger-color);
-            color: white;
+        .management-table-container {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2rem;
         }
 
-    .category-badge {
-        display: inline-block;
-        padding: .25rem .6rem;
-        border-radius: 999px;
-        background-color: rgba(75,0,130,.09);
-        color: var(--accent-purple);
-        font-size: .85rem;
-        font-weight: 600;
-    }
-
-    .empty-state {
-        background-color: var(--primary-light);
-        border-radius: 12px;
-        padding: 2rem;
-        text-align: center;
-        box-shadow: 0 5px 15px rgba(0,0,0,.06);
-    }
-
-        .empty-state i {
-            font-size: 3rem;
-            color: var(--medium-gray);
-            margin-bottom: .75rem;
+        .management-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .empty-state p {
-            color: var(--text-light);
-            font-size: 1.05rem;
+            .management-table thead {
+                background: var(--dark-gradient);
+            }
+
+            .management-table th {
+                padding: 1.2rem 1.5rem;
+                text-align: left;
+                font-weight: 600;
+                color: white;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .management-table tbody tr {
+                border-bottom: 1px solid var(--border-light);
+                transition: var(--transition);
+            }
+
+                .management-table tbody tr:last-child {
+                    border-bottom: none;
+                }
+
+                .management-table tbody tr:hover {
+                    background: rgba(108, 99, 255, 0.03);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                }
+
+            .management-table td {
+                padding: 1.2rem 1.5rem;
+                vertical-align: middle;
+            }
+
+        .category-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.4rem 0.9rem;
+            border-radius: 50px;
+            background: rgba(108, 99, 255, 0.1);
+            color: var(--accent-purple);
+            font-size: 0.85rem;
+            font-weight: 600;
+            gap: 0.4rem;
         }
 
-    .alert {
-        border-radius: 12px;
-        padding: .9rem 1rem;
-        margin-bottom: 1rem;
-        display: flex;
-        gap: .6rem;
-        align-items: center;
-        font-weight: 500;
-    }
+            .category-badge i {
+                font-size: 0.75rem;
+            }
 
-    .alert-success {
-        background: rgba(40,167,69,.1);
-        color: var(--success-color);
-        border: 1px solid rgba(40,167,69,.25);
-    }
+        .actions-container {
+            display: flex;
+            gap: 0.5rem;
+        }
 
-    .alert-danger {
-        background: rgba(220,53,69,.1);
-        color: var(--danger-color);
-        border: 1px solid rgba(220,53,69,.25);
-    }
+        .action-btn {
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+        }
 
-    @@keyframes fadeIn {
-        from {
+        .edit-btn {
+            background: rgba(36, 174, 233, 0.1);
+            color: var(--accent-blue);
+        }
+
+            .edit-btn:hover {
+                background: var(--accent-blue);
+                color: white;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(36, 174, 233, 0.3);
+            }
+
+        .delete-btn {
+            background: rgba(245, 87, 108, 0.1);
+            color: #f5576c;
+        }
+
+            .delete-btn:hover {
+                background: #f5576c;
+                color: white;
+                transform: translateY(-2px);
+                box-shadow: 0 5px 15px rgba(245, 87, 108, 0.3);
+            }
+
+        .empty-state {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 4rem 2rem;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            margin: 2rem 0;
+        }
+
+            .empty-state i {
+                font-size: 4rem;
+                background: var(--primary-gradient);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                margin-bottom: 1.5rem;
+            }
+
+            .empty-state h3 {
+                font-size: 1.5rem;
+                margin-bottom: 0.5rem;
+                color: var(--text-primary);
+            }
+
+            .empty-state p {
+                color: var(--text-secondary);
+                font-size: 1.05rem;
+                max-width: 500px;
+                margin: 0 auto 1.5rem;
+            }
+
+        .alert {
+            border-radius: var(--border-radius-sm);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+            font-weight: 500;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .alert-success {
+            background: rgba(67, 233, 123, 0.1);
+            color: #2ecc71;
+            border-left: 4px solid #2ecc71;
+        }
+
+        .alert-danger {
+            background: rgba(245, 87, 108, 0.1);
+            color: #e74c3c;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+            .stat-card:hover {
+                transform: translateY(-5px);
+                box-shadow: var(--shadow-lg);
+            }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .stat-count {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @@keyframes fadeIn {
+            from
+
+        {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(20px);
         }
 
         to {
             opacity: 1;
             transform: translateY(0);
         }
-    }
 
-    .fade-in {
-        animation: fadeIn .4s ease-out;
-    }
+        }
 
-    /* Responsive */
-    @@media (max-width: 768px) {
-        .management-header {
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @@keyframes pulse {
+            0%
+
+        {
+            box-shadow: 0 0 0 0 rgba(108, 99, 255, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(108, 99, 255, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(108, 99, 255, 0);
+        }
+
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Responsive */
+        @@media (max-width: 1024px) {
+            .management-header
+
+        {
             flex-direction: column;
             align-items: flex-start;
         }
 
-        .add-btn {
+        .toolbar {
+            margin-left: 0;
             width: 100%;
-            justify-content: center;
         }
 
-        .toolbar input[type="search"], .toolbar select {
-            width: 100%;
-            min-width: 0;
+        .search-box, .filter-select {
+            flex: 1;
+            min-width: auto;
         }
 
-        .management-table th:nth-child(2), .management-table td:nth-child(2) {
+        }
+
+        @@media (max-width: 768px) {
+            .management-title
+
+        {
+            font-size: 1.8rem;
+        }
+
+        .toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .management-table {
+            display: block;
+            overflow-x: auto;
+        }
+
+        .stats-container {
+            grid-template-columns: 1fr;
+        }
+
+        .management-table th:nth-child(2),
+        .management-table td:nth-child(2) {
             display: none;
         }
-        /* Oculta la columna de categoría en móvil para compactar */
-    }
-</style>
 
-<div class="management-container fade-in">
+        }
 
-    <div class="management-header">
-        <h2 class="management-title">
-            <i class="fas fa-tags"></i> @ViewData["Title"]
-        </h2>
+        @@media (max-width: 480px) {
+            body
 
-        <div class="toolbar" style="margin-left:auto">
-            @* Si un Administrador está viendo otro vendedor *@
-            @if (!string.IsNullOrWhiteSpace(targetVendorId))
-            {
-                <span class="vendor-badge" title="Viendo subcategorías de otro vendedor">
-                    <i class="fa-solid fa-user-shield"></i> Vendor: @targetVendorId
-                </span>
-            }
+        {
+            padding: 10px;
+        }
 
-            <input id="searchBox" type="search" placeholder="Buscar por nombre..." aria-label="Buscar subcategoría" />
-            <select id="categoryFilter" aria-label="Filtrar por categoría">
-                <option value="">Todas las categorías</option>
-                @foreach (var c in categoriasDistinct)
+        .management-container {
+            padding: 0 10px;
+        }
+
+        .management-title {
+            font-size: 1.5rem;
+        }
+
+        .empty-state {
+            padding: 2rem 1rem;
+        }
+
+        .stat-card {
+            padding: 1rem;
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="management-container fade-in">
+        <!-- Header Section -->
+        <div class="management-header">
+            <h2 class="management-title">
+                <i class="fas fa-tags"></i> @ViewData["Title"]
+            </h2>
+
+            <div class="toolbar">
+                <!-- Vendor Badge -->
+                @if (!string.IsNullOrWhiteSpace(targetVendorId))
                 {
-                    <option value="@c">@c</option>
+                    <span class="vendor-badge" title="Viendo subcategorías de otro vendedor">
+                        <i class="fa-solid fa-user-shield"></i> Vendor: @targetVendorId
+                    </span>
                 }
-            </select>
 
-            <a asp-controller="Panel" asp-action="AnadirSubcategoria" class="add-btn">
-                <i class="fas fa-plus"></i> Añadir @ViewData["Type"]
-            </a>
-        </div>
-    </div>
+                <!-- Search Box -->
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input id="searchBox" type="search" placeholder="Buscar por nombre..." aria-label="Buscar subcategoría" />
+                </div>
 
-    @* Mensajes de operación *@
-    @if (TempData["Ok"] != null)
-    {
-        <div class="alert alert-success fade-in">
-            <i class="fa-solid fa-circle-check"></i>
-            <span>@TempData["Ok"]</span>
-        </div>
-    }
-    @if (TempData["Err"] != null)
-    {
-        <div class="alert alert-danger fade-in">
-            <i class="fa-solid fa-circle-exclamation"></i>
-            <span>@TempData["Err"]</span>
-        </div>
-    }
+                <!-- Category Filter -->
+                <div class="filter-select">
+                    <select id="categoryFilter" aria-label="Filtrar por categoría">
+                        <option value="">Todas las categorías</option>
+                        @foreach (var c in categoriasDistinct)
+                        {
+                            <option value="@c">@c</option>
+                        }
+                    </select>
+                </div>
 
-    @if (subcats.Any())
-    {
-        <div class="table-wrap">
-            <table class="management-table" id="subcatsTable">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Categoría</th>
-                        <th style="width:140px">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var s in subcats)
-                    {
-                        var catName = s?.Categoria?.Nombre ?? "(Sin categoría)";
-                        <tr data-name="@s?.NombreSubcategoria" data-cat="@catName">
-                            <td><strong>@s?.NombreSubcategoria</strong></td>
-                            <td><span class="category-badge">@catName</span></td>
-                            <td>
-                                <form method="get" asp-controller="Panel" asp-action="EditarSubcategoria" style="display:inline">
-                                    <input type="hidden" name="subcategoriaID" value="@s.SubcategoriaID" />
-                                    <button type="submit" class="action-btn edit-btn" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                </form>
-
-                                @* Importante: el action correcto es EliminarSubcategoria
-                               y el parámetro que espera en el controlador se llama 'categoriaID'
-                               pero recibe el ID de la SUBCATEGORÍA (naming legacy). *@
-                                <form method="post"
-                                      asp-controller="Panel"
-                                      asp-action="EliminarSubcategoria"
-                                      onsubmit="return confirm('¿Estás seguro de eliminar esta subcategoría?');"
-                                      style="display:inline">
-                                    <input type="hidden" name="categoriaID" value="@s.SubcategoriaID" />
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="action-btn delete-btn" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
-    else
-    {
-        <div class="empty-state">
-            <i class="fas fa-tags"></i>
-            <p>No hay subcategorías disponibles.</p>
-            <div style="margin-top:1rem">
-                <a asp-controller="Panel" asp-action="AnadirSubcategoria" class="add-btn">
-                    <i class="fas fa-plus"></i> Crear primera @ViewData["Type"]
+                <!-- Add Button -->
+                <a asp-controller="Panel" asp-action="AnadirSubcategoria" class="add-btn pulse">
+                    <i class="fas fa-plus"></i> Añadir @ViewData["Type"]
                 </a>
             </div>
         </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-container fade-in">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(108, 99, 255, 0.1); color: var(--accent-purple);">
+                    <i class="fas fa-tags"></i>
+                </div>
+                <div class="stat-count">@subcats.Count()</div>
+                <div class="stat-label">Total Subcategorías</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(36, 174, 233, 0.1); color: var(--accent-blue);">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="stat-count">@categoriasDistinct.Count</div>
+                <div class="stat-label">Categorías Únicas</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(67, 233, 123, 0.1); color: #2ecc71;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-count">@subcats.Count(s => s?.Categoria != null)</div>
+                <div class="stat-label">Con Categoría</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: rgba(245, 87, 108, 0.1); color: #f5576c;">
+                    <i class="fas fa-exclamation-circle"></i>
+                </div>
+                <div class="stat-count">@subcats.Count(s => s?.Categoria == null)</div>
+                <div class="stat-label">Sin Categoría</div>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        @if (TempData["Ok"] != null)
+        {
+            <div class="alert alert-success fade-in">
+                <i class="fa-solid fa-circle-check"></i>
+                <span>@TempData["Ok"]</span>
+            </div>
+        }
+        @if (TempData["Err"] != null)
+        {
+            <div class="alert alert-danger fade-in">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span>@TempData["Err"]</span>
+            </div>
+        }
+
+        <!-- Data Table -->
+        @if (subcats.Any())
+        {
+            <div class="management-table-container fade-in">
+                <table class="management-table" id="subcatsTable">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th style="width:140px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in subcats)
+                        {
+                            var catName = s?.Categoria?.Nombre ?? "(Sin categoría)";
+                            <tr data-name="@s?.NombreSubcategoria" data-cat="@catName">
+                                <td>
+                                    <strong>@s?.NombreSubcategoria</strong>
+                                </td>
+                                <td>
+                                    <span class="category-badge">
+                                        <i class="fas fa-folder"></i>@catName
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="actions-container">
+                                        <form method="get" asp-controller="Panel" asp-action="EditarSubcategoria" style="display:inline">
+                                            <input type="hidden" name="subcategoriaID" value="@s.SubcategoriaID" />
+                                            <button type="submit" class="action-btn edit-btn" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </form>
+
+                                        <form method="post"
+                                              asp-controller="Panel"
+                                              asp-action="EliminarSubcategoria"
+                                              onsubmit="return confirm('¿Estás seguro de eliminar esta subcategoría?');"
+                                              style="display:inline">
+                                            <input type="hidden" name="categoriaID" value="@s.SubcategoriaID" />
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="action-btn delete-btn" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state fade-in">
+                <i class="fas fa-tags"></i>
+                <h3>No hay subcategorías disponibles</h3>
+                <p>Comienza creando tu primera subcategoría para organizar tus productos de manera eficiente.</p>
+                <div style="margin-top:1.5rem">
+                    <a asp-controller="Panel" asp-action="AnadirSubcategoria" class="add-btn pulse">
+                        <i class="fas fa-plus"></i> Crear primera @ViewData["Type"]
+                    </a>
+                </div>
+            </div>
+        }
+    </div>
+
+    @section Scripts {
+        <partial name="_ValidationScriptsPartial" />
+        <script>
+            (function(){
+                const table = document.getElementById('subcatsTable');
+                const search = document.getElementById('searchBox');
+                const filter = document.getElementById('categoryFilter');
+
+                function norm(s){ return (s || '').toString().trim().toLowerCase(); }
+
+                function applyFilter(){
+                    if (!table) return;
+                    const q = norm(search && search.value);
+                    const cat = norm(filter && filter.value);
+
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(tr => {
+                        const name = norm(tr.getAttribute('data-name'));
+                        const c    = norm(tr.getAttribute('data-cat'));
+
+                        const okName = !q || name.includes(q);
+                        const okCat  = !cat || c === cat;
+
+                        tr.style.display = (okName && okCat) ? '' : 'none';
+                    });
+                }
+
+                if (search) search.addEventListener('input', applyFilter);
+                if (filter) filter.addEventListener('change', applyFilter);
+            })();
+        </script>
     }
-</div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script>
-        (function(){
-            const table = document.getElementById('subcatsTable');
-            const search = document.getElementById('searchBox');
-            const filter = document.getElementById('categoryFilter');
-
-            function norm(s){ return (s || '').toString().trim().toLowerCase(); }
-
-            function applyFilter(){
-                if (!table) return;
-                const q = norm(search && search.value);
-                const cat = norm(filter && filter.value);
-
-                const rows = table.querySelectorAll('tbody tr');
-                rows.forEach(tr => {
-                    const name = norm(tr.getAttribute('data-name'));
-                    const c    = norm(tr.getAttribute('data-cat'));
-
-                    const okName = !q || name.includes(q);
-                    const okCat  = !cat || c === cat;
-
-                    tr.style.display = (okName && okCat) ? '' : 'none';
-                });
-            }
-
-            if (search) search.addEventListener('input', applyFilter);
-            if (filter) filter.addEventListener('change', applyFilter);
-        })();
-    </script>
-}
+</body>
+</html>

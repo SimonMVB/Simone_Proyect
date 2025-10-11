@@ -1,397 +1,676 @@
 ﻿@using Simone.Models
 @using SimoneCfg = Simone.Configuration
 @{
-    // Detecta contexto: vendedor puro o admin ayudando a un vendedor (vId)
     var cuentas = (ViewBag.Cuentas as IEnumerable<SimoneCfg.CuentaBancaria>) ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>();
     bool esVendedor = User.IsInRole("Vendedor");
     bool esAdmin = User.IsInRole("Administrador");
-    string? targetVendorId = ViewBag.TargetVendorId as string; // si el Admin ayuda a un vendedor
+    string? targetVendorId = ViewBag.TargetVendorId as string;
     bool adminAyudando = esAdmin && !string.IsNullOrWhiteSpace(targetVendorId);
     bool ctxVendedor = esVendedor || adminAyudando;
 
     ViewData["Title"] = ctxVendedor ? "Mis Cuentas Bancarias" : "Bancos del Administrador";
 
+    // Catálogo mejorado con rutas corregidas y placeholders
     var catalogo = new[]{
         new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
-        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/Guayaquil.png" },
-        new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/Pacifico.png" },
-        new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/Bolivariano.webp" },
-        new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/JEP.png" },
+        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/guayaquil.png" },
+        new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/pacifico.png" },
+        new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/bolivariano.webp" },
+        new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/jep.png" },
     };
 
     var modelErrors = ViewBag.ModelErrors as string;
 }
 
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-<style>
-    .page-title {
-        font-family: "Playfair Display",serif;
-        font-weight: 700
-    }
-
-    .card-elev {
-        box-shadow: 0 10px 26px rgba(0,0,0,.06);
-        border: 1px solid #eef0f4;
-        border-radius: 16px
-    }
-
-    .bank-preview {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        background: #f8fafc;
-        border: 1px solid #eef0f4;
-        padding: 14px 16px;
-        border-radius: 14px
-    }
-
-    .bank-logo {
-        width: 56px;
-        height: 56px;
-        border-radius: 12px;
-        object-fit: contain;
-        background: #fff;
-        border: 1px solid #eaecef
-    }
-
-    .muted {
-        color: #6b7280
-    }
-
-    .table thead th {
-        background: #f7f8fb;
-        border-bottom-color: #eef0f4
-    }
-
-    .table td, .table th {
-        vertical-align: middle
-    }
-
-    .badge-dot {
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem
-    }
-
-        .badge-dot i {
-            font-size: .5rem
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"]</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #f8fafc;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #1e293b;
+            --light: #f1f5f9;
+            --border: #e2e8f0;
+            --text: #475569;
+            --text-light: #94a3b8;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius: 12px;
+            --transition: all 0.3s ease;
         }
 
-    .text-mono {
-        font-family: ui-monospace,Menlo,Consolas,monospace
-    }
-</style>
+        * {
+            font-family: 'Inter', sans-serif;
+        }
 
-<div class="container my-4">
-    <div class="d-flex align-items-center justify-content-between mb-3">
-        <h1 class="page-title mb-0"><i class="fa-solid fa-university me-2"></i>@ViewData["Title"]</h1>
-        <div class="small text-muted">
-            @(ctxVendedor ? (object)"Se muestra al cliente cuando la compra es solo de tu tienda."
-                        : (object)"Se usa cuando el carrito es de varias tiendas.")
-            @if (adminAyudando)
-            {
-                <span class="ms-2">(Ayudando a vendedor: <code>@targetVendorId</code>)</span>
+        body {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .page-title {
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: var(--dark);
+            font-size: 2.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-elev {
+            background: white;
+            border: none;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+
+        /* CORRECCIÓN CRÍTICA: Estilos para imágenes de bancos */
+        .bank-logo-container {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .bank-logo {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            width: auto;
+            height: auto;
+        }
+
+        .bank-logo-sm {
+            max-width: 40px;
+            max-height: 40px;
+            object-fit: contain;
+        }
+
+        .bank-preview {
+            display: flex;
+            gap: 1.25rem;
+            align-items: center;
+            background: var(--secondary);
+            border: 2px dashed var(--border);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            transition: var(--transition);
+        }
+
+            .bank-preview.active {
+                border-color: var(--primary);
+                background: rgba(99, 102, 241, 0.05);
             }
-        </div>
-    </div>
 
-    @if (TempData["MensajeExito"] is string okMsg)
-    {
-        <div class="alert alert-success">@okMsg</div>
-    }
-    @if (TempData["MensajeError"] is string errMsg)
-    {
-        <div class="alert alert-danger mb-2">@errMsg</div>
-        @if (!string.IsNullOrWhiteSpace(modelErrors))
-        {
-            <div class="alert alert-warning"><small>@modelErrors</small></div>
+        .bank-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
-    }
 
-    <!-- ===== Formulario Upsert ===== -->
-    <div class="card card-elev mb-4">
-        <div class="card-header bg-white">
-            <strong><i class="fa-solid fa-pen-to-square me-2"></i> @(ctxVendedor ? "Agregar / Editar cuenta de mi tienda" : "Nueva / Editar cuenta (Admin)")</strong>
+        .bank-option {
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+            min-height: 140px;
+        }
+
+            .bank-option.active {
+                border-color: var(--primary);
+                background: rgba(99, 102, 241, 0.05);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+            }
+
+        .bank-option-logo-container {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px;
+        }
+
+        .bank-option-logo {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        /* Resto de estilos se mantienen igual... */
+        .table thead th {
+            background: var(--secondary);
+            color: var(--dark);
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+            padding: 1rem 0.75rem;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+            .status-badge.active {
+                background: rgba(16, 185, 129, 0.1);
+                color: var(--success);
+            }
+
+            .status-badge.inactive {
+                background: rgba(100, 116, 139, 0.1);
+                color: var(--text-light);
+            }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+            .toggle-slider:before {
+                position: absolute;
+                content: "";
+                height: 16px;
+                width: 16px;
+                left: 4px;
+                bottom: 4px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+            }
+
+        input:checked + .toggle-slider {
+            background-color: var(--success);
+        }
+
+            input:checked + .toggle-slider:before {
+                transform: translateX(26px);
+            }
+
+        @@media (max-width: 768px) {
+            .bank-selector
+
+        {
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4">
+            <div class="mb-3 mb-md-0">
+                <h1 class="page-title">
+                    <i class="fa-solid fa-landmark me-2"></i>@ViewData["Title"]
+                </h1>
+                <p class="text-muted">
+                    @(ctxVendedor ?
+                                        "Gestiona las cuentas bancarias de tu tienda para recibir pagos" :
+                                        "Administra las cuentas bancarias del sistema")
+                </p>
+            </div>
         </div>
-        <div class="card-body">
-            <form method="post"
-                  asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
-                  asp-action="@(ctxVendedor ? "Save" : "SaveAdmin")"
-                  id="frmBanco" class="row g-3" novalidate>
-                @Html.AntiForgeryToken()
 
-                @* si un Admin está ayudando a un vendedor, propaga vId *@
-                @if (adminAyudando)
-                {
-                    <input type="hidden" name="vId" value="@targetVendorId" />
-                }
+        <!-- Alertas -->
+        @if (TempData["MensajeExito"] is string okMsg)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fa-solid fa-circle-check me-2"></i>
+                @okMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @if (TempData["MensajeError"] is string errMsg)
+        {
+            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                @errMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
 
-                <input type="hidden" id="OriginalCodigo" name="OriginalCodigo" />
+        <!-- Formulario -->
+        <div class="card card-elev mb-5">
+            <div class="card-header">
+                <i class="fa-solid fa-plus-circle me-2"></i>
+                @(ctxVendedor ? "Agregar / Editar Cuenta Bancaria" : "Nueva / Editar Cuenta (Administrador)")
+            </div>
+            <div class="card-body p-4">
+                <form method="post"
+                      asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
+                      asp-action="@(ctxVendedor ? "Save" : "SaveAdmin")"
+                      id="frmBanco" class="row g-4" novalidate>
+                    @Html.AntiForgeryToken()
 
-                <!-- Catálogo de bancos -->
-                <div class="col-12">
-                    <label class="form-label fw-semibold">Banco</label>
-                    <select id="ddlBanco" class="form-select">
-                        <option value="">Selecciona un banco...</option>
-                        @foreach (var b in catalogo)
-                        {
-                            <option value="@b.Codigo" data-nombre="@b.Nombre" data-logo="@b.Logo">@b.Nombre</option>
-                        }
-                    </select>
-                    <div class="form-text">Al seleccionar, se autocompletan nombre y logo.</div>
-                </div>
+                    @if (adminAyudando)
+                    {
+                        <input type="hidden" name="vId" value="@targetVendorId" />
+                    }
 
-                <!-- Preview -->
-                <div class="col-12">
-                    <div class="bank-preview">
-                        <img id="logoPreview" class="bank-logo" src="/images/product-placeholder.png"
-                             onerror="this.src='/images/product-placeholder.png'">
-                        <div>
-                            <div class="fw-semibold" id="bankName">—</div>
-                            <div class="small muted">Los datos del banco se establecen automáticamente.</div>
+                    <input type="hidden" id="OriginalCodigo" name="OriginalCodigo" />
+
+                    <!-- Selección de Banco -->
+                    <div class="col-12">
+                        <div class="mb-4">
+                            <h5 class="fw-semibold mb-3">
+                                <i class="fa-solid fa-building-columns me-2"></i>
+                                Selecciona un Banco
+                            </h5>
+                            <div class="bank-selector">
+                                @foreach (var b in catalogo)
+                                {
+                                    <div class="bank-option" data-bank-code="@b.Codigo" data-bank-name="@b.Nombre" data-bank-logo="@b.Logo">
+                                        <div class="bank-option-logo-container">
+                                            <img src="@b.Logo" class="bank-option-logo" alt="@b.Nombre"
+                                                 onerror="this.src='/images/placeholder-bank.png'">
+                                        </div>
+                                        <span class="bank-option-name fw-medium">@b.Nombre</span>
+                                    </div>
+                                }
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Campos editables -->
-                <div class="col-md-4">
-                    <label class="form-label">Número de cuenta</label>
-                    <input id="Numero" name="Numero" class="form-control" inputmode="numeric" maxlength="20"
-                           pattern="[0-9]{6,20}" placeholder="Ej. 2210704773" required>
-                    <div class="invalid-feedback">Ingrese un número válido (solo dígitos, 6–20).</div>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Tipo</label>
-                    <select id="Tipo" name="Tipo" class="form-select" required>
-                        <option value="Cuenta de Ahorros">Cuenta de Ahorros</option>
-                        <option value="Cuenta Corriente">Cuenta Corriente</option>
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <label class="form-label">Titular <small class="text-muted">(opcional)</small></label>
-                    <input id="Titular" name="Titular" class="form-control" placeholder="Nombre del titular" maxlength="120">
-                </div>
-
-                <div class="col-md-4">
-                    <label class="form-label">RUC / Cédula <small class="text-muted">(opcional)</small></label>
-                    <input id="Ruc" name="Ruc" class="form-control" inputmode="numeric"
-                           pattern="^\d{10}(\d{3})?$" maxlength="13" placeholder="10 o 13 dígitos">
-                    <div class="form-text">Ej: cédula (10) o RUC (13).</div>
-                </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <div class="form-check">
-                        <input type="hidden" name="Activo" value="false" />
-                        <input class="form-check-input" type="checkbox" id="Activo" name="Activo" value="true" checked>
-                        <label class="form-check-label" for="Activo">Activo</label>
+                    <!-- Vista Previa -->
+                    <div class="col-12">
+                        <div class="bank-preview" id="bankPreview">
+                            <div class="bank-logo-container">
+                                <img id="logoPreview" class="bank-logo" src="/images/placeholder-bank.png"
+                                     alt="Vista previa del banco">
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="fw-bold mb-1" id="bankName">Selecciona un banco</h5>
+                                <p class="text-muted mb-0" id="bankDescription">Los datos del banco se establecerán automáticamente</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Hidden que usa el backend -->
-                <input type="hidden" id="Codigo" name="Codigo" required maxlength="50">
-                <input type="hidden" id="Nombre" name="Nombre" required maxlength="120">
-                <input type="hidden" id="LogoPath" name="LogoPath" maxlength="200">
+                    <!-- Campos del formulario -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Número de Cuenta *</label>
+                        <input id="Numero" name="Numero" class="form-control" inputmode="numeric" maxlength="20"
+                               pattern="[0-9]{6,20}" placeholder="Ej. 2210704773" required>
+                        <div class="invalid-feedback">Ingresa un número de cuenta válido (6-20 dígitos)</div>
+                    </div>
 
-                <div class="col-12">
-                    <button type="submit" class="btn btn-primary me-2" id="btnGuardar">
-                        <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
-                    </button>
-                    <button type="reset" class="btn btn-outline-secondary" id="btnLimpiar">
-                        <i class="fa-solid fa-eraser me-1"></i> Limpiar
-                    </button>
-                </div>
-            </form>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Tipo de Cuenta *</label>
+                        <select id="Tipo" name="Tipo" class="form-select" required>
+                            <option value="">Selecciona un tipo</option>
+                            <option value="Cuenta de Ahorros">Cuenta de Ahorros</option>
+                            <option value="Cuenta Corriente">Cuenta Corriente</option>
+                        </select>
+                        <div class="invalid-feedback">Selecciona un tipo de cuenta</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre del Titular</label>
+                        <input id="Titular" name="Titular" class="form-control" placeholder="Nombre completo del titular" maxlength="120">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">RUC / Cédula</label>
+                        <input id="Ruc" name="Ruc" class="form-control" inputmode="numeric"
+                               pattern="^\d{10}(\d{3})?$" maxlength="13" placeholder="10 o 13 dígitos">
+                        <div class="invalid-feedback">Formato inválido. Use 10 o 13 dígitos</div>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="Activo" name="Activo" value="true" checked>
+                            <label class="form-check-label fw-semibold" for="Activo">
+                                Cuenta activa
+                            </label>
+                        </div>
+                        <div class="form-text">Las cuentas inactivas no se mostrarán a los clientes</div>
+                    </div>
+
+                    <!-- Campos Ocultos -->
+                    <input type="hidden" id="Codigo" name="Codigo" required>
+                    <input type="hidden" id="Nombre" name="Nombre" required>
+                    <input type="hidden" id="LogoPath" name="LogoPath">
+
+                    <!-- Botones -->
+                    <div class="col-12">
+                        <div class="d-flex gap-2 pt-3 border-top">
+                            <button type="reset" class="btn btn-outline-secondary" id="btnLimpiar">
+                                <i class="fa-solid fa-eraser me-1"></i> Limpiar
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="btnGuardar">
+                                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cuenta
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
-    </div>
 
-    <!-- ===== Listado ===== -->
-    <div class="card card-elev">
-        <div class="card-header bg-white d-flex align-items-center justify-content-between">
-            <strong><i class="fa-solid fa-list-ul me-2"></i> Cuentas registradas</strong>
-            <span class="text-muted small">@cuentas.Count() registro(s)</span>
-        </div>
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
-                <thead>
-                    <tr>
-                        <th>Logo</th>
-                        <th>Banco</th>
-                        <th>Número</th>
-                        <th>Tipo</th>
-                        <th>Titular</th>
-                        <th>RUC</th>
-                        <th>Estado</th>
-                        <th style="width:170px;">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (cuentas.Any())
-                    {
-                        foreach (var c in cuentas)
-                        {
-                            <tr>
-                                <td>
-                                    <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? "/images/product-placeholder.png" : c.LogoPath)"
-                                         class="bank-logo" onerror="this.src='/images/product-placeholder.png'">
-                                </td>
-                                <td>@(string.IsNullOrWhiteSpace(c.Nombre) ? c.Codigo : c.Nombre)</td>
-                                <td class="text-mono">@c.Numero</td>
-                                <td>@c.Tipo</td>
-                                <td>@c.Titular</td>
-                                <td>@c.Ruc</td>
-                                <td>
-                                    @if (c.Activo)
-                                    {
-                                        <span class="badge bg-success badge-dot"><i class="fa-solid fa-circle"></i> Activo</span>
-                                    }
-                                    else
-                                    {
-
-                                        <span class="badge bg-secondary badge-dot"><i class="fa-solid fa-circle"></i> Inactivo</span>
-                                    }
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2">
-                                        <button type="button"
-                                                class="btn btn-outline-primary btn-sm"
-                                                data-codigo="@c.Codigo"
-                                                data-nombre="@(c.Nombre ?? "")"
-                                                data-numero="@(c.Numero ?? "")"
-                                                data-tipo="@(c.Tipo ?? "")"
-                                                data-titular="@(c.Titular ?? "")"
-                                                data-ruc="@(c.Ruc ?? "")"
-                                                data-logo="@(c.LogoPath ?? "")"
-                                                data-activo="@(c.Activo ? "true" : "false")"
-                                                onclick="editarDesdeData(this)">
-                                            <i class="fa-regular fa-pen-to-square"></i>
-                                        </button>
-
-                                        <form method="post"
-                                              asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
-                                              asp-action="@(ctxVendedor ? "Delete" : "DeleteAdmin")"
-                                              class="d-inline"
-                                              onsubmit="return confirm('¿Eliminar la cuenta @((c.Nombre ?? c.Codigo))?');">
-                                            @Html.AntiForgeryToken()
-                                            @if (adminAyudando)
+        <!-- Lista de Cuentas -->
+        <div class="card card-elev">
+            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">
+                    <i class="fa-solid fa-list-check me-2"></i> Cuentas Registradas
+                </h5>
+                <span class="badge bg-primary">@cuentas.Count() cuenta(s)</span>
+            </div>
+            <div class="card-body p-0">
+                @if (cuentas.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Banco</th>
+                                    <th>Número</th>
+                                    <th>Tipo</th>
+                                    <th>Titular</th>
+                                    <th>Estado</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in cuentas)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="bank-logo-container me-3">
+                                                    <img src="@c.LogoPath" class="bank-logo-sm"
+                                                         onerror="this.src='/images/placeholder-bank.png'"
+                                                         alt="@c.Nombre">
+                                                </div>
+                                                <div>
+                                                    <div class="fw-semibold">@c.Nombre</div>
+                                                    <small class="text-muted">@c.Codigo</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="fw-mono">@c.Numero</td>
+                                        <td>@c.Tipo</td>
+                                        <td>
+                                            @(!string.IsNullOrWhiteSpace(c.Titular) ? c.Titular : "—")
+                                        </td>
+                                        <td>
+                                            @if (c.Activo)
                                             {
-                                                <input type="hidden" name="vId" value="@targetVendorId" />
+                                                <span class="status-badge active">
+                                                    <i class="fa-solid fa-circle"></i> Activa
+                                                </span>
                                             }
-                                            <input type="hidden" name="codigo" value="@c.Codigo" />
-                                            <button class="btn btn-outline-danger btn-sm" type="submit">
-                                                <i class="fa-regular fa-trash-can"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    }
-                    else
-                    {
-                        <tr><td colspan="8" class="text-center text-muted py-4">No hay cuentas registradas.</td></tr>
-                    }
-                </tbody>
-            </table>
+                                            else
+                                            {
+                                                <span class="status-badge inactive">
+                                                    <i class="fa-solid fa-circle"></i> Inactiva
+                                                </span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="d-flex gap-2 justify-content-center">
+                                                <button type="button"
+                                                        class="btn btn-outline-primary btn-sm"
+                                                        data-codigo="@c.Codigo"
+                                                        data-nombre="@c.Nombre"
+                                                        data-numero="@c.Numero"
+                                                        data-tipo="@c.Tipo"
+                                                        data-titular="@c.Titular"
+                                                        data-ruc="@c.Ruc"
+                                                        data-logo="@c.LogoPath"
+                                                        data-activo="@c.Activo"
+                                                        onclick="editarDesdeData(this)"
+                                                        title="Editar cuenta">
+                                                    <i class="fa-regular fa-pen-to-square"></i>
+                                                </button>
+
+                                                <form method="post"
+                                                      asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
+                                                      asp-action="@(ctxVendedor ? "Delete" : "DeleteAdmin")"
+                                                      class="d-inline"
+                                                      onsubmit="return confirm('¿Estás seguro de eliminar la cuenta de @c.Nombre?');">
+                                                    @Html.AntiForgeryToken()
+                                                    @if (adminAyudando)
+                                                    {
+                                                        <input type="hidden" name="vId" value="@targetVendorId" />
+                                                    }
+                                                    <input type="hidden" name="codigo" value="@c.Codigo" />
+                                                    <button class="btn btn-outline-danger btn-sm" type="submit" title="Eliminar cuenta">
+                                                        <i class="fa-regular fa-trash-can"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <i class="fa-solid fa-university fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No hay cuentas registradas</h5>
+                        <p class="text-muted">Comienza agregando tu primera cuenta bancaria</p>
+                    </div>
+                }
+            </div>
         </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-    (() => {
-        const $ = s => document.querySelector(s);
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (() => {
+            // Elementos del DOM
+            const bankOptions = document.querySelectorAll('.bank-option');
+            const bankPreview = document.getElementById('bankPreview');
+            const nameL = document.getElementById('bankName');
+            const descL = document.getElementById('bankDescription');
+            const logo = document.getElementById('logoPreview');
 
-        const ddl   = $("#ddlBanco");
-        const nameL = $("#bankName");
-        const logo  = $("#logoPreview");
+            const f = document.getElementById('frmBanco');
+            const hOrig = document.getElementById('OriginalCodigo');
+            const hCod = document.getElementById('Codigo');
+            const hNom = document.getElementById('Nombre');
+            const hLogo = document.getElementById('LogoPath');
+            const inpN = document.getElementById('Numero');
+            const selT = document.getElementById('Tipo');
+            const inpTi = document.getElementById('Titular');
+            const inpR = document.getElementById('Ruc');
+            const chkA = document.getElementById('Activo');
+            const btnG = document.getElementById('btnGuardar');
 
-        const f     = $("#frmBanco");
-        const hOrig = $("#OriginalCodigo");
-        const hCod  = $("#Codigo");
-        const hNom  = $("#Nombre");
-        const hLogo = $("#LogoPath");
-        const inpN  = $("#Numero");
-        const selT  = $("#Tipo");
-        const inpTi = $("#Titular");
-        const inpR  = $("#Ruc");
-        const chkA  = $("#Activo");
-        const btnG  = $("#btnGuardar");
+            // Configurar selección de bancos
+            bankOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    // Remover clase activa de todas las opciones
+                    bankOptions.forEach(opt => {
+                        opt.classList.remove('active');
+                        opt.style.borderColor = '';
+                    });
 
-        function setPreview(nombre, logoPath){
-            nameL.textContent = nombre || "—";
-            logo.src = (logoPath || "/images/product-placeholder.png");
-        }
+                    // Agregar clase activa a la opción seleccionada
+                    this.classList.add('active');
 
-        function setFromCatalog(opt){
-            if (!opt) { setPreview(null, null); hCod.value=hNom.value=hLogo.value=""; return; }
-            const code = opt.value;
-            const name = opt.getAttribute("data-nombre") || code;
-            const img  = opt.getAttribute("data-logo")   || "/images/product-placeholder.png";
-            hCod.value  = code;
-            hNom.value  = name;
-            hLogo.value = img;
-            setPreview(name, img);
-        }
+                    // Obtener datos del banco
+                    const code = this.getAttribute('data-bank-code');
+                    const name = this.getAttribute('data-bank-name');
+                    const logoPath = this.getAttribute('data-bank-logo');
 
-        ddl?.addEventListener("change", function(){
-            const opt = this.selectedIndex > 0 ? this.options[this.selectedIndex] : null;
-            setFromCatalog(opt);
-            if (!selT.value) selT.value = "Cuenta de Ahorros";
-        });
+                    // Actualizar campos ocultos
+                    hCod.value = code;
+                    hNom.value = name;
+                    hLogo.value = logoPath;
 
-        window.editarDesdeData = function (btn) {
-            const d = btn.dataset;
-            editar(
-                d.codigo, d.nombre || '', d.numero || '', d.tipo || '',
-                d.titular || '', d.ruc || '', d.logo || '', d.activo === 'true'
-            );
-        };
+                    // Actualizar vista previa
+                    setPreview(name, logoPath, true);
+                });
+            });
 
-        window.editar = function(codigo, nombre, numero, tipo, titular, ruc, logoPath, activo){
-            hOrig.value = codigo;
-            hCod.value  = codigo;
-            hNom.value  = nombre || codigo;
-            hLogo.value = logoPath || "/images/product-placeholder.png";
-            setPreview(hNom.value, hLogo.value);
+            function setPreview(nombre, logoPath, configured = false) {
+                if (configured) {
+                    nameL.textContent = nombre || "Banco no especificado";
+                    descL.textContent = "Cuenta bancaria configurada - Lista para guardar";
+                    bankPreview.classList.add('active');
+                } else {
+                    nameL.textContent = "Selecciona un banco";
+                    descL.textContent = "Los datos del banco se establecerán automáticamente";
+                    bankPreview.classList.remove('active');
+                }
 
-            if (ddl){
-                const opt = Array.from(ddl.options).find(o => o.value === codigo);
-                ddl.value = opt ? codigo : "";
+                // CORRECCIÓN: Manejo mejorado de imágenes
+                if (logoPath && logoPath !== "/images/placeholder-bank.png") {
+                    const img = new Image();
+                    img.src = logoPath;
+                    img.onload = function() {
+                        logo.src = logoPath;
+                    };
+                    img.onerror = function() {
+                        logo.src = '/images/placeholder-bank.png';
+                    };
+                } else {
+                    logo.src = '/images/placeholder-bank.png';
+                }
             }
 
-            inpN.value   = numero || "";
-            selT.value   = tipo || "Cuenta de Ahorros";
-            inpTi.value  = titular || "";
-            inpR.value   = ruc || "";
-            chkA.checked = (activo === true || activo === "true");
-            window.scrollTo({ top: 0, behavior: "smooth" });
-        };
+            window.editarDesdeData = function (btn) {
+                const d = btn.dataset;
+                editar(
+                    d.codigo, d.nombre || '', d.numero || '', d.tipo || '',
+                    d.titular || '', d.ruc || '', d.logo || '', d.activo === 'true'
+                );
+            };
 
-        $("#btnLimpiar")?.addEventListener("click", () => {
-            setTimeout(() => {
-                f.reset();
-                ddl.value = "";
-                hOrig.value = "";
-                hCod.value = hNom.value = hLogo.value = "";
-                setPreview(null, null);
-                f.classList.remove("was-validated");
-                btnG.disabled = false;
-            }, 0);
-        });
+            window.editar = function(codigo, nombre, numero, tipo, titular, ruc, logoPath, activo) {
+                // Restablecer selección de bancos
+                bankOptions.forEach(opt => opt.classList.remove('active'));
 
-        f?.addEventListener("submit", (e) => {
-            if (!hCod.value && ddl && ddl.value){
-                const opt = ddl.options[ddl.selectedIndex];
-                setFromCatalog(opt);
-            }
-            if (!f.checkValidity()){
-                e.preventDefault();
-                e.stopPropagation();
-            } else {
-                btnG.disabled = true;
-            }
-            f.classList.add("was-validated");
-        });
-    })();
-</script>
+                // Seleccionar el banco correspondiente
+                const bankOption = Array.from(bankOptions).find(opt =>
+                    opt.getAttribute('data-bank-code') === codigo);
+
+                if (bankOption) {
+                    bankOption.classList.add('active');
+                }
+
+                // Actualizar campos del formulario
+                hOrig.value = codigo;
+                hCod.value = codigo;
+                hNom.value = nombre || codigo;
+                hLogo.value = logoPath || "/images/placeholder-bank.png";
+
+                inpN.value = numero || "";
+                selT.value = tipo || "";
+                inpTi.value = titular || "";
+                inpR.value = ruc || "";
+                chkA.checked = (activo === true || activo === "true");
+
+                // Actualizar vista previa
+                setPreview(nombre, logoPath, true);
+
+                // Desplazar al formulario
+                window.scrollTo({ top: 0, behavior: "smooth" });
+
+                // Actualizar texto del botón
+                btnG.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i> Actualizar Cuenta';
+            };
+
+            document.getElementById('btnLimpiar')?.addEventListener('click', () => {
+                setTimeout(() => {
+                    f.reset();
+                    bankOptions.forEach(opt => opt.classList.remove('active'));
+                    hOrig.value = "";
+                    hCod.value = hNom.value = hLogo.value = "";
+                    setPreview(null, null, false);
+                    f.classList.remove('was-validated');
+                    btnG.disabled = false;
+                    btnG.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cuenta';
+                    chkA.checked = true;
+                }, 0);
+            });
+
+            f?.addEventListener('submit', (e) => {
+                // Validar que se haya seleccionado un banco
+                if (!hCod.value) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    alert('Por favor selecciona un banco de la lista.');
+                    return;
+                }
+
+                if (!f.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                } else {
+                    btnG.disabled = true;
+                    btnG.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando...';
+                }
+                f.classList.add('was-validated');
+            });
+        })();
+    </script>
+</body>
+</html>

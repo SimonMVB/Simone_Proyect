@@ -1,0 +1,142 @@
+﻿@{
+    ViewData["Title"] = "Información General";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var lastUpdated = new DateTime(2025, 10, 10); // <-- ajusta fecha cuando cambies el contenido
+}
+
+<div class="container my-5">
+    <div class="row g-4">
+>
+
+        <!-- Contenido -->
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-dark text-white rounded-top-4">
+                    <h1 class="h4 mb-0">@ViewData["Title"]</h1>
+                    <small class="opacity-75 d-block">Última actualización: @lastUpdated:dd/MM/yyyy</small>
+                </div>
+
+                <div class="card-body p-4">
+                    <article>
+                        <p class="text-muted">
+                            Esta sección resume aspectos operativos generales de Neo Ágora: cobertura, courier,
+                            tiempos de entrega, costos y comunicación de estados.
+                        </p>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Cobertura</h2>
+                            <p>
+                                Neo Ágora realiza envíos exclusivamente dentro del Ecuador. Al entregar el paquete a
+                                Servientrega, recibirás el número de guía para rastrear tu envío en tiempo real a través de
+                                los canales del courier.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Courier y custodia</h2>
+                            <p>
+                                El transporte se gestiona con Servientrega. Una vez entregado el paquete al courier,
+                                la custodia y el riesgo de transporte corresponden a Servientrega. Neo Ágora realiza
+                                seguimiento y apoyo en caso de incidencias.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Tiempos de entrega</h2>
+                            <p>
+                                El tiempo estimado de entrega es de <strong>3 días laborables</strong> contados desde la
+                                verificación del pago. Zonas rurales o de difícil acceso pueden requerir plazos adicionales
+                                según la operación del courier.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Costos de envío</h2>
+                            <p>
+                                El costo se informa antes de pagar. El cliente debe ingresar dirección completa, referencias
+                                claras y número de contacto. Si por dirección incompleta, error del destinatario o reintentos
+                                fallidos se requiere redirección, el costo adicional será asumido por el cliente.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Entrega y persona autorizada</h2>
+                            <p>
+                                El paquete se entrega en la dirección indicada a la persona presente que acredite recepción.
+                                En edificios/urbanizaciones, la entrega puede realizarse en portería/garita si así lo establece
+                                el reglamento del lugar.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Intentos de entrega y ausencias</h2>
+                            <p>
+                                Si no hay quien reciba, Servientrega puede realizar nuevos intentos o derivar a punto de retiro.
+                                Si no se concreta la entrega en los plazos del courier, el paquete puede retornar a origen;
+                                el nuevo envío se coordina con el cliente y se cobra aparte.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Paquetes dañados o con señales de manipulación</h2>
+                            <p>
+                                Revisa visualmente el empaque al recibir. Ante daño, mojadura, sello abierto o manipulación,
+                                solicita al mensajero dejar constancia y no recibas o recibe “con novedad”. Reporta a Neo Ágora
+                                el mismo día con fotos del empaque y de la guía para gestionar el reclamo con el courier.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Contenido faltante o error de artículo/talla</h2>
+                            <p>
+                                Si el contenido recibido no coincide con tu pedido, avísanos dentro de 24 horas adjuntando fotos
+                                y número de pedido. Si es error de Neo Ágora, asumimos flete de retorno y reenvío; si es error del
+                                cliente, éste asume flete de retorno y reenvío y aplican reglas de cambios en 7 días con prenda impecable.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Pérdida o extravío</h2>
+                            <p>
+                                Ante reporte de pérdida por parte del courier, Neo Ágora abrirá el caso con Servientrega. Confirmado
+                                el extravío, coordinaremos reposición o nota de crédito por el valor pagado si no hubiera stock.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Pedidos múltiples y parcialidades</h2>
+                            <p>
+                                Si un pedido incluye varios artículos, se enviará en un solo despacho salvo acuerdo de envío parcial
+                                por disponibilidad u operatividad; te comunicaremos las guías correspondientes.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Alta demanda y fuerza mayor</h2>
+                            <p>
+                                En campañas especiales, picos de demanda, fenómenos climáticos, cierres viales u otros hechos de
+                                fuerza mayor, los tiempos de entrega pueden extenderse. Mantendremos la comunicación y el seguimiento.
+                            </p>
+                        </section>
+
+                        <section class="mb-4">
+                            <h2 class="h5">Comunicación de estados</h2>
+                            <p>
+                                Recibirás notificaciones de confirmación de pedido, entrega al courier y número de guía. Cualquier
+                                incidencia relevante será comunicada por correo o WhatsApp.
+                            </p>
+                        </section>
+
+                        <section>
+                            <h2 class="h5">Actualizaciones de esta política</h2>
+                            <p>
+                                Neo Ágora puede actualizar esta sección. La versión vigente se publica con su fecha de actualización.
+                                El uso del servicio tras un cambio implica aceptación de la versión actual.
+                            </p>
+                        </section>
+                    </article>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

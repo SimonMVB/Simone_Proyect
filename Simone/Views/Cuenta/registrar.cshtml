@@ -4,16 +4,442 @@
     Layout = "~/Views/Shared/_LayoutCuenta.cshtml";
 }
 
-<div class="container py-5" style="max-width: 560px;">
-    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-        <div class="card-header text-center border-0 p-4" style="background: linear-gradient(135deg,#f7cadb,#f4a7c1);">
-            <h4 class="mb-0 text-white">
-                <i class="fa-solid fa-user-plus me-2"></i> Crear una cuenta
+<style>
+    :root {
+        --primary-color: #f4a7c1;
+        --secondary-color: #f7cadb;
+        --accent-color: #e91e63;
+        --dark-color: #2c3e50;
+        --light-bg: #f8f9fa;
+        --border-radius: 12px;
+        --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .register-container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .register-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        overflow: hidden;
+        background: white;
+    }
+
+    .register-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        color: white;
+        padding: 2.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .register-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            animation: float 20s linear infinite;
+        }
+
+    @@keyframes float {
+        0%
+
+    {
+        transform: translate(0, 0) rotate(0deg);
+    }
+
+    100% {
+        transform: translate(-20px, -20px) rotate(360deg);
+    }
+
+    }
+
+    .register-header h4 {
+        font-weight: 700;
+        font-size: 1.75rem;
+        margin: 0;
+        position: relative;
+        z-index: 2;
+    }
+
+    .register-body {
+        padding: 2.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--dark-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .input-group {
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        border: 2px solid #e9ecef;
+        transition: var(--transition);
+    }
+
+        .input-group:focus-within {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(244, 167, 193, 0.25);
+        }
+
+    .input-group-text {
+        background: white;
+        border: none;
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+
+    .form-control {
+        border: none;
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        transition: var(--transition);
+    }
+
+        .form-control:focus {
+            box-shadow: none;
+            background-color: var(--light-bg);
+        }
+
+    .btn-outline-secondary {
+        border-color: #dee2e6;
+        color: #6c757d;
+        transition: var(--transition);
+    }
+
+        .btn-outline-secondary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+        }
+
+    .progress {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+    }
+
+    .progress-bar {
+        border-radius: 4px;
+        transition: width 0.5s ease;
+    }
+
+    .terms-section {
+        background: var(--light-bg);
+        border-radius: var(--border-radius);
+        padding: 2rem;
+        margin: 2rem 0;
+        border: 2px solid #e9ecef;
+    }
+
+    .terms-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+        .terms-header h5 {
+            color: var(--dark-color);
+            margin: 0;
+            font-weight: 700;
+        }
+
+    .terms-content {
+        max-height: 400px;
+        overflow-y: auto;
+        padding: 1rem;
+        background: white;
+        border-radius: var(--border-radius);
+        border: 1px solid #dee2e6;
+    }
+
+    .terms-tabs {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+
+    .terms-tab {
+        padding: 0.75rem 1.5rem;
+        border: 2px solid var(--primary-color);
+        border-radius: 50px;
+        background: white;
+        color: var(--primary-color);
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        flex: 1;
+        min-width: 120px;
+        text-align: center;
+    }
+
+        .terms-tab.active {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(244, 167, 193, 0.3);
+        }
+
+        .terms-tab.completed {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+
+    .terms-document {
+        display: none;
+    }
+
+        .terms-document.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    .document-content {
+        line-height: 1.6;
+        color: var(--dark-color);
+    }
+
+        .document-content h4 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .document-content h5 {
+            color: var(--dark-color);
+            margin: 1.5rem 0 1rem 0;
+            font-weight: 600;
+        }
+
+        .document-content p {
+            margin-bottom: 1rem;
+        }
+
+        .document-content ul {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        .document-content li {
+            margin-bottom: 0.5rem;
+        }
+
+    .highlight-box {
+        background-color: var(--light-bg);
+        border-left: 4px solid var(--primary-color);
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .accept-all-section {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        border: 2px solid #28a745;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        text-align: center;
+    }
+
+    .form-check {
+        padding-left: 2.5rem;
+    }
+
+    .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-left: -2.5rem;
+        margin-top: 0.25rem;
+        border: 2px solid #6c757d;
+        transition: var(--transition);
+    }
+
+        .form-check-input:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(244, 167, 193, 0.25);
+        }
+
+    .form-check-label {
+        font-weight: 600;
+        color: var(--dark-color);
+        cursor: pointer;
+    }
+
+    .btn-register {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+        border: none;
+        color: white;
+        padding: 1rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        border-radius: 50px;
+        transition: var(--transition);
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(244, 167, 193, 0.4);
+        }
+
+        .btn-register:disabled {
+            background: #6c757d;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-register::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-register:hover::before {
+            left: 100%;
+        }
+
+    .password-strength {
+        margin-top: 0.5rem;
+    }
+
+    .strength-text {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-top: 0.25rem;
+    }
+
+    .location-preview {
+        background: var(--light-bg);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        margin-top: 0.5rem;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .alert {
+        border-radius: var(--border-radius);
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .alert-danger {
+        background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+        color: #721c24;
+    }
+
+    .alert-success {
+        background: linear-gradient(135deg, #d4edda, #c3e6cb);
+        color: #155724;
+    }
+
+    /* Scroll personalizado */
+    .terms-content::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .terms-content::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+
+    .terms-content::-webkit-scrollbar-thumb {
+        background: var(--primary-color);
+        border-radius: 4px;
+    }
+
+        .terms-content::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
+        }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .register-container
+
+    {
+        margin: 1rem;
+    }
+
+    .register-body {
+        padding: 1.5rem;
+    }
+
+    .terms-tabs {
+        flex-direction: column;
+    }
+
+    .terms-tab {
+        min-width: auto;
+    }
+
+    }
+
+    /* Offcanvas mejorado */
+    .offcanvas-provincias .list-group-item {
+        border: none;
+        padding: 0.75rem 1rem;
+        transition: var(--transition);
+    }
+
+        .offcanvas-provincias .list-group-item:hover,
+        .offcanvas-provincias .list-group-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+    .offcanvas-provincias .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.2rem rgba(244, 167, 193, 0.25);
+    }
+</style>
+
+<div class="register-container">
+    <div class="register-card">
+        <div class="register-header">
+            <h4>
+                <i class="fa-solid fa-user-plus me-2"></i> Crear Cuenta en Neo Ágora
             </h4>
         </div>
 
-        <div class="card-body p-4">
-            @* mensajes *@
+        <div class="register-body">
+            <!-- Mensajes de alerta -->
             @if (TempData["MensajeError"] is string err && !string.IsNullOrWhiteSpace(err))
             {
                 <div class="alert alert-danger d-flex align-items-start" role="alert">
@@ -29,231 +455,533 @@
                 </div>
             }
 
-            @* errores del modelo *@
-            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+            <!-- Errores del modelo -->
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger small"></div>
 
             <form asp-action="Registrar" method="post" id="formRegistro" novalidate>
                 @Html.AntiForgeryToken()
 
-                <!-- Nombre -->
-                <div class="mb-3">
-                    <label asp-for="Nombre" class="form-label">Nombre completo</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
-                        <input asp-for="Nombre"
-                               class="form-control"
-                               placeholder="Nombre y apellidos"
-                               autocomplete="name"
-                               required />
+                <div class="row">
+                    <!-- Columna izquierda -->
+                    <div class="col-md-6">
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label asp-for="Nombre" class="form-label">
+                                <i class="fa-solid fa-user me-1"></i> Nombre completo
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Nombre"
+                                       class="form-control"
+                                       placeholder="Nombre y apellidos"
+                                       autocomplete="name"
+                                       required />
+                            </div>
+                            <span asp-validation-for="Nombre" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Cédula -->
+                        <div class="mb-3">
+                            <label asp-for="Cedula" class="form-label">
+                                <i class="fa-solid fa-id-card me-1"></i> Cédula
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Cedula"
+                                       class="form-control"
+                                       placeholder="10 dígitos"
+                                       inputmode="numeric"
+                                       pattern="\d{10}"
+                                       maxlength="10"
+                                       autocomplete="off"
+                                       required />
+                            </div>
+                            <small class="form-text text-muted">Solo números, exactamente 10 dígitos.</small>
+                            <span asp-validation-for="Cedula" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label">
+                                <i class="fa-solid fa-envelope me-1"></i> Correo electrónico
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Email"
+                                       class="form-control"
+                                       placeholder="correo@ejemplo.com"
+                                       inputmode="email"
+                                       autocomplete="username email"
+                                       required />
+                            </div>
+                            <span asp-validation-for="Email" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Teléfono -->
+                        <div class="mb-3">
+                            <label asp-for="Telefono" class="form-label">
+                                <i class="fa-solid fa-phone me-1"></i> Número de celular
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Telefono"
+                                       class="form-control"
+                                       placeholder="0999999999"
+                                       inputmode="numeric"
+                                       pattern="\d{9,10}"
+                                       maxlength="10"
+                                       autocomplete="tel-national" />
+                            </div>
+                            <small class="form-text text-muted">Solo dígitos, 9–10 caracteres.</small>
+                            <span asp-validation-for="Telefono" class="text-danger small"></span>
+                        </div>
                     </div>
-                    <span asp-validation-for="Nombre" class="text-danger small"></span>
+
+                    <!-- Columna derecha -->
+                    <div class="col-md-6">
+                        <!-- Dirección -->
+                        <div class="mb-3">
+                            <label asp-for="Direccion" class="form-label">
+                                <i class="fa-solid fa-location-dot me-1"></i> Dirección
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Direccion"
+                                       class="form-control"
+                                       placeholder="Calle principal y Nro."
+                                       autocomplete="street-address" />
+                            </div>
+                            <span asp-validation-for="Direccion" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Ubicación -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fa-solid fa-map me-1"></i> Provincia y Ciudad
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Provincia"
+                                       class="form-control"
+                                       placeholder="Selecciona tu provincia"
+                                       autocomplete="address-level1"
+                                       readonly
+                                       required />
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="offcanvas"
+                                        data-bs-target="#offProvinciaCiudad"
+                                        title="Elegir provincia y ciudad">
+                                    <i class="fa-solid fa-magnifying-glass-location"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Provincia" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="input-group">
+                                <input asp-for="Ciudad"
+                                       class="form-control"
+                                       placeholder="Selecciona tu ciudad"
+                                       autocomplete="address-level2"
+                                       readonly
+                                       required />
+                                <button class="btn btn-outline-secondary"
+                                        type="button"
+                                        data-bs-toggle="offcanvas"
+                                        data-bs-target="#offProvinciaCiudad"
+                                        title="Elegir provincia y ciudad">
+                                    <i class="fa-solid fa-list"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="Ciudad" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Referencia -->
+                        <div class="mb-3">
+                            <label asp-for="Referencia" class="form-label">
+                                <i class="fa-solid fa-map-pin me-1"></i> Referencia (opcional)
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Referencia"
+                                       class="form-control"
+                                       placeholder="Casa blanca con portón azul" />
+                            </div>
+                            <span asp-validation-for="Referencia" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Vista previa de ubicación -->
+                        <div id="locationPreview" class="location-preview" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fa-solid fa-eye me-1"></i>
+                                <strong>Ubicación seleccionada:</strong>
+                                <span id="previewText"></span>
+                            </small>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Cédula -->
-                <div class="mb-3">
-                    <label asp-for="Cedula" class="form-label">Cédula</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
-                        <input asp-for="Cedula"
-                               class="form-control"
-                               placeholder="10 dígitos"
-                               inputmode="numeric"
-                               pattern="\d{10}"
-                               maxlength="10"
-                               autocomplete="off"
-                               aria-describedby="cedHelp"
-                               required />
+                <!-- Contraseñas -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="Password" class="form-label">
+                                <i class="fa-solid fa-lock me-1"></i> Contraseña
+                            </label>
+                            <div class="input-group" data-pass>
+                                <input asp-for="Password"
+                                       type="password"
+                                       class="form-control"
+                                       placeholder="••••••••"
+                                       autocomplete="new-password"
+                                       required />
+                                <button class="btn btn-outline-secondary" type="button" data-pass-toggle title="Mostrar/ocultar">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength">
+                                <div class="progress">
+                                    <div class="progress-bar" role="progressbar" style="width:0%" id="pwdMeter"></div>
+                                </div>
+                                <div class="strength-text" id="pwdStrengthText">Seguridad de la contraseña</div>
+                            </div>
+                            <span asp-validation-for="Password" class="text-danger small"></span>
+                        </div>
                     </div>
-                    <div id="cedHelp" class="form-text">Solo números, exactamente 10 dígitos.</div>
-                    <span asp-validation-for="Cedula" class="text-danger small"></span>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label asp-for="ConfirmPassword" class="form-label">
+                                <i class="fa-solid fa-lock me-1"></i> Confirmar contraseña
+                            </label>
+                            <div class="input-group" data-pass2>
+                                <input asp-for="ConfirmPassword"
+                                       type="password"
+                                       class="form-control"
+                                       placeholder="••••••••"
+                                       autocomplete="new-password"
+                                       required />
+                                <button class="btn btn-outline-secondary" type="button" data-pass2-toggle title="Mostrar/ocultar">
+                                    <i class="fa-regular fa-eye"></i>
+                                </button>
+                            </div>
+                            <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Email -->
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label">Correo electrónico</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
-                        <input asp-for="Email"
-                               class="form-control"
-                               placeholder="correo@ejemplo.com"
-                               inputmode="email"
-                               autocomplete="username email"
-                               required />
+                <!-- Sección de Términos y Condiciones -->
+                <div class="terms-section">
+                    <div class="terms-header">
+                        <h5>
+                            <i class="fa-solid fa-file-contract me-2"></i>
+                            Términos y Condiciones
+                        </h5>
+                        <span class="badge bg-primary" id="termsProgress">0/7 completados</span>
                     </div>
-                    <span asp-validation-for="Email" class="text-danger small"></span>
+
+                    <div class="terms-tabs" id="termsTabs">
+                        <div class="terms-tab active" data-tab="terminos">
+                            <i class="fa-solid fa-scale-balanced me-1"></i> Términos
+                        </div>
+                        <div class="terms-tab" data-tab="privacidad">
+                            <i class="fa-solid fa-shield-halved me-1"></i> Privacidad
+                        </div>
+                        <div class="terms-tab" data-tab="cookies">
+                            <i class="fa-solid fa-cookie me-1"></i> Cookies
+                        </div>
+                        <div class="terms-tab" data-tab="pagos">
+                            <i class="fa-solid fa-credit-card me-1"></i> Pagos
+                        </div>
+                        <div class="terms-tab" data-tab="envios">
+                            <i class="fa-solid fa-truck me-1"></i> Envíos
+                        </div>
+                        <div class="terms-tab" data-tab="informacion">
+                            <i class="fa-solid fa-circle-info me-1"></i> Información
+                        </div>
+                        <div class="terms-tab" data-tab="aviso">
+                            <i class="fa-solid fa-eye me-1"></i> Aviso
+                        </div>
+                    </div>
+
+                    <div class="terms-content">
+                        <!-- Términos y Condiciones -->
+                        <div class="terms-document active" id="terminosContent">
+                            <div class="document-content">
+                                <h4>Términos y Condiciones</h4>
+
+                                <h5>Identificación del titular del Sitio</h5>
+                                <p><strong>Neo Ágora</strong>, con domicilio en la ciudad de Milagro, provincia del Guayas, Ecuador, es titular del presente sitio web.</p>
+
+                                <div class="highlight-box">
+                                    <p><strong>RUC:</strong> 0941984890001</p>
+                                    <p><strong>Medios de contacto:</strong> melinafuentesduarte11@gmail.com</p>
+                                    <p><strong>Teléfono:</strong> 0991570376</p>
+                                </div>
+
+                                <h5>Aceptación de los términos</h5>
+                                <p>Al acceder y utilizar este sitio, el usuario declara haber leído y aceptado estos Términos y Condiciones. Si no está de acuerdo con alguno de los términos establecidos, debe abstenerse de usar el sitio.</p>
+
+                                <h5>Naturaleza del acuerdo</h5>
+                                <p>Neo Ágora opera un canal de comercio electrónico para la venta de prendas de vestir y artículos afines (los "Productos"), dirigido exclusivamente al territorio ecuatoriano.</p>
+
+                                <h5>Capacidad y mayoría de edad</h5>
+                                <p>Al aceptar, el Usuario declara tener 18 años o más y contar con capacidad legal suficiente para obligarse.</p>
+
+                                <h5>Ley aplicable y jurisdicción</h5>
+                                <p>El Usuario acepta que este acuerdo se rige por la ley ecuatoriana y que, para cualquier divergencia relacionada con la validez, interpretación, ejecución o terminación de estos Términos, serán competentes los juzgados del cantón Milagro, provincia del Guayas.</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptTerminos">
+                                    <label class="form-check-label" for="acceptTerminos">
+                                        He leído y acepto los Términos y Condiciones
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Política de Privacidad -->
+                        <div class="terms-document" id="privacidadContent">
+                            <div class="document-content">
+                                <h4>Política de Privacidad</h4>
+
+                                <h5>Identificación y Contacto</h5>
+                                <p>Recopilamos y utilizamos tus datos personales para procesar tus compras, gestionar envíos y ofrecerte atención al cliente.</p>
+
+                                <h5>Datos que Recopilamos</h5>
+                                <ul>
+                                    <li>Nombres y apellidos completos</li>
+                                    <li>Cédula o RUC para facturación electrónica</li>
+                                    <li>Correo electrónico y número de teléfono</li>
+                                    <li>Dirección de entrega y facturación</li>
+                                    <li>Información de pedidos y facturación</li>
+                                </ul>
+
+                                <h5>Seguridad de la Información</h5>
+                                <p>Implementamos medidas de seguridad para proteger tu información y prevenir actividades fraudulentas. No solicitamos ni almacenamos contraseñas bancarias ni accesos a banca en línea.</p>
+
+                                <h5>Datos que No Tratamos</h5>
+                                <p>Nos comprometemos a no recopilar información de tarjetas de crédito/débito, contraseñas bancarias, datos sensibles como salud o biometría, ni datos de personas menores de 18 años.</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptPrivacidad">
+                                    <label class="form-check-label" for="acceptPrivacidad">
+                                        He leído y acepto la Política de Privacidad
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Política de Cookies -->
+                        <div class="terms-document" id="cookiesContent">
+                            <div class="document-content">
+                                <h4>Política de Cookies</h4>
+
+                                <h5>Naturaleza y Objeto</h5>
+                                <p>Las cookies son pequeños archivos que se guardan en tu navegador y permiten que el sitio funcione correctamente, recuerde tus preferencias y mejore la experiencia.</p>
+
+                                <h5>Categorías que Utilizamos</h5>
+                                <ul>
+                                    <li><strong>Cookies Necesarias:</strong> Imprescindibles para que el sitio funcione, mantener tu sesión, recordar tu carrito</li>
+                                    <li><strong>Cookies Analíticas:</strong> Nos ayudan a entender el uso del sitio para mejorar contenidos y procesos</li>
+                                    <li><strong>Cookies Publicitarias:</strong> Actualmente no utilizamos de forma predeterminada</li>
+                                </ul>
+
+                                <h5>Consentimiento y Control</h5>
+                                <p>Al ingresar al sitio verás un banner que te permite Aceptar, Rechazar o Configurar las cookies no necesarias. Tu elección se guarda y puedes cambiarla en cualquier momento.</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptCookies">
+                                    <label class="form-check-label" for="acceptCookies">
+                                        He leído y acepto la Política de Cookies
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Métodos de Pago -->
+                        <div class="terms-document" id="pagosContent">
+                            <div class="document-content">
+                                <h4>Métodos de Pago</h4>
+
+                                <h5>Transferencias Bancarias</h5>
+                                <p><strong>Neo Ágora acepta únicamente transferencias bancarias nacionales en dólares de los Estados Unidos.</strong> El costo de envío se informa antes de pagar.</p>
+
+                                <h5>Tiempo para Realizar la Transferencia</h5>
+                                <p>Recomendamos efectuar el pago dentro de veinticuatro horas después de confirmar el pedido. Si no se recibe la acreditación en ese tiempo, Neo Ágora puede liberar el inventario y cancelar la orden por falta de pago.</p>
+
+                                <h5>Acreditación y Verificación</h5>
+                                <p>El pedido entra a preparación cuando el pago queda acreditado en la cuenta de Neo Ágora. Podemos realizar validaciones adicionales para confirmar titularidad, monto y referencia del pedido.</p>
+
+                                <h5>Seguridad</h5>
+                                <p>Neo Ágora no solicita ni almacena contraseñas bancarias ni accesos a banca en línea. Solo tratamos la información necesaria para validar la acreditación del pago.</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptPagos">
+                                    <label class="form-check-label" for="acceptPagos">
+                                        He leído y acepto los Métodos de Pago
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Políticas de Envío -->
+                        <div class="terms-document" id="enviosContent">
+                            <div class="document-content">
+                                <h4>Políticas de Envío</h4>
+
+                                <h5>Logística y Entrega</h5>
+                                <p>Realizamos envíos a través de <strong>Servientrega</strong> con un plazo estimado de 2 días hábiles.</p>
+
+                                <h5>Información Requerida</h5>
+                                <ul>
+                                    <li>Dirección completa de entrega</li>
+                                    <li>Punto de referencia</li>
+                                    <li>Persona autorizada para recibir</li>
+                                    <li>Número de contacto</li>
+                                </ul>
+
+                                <h5>Seguimiento</h5>
+                                <p>Recibirás un número de guía para realizar el seguimiento de tu pedido. Los estados de envío y confirmación de entrega son gestionados por Servientrega.</p>
+
+                                <h5>Cobertura</h5>
+                                <p>Realizamos envíos a todo el territorio ecuatoriano. El costo de envío varía según la ubicación y se calcula automáticamente durante el proceso de compra.</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptEnvios">
+                                    <label class="form-check-label" for="acceptEnvios">
+                                        He leído y acepto las Políticas de Envío
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Información General -->
+                        <div class="terms-document" id="informacionContent">
+                            <div class="document-content">
+                                <h4>Información General</h4>
+
+                                <h5>Identificación del Titular</h5>
+                                <p><strong>Neo Ágora</strong>, con domicilio en la ciudad de Milagro, provincia del Guayas, Ecuador.</p>
+
+                                <div class="highlight-box">
+                                    <p><strong>RUC:</strong> 0941984890001</p>
+                                    <p><strong>Contacto:</strong> melinafuentesduarte11@gmail.com | 0991570376</p>
+                                </div>
+
+                                <h5>Disponibilidad Dinámica</h5>
+                                <p>El inventario de Productos es limitado y puede variar sin previo aviso hasta la confirmación efectiva del pago.</p>
+
+                                <h5>Atención y Postventa</h5>
+                                <p>La experiencia postventa incluye confirmaciones de pedido, facturación electrónica en 48 horas posteriores a la acreditación, coordinación de envío por Servientrega y gestión de cambios.</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptInformacion">
+                                    <label class="form-check-label" for="acceptInformacion">
+                                        He leído y acepto la Información General
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Aviso de Privacidad -->
+                        <div class="terms-document" id="avisoContent">
+                            <div class="document-content">
+                                <h4>Aviso de Privacidad</h4>
+
+                                <h5>Finalidad del Tratamiento de Datos</h5>
+                                <p>Utilizamos tu información personal para:</p>
+                                <ul>
+                                    <li>Procesar tus compras y pedidos</li>
+                                    <li>Gestionar envíos y entregas</li>
+                                    <li>Emitir facturas electrónicas</li>
+                                    <li>Brindar atención al cliente</li>
+                                    <li>Enviar comunicaciones comerciales (con tu consentimiento)</li>
+                                </ul>
+
+                                <h5>Datos que Recopilamos</h5>
+                                <p>Recopilamos nombres, cédula/RUC, correo electrónico, teléfono, dirección, información de pedidos, datos de transferencias bancarias y preferencias de marketing.</p>
+
+                                <h5>Derechos ARCO</h5>
+                                <p>Tienes derecho a Acceder, Rectificar, Cancelar y Oponerte al tratamiento de tus datos personales. Para ejercer estos derechos, contáctanos a través de los medios proporcionados.</p>
+
+                                <h5>Transferencia de Datos</h5>
+                                <p>Tus datos pueden ser compartidos con:</p>
+                                <ul>
+                                    <li>Servientrega para la entrega de pedidos</li>
+                                    <li>Autoridades fiscales para facturación</li>
+                                    <li>Proveedores de servicios tecnológicos</li>
+                                </ul>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="acceptAviso">
+                                    <label class="form-check-label" for="acceptAviso">
+                                        He leído y acepto el Aviso de Privacidad
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Teléfono -->
-                <div class="mb-3">
-                    <label asp-for="Telefono" class="form-label">Número de celular</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
-                        <input asp-for="Telefono"
-                               class="form-control"
-                               placeholder="0999999999"
-                               inputmode="numeric"
-                               pattern="\d{9,10}"
-                               maxlength="10"
-                               autocomplete="tel-national"
-                               aria-describedby="telHelp" />
+                <!-- Aceptar Todos -->
+                <div class="accept-all-section">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="acceptAll">
+                        <label class="form-check-label" for="acceptAll">
+                            <strong>
+                                <i class="fa-solid fa-check-double me-2"></i>
+                                ACEPTO TODOS LOS TÉRMINOS Y CONDICIONES ANTERIORES
+                            </strong>
+                        </label>
                     </div>
-                    <div id="telHelp" class="form-text">Solo dígitos, 9–10 caracteres.</div>
-                    <span asp-validation-for="Telefono" class="text-danger small"></span>
-                </div>
-
-                <!-- Dirección -->
-                <div class="mb-3">
-                    <label asp-for="Direccion" class="form-label">Dirección</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-location-dot"></i></span>
-                        <input asp-for="Direccion"
-                               class="form-control"
-                               placeholder="Calle principal y Nro."
-                               autocomplete="street-address" />
-                    </div>
-                    <span asp-validation-for="Direccion" class="text-danger small"></span>
-                </div>
-
-                <!-- Ciudad -->
-                <div class="mb-3">
-                    <label asp-for="Ciudad" class="form-label">Ciudad</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-city"></i></span>
-                        <input asp-for="Ciudad"
-                               class="form-control"
-                               placeholder="Selecciona tu ciudad"
-                               autocomplete="address-level2"
-                               readonly
-                               required />
-                        <button class="btn btn-outline-secondary"
-                                type="button"
-                                data-bs-toggle="offcanvas"
-                                data-bs-target="#offProvinciaCiudad"
-                                title="Elegir provincia y ciudad">
-                            <i class="fa-solid fa-magnifying-glass-location"></i>
-                        </button>
-                    </div>
-                    <span asp-validation-for="Ciudad" class="text-danger small"></span>
-                </div>
-
-                <!-- Provincia -->
-                <div class="mb-3">
-                    <label asp-for="Provincia" class="form-label">Provincia</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-map"></i></span>
-                        <input asp-for="Provincia"
-                               class="form-control"
-                               placeholder="Selecciona tu provincia"
-                               autocomplete="address-level1"
-                               readonly
-                               required />
-                        <button class="btn btn-outline-secondary"
-                                type="button"
-                                data-bs-toggle="offcanvas"
-                                data-bs-target="#offProvinciaCiudad"
-                                title="Elegir provincia y ciudad">
-                            <i class="fa-solid fa-list"></i>
-                        </button>
-                    </div>
-                    <span asp-validation-for="Provincia" class="text-danger small"></span>
-                </div>
-
-                <!-- Referencia -->
-                <div class="mb-3">
-                    <label asp-for="Referencia" class="form-label">Referencia (opcional)</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-map-pin"></i></span>
-                        <input asp-for="Referencia"
-                               class="form-control"
-                               placeholder="Casa blanca con portón azul" />
-                    </div>
-                    <span asp-validation-for="Referencia" class="text-danger small"></span>
-                </div>
-
-                <!-- Contraseña -->
-                <div class="mb-2">
-                    <label asp-for="Password" class="form-label">Contraseña</label>
-                    <div class="input-group" data-pass>
-                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="Password"
-                               type="password"
-                               class="form-control"
-                               placeholder="••••••••"
-                               autocomplete="new-password"
-                               aria-describedby="pwdHelp"
-                               required />
-                        <button class="btn btn-outline-secondary" type="button" data-pass-toggle title="Mostrar/ocultar">
-                            <i class="fa-regular fa-eye"></i>
-                        </button>
-                    </div>
-                    <div class="progress mt-2" style="height:6px;">
-                        <div class="progress-bar" role="progressbar" style="width:0%" id="pwdMeter"></div>
-                    </div>
-                    <small id="pwdHelp" class="form-text text-muted">
-                        Usa 8+ caracteres, mayúsculas, minúsculas, números y símbolos.
+                    <small class="text-muted mt-2 d-block">
+                        Al marcar esta casilla, confirmas que has leído y aceptado todos los documentos legales de Neo Ágora
                     </small>
-                    <span asp-validation-for="Password" class="text-danger small d-block"></span>
                 </div>
 
-                <!-- Confirmar Contraseña -->
-                <div class="mb-3">
-                    <label asp-for="ConfirmPassword" class="form-label">Confirmar contraseña</label>
-                    <div class="input-group" data-pass2>
-                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="ConfirmPassword"
-                               type="password"
-                               class="form-control"
-                               placeholder="••••••••"
-                               autocomplete="new-password"
-                               required />
-                        <button class="btn btn-outline-secondary" type="button" data-pass2-toggle title="Mostrar/ocultar">
-                            <i class="fa-regular fa-eye"></i>
-                        </button>
-                    </div>
-                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
-                </div>
-
-                <!-- Botón -->
-                <button type="submit" class="btn w-100 py-2 fw-semibold text-white" id="btnRegistrar"
-                        style="background-color:#f4a7c1; border-color:#f4a7c1;">
-                    <span class="me-2"><i class="fa-solid fa-user-plus"></i></span> Registrarme
+                <!-- Botón de Registro -->
+                <button type="submit" class="btn btn-register" id="btnRegistrar" disabled>
+                    <span class="me-2"><i class="fa-solid fa-user-plus"></i></span>
+                    <span id="btnText">Completar Registro</span>
                 </button>
             </form>
-        </div>
 
-        <div class="card-footer text-center small bg-white">
-            ¿Ya tienes una cuenta?
-            <a asp-controller="Cuenta" asp-action="Login" class="fw-semibold" style="color:#f4a7c1;">
-                Inicia sesión aquí
-            </a>
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    ¿Ya tienes una cuenta?
+                    <a asp-controller="Cuenta" asp-action="Login" class="fw-semibold" style="color: var(--primary-color);">
+                        Inicia sesión aquí
+                    </a>
+                </small>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Offcanvas Provincia/Ciudad -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offProvinciaCiudad" aria-labelledby="offProvinciaCiudadLabel">
-    <div class="offcanvas-header">
+<!-- Offcanvas Provincia/Ciudad Mejorado -->
+<div class="offcanvas offcanvas-end offcanvas-provincias" tabindex="-1" id="offProvinciaCiudad" aria-labelledby="offProvinciaCiudadLabel">
+    <div class="offcanvas-header bg-light">
         <h5 id="offProvinciaCiudadLabel" class="mb-0">
-            <i class="fa-solid fa-location-dot me-2"></i> Selecciona provincia y ciudad
+            <i class="fa-solid fa-location-dot me-2 text-primary"></i> Selecciona provincia y ciudad
         </h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
     </div>
     <div class="offcanvas-body">
         <div class="row g-3">
             <div class="col-12 col-md-5">
-                <div class="mb-2 d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-map text-muted"></i>
-                    <input type="text" class="form-control form-control-sm" id="searchProv" placeholder="Filtrar provincias..." />
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-2">
+                        <i class="fa-solid fa-map me-1"></i> Buscar provincia
+                    </label>
+                    <input type="text" class="form-control form-control-sm" id="searchProv" placeholder="Escribe para filtrar..." />
                 </div>
-                <div class="list-group small" id="provList" style="max-height: 60vh; overflow:auto;"></div>
+                <div class="list-group small" id="provList" style="max-height: 50vh; overflow:auto;"></div>
             </div>
             <div class="col-12 col-md-7">
-                <div class="mb-2 d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-city text-muted"></i>
-                    <input type="text" class="form-control form-control-sm" id="searchCity" placeholder="Filtrar ciudades..." disabled />
+                <div class="mb-3">
+                    <label class="form-label small text-muted mb-2">
+                        <i class="fa-solid fa-city me-1"></i> Buscar ciudad en <span id="currentProvince">...</span>
+                    </label>
+                    <input type="text" class="form-control form-control-sm" id="searchCity" placeholder="Escribe para filtrar..." disabled />
                 </div>
-                <div class="list-group small" id="cityList" style="max-height: 60vh; overflow:auto;">
-                    <div class="text-muted ps-2">Elige primero una provincia.</div>
+                <div class="list-group small" id="cityList" style="max-height: 50vh; overflow:auto;">
+                    <div class="text-muted text-center p-3">
+                        <i class="fa-solid fa-arrow-left me-1"></i> Selecciona primero una provincia
+                    </div>
                 </div>
             </div>
         </div>
@@ -263,55 +991,137 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        (function () {
+        document.addEventListener('DOMContentLoaded', function() {
             const form = document.getElementById('formRegistro');
-            const btn  = document.getElementById('btnRegistrar');
-            const tel  = document.getElementById('@Html.IdFor(m => m.Telefono)');
-            const ced  = document.getElementById('@Html.IdFor(m => m.Cedula)');
-            const pwd  = document.getElementById('@Html.IdFor(m => m.Password)');
-            const pwd2 = document.getElementById('@Html.IdFor(m => m.ConfirmPassword)');
-            const meter= document.getElementById('pwdMeter');
+            const btn = document.getElementById('btnRegistrar');
+            const btnText = document.getElementById('btnText');
+            const acceptAll = document.getElementById('acceptAll');
 
-            // Habilitar/deshabilitar por validez
-            const toggleSubmit = () => {
-                let valid = form.checkValidity();
-                if (window.jQuery && $.validator && $(form).data('validator')) {
-                    valid = valid && $(form).valid();
-                }
-                btn.disabled = !valid;
+            // Sistema de pestañas de términos
+            const tabs = document.querySelectorAll('.terms-tab');
+            const documents = document.querySelectorAll('.terms-document');
+            const progress = document.getElementById('termsProgress');
+
+            // Checkboxes individuales
+            const checkboxes = {
+                terminos: document.getElementById('acceptTerminos'),
+                privacidad: document.getElementById('acceptPrivacidad'),
+                cookies: document.getElementById('acceptCookies'),
+                pagos: document.getElementById('acceptPagos'),
+                envios: document.getElementById('acceptEnvios'),
+                informacion: document.getElementById('acceptInformacion'),
+                aviso: document.getElementById('acceptAviso')
             };
 
-            // Solo dígitos en Cédula (10) y Teléfono (máx 10)
-            if (ced) {
-                ced.addEventListener('input', () => {
-                    const digits = (ced.value || '').replace(/\D+/g, '').slice(0, 10);
-                    if (ced.value !== digits) ced.value = digits;
-                    ced.setCustomValidity(digits.length === 10 ? '' : 'La cédula debe tener 10 dígitos.');
+            // Cambiar pestaña
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const tabId = this.dataset.tab;
+
+                    // Actualizar pestañas activas
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    // Mostrar documento correspondiente
+                    documents.forEach(doc => doc.classList.remove('active'));
+                    document.getElementById(`${tabId}Content`).classList.add('active');
                 });
-            }
-            if (tel) {
-                tel.addEventListener('input', () => {
-                    tel.value = (tel.value || '').replace(/\D+/g, '').slice(0, 10);
+            });
+
+            // Actualizar progreso y estado de pestañas
+            function updateProgress() {
+                let completed = 0;
+                const total = Object.keys(checkboxes).length;
+
+                Object.keys(checkboxes).forEach((key, index) => {
+                    if (checkboxes[key]?.checked) {
+                        completed++;
+                        // Marcar pestaña como completada
+                        tabs[index].classList.add('completed');
+                    } else {
+                        tabs[index].classList.remove('completed');
+                    }
                 });
+
+                progress.textContent = `${completed}/${total} completados`;
+
+                // Actualizar "Aceptar todos"
+                if (completed === total) {
+                    acceptAll.checked = true;
+                } else {
+                    acceptAll.checked = false;
+                }
+
+                updateSubmitButton();
             }
 
-            // Medidor de contraseña
+            // Escuchar cambios en checkboxes individuales
+            Object.values(checkboxes).forEach(checkbox => {
+                if (checkbox) {
+                    checkbox.addEventListener('change', updateProgress);
+                }
+            });
+
+            // Aceptar todos
+            acceptAll.addEventListener('change', function() {
+                const isChecked = this.checked;
+                Object.values(checkboxes).forEach(checkbox => {
+                    if (checkbox) checkbox.checked = isChecked;
+                });
+                updateProgress();
+            });
+
+            // Actualizar botón de envío
+            function updateSubmitButton() {
+                const allAccepted = Object.values(checkboxes).every(checkbox => checkbox?.checked);
+                const formValid = form.checkValidity();
+
+                btn.disabled = !(allAccepted && formValid);
+
+                if (allAccepted && formValid) {
+                    btnText.innerHTML = '<i class="fa-solid fa-rocket me-2"></i> Completar Registro';
+                } else if (!allAccepted) {
+                    btnText.innerHTML = '<i class="fa-solid fa-lock me-2"></i> Acepta todos los términos';
+                } else {
+                    btnText.innerHTML = '<i class="fa-solid fa-user-plus me-2"></i> Completar Registro';
+                }
+            }
+
+            // Sistema de contraseñas
+            const pwd = document.getElementById('@Html.IdFor(m => m.Password)');
+            const pwd2 = document.getElementById('@Html.IdFor(m => m.ConfirmPassword)');
+            const meter = document.getElementById('pwdMeter');
+            const strengthText = document.getElementById('pwdStrengthText');
+
             function scorePassword(v) {
-                let s = 0; if (!v) return 0;
+                let s = 0;
+                if (!v) return 0;
                 if (v.length >= 8) s += 20;
                 if (/[a-z]/.test(v)) s += 20;
                 if (/[A-Z]/.test(v)) s += 20;
-                if (/\d/.test(v))   s += 20;
+                if (/\d/.test(v)) s += 20;
                 if (/[^A-Za-z0-9]/.test(v)) s += 20;
                 return Math.min(s, 100);
             }
+
             function updateMeter() {
                 const s = scorePassword(pwd.value);
                 meter.style.width = s + '%';
                 meter.className = 'progress-bar';
-                if (s < 40) meter.classList.add('bg-danger');
-                else if (s < 70) meter.classList.add('bg-warning');
-                else meter.classList.add('bg-success');
+
+                if (s < 40) {
+                    meter.classList.add('bg-danger');
+                    strengthText.textContent = 'Contraseña débil';
+                    strengthText.className = 'strength-text text-danger';
+                } else if (s < 70) {
+                    meter.classList.add('bg-warning');
+                    strengthText.textContent = 'Contraseña media';
+                    strengthText.className = 'strength-text text-warning';
+                } else {
+                    meter.classList.add('bg-success');
+                    strengthText.textContent = 'Contraseña fuerte';
+                    strengthText.className = 'strength-text text-success';
+                }
             }
 
             // Mostrar/ocultar contraseña
@@ -322,419 +1132,177 @@
                 icon.classList.toggle('fa-eye');
                 icon.classList.toggle('fa-eye-slash');
             };
+
             document.querySelector('[data-pass-toggle]')?.addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleType(pwd, e.currentTarget);
             });
+
             document.querySelector('[data-pass2-toggle]')?.addEventListener('click', (e) => {
                 e.preventDefault();
                 toggleType(pwd2, e.currentTarget);
             });
 
-            // Validación en vivo
+            // Validación en tiempo real
             ['input', 'change', 'keyup', 'blur'].forEach(evt => {
                 form.addEventListener(evt, () => {
                     updateMeter();
-                    toggleSubmit();
+                    updateSubmitButton();
                 }, true);
             });
 
-            // ====== Provincia / Ciudad (Offcanvas) ======
-            const inProv  = document.getElementById('@Html.IdFor(m => m.Provincia)');
-            const inCity  = document.getElementById('@Html.IdFor(m => m.Ciudad)');
-            const provList= document.getElementById('provList');
-            const cityList= document.getElementById('cityList');
-            const sProv   = document.getElementById('searchProv');
-            const sCity   = document.getElementById('searchCity');
+            // ====== SISTEMA DE PROVINCIAS Y CIUDADES COMPLETO ======
+            const inProv = document.getElementById('@Html.IdFor(m => m.Provincia)');
+            const inCity = document.getElementById('@Html.IdFor(m => m.Ciudad)');
+            const provList = document.getElementById('provList');
+            const cityList = document.getElementById('cityList');
+            const sProv = document.getElementById('searchProv');
+            const sCity = document.getElementById('searchCity');
+            const currentProvince = document.getElementById('currentProvince');
+            const locationPreview = document.getElementById('locationPreview');
+            const previewText = document.getElementById('previewText');
+
             let selectedProv = null;
 
-            // Catálogo Ecuador (muestra base; si tienes JSON propio lo integramos en 1 paso)
-                  const EC_PROVINCIAS = {
-        "Azuay": [
-          "Camilo Ponce Enríquez",
-          "Chordeleg",
-          "Cuenca",
-          "El Pan",
-          "Girón",
-          "Gualaceo",
-          "Guachapala",
-          "Nabón",
-          "Oña",
-          "Paute",
-          "Pucará",
-          "San Fernando",
-          "Santa Isabel",
-          "Sevilla de Oro",
-          "Sígsig"
-        ],
-        "Bolívar": [
-          "Caluma",
-          "Chillanes",
-          "Chimbo",
-          "Echeandía",
-          "Guaranda",
-          "Las Naves",
-          "San Miguel"
-        ],
-        "Cañar": [
-          "Azogues",
-          "Biblián",
-          "Cañar",
-          "Déleg",
-          "El Tambo",
-          "La Troncal",
-          "Suscal"
-        ],
-        "Carchi": [
-          "Bolívar",
-          "Espejo",
-          "Huaca",
-          "Mira",
-          "Montúfar",
-          "Tulcán"
-        ],
-        "Chimborazo": [
-          "Alausí",
-          "Chambo",
-          "Chunchi",
-          "Colta",
-          "Cumandá",
-          "Guamote",
-          "Guano",
-          "Pallatanga",
-          "Penipe",
-          "Riobamba"
-        ],
-        "Cotopaxi": [
-          "La Maná",
-          "Latacunga",
-          "Pangua",
-          "Pujilí",
-          "Salcedo",
-          "Saquisilí",
-          "Sigchos"
-        ],
-        "El Oro": [
-          "Arenillas",
-          "Atahualpa",
-          "Balsas",
-          "Chilla",
-          "El Guabo",
-          "Huaquillas",
-          "Las Lajas",
-          "Machala",
-          "Marcabelí",
-          "Pasaje",
-          "Piñas",
-          "Portovelo",
-          "Santa Rosa",
-          "Zaruma"
-        ],
-        "Esmeraldas": [
-          "Atacames",
-          "Eloy Alfaro",
-          "Esmeraldas",
-          "Muisne",
-          "Quinindé",
-          "Rioverde",
-          "San Lorenzo"
-        ],
-        "Galápagos": [
-          "Isabela",
-          "San Cristóbal",
-          "Santa Cruz"
-        ],
-        "Guayas": [
-          "Alfredo Baquerizo Moreno (Jujan)",
-          "Balao",
-          "Balzar",
-          "Colimes",
-          "Daule",
-          "Durán",
-          "El Empalme",
-          "El Triunfo",
-          "General Antonio Elizalde (Bucay)",
-          "Guayaquil",
-          "Isidro Ayora",
-          "Lomas de Sargentillo",
-          "Marcelino Maridueña",
-          "Milagro",
-          "Naranjal",
-          "Naranjito",
-          "Nobol",
-          "Palestina",
-          "Pedro Carbo",
-          "Playas",
-          "Salitre",
-          "Samborondón",
-          "Santa Lucía",
-          "Simón Bolívar",
-          "Yaguachi"
-        ],
-        "Imbabura": [
-          "Antonio Ante",
-          "Cotacachi",
-          "Ibarra",
-          "Otavalo",
-          "Pimampiro",
-          "San Miguel de Urcuquí"
-        ],
-        "Loja": [
-          "Calvas",
-          "Catamayo",
-          "Celica",
-          "Chaguarpamba",
-          "Espíndola",
-          "Gonzanamá",
-          "Loja",
-          "Macará",
-          "Olmedo",
-          "Paltas",
-          "Pindal",
-          "Puyango",
-          "Quilanga",
-          "Saraguro",
-          "Sozoranga",
-          "Zapotillo"
-        ],
-        "Los Ríos": [
-          "Baba",
-          "Babahoyo",
-          "Buena Fe",
-          "Mocache",
-          "Montalvo",
-          "Palenque",
-          "Puebloviejo",
-          "Quevedo",
-          "Quinsaloma",
-          "Urdaneta",
-          "Valencia",
-          "Ventanas",
-          "Vinces"
-        ],
-        "Manabí": [
-          "24 de Mayo",
-          "Bolívar",
-          "Chone",
-          "El Carmen",
-          "Flavio Alfaro",
-          "Jama",
-          "Jaramijó",
-          "Jipijapa",
-          "Junín",
-          "Manta",
-          "Montecristi",
-          "Olmedo",
-          "Paján",
-          "Pedernales",
-          "Pichincha",
-          "Portoviejo",
-          "Puerto López",
-          "Rocafuerte",
-          "San Vicente",
-          "Santa Ana",
-          "Sucre",
-          "Tosagua"
-        ],
-        "Morona Santiago": [
-          "Gualaquiza",
-          "Huamboya",
-          "Limón Indanza",
-          "Logroño",
-          "Morona",
-          "Pablo Sexto",
-          "Palora",
-          "San Juan Bosco",
-          "Santiago",
-          "Sucúa",
-          "Taisha",
-          "Tiwintza"
-        ],
-        "Napo": [
-          "Archidona",
-          "Carlos Julio Arosemena Tola",
-          "El Chaco",
-          "Quijos",
-          "Tena"
-        ],
-        "Orellana": [
-          "Aguarico",
-          "Francisco de Orellana",
-          "Joya de los Sachas",
-          "Loreto"
-        ],
-        "Pastaza": [
-          "Arajuno",
-          "Mera",
-          "Pastaza",
-          "Santa Clara"
-        ],
-        "Pichincha": [
-          "Cayambe",
-          "Mejía",
-          "Pedro Moncayo",
-          "Pedro Vicente Maldonado",
-          "Puerto Quito",
-          "Quito",
-          "Rumiñahui",
-          "San Miguel de los Bancos"
-        ],
-        "Santa Elena": [
-          "La Libertad",
-          "Salinas",
-          "Santa Elena"
-        ],
-        "Santo Domingo de los Tsáchilas": [
-          "La Concordia",
-          "Santo Domingo"
-        ],
-        "Sucumbíos": [
-          "Cascales",
-          "Cuyabeno",
-          "Gonzalo Pizarro",
-          "Lago Agrio",
-          "Putumayo",
-          "Shushufindi",
-          "Sucumbíos"
-        ],
-        "Tungurahua": [
-          "Ambato",
-          "Baños de Agua Santa",
-          "Cevallos",
-          "Mocha",
-          "Patate",
-          "Quero",
-          "San Pedro de Pelileo",
-          "Santiago de Píllaro",
-          "Tisaleo"
-        ],
-        "Zamora Chinchipe": [
-          "Centinela del Cóndor",
-          "Chinchipe",
-          "El Pangui",
-          "Nangaritza",
-          "Palanda",
-          "Paquisha",
-          "Yacuambi",
-          "Yantzaza",
-          "Zamora"
-        ]
+            // Catálogo completo de Ecuador
+            const EC_PROVINCIAS = {
+                "Azuay": ["Cuenca", "Girón", "Gualaceo", "Nabón", "Paute", "Pucará", "San Fernando", "Santa Isabel", "Sígsig", "Oña", "Chordeleg", "El Pan", "Sevilla de Oro", "Guachapala"],
+                "Bolívar": ["Guaranda", "Chillanes", "Chimbo", "Echeandía", "San Miguel", "Caluma", "Las Naves"],
+                "Cañar": ["Azogues", "Biblián", "Cañar", "Déleg", "El Tambo", "La Troncal", "Suscal"],
+                "Carchi": ["Tulcán", "Bolívar", "Espejo", "Mira", "Montúfar", "San Pedro de Huaca"],
+                "Chimborazo": ["Riobamba", "Alausí", "Colta", "Chambo", "Chunchi", "Guamote", "Guano", "Pallatanga", "Penipe", "Cumandá"],
+                "Cotopaxi": ["Latacunga", "La Maná", "Pangua", "Pujilí", "Salcedo", "Saquisilí", "Sigchos"],
+                "El Oro": ["Machala", "Arenillas", "Atahualpa", "Balsas", "Chilla", "El Guabo", "Huaquillas", "Las Lajas", "Marcabelí", "Pasaje", "Piñas", "Portovelo", "Santa Rosa", "Zaruma"],
+                "Esmeraldas": ["Esmeraldas", "Eloy Alfaro", "Muisne", "Quinindé", "Río Verde", "San Lorenzo", "Atacames"],
+                "Galápagos": ["Puerto Baquerizo Moreno", "Puerto Ayora", "Puerto Villamil"],
+                "Guayas": ["Guayaquil", "Alfredo Baquerizo Moreno", "Balao", "Balzar", "Colimes", "Daule", "Durán", "El Empalme", "El Triunfo", "Milagro", "Naranjal", "Naranjito", "Palestina", "Pedro Carbo", "Samborondón", "Santa Lucía", "Salitre", "San Jacinto de Yaguachi", "Playas", "Simón Bolívar", "Coronel Marcelino Maridueña", "Lomas de Sargentillo", "Nobol", "General Antonio Elizalde"],
+                "Imbabura": ["Ibarra", "Antonio Ante", "Cotacachi", "Otavalo", "Pimampiro", "San Miguel de Urcuquí"],
+                "Loja": ["Loja", "Calvas", "Catamayo", "Celica", "Chaguarpamba", "Espíndola", "Gonzanamá", "Macará", "Paltas", "Puyango", "Saraguro", "Sozoranga", "Zapotillo", "Pindal", "Quilanga", "Olmedo"],
+                "Los Ríos": ["Babahoyo", "Baba", "Montalvo", "Puebloviejo", "Quevedo", "Urdaneta", "Ventanas", "Vinces", "Palenque", "Buena Fe", "Valencia", "Mocache", "Quinsaloma"],
+                "Manabí": ["Portoviejo", "Bolívar", "Chone", "El Carmen", "Flavio Alfaro", "Jipijapa", "Junín", "Manta", "Montecristi", "Paján", "Pichincha", "Rocafuerte", "Santa Ana", "Sucre", "Tosagua", "24 de Mayo", "Pedernales", "Olmedo", "Puerto López", "Jama", "Jaramijó", "San Vicente"],
+                "Morona Santiago": ["Macas", "Gualaquiza", "Huamboya", "Limón Indanza", "Logroño", "Morona", "Pablo Sexto", "Palora", "San Juan Bosco", "Santiago de Méndez", "Sucúa", "Taisha", "Tiwintza"],
+                "Napo": ["Tena", "Archidona", "El Chaco", "Quijos", "Carlos Julio Arosemena Tola"],
+                "Orellana": ["Puerto Francisco de Orellana", "Aguarico", "La Joya de los Sachas", "Loreto"],
+                "Pastaza": ["Puyo", "Arajuno", "Mera", "Santa Clara"],
+                "Pichincha": ["Quito", "Cayambe", "Mejía", "Pedro Moncayo", "Rumiñahui", "San Miguel de los Bancos", "Pedro Vicente Maldonado", "Puerto Quito"],
+                "Santa Elena": ["Santa Elena", "La Libertad", "Salinas"],
+                "Santo Domingo de los Tsáchilas": ["Santo Domingo", "La Concordia"],
+                "Sucumbíos": ["Nueva Loja", "Cascales", "Cuyabeno", "Gonzalo Pizarro", "Putumayo", "Shushufindi", "Sucumbíos"],
+                "Tungurahua": ["Ambato", "Baños de Agua Santa", "Cevallos", "Mocha", "Patate", "Quero", "San Pedro de Pelileo", "Santiago de Píllaro", "Tisaleo"],
+                "Zamora Chinchipe": ["Zamora", "Chinchipe", "Nangaritza", "Yacuambi", "Yantzaza", "El Pangui", "Centinela del Cóndor", "Palanda", "Paquisha"]
             };
 
-            // Render inicial
+            // Renderizar provincias
             function renderProvinces(filter = '') {
                 const q = (filter || '').toLowerCase();
                 provList.innerHTML = '';
+
                 Object.keys(EC_PROVINCIAS).sort().forEach(p => {
                     if (q && !p.toLowerCase().includes(q)) return;
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'list-group-item list-group-item-action';
-                    btn.textContent = p;
-                    btn.dataset.prov = p;
-                    if (selectedProv === p) btn.classList.add('active');
-                    btn.addEventListener('click', () => {
+
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'list-group-item list-group-item-action';
+                    if (selectedProv === p) item.classList.add('active');
+                    item.textContent = p;
+                    item.addEventListener('click', () => {
                         selectedProv = p;
+                        currentProvince.textContent = p;
                         renderProvinces(sProv.value);
-                        renderCities('', p);
+                        renderCities('');
                         sCity.disabled = false;
                         sCity.focus();
+                        updateLocationPreview();
                     });
-                    provList.appendChild(btn);
+                    provList.appendChild(item);
                 });
+
                 if (!provList.children.length) {
-                    provList.innerHTML = '<div class="text-muted ps-2">Sin resultados.</div>';
+                    provList.innerHTML = '<div class="text-muted text-center p-3">No se encontraron provincias</div>';
                 }
             }
-            function renderCities(filter = '', prov = selectedProv) {
+
+            // Renderizar ciudades
+            function renderCities(filter = '') {
                 cityList.innerHTML = '';
-                if (!prov) {
-                    cityList.innerHTML = '<div class="text-muted ps-2">Elige primero una provincia.</div>';
+
+                if (!selectedProv) {
+                    cityList.innerHTML = '<div class="text-muted text-center p-3">Selecciona una provincia primero</div>';
                     return;
                 }
+
                 const q = (filter || '').toLowerCase();
-                const cities = (EC_PROVINCIAS[prov] || []).filter(c => !q || c.toLowerCase().includes(q));
+                const cities = EC_PROVINCIAS[selectedProv].filter(c =>
+                    !q || c.toLowerCase().includes(q)
+                ).sort();
+
                 if (!cities.length) {
-                    cityList.innerHTML = '<div class="text-muted ps-2">Sin resultados en ' + prov + '.</div>';
+                    cityList.innerHTML = '<div class="text-muted text-center p-3">No se encontraron ciudades</div>';
                     return;
                 }
+
                 cities.forEach(c => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'list-group-item list-group-item-action';
-                    btn.textContent = c;
-                    btn.addEventListener('click', () => {
-                        setUbicacion(prov, c);
-                        closeOffcanvas();
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'list-group-item list-group-item-action';
+                    item.textContent = c;
+                    item.addEventListener('click', () => {
+                        setUbicacion(selectedProv, c);
+                        bootstrap.Offcanvas.getInstance(document.getElementById('offProvinciaCiudad')).hide();
                     });
-                    cityList.appendChild(btn);
+                    cityList.appendChild(item);
                 });
             }
-            function setUbicacion(prov, city) {
-                if (inProv) inProv.value = prov || '';
-                if (inCity) inCity.value = city || '';
-                // Validar requeridos
-                if (inProv) inProv.reportValidity?.();
-                if (inCity) inCity.reportValidity?.();
-                toggleSubmit();
+
+            // Establecer ubicación seleccionada
+            function setUbicacion(provincia, ciudad) {
+                if (inProv) inProv.value = provincia;
+                if (inCity) inCity.value = ciudad;
+                updateLocationPreview();
+                updateSubmitButton();
             }
-            function closeOffcanvas() {
-                const el = document.getElementById('offProvinciaCiudad');
-                if (!el) return;
-                const inst = bootstrap.Offcanvas.getOrCreateInstance(el);
-                inst.hide();
+
+            // Actualizar vista previa de ubicación
+            function updateLocationPreview() {
+                if (inProv.value && inCity.value) {
+                    previewText.textContent = `${inCity.value}, ${inProv.value}`;
+                    locationPreview.style.display = 'block';
+                } else {
+                    locationPreview.style.display = 'none';
+                }
             }
 
             // Filtros
             sProv?.addEventListener('input', () => renderProvinces(sProv.value));
             sCity?.addEventListener('input', () => renderCities(sCity.value));
 
-            // Abrir slide: precargar estado actual
-            document.querySelectorAll('[data-bs-target="#offProvinciaCiudad"]').forEach(btnOpen => {
-                btnOpen.addEventListener('click', () => {
-                    // Si ya hay valores en inputs, mantener selección
-                    selectedProv = (inProv?.value || '') || null;
-                    renderProvinces(sProv?.value || '');
-                    renderCities(sCity?.value || '');
+            // Inicializar al abrir el offcanvas
+            document.querySelectorAll('[data-bs-target="#offProvinciaCiudad"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedProv = inProv?.value || null;
+                    currentProvince.textContent = selectedProv || '...';
+                    renderProvinces();
+                    renderCities();
+                    sCity.disabled = !selectedProv;
                 });
             });
 
-            // Estado inicial
+            // Inicializar
+            renderProvinces();
+            updateLocationPreview();
             updateMeter();
-            toggleSubmit();
+            updateProgress();
 
-            // Evita doble envío
-            form.addEventListener('submit', function () {
-                if (window.jQuery && $.validator && !$(form).valid()) return;
+            // Prevenir doble envío
+            form.addEventListener('submit', function(e) {
+                if (btn.disabled) {
+                    e.preventDefault();
+                    return;
+                }
+
                 btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Registrando...';
-            }, { once: true });
-        })();
+                btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Registrando...';
+            });
+        });
     </script>
-
-    <style>
-        .input-group-text {
-            background: #fff;
-        }
-
-        .form-control:focus {
-            border-color: #f4a7c1;
-            box-shadow: 0 0 0 .25rem rgba(244,167,193,.25);
-        }
-
-        .btn:disabled {
-            opacity: .65;
-        }
-
-        /* Offcanvas UI */
-        #offProvinciaCiudad .list-group-item.active {
-            background-color: #f4a7c1;
-            border-color: #f4a7c1;
-        }
-
-        #offProvinciaCiudad .form-control:focus {
-            border-color: #f4a7c1;
-            box-shadow: 0 0 0 .2rem rgba(244,167,193,.2);
-        }
-    </style>
 }

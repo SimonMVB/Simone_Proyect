@@ -1,0 +1,563 @@
+﻿@{
+    ViewData["Title"] = "Política de Pagos";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #27ae60;
+        --accent-color: #e74c3c;
+        --light-bg: #f8f9fa;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .payments-container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+    }
+
+    .payments-header {
+        background: linear-gradient(135deg, var(--primary-color), #2ecc71);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        text-align: center;
+        margin-bottom: 0;
+    }
+
+        .payments-header h1 {
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .payments-header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+    .payments-content {
+        display: flex;
+        gap: 2rem;
+        margin-top: 0;
+    }
+
+    @@media (max-width: 768px) {
+        .payments-content
+
+    {
+        flex-direction: column;
+    }
+
+    }
+
+    .payments-sidebar {
+        flex: 0 0 280px;
+        position: sticky;
+        top: 2rem;
+        height: fit-content;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+    }
+
+    .payments-main {
+        flex: 1;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem;
+    }
+
+    .table-of-contents {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .table-of-contents li {
+            margin-bottom: 0.75rem;
+        }
+
+        .table-of-contents a {
+            color: var(--primary-color);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+            .table-of-contents a:hover,
+            .table-of-contents a.active {
+                background-color: var(--light-bg);
+                border-left-color: var(--secondary-color);
+                color: var(--secondary-color);
+            }
+
+    .section-title {
+        color: var(--primary-color);
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--light-bg);
+        font-weight: 600;
+    }
+
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+    .highlight-box {
+        background-color: var(--light-bg);
+        border-left: 4px solid var(--secondary-color);
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .payment-method {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+        .payment-method h4 {
+            color: var(--primary-color);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .payment-method h4 i {
+                color: var(--secondary-color);
+            }
+
+    .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .contact-item {
+        flex: 1;
+        min-width: 200px;
+        background-color: var(--light-bg);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        text-align: center;
+    }
+
+        .contact-item i {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+    .payments-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-payments {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-accept {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+    }
+
+        .btn-accept:hover {
+            background-color: #219653;
+            transform: translateY(-2px);
+        }
+
+    .progress-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background-color: var(--secondary-color);
+        width: 0%;
+        z-index: 1000;
+        transition: width 0.3s ease;
+    }
+
+    .last-updated {
+        font-size: 0.9rem;
+        color: #6c757d;
+        text-align: right;
+        margin-top: 1rem;
+    }
+
+    .timeline {
+        position: relative;
+        margin: 2rem 0;
+        padding-left: 2rem;
+    }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 7px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--secondary-color);
+        }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 2rem;
+        padding-left: 2rem;
+    }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 0;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--secondary-color);
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px var(--secondary-color);
+        }
+
+        .timeline-item h4 {
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+
+    .payment-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .detail-card {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+        .detail-card i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 1rem;
+        }
+
+    .warning-box {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+        color: #856404;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .info-box {
+        background-color: #d1ecf1;
+        border-left: 4px solid #17a2b8;
+        color: #0c5460;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+</style>
+
+<div class="progress-indicator" id="readingProgress"></div>
+
+<div class="payments-container">
+    <div class="payments-header">
+        <h1>@ViewData["Title"]</h1>
+        <p>Información detallada sobre nuestros métodos de pago, procesos de verificación y políticas relacionadas con transacciones.</p>
+        <div class="last-updated">Última actualización: @DateTime.Now.ToString("dd/MM/yyyy")</div>
+    </div>
+
+    <div class="payments-content">
+        <aside class="payments-sidebar">
+            <h3>Contenido</h3>
+            <ul class="table-of-contents" id="tableOfContents">
+                <!-- Los elementos de la tabla de contenidos se generarán con JavaScript -->
+            </ul>
+
+            <div class="highlight-box">
+                <h4>¿Necesitas ayuda?</h4>
+                <p>Si tienes dudas sobre pagos, contáctanos:</p>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i>📧</i>
+                        <div>melinafuentesduarte11@gmail.com</div>
+                    </div>
+                    <div class="contact-item">
+                        <i>📱</i>
+                        <div>0991570376</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="payments-main">
+            <section id="introduccion">
+                <h2 class="section-title">Introducción</h2>
+                <p>En Neo Ágora nos esforzamos por ofrecer un proceso de pago seguro, transparente y eficiente. Esta política detalla todos los aspectos relacionados con las transacciones en nuestra plataforma.</p>
+            </section>
+
+            <section id="metodos-pago">
+                <h2 class="section-title">Métodos de Pago Aceptados</h2>
+
+                <div class="payment-method">
+                    <h4><i>🏦</i> Transferencias Bancarias</h4>
+                    <p><strong>Neo Ágora acepta únicamente transferencias bancarias nacionales en dólares de los Estados Unidos.</strong></p>
+                    <p>El costo de envío se informa claramente antes de que realices el pago, permitiéndote conocer el monto total de tu compra.</p>
+                </div>
+
+                <div class="warning-box">
+                    <h4>⚠️ Importante</h4>
+                    <p>No aceptamos pagos en efectivo, tarjetas de crédito/débito, ni otros métodos de pago diferentes a transferencias bancarias.</p>
+                </div>
+            </section>
+
+            <section id="proceso-pago">
+                <h2 class="section-title">Proceso de Pago</h2>
+
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <h4>1. Confirmación del Pedido</h4>
+                        <p>Una vez que confirmas tu pedido, el sistema reserva temporalmente los productos en tu carrito.</p>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4>2. Realización de la Transferencia</h4>
+                        <p><strong>Tiempo para realizar la transferencia:</strong> Recomendamos efectuar el pago dentro de las <strong>veinticuatro horas</strong> después de confirmar el pedido.</p>
+                        <div class="info-box">
+                            <p>Si no se recibe la acreditación en ese tiempo, Neo Ágora puede liberar el inventario y cancelar la orden por falta de pago.</p>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item">
+                        <h4>3. Acreditación y Verificación</h4>
+                        <p>El pedido entra a preparación cuando el pago queda acreditado en la cuenta de Neo Ágora.</p>
+                        <p>Podemos realizar validaciones adicionales para confirmar:</p>
+                        <ul>
+                            <li>Titularidad de la cuenta</li>
+                            <li>Monto transferido</li>
+                            <li>Referencia del pedido</li>
+                        </ul>
+                        <p>Hasta completar la verificación el pedido permanece en estado de "espera de pago".</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="situaciones-especiales">
+                <h2 class="section-title">Situaciones Especiales</h2>
+
+                <div class="payment-details">
+                    <div class="detail-card">
+                        <i>⬇️</i>
+                        <h4>Pagos con Montos Inferiores</h4>
+                        <p>Si el monto es menor al total, solicitaremos regularización antes de preparar el envío.</p>
+                    </div>
+
+                    <div class="detail-card">
+                        <i>⬆️</i>
+                        <h4>Pagos con Montos Superiores</h4>
+                        <p>Si el monto es mayor al total, coordinaremos la devolución de la diferencia o la emisión de una nota de crédito según prefiera el cliente.</p>
+                    </div>
+
+                    <div class="detail-card">
+                        <i>❓</i>
+                        <h4>Errores en Datos de Pago</h4>
+                        <p>Si la transferencia no incluye el número de pedido o presenta datos confusos, te contactaremos para aclarar. Hasta entonces el pedido permanecerá en revisión.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="facturacion">
+                <h2 class="section-title">Facturación Electrónica</h2>
+
+                <div class="payment-method">
+                    <h4><i>🧾</i> Proceso de Facturación</h4>
+                    <p>Una vez acreditado el pago se emite y envía la factura electrónica al correo del cliente en un plazo máximo de <strong>cuarenta y ocho horas</strong>.</p>
+
+                    <div class="warning-box">
+                        <h4>Responsabilidad del Cliente</h4>
+                        <p>El cliente debe proporcionar datos de facturación correctos y completos. Cualquier error en la información proporcionada puede retrasar la emisión de la factura.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="anulaciones-reembolsos">
+                <h2 class="section-title">Anulaciones y Reembolsos</h2>
+
+                <div class="payment-method">
+                    <h4><i>🔄</i> Anulación por Parte de Neo Ágora</h4>
+                    <p>Si por un inconveniente insubsanable no es posible despachar un pedido ya pagado, coordinaremos:</p>
+                    <ul>
+                        <li><strong>Reembolso por transferencia</strong> a la cuenta indicada por el cliente</li>
+                        <li><strong>Nota de crédito</strong> para futuras compras</li>
+                    </ul>
+                    <p>Si eliges reembolso, el tiempo de acreditación depende de los procesos bancarios.</p>
+                </div>
+
+                <div class="payment-method">
+                    <h4><i>✋</i> Anulación Solicitada por el Cliente</h4>
+                    <p>El cliente puede pedir la cancelación mientras el pedido no haya sido entregado al Courier.</p>
+                    <p>Si ya fue entregado al courier aplican las reglas de cambios y devoluciones vigentes.</p>
+                </div>
+            </section>
+
+            <section id="seguridad">
+                <h2 class="section-title">Seguridad de la Información</h2>
+
+                <div class="highlight-box">
+                    <h4>🛡️ Protección de Datos Bancarios</h4>
+                    <p><strong>Neo Ágora no solicita ni almacena contraseñas bancarias ni accesos a banca en línea.</strong></p>
+                    <p>Solo tratamos la información necesaria para validar la acreditación del pago conforme a nuestra política de privacidad.</p>
+                </div>
+            </section>
+
+            <section id="comunicacion">
+                <h2 class="section-title">Comunicación de Estados</h2>
+
+                <div class="payment-method">
+                    <h4><i>📢</i> Notificaciones</h4>
+                    <p>Te informaremos por correo o WhatsApp sobre:</p>
+                    <ul>
+                        <li>Recepción del comprobante de pago</li>
+                        <li>Validación del pago</li>
+                        <li>Inicio de preparación del pedido</li>
+                        <li>Número de guía cuando el pedido sea entregado a Servientrega</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section id="actualizaciones">
+                <h2 class="section-title">Actualizaciones de la Política</h2>
+
+                <div class="info-box">
+                    <p><strong>Neo Ágora puede actualizar esta Política de Pagos.</strong> La versión vigente se publica con su fecha de actualización.</p>
+                    <p>El uso del servicio después de un cambio implica aceptación de la versión actual.</p>
+                </div>
+            </section>
+
+            <div class="payments-actions">
+                <button class="btn-payments btn-accept" id="understandPolicy">Entendido</button>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generar tabla de contenidos automáticamente
+        const sections = document.querySelectorAll('section');
+        const toc = document.getElementById('tableOfContents');
+
+        sections.forEach(section => {
+            const title = section.querySelector('.section-title');
+            if (title) {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${section.id}`;
+                link.textContent = title.textContent;
+                listItem.appendChild(link);
+                toc.appendChild(listItem);
+            }
+        });
+
+        // Scroll suave para los enlaces de la tabla de contenidos
+        document.querySelectorAll('.table-of-contents a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Actualizar la barra de progreso de lectura
+        window.addEventListener('scroll', function() {
+            const winHeight = window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.pageYOffset;
+            const scrollPercent = (scrollTop / (docHeight - winHeight)) * 100;
+            document.getElementById('readingProgress').style.width = scrollPercent + '%';
+        });
+
+        // Resaltar sección activa en la tabla de contenidos
+        window.addEventListener('scroll', function() {
+            const scrollPos = window.scrollY + 100;
+
+            document.querySelectorAll('section').forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+
+                if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                    const currentId = section.getAttribute('id');
+                    document.querySelectorAll('.table-of-contents a').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${currentId}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Manejar botón de entendido
+        document.getElementById('understandPolicy').addEventListener('click', function() {
+            alert('¡Gracias por leer nuestra Política de Pagos! Si tienes alguna pregunta, no dudes en contactarnos.');
+            // Aquí podrías redirigir a la página principal o a la de compras
+            // window.location.href = '/';
+        });
+
+        // Cargar preferencias guardadas si existen
+        const savedPreferences = localStorage.getItem('paymentsPolicyRead');
+        if (savedPreferences) {
+            console.log('El usuario ya ha leído la política de pagos anteriormente');
+        }
+
+        // Marcar como leída cuando llegan al final
+        window.addEventListener('scroll', function() {
+            const scrollTop = window.pageYOffset;
+            const windowHeight = window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+
+            if (scrollTop + windowHeight >= docHeight - 100) {
+                localStorage.setItem('paymentsPolicyRead', new Date().toISOString());
+            }
+        });
+    });
+</script>

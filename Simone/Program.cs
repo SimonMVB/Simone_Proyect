@@ -1,21 +1,28 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Localization;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
+using System.Globalization;
+using System.IO;
 using System.Linq;
-// (opcional si no tienes las global usings)
-// using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1) Cadena de conexión
+// =====================================
+// 1) Conexión
+// =====================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' no está configurada.");
 
+// =====================================
 // 2) DB + Identity
+// =====================================
 builder.Services.AddDbContext<TiendaDbContext>(options =>
     options.UseSqlServer(
         connectionString,
@@ -40,13 +47,38 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();
 
-// 3) Sesión, HttpContext y cookies
-builder.Services.AddSession(options =>
+// =====================================
+// 3) Cultura (decimales con coma) + Sesión/Cookies/Form
+// =====================================
+// Cultura base (puedes cambiar a es-ES si prefieres)
+var appCulture = new CultureInfo("es-EC")
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30);
-    options.Cookie.HttpOnly = true;
-    options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
+    NumberFormat =
+    {
+        NumberDecimalSeparator = ",",
+        NumberGroupSeparator = "."
+    }
+};
+CultureInfo.DefaultThreadCurrentCulture = appCulture;
+CultureInfo.DefaultThreadCurrentUICulture = appCulture;
+
+var requestLocalizationOptions = new RequestLocalizationOptions()
+    .SetDefaultCulture(appCulture.Name)
+    .AddSupportedCultures(appCulture.Name)
+    .AddSupportedUICultures(appCulture.Name);
+
+builder.Services.AddSession(o =>
+{
+    o.IdleTimeout = TimeSpan.FromMinutes(30);
+    o.Cookie.HttpOnly = true;
+    o.Cookie.IsEssential = true;
+    o.Cookie.SameSite = SameSiteMode.Lax;
+});
+
+// Límite de subida alineado con el formulario (64 MB)
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 64L * 1024 * 1024;
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -60,14 +92,10 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
 });
 
-// (Opcional) Límite de subida por encima de 5MB para el request completo
-builder.Services.Configure<FormOptions>(o =>
-{
-    o.MultipartBodyLengthLimit = 10 * 1024 * 1024;  // 10MB request total
-});
-
+// =====================================
 // 4) Servicios de dominio
-builder.Services.AddScoped<PagosResolver>();     // Simone.Services.PagosResolver
+// =====================================
+builder.Services.AddScoped<PagosResolver>();
 builder.Services.AddScoped<CategoriasService>();
 builder.Services.AddScoped<SubcategoriasService>();
 builder.Services.AddScoped<ProveedorService>();
@@ -77,28 +105,38 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<CarritoActionFilter>();
 
-
-// 🔧 Bancos (IO a archivos)
+// Configs que leen/escriben archivos
 builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
-
-// 🔧 Envíos (IO a archivos + resolución + cálculo carrito)  👈 NUEVO
 builder.Services.AddSingleton<IEnviosConfigService, EnviosConfigService>();
 builder.Services.AddScoped<EnviosResolver>();
 builder.Services.AddScoped<EnviosCarritoService>();
 
-
-// ❌ No registrar resolvers duplicados bajo otros namespaces
-// builder.Services.AddScoped<Simone.ViewModels.Pagos.PagosResolver>();
-
-// 5) MVC + filtro global
-builder.Services.AddControllersWithViews(options =>
+// =====================================
+// 5) MVC + filtro global + (opcional) runtime compilation en Dev
+// =====================================
+var mvc = builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<CarritoActionFilter>();
 });
 
+if (builder.Environment.IsDevelopment())
+{
+    try { mvc.AddRazorRuntimeCompilation(); } catch { /* ignorar si no está el paquete */ }
+}
+
+// =====================================
+// 5.1) Asegurar wwwroot ANTES de Build/UseStaticFiles
+// =====================================
+var contentRoot = builder.Environment.ContentRootPath;
+var webRoot = Path.Combine(contentRoot, "wwwroot");
+Directory.CreateDirectory(webRoot);        // crea wwwroot si no existe
+builder.WebHost.UseWebRoot("wwwroot");
+
 var app = builder.Build();
 
+// =====================================
 // 6) Pipeline
+// =====================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
@@ -106,11 +144,24 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 
+// Archivos estáticos con caché moderada (24h)
+if (Directory.Exists(webRoot))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(webRoot),
+        OnPrepareResponse = ctx =>
+        {
+            // Evita re-descargas innecesarias de imágenes/CSS/JS
+            const int seconds = 60 * 60 * 24; // 1 día
+            ctx.Context.Response.Headers["Cache-Control"] = $"public,max-age={seconds}";
+        }
+    });
+}
+
+app.UseRequestLocalization(requestLocalizationOptions);
 app.UseRouting();
-
-// 🔧 Orden recomendado: Auth → Authorize → Session
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
@@ -119,7 +170,9 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// 7) Seed inicial (roles, admin, datos base) + asegurar carpetas
+// =====================================
+// 7) Migraciones + Seed + Carpetas de trabajo
+// =====================================
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -127,19 +180,22 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        // Asegurar carpetas de trabajo (necesarias para bancos y comprobantes)
         var env = services.GetRequiredService<IWebHostEnvironment>();
-        Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "App_Data"));
-        Directory.CreateDirectory(Path.Combine(env.WebRootPath, "uploads", "comprobantes"));
+        var wr = env.WebRootPath ?? webRoot;
 
-        // 1) Migrar primero
+        // Carpetas necesarias para IO
+        Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "App_Data"));
+        Directory.CreateDirectory(Path.Combine(wr, "uploads", "comprobantes"));
+        Directory.CreateDirectory(Path.Combine(wr, "images", "Productos"));
+
+        // Migraciones
         var db = services.GetRequiredService<TiendaDbContext>();
         await db.Database.MigrateAsync();
 
-        // 2) Seed de Identity (roles + admin)
+        // Seed Identity
         await CrearRolesYAdmin(services, logger);
 
-        // 3) Seed de dominio
+        // Seed dominio
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
 
@@ -153,7 +209,9 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// ----- Helpers -----
+// =====================================
+// Helpers
+// =====================================
 static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
 {
     var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
@@ -209,7 +267,6 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
     }
     else
     {
-        // Garantizar que el admin tenga el rol, por si ya existía
         if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
         {
             await userManager.AddToRoleAsync(existingAdmin, "Administrador");

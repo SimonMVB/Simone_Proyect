@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Simone.Data;
 using Simone.Extensions;
 using Simone.Models;
-using Simone.Services; // ⬅️ envíos
+using Simone.Services; // ICarritoService, EnviosCarritoService
 using System.Collections.Generic;
 
 namespace Simone.Controllers
@@ -12,19 +12,19 @@ namespace Simone.Controllers
     public class CarritoController : Controller
     {
         private readonly TiendaDbContext _context;
-        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly UserManager<Usuario> _userManager;
-        private readonly EnviosCarritoService _enviosCarrito; // ⬅️ servicio de cálculo de envíos
+        private readonly ICarritoService _carritoService;        // ← BD
+        private readonly EnviosCarritoService _enviosCarrito;    // ← envíos
 
         public CarritoController(
             TiendaDbContext context,
-            IHttpContextAccessor httpContextAccessor,
             UserManager<Usuario> user,
-            EnviosCarritoService enviosCarrito) // ⬅️ inyectado
+            ICarritoService carritoService,
+            EnviosCarritoService enviosCarrito)
         {
             _context = context;
-            _httpContextAccessor = httpContextAccessor;
             _userManager = user;
+            _carritoService = carritoService;
             _enviosCarrito = enviosCarrito;
         }
 
@@ -32,70 +32,47 @@ namespace Simone.Controllers
         private bool EsAjax() =>
             string.Equals(Request.Headers["X-Requested-With"], "XMLHttpRequest", StringComparison.OrdinalIgnoreCase);
 
-        private List<CarritoDetalle> ObtenerCarrito()
-        {
-            return _httpContextAccessor.HttpContext!.Session
-                .GetObjectFromJson<List<CarritoDetalle>>("Carrito")
-                ?? new List<CarritoDetalle>();
-        }
-
-        private void GuardarCarrito(List<CarritoDetalle> carrito)
-        {
-            foreach (var it in carrito) it.Producto = null; // no persistir navegación en sesión
-            _httpContextAccessor.HttpContext!.Session.SetObjectAsJson("Carrito", carrito);
-        }
-
-        private (int count, decimal total) Resumen(List<CarritoDetalle> carrito)
-            => (carrito.Sum(c => c.Cantidad), carrito.Sum(c => c.Precio * c.Cantidad));
+        private (int count, decimal total) Resumen(List<CarritoDetalle> detalles)
+            => (detalles.Sum(c => c.Cantidad), detalles.Sum(c => c.Precio * c.Cantidad));
 
         private Promocion? ObtenerCupon()
-            => _httpContextAccessor.HttpContext!.Session.GetObjectFromJson<Promocion>("Cupon");
+            => HttpContext.Session.GetObjectFromJson<Promocion>("Cupon");
 
         private void GuardarCupon(Promocion cupon)
-            => _httpContextAccessor.HttpContext!.Session.SetObjectAsJson("Cupon", cupon);
+            => HttpContext.Session.SetObjectAsJson("Cupon", cupon);
 
-        // -------- acciones --------
-
-        // Ver carrito (rehidrata Producto SOLO para la vista) + cálculo de envíos
+        // ======================= VISTA PRINCIPAL =======================
         [HttpGet]
         public async Task<IActionResult> VerCarrito()
         {
-            var carrito = ObtenerCarrito();
+            var usuario = await _userManager.GetUserAsync(User);
+            var detalles = new List<CarritoDetalle>();
 
-            // Rehidratar productos para mostrar nombres/precios
-            var ids = carrito.Select(c => c.ProductoID).Distinct().ToList();
-            var productosDict = await _context.Productos
-                .AsNoTracking()
-                .Where(p => ids.Contains(p.ProductoID))
-                .ToDictionaryAsync(p => p.ProductoID, p => p);
+            if (usuario != null)
+            {
+                var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
+                if (carrito != null)
+                    detalles = await _carritoService.LoadCartDetails(carrito.CarritoID);
+            }
 
-            foreach (var it in carrito)
-                if (productosDict.TryGetValue(it.ProductoID, out var prod))
-                    it.Producto = prod;
-
-            // Cupón (igual que antes)
+            // Cupón
             var cupon = ObtenerCupon();
             ViewBag.Descuento = cupon?.Descuento ?? 0m;
             ViewBag.CodigoCupon = cupon?.CodigoCupon;
 
-            // ================== NUEVO: cálculo de envío ==================
-            // 1) destino (si hay usuario logueado con provincia/ciudad)
-            var usuario = await _userManager.GetUserAsync(User);
+            // ===== Envíos (si hay destino y vendedores en el carrito) =====
             var prov = usuario?.Provincia;
             var city = usuario?.Ciudad;
-
             ViewBag.DestinoProvincia = prov;
             ViewBag.DestinoCiudad = city;
 
-            // 2) vendedores presentes en el carrito
-            var vendorIds = carrito
+            var vendorIds = detalles
                 .Select(c => c.Producto?.VendedorID)
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .Cast<string>()
                 .Distinct()
                 .ToList();
 
-            // 3) nombres de vendedores para el desglose (opcional, si quieres mostrar “Juan Pérez”)
             var vendorNames = await _userManager.Users
                 .Where(u => vendorIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.NombreCompleto, u.Email })
@@ -105,7 +82,6 @@ namespace Simone.Controllers
                 );
             ViewBag.VendedorNombres = vendorNames;
 
-            // 4) calcula envíos solo si hay destino y vendedores
             decimal envioTotal = 0m;
             Dictionary<string, decimal> envioPorVend = new();
             List<string> envioMsgs = new();
@@ -118,99 +94,106 @@ namespace Simone.Controllers
                 envioMsgs = res.Mensajes;
             }
 
-            ViewBag.EnvioTotal = envioTotal;                    // total $ del envío
-            ViewBag.EnvioPorVendedor = envioPorVend;            // diccionario {vendorId -> $}
-            ViewBag.EnvioMensajes = envioMsgs;                  // avisos (faltantes, etc.)
+            ViewBag.EnvioTotal = envioTotal;
+            ViewBag.EnvioPorVendedor = envioPorVend;
+            ViewBag.EnvioMensajes = envioMsgs;
 
-            return View(carrito);
+            return View(detalles);
         }
 
         // Mini resumen para navbar/widget
         [HttpGet]
         [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult CartInfo()
+        public async Task<IActionResult> CartInfo()
         {
-            var r = Resumen(ObtenerCarrito());
+            var usuario = await _userManager.GetUserAsync(User);
+            if (usuario == null)
+                return Json(new { count = 0, subtotal = 0m });
+
+            var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
+            if (carrito == null)
+                return Json(new { count = 0, subtotal = 0m });
+
+            var detalles = await _carritoService.LoadCartDetails(carrito.CarritoID);
+            var r = Resumen(detalles);
             return Json(new { count = r.count, subtotal = r.total });
         }
 
-        // Agregar
+        // ======================= MUTACIONES (AJAX) =======================
+
+        // Agregar (opcional, si tu flujo agrega desde otro controlador puedes ignorarlo)
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AgregarAlCarrito(int productoId, int cantidad = 1)
+        public async Task<IActionResult> AgregarAlCarrito(int productoId, int cantidad = 1, int? productoVarianteId = null)
         {
             if (cantidad < 1) cantidad = 1;
 
-            var carrito = ObtenerCarrito();
-            var producto = await _context.Productos
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ProductoID == productoId);
+            var usuario = await _userManager.GetUserAsync(User);
+            if (usuario == null)
+                return EsAjax() ? Json(new { ok = false, error = "Debes iniciar sesión." }) : RedirectToAction(nameof(VerCarrito));
 
+            var producto = await _context.Productos.FirstOrDefaultAsync(p => p.ProductoID == productoId);
             if (producto == null)
-                return EsAjax()
-                    ? Json(new { ok = false, error = "Producto no encontrado." })
-                    : RedirectToAction(nameof(VerCarrito));
+                return EsAjax() ? Json(new { ok = false, error = "Producto no encontrado." }) : RedirectToAction(nameof(VerCarrito));
 
-            var item = carrito.FirstOrDefault(c => c.ProductoID == productoId);
-            if (item == null)
-                carrito.Add(new CarritoDetalle { ProductoID = productoId, Cantidad = cantidad, Precio = producto.PrecioVenta });
-            else
-                item.Cantidad += cantidad;
-
-            GuardarCarrito(carrito);
-
-            var r = Resumen(carrito);
-            if (EsAjax()) return Json(new { ok = true, count = r.count, total = r.total });
-
-            TempData["MensajeExito"] = "Producto agregado al carrito correctamente.";
-            return RedirectToAction(nameof(VerCarrito));
-        }
-
-        // Actualizar cantidad
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult ActualizarCarrito(int productoId, int cantidad)
-        {
-            var carrito = ObtenerCarrito();
-            var item = carrito.FirstOrDefault(c => c.ProductoID == productoId);
-
-            if (item == null)
-                return EsAjax()
-                    ? Json(new { ok = false, error = "El producto no está en el carrito." })
-                    : RedirectToAction(nameof(VerCarrito));
-
-            if (cantidad < 1) cantidad = 1;
-            item.Cantidad = cantidad;
-            GuardarCarrito(carrito);
-
-            var r = Resumen(carrito);
-            if (EsAjax()) return Json(new { ok = true, count = r.count, total = r.total, subtotal = item.Precio * item.Cantidad });
-
-            TempData["MensajeExito"] = "Cantidad actualizada.";
-            return RedirectToAction(nameof(VerCarrito));
-        }
-
-        // Eliminar producto
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public IActionResult EliminarDelCarrito(int productoId)
-        {
-            var carrito = ObtenerCarrito();
-            var item = carrito.FirstOrDefault(c => c.ProductoID == productoId);
-            if (item != null)
+            try
             {
-                carrito.Remove(item);
-                GuardarCarrito(carrito);
+                var okAdd = await _carritoService.AnadirProducto(producto, usuario, cantidad, productoVarianteId);
+                if (!okAdd)
+                    return EsAjax() ? Json(new { ok = false, error = "No se pudo agregar al carrito." }) : RedirectToAction(nameof(VerCarrito));
+
+                var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
+                var detalles = carrito != null ? await _carritoService.LoadCartDetails(carrito.CarritoID) : new List<CarritoDetalle>();
+                var r = Resumen(detalles);
+
+                if (EsAjax()) return Json(new { ok = true, count = r.count, total = r.total });
+
+                TempData["MensajeExito"] = "Producto agregado al carrito correctamente.";
+                return RedirectToAction(nameof(VerCarrito));
             }
+            catch (Exception ex)
+            {
+                if (EsAjax()) return Json(new { ok = false, error = ex.Message });
+                TempData["MensajeError"] = ex.Message;
+                return RedirectToAction(nameof(VerCarrito));
+            }
+        }
 
-            var r = Resumen(carrito);
-            if (EsAjax()) return Json(new { ok = true, count = r.count, total = r.total });
+        // Actualizar cantidad (por CarritoDetalleID)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ActualizarCarrito(int carritoDetalleId, int cantidad, int? productoId = null)
+        {
+            var (ok, lineSubtotal, error) = await _carritoService.ActualizarCantidadAsync(carritoDetalleId, cantidad);
+            if (!ok)
+                return Json(new { ok = false, error });
 
-            TempData["MensajeExito"] = "Producto eliminado del carrito.";
+            var usuario = await _userManager.GetUserAsync(User);
+            var carrito = usuario != null ? await _carritoService.GetByUsuarioIdAsync(usuario.Id) : null;
+            var detalles = carrito != null ? await _carritoService.LoadCartDetails(carrito.CarritoID) : new List<CarritoDetalle>();
+            var r = Resumen(detalles);
+
+            return Json(new { ok = true, count = r.count, total = r.total, lineSubtotal });
+        }
+
+        // Eliminar ítem (por CarritoDetalleID)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarDelCarrito(int carritoDetalleId, int? productoId = null)
+        {
+            var ok = await _carritoService.BorrarProductoCarrito(carritoDetalleId);
+
+            var usuario = await _userManager.GetUserAsync(User);
+            var carrito = usuario != null ? await _carritoService.GetByUsuarioIdAsync(usuario.Id) : null;
+            var detalles = carrito != null ? await _carritoService.LoadCartDetails(carrito.CarritoID) : new List<CarritoDetalle>();
+            var r = Resumen(detalles);
+
+            if (EsAjax()) return Json(new { ok, count = r.count, total = r.total });
+            TempData["MensajeExito"] = ok ? "Producto eliminado del carrito." : "No se pudo eliminar el producto.";
             return RedirectToAction(nameof(VerCarrito));
         }
 
-        // Cupón
+        // ======================= CUPONES =======================
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult AplicarCupon(string codigoCupon)
@@ -227,11 +210,11 @@ namespace Simone.Controllers
                 GuardarCupon(cupon);
                 if (EsAjax()) return Json(new { ok = true, descuento = cupon.Descuento, codigo = cupon.CodigoCupon });
 
-                TempData["CuponAplicado"] = $"Cupón '{cupon.CodigoCupon}' aplicado correctamente: {cupon.Descuento:C} de descuento.";
+                TempData["CuponAplicado"] = $"Cupón '{cupon.CodigoCupon}' aplicado: {cupon.Descuento:C}.";
             }
             else
             {
-                _httpContextAccessor.HttpContext!.Session.Remove("Cupon");
+                HttpContext.Session.Remove("Cupon");
                 if (EsAjax()) return Json(new { ok = false, error = "Cupón inválido o expirado." });
 
                 TempData["CuponError"] = "El cupón ingresado no es válido o ha expirado.";
@@ -244,25 +227,20 @@ namespace Simone.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult QuitarCupon()
         {
-            _httpContextAccessor.HttpContext!.Session.Remove("Cupon");
+            HttpContext.Session.Remove("Cupon");
             if (EsAjax()) return Json(new { ok = true });
 
             TempData["MensajeExito"] = "Cupón eliminado correctamente.";
             return RedirectToAction(nameof(VerCarrito));
         }
 
-        // Confirmar compra (sin cambios de negocio: NO suma envío a la venta)
+        // ======================= CHECKOUT =======================
+        // Nota: el total de la venta se calcula en el servicio con los precios de línea.
+        // El cupón actualmente NO se descuenta en la venta (solo UI). Si quieres integrarlo en DB, lo hacemos en el siguiente paso.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ConfirmarCompra(int carritoID)
+        public async Task<IActionResult> ConfirmarCompra(string? EnvioProvincia, string? EnvioCiudad, decimal? EnvioPrecio)
         {
-            var carrito = ObtenerCarrito();
-            if (carrito == null || !carrito.Any())
-            {
-                TempData["MensajeError"] = "Tu carrito está vacío.";
-                return RedirectToAction(nameof(VerCarrito));
-            }
-
             var usuario = await _userManager.GetUserAsync(User);
             if (usuario == null)
             {
@@ -270,43 +248,49 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(VerCarrito));
             }
 
-            var cupon = ObtenerCupon();
-            decimal total = carrito.Sum(c => c.Total);
-            decimal descuento = cupon?.Descuento ?? 0m;
-            decimal totalFinal = Math.Max(0m, total - descuento);
-
-            var venta = new Ventas
+            var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
+            if (carrito == null)
             {
-                UsuarioId = usuario.Id,
-                FechaVenta = DateTime.UtcNow,
-                Estado = "Completada",
-                MetodoPago = "Transferencia",
-                Total = totalFinal
-            };
+                TempData["MensajeError"] = "Tu carrito está vacío.";
+                return RedirectToAction(nameof(VerCarrito));
+            }
 
-            _context.Ventas.Add(venta);
-            await _context.SaveChangesAsync();
-
-            var detalles = carrito.Select(item => new DetalleVentas
+            var detalles = await _carritoService.LoadCartDetails(carrito.CarritoID);
+            if (!detalles.Any())
             {
-                VentaID = venta.VentaID,
-                ProductoID = item.ProductoID,
-                Cantidad = item.Cantidad,
-                PrecioUnitario = item.Precio,
-                Descuento = 0,
-                Subtotal = item.Total,
-                FechaCreacion = DateTime.UtcNow
-            });
-            await _context.DetalleVentas.AddRangeAsync(detalles);
-            await _context.SaveChangesAsync();
+                TempData["MensajeError"] = "Tu carrito está vacío.";
+                return RedirectToAction(nameof(VerCarrito));
+            }
 
-            _httpContextAccessor.HttpContext!.Session.Remove("Carrito");
-            _httpContextAccessor.HttpContext!.Session.Remove("Cupon");
+            try
+            {
+                var ok = await _carritoService.ProcessCartDetails(carrito.CarritoID, usuario);
+                if (!ok)
+                {
+                    TempData["MensajeError"] = "No se pudo procesar la compra.";
+                    return RedirectToAction(nameof(VerCarrito));
+                }
 
-            TempData["MensajeExito"] = "¡Gracias por tu compra!";
-            return RedirectToAction("ConfirmacionCompra", new { id = venta.VentaID });
+                // Borra cupón de la sesión (UI) y redirige a la última venta del usuario
+                HttpContext.Session.Remove("Cupon");
+
+                var ventaId = await _context.Ventas
+                    .Where(v => v.UsuarioId == usuario.Id)
+                    .OrderByDescending(v => v.FechaVenta)
+                    .Select(v => v.VentaID)
+                    .FirstOrDefaultAsync();
+
+                TempData["MensajeExito"] = "¡Gracias por tu compra!";
+                return RedirectToAction(nameof(ConfirmacionCompra), new { id = ventaId });
+            }
+            catch (Exception ex)
+            {
+                TempData["MensajeError"] = ex.Message;
+                return RedirectToAction(nameof(VerCarrito));
+            }
         }
 
+        [HttpGet]
         public IActionResult ConfirmacionCompra(int id) => View(id);
     }
 }

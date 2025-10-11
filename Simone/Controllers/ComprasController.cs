@@ -71,13 +71,41 @@ namespace Simone.Controllers
         // CATÁLOGO / PRODUCTO
         // =========================
         [HttpGet]
-        public async Task<IActionResult> Catalogo(int? categoriaID, int[]? subcategoriaIDs, int pageNumber = 1, int pageSize = 20, CancellationToken ct = default)
+        public async Task<IActionResult> Catalogo(
+            int? categoriaID,
+            int[]? subcategoriaIDs,
+            [FromQuery] string[]? ColoresSeleccionados,
+            [FromQuery] string[]? TallasSeleccionadas,
+            [FromQuery] bool SoloDisponibles = false,
+            [FromQuery] string? sort = null,
+            int pageNumber = 1,
+            int pageSize = 20,
+            CancellationToken ct = default)
         {
+            // Sanidad de paginación
+            pageNumber = Math.Max(1, pageNumber);
+            pageSize = Math.Clamp(pageSize, 4, 60);
+
+            // Sidebar: categorías y subcategorías
             var categorias = await _categorias.GetAllAsync();
             var subcategorias = categoriaID.HasValue
                 ? await _subcategorias.GetByCategoriaIdAsync(categoriaID.Value)
                 : new List<Subcategorias>();
 
+            // Normalizar filtros
+            var coloresSel = (ColoresSeleccionados ?? Array.Empty<string>())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var tallasSel = (TallasSeleccionadas ?? Array.Empty<string>())
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(s => s.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // Base query
             IQueryable<Producto> query = _context.Productos.AsNoTracking();
 
             if (categoriaID.HasValue)
@@ -86,14 +114,170 @@ namespace Simone.Controllers
             if (subcategoriaIDs is { Length: > 0 })
                 query = query.Where(p => subcategoriaIDs!.Contains(p.SubcategoriaID));
 
+            // Solo disponibles (variante o producto simple)
+            if (SoloDisponibles)
+            {
+                query = query.Where(p =>
+                    _context.ProductoVariantes.Any(v => v.ProductoID == p.ProductoID && v.Stock > 0)
+                    || (!_context.ProductoVariantes.Any(v => v.ProductoID == p.ProductoID) && p.Stock > 0)
+                );
+            }
+
+            // Filtro por Color
+            if (coloresSel.Any())
+            {
+                query = query.Where(p =>
+                    _context.ProductoVariantes.Any(v => v.ProductoID == p.ProductoID && v.Color != null && coloresSel.Contains(v.Color))
+                    || (p.Color != null && coloresSel.Contains(p.Color))
+                );
+            }
+
+            // Filtro por Talla
+            if (tallasSel.Any())
+            {
+                query = query.Where(p =>
+                    _context.ProductoVariantes.Any(v => v.ProductoID == p.ProductoID && v.Talla != null && tallasSel.Contains(v.Talla))
+                    || (p.Talla != null && tallasSel.Contains(p.Talla))
+                );
+            }
+
+            // Ordenamiento
+            switch ((sort ?? "").Trim().ToLowerInvariant())
+            {
+                case "precio_asc":
+                    query = query
+                        .Select(p => new
+                        {
+                            P = p,
+                            MinPrecio = _context.ProductoVariantes
+                                .Where(v => v.ProductoID == p.ProductoID)
+                                .Select(v => (decimal?)v.PrecioVenta)
+                                .DefaultIfEmpty(p.PrecioVenta)
+                                .Min()
+                        })
+                        .OrderBy(x => x.MinPrecio)
+                        .ThenBy(x => x.P.Nombre)
+                        .Select(x => x.P);
+                    break;
+
+                case "precio_desc":
+                    query = query
+                        .Select(p => new
+                        {
+                            P = p,
+                            MaxPrecio = _context.ProductoVariantes
+                                .Where(v => v.ProductoID == p.ProductoID)
+                                .Select(v => (decimal?)v.PrecioVenta)
+                                .DefaultIfEmpty(p.PrecioVenta)
+                                .Max()
+                        })
+                        .OrderByDescending(x => x.MaxPrecio)
+                        .ThenBy(x => x.P.Nombre)
+                        .Select(x => x.P);
+                    break;
+
+                case "nuevos":
+                    query = query.OrderByDescending(p => p.FechaAgregado).ThenBy(p => p.Nombre);
+                    break;
+
+                case "mas_vendidos":
+                    {
+                        var ventasQ = _context.DetalleVentas.AsNoTracking()
+                            .GroupBy(d => d.ProductoID)
+                            .Select(g => new { ProductoID = g.Key, Cant = g.Sum(x => x.Cantidad) });
+
+                        query = query
+                            .GroupJoin(ventasQ, p => p.ProductoID, s => s.ProductoID,
+                                (p, s) => new { P = p, Cant = s.Select(x => (int?)x.Cant).FirstOrDefault() ?? 0 })
+                            .OrderByDescending(x => x.Cant)
+                            .ThenBy(x => x.P.Nombre)
+                            .Select(x => x.P);
+                    }
+                    break;
+
+                default:
+                    query = query.OrderBy(p => p.Nombre);
+                    break;
+            }
+
+            // Conteo total tras filtros
             var totalProducts = await query.CountAsync(ct);
 
+            // Paginación
             var productos = await query
-                .OrderBy(p => p.Nombre)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(ct);
 
+            // Variantes para productos de la página
+            var pageIds = productos.Select(p => p.ProductoID).ToList();
+
+            var variantesPageQ = _context.ProductoVariantes
+                .AsNoTracking()
+                .Where(v => pageIds.Contains(v.ProductoID));
+
+            if (SoloDisponibles)
+                variantesPageQ = variantesPageQ.Where(v => v.Stock > 0);
+
+            var variantesPage = await variantesPageQ.ToListAsync(ct);
+
+            var variantesPorProducto = variantesPage
+                .GroupBy(v => v.ProductoID)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Facets (sobre todo el set filtrado, no solo la página)
+            var filteredProductIds = await query.Select(p => p.ProductoID).ToListAsync(ct);
+
+            var variantsFilteredQ = _context.ProductoVariantes.AsNoTracking()
+                .Where(v => filteredProductIds.Contains(v.ProductoID));
+
+            if (SoloDisponibles)
+                variantsFilteredQ = variantsFilteredQ.Where(v => v.Stock > 0);
+
+            var coloresVar = await variantsFilteredQ
+                .Where(v => v.Color != null && v.Color != "")
+                .Select(v => v.Color!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var tallasVar = await variantsFilteredQ
+                .Where(v => v.Talla != null && v.Talla != "")
+                .Select(v => v.Talla!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            // Incluir color/talla de productos sin variantes dentro del set filtrado
+            var sinVarQ = _context.Productos.AsNoTracking().Where(p => filteredProductIds.Contains(p.ProductoID));
+
+            if (SoloDisponibles)
+                sinVarQ = sinVarQ.Where(p =>
+                    !_context.ProductoVariantes.Any(v => v.ProductoID == p.ProductoID) && p.Stock > 0);
+
+            var coloresProd = await sinVarQ
+                .Where(p => p.Color != null && p.Color != "")
+                .Select(p => p.Color!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var tallasProd = await sinVarQ
+                .Where(p => p.Talla != null && p.Talla != "")
+                .Select(p => p.Talla!)
+                .Distinct()
+                .ToListAsync(ct);
+
+            var coloresDisponibles = coloresVar
+                .Concat(coloresProd)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var tallasDisponibles = tallasVar
+                .Concat(tallasProd)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(s => s, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            // Modelo
             var model = new CatalogoViewModel
             {
                 Categorias = categorias,
@@ -101,12 +285,27 @@ namespace Simone.Controllers
                 Subcategorias = subcategorias,
                 SelectedSubcategoriaIDs = subcategoriaIDs?.ToList() ?? new List<int>(),
                 Productos = productos,
+
+                // filtros & facets
+                ColoresSeleccionados = coloresSel,
+                TallasSeleccionadas = tallasSel,
+                SoloDisponibles = SoloDisponibles,
+                ColoresDisponibles = coloresDisponibles,
+                TallasDisponibles = tallasDisponibles,
+
+                // paginación
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 TotalProducts = totalProducts,
-                ProductoIDsFavoritos = new List<int>()
+
+                // variantes diccionario (para la vista)
+                VariantesPorProducto = variantesPorProducto,
+
+                // sort
+                Sort = sort
             };
 
+            // Favoritos
             if (User.Identity?.IsAuthenticated == true)
             {
                 var userId = _userManager.GetUserId(User);
@@ -114,6 +313,10 @@ namespace Simone.Controllers
                     .Where(f => f.UsuarioId == userId)
                     .Select(f => f.ProductoId)
                     .ToListAsync(ct);
+            }
+            else
+            {
+                model.ProductoIDsFavoritos = new List<int>();
             }
 
             return View(model);
@@ -129,6 +332,7 @@ namespace Simone.Controllers
                 .AsNoTracking()
                 .Include(p => p.Categoria)
                 .Include(p => p.Subcategoria)
+                .Include(p => p.Variantes)
                 .FirstOrDefaultAsync(p => p.ProductoID == productoID, ct);
 
             if (producto == null)
@@ -137,6 +341,22 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(Catalogo));
             }
 
+            // >>> GALERÍA: cargar lista de imágenes (JSON de galería o DB) <<<
+            var (portada, imagenes) = await CargarGaleriaAsync(producto.ProductoID, ct);
+            if (string.IsNullOrWhiteSpace(portada))
+                portada = producto.ImagenPath;
+
+            if (imagenes == null || imagenes.Count == 0)
+            {
+                imagenes = string.IsNullOrWhiteSpace(portada)
+                    ? new List<string>()
+                    : new List<string> { portada };
+            }
+
+            ViewBag.Portada = portada;
+            ViewBag.Galeria = imagenes;
+
+            // Relacionados
             var relacionados = _context.Productos.AsNoTracking()
                 .Where(p => p.ProductoID != producto.ProductoID);
 
@@ -151,6 +371,9 @@ namespace Simone.Controllers
                 .Take(8)
                 .ToListAsync(ct);
 
+            ViewBag.Variantes = producto.Variantes?.OrderBy(v => v.Color).ThenBy(v => v.Talla).ToList()
+                                ?? new List<ProductoVariante>();
+
             return View(producto);
         }
 
@@ -158,7 +381,10 @@ namespace Simone.Controllers
         // CARRITO
         // =========================
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> AnadirAlCarrito([Bind("ProductoID,Cantidad")] CatalogoViewModel model, CancellationToken ct = default)
+        public async Task<IActionResult> AnadirAlCarrito(
+            [Bind("ProductoID,Cantidad")] CatalogoViewModel model,
+            [FromForm(Name = "ProductoVarianteID")] int? productoVarianteId,  // 👈 bind seguro desde la vista
+            CancellationToken ct = default)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
@@ -178,6 +404,35 @@ namespace Simone.Controllers
                 return RedirectToReferrerOr("Catalogo");
             }
 
+            // ¿Tiene variantes?
+            var tieneVariantes = await _context.ProductoVariantes
+                .AsNoTracking()
+                .AnyAsync(v => v.ProductoID == model.ProductoID, ct);
+
+            ProductoVariante? variante = null;
+            if (tieneVariantes)
+            {
+                if (!productoVarianteId.HasValue)
+                {
+                    var msg = "Selecciona Color y Talla antes de añadir al carrito.";
+                    if (EsAjax()) return Json(new { ok = false, needVariant = true, error = msg });
+                    TempData["MensajeError"] = msg;
+                    return RedirectToReferrerOr("VerProducto");
+                }
+
+                variante = await _context.ProductoVariantes
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(v => v.ProductoVarianteID == productoVarianteId.Value, ct);
+
+                if (variante == null || variante.ProductoID != model.ProductoID)
+                {
+                    var msg = "La combinación seleccionada no es válida para este producto.";
+                    if (EsAjax()) return Json(new { ok = false, error = msg });
+                    TempData["MensajeError"] = msg;
+                    return RedirectToReferrerOr("VerProducto");
+                }
+            }
+
             var carrito = await _carrito.GetByClienteIdAsync(user.Id)
                         ?? (await _carrito.AddAsync(user) ? await _carrito.GetByClienteIdAsync(user.Id) : null);
 
@@ -187,18 +442,38 @@ namespace Simone.Controllers
                 return RedirectToReferrerOr("Catalogo");
             }
 
+            // Cargar detalles para validar stock respecto a lo ya añadido
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
-            var enCarrito = detalles.Where(c => c.ProductoID == model.ProductoID).Sum(c => c.Cantidad);
+            var enCarrito = detalles
+                .Where(c => c.ProductoID == model.ProductoID &&
+                            c.ProductoVarianteID == (productoVarianteId.HasValue ? productoVarianteId.Value : (int?)null))
+                .Sum(c => c.Cantidad);
 
-            if (enCarrito + model.Cantidad > producto.Stock)
+            // Validación de stock (variante o producto)
+            if (tieneVariantes)
             {
-                var msg = "La cantidad solicitada supera el stock disponible.";
-                if (EsAjax()) return Json(new { ok = false, error = msg, stock = producto.Stock, enCarrito });
-                TempData["MensajeError"] = msg;
-                return RedirectToReferrerOr("Catalogo");
+                var disponible = variante!.Stock;
+                if (enCarrito + model.Cantidad > disponible)
+                {
+                    var msg = "La cantidad solicitada supera el stock disponible para la combinación seleccionada.";
+                    if (EsAjax()) return Json(new { ok = false, error = msg, stock = disponible, enCarrito });
+                    TempData["MensajeError"] = msg;
+                    return RedirectToReferrerOr("VerProducto");
+                }
+            }
+            else
+            {
+                if (enCarrito + model.Cantidad > producto.Stock)
+                {
+                    var msg = "La cantidad solicitada supera el stock disponible.";
+                    if (EsAjax()) return Json(new { ok = false, error = msg, stock = producto.Stock, enCarrito });
+                    TempData["MensajeError"] = msg;
+                    return RedirectToReferrerOr("Catalogo");
+                }
             }
 
-            var ok = await _carrito.AnadirProducto(producto, user, model.Cantidad);
+            // Añadir (con variante si aplica)
+            var ok = await _carrito.AnadirProducto(producto, user, model.Cantidad, productoVarianteId);
             if (!ok)
             {
                 if (EsAjax()) return Json(new { ok = false, error = "No se pudo añadir al carrito." });
@@ -243,17 +518,32 @@ namespace Simone.Controllers
             var detalle = await _context.CarritoDetalle
                 .Include(cd => cd.Carrito)
                 .Include(cd => cd.Producto)
+                .Include(cd => cd.Variante)
                 .FirstOrDefaultAsync(cd => cd.CarritoDetalleID == carritoDetalleID, ct);
 
             if (detalle == null || detalle.Carrito?.UsuarioId != user.Id) return NotFound();
             if (detalle.Producto == null) return NotFound();
 
-            if (cantidad > detalle.Producto.Stock)
+            // Validación de stock
+            if (detalle.Variante != null)
             {
-                var msg = "La cantidad supera el stock disponible.";
-                if (EsAjax()) return Json(new { ok = false, error = msg, stock = detalle.Producto.Stock });
-                TempData["MensajeError"] = msg;
-                return RedirectToReferrerOr("Resumen");
+                if (cantidad > detalle.Variante.Stock)
+                {
+                    var msg = "La cantidad supera el stock disponible para la combinación seleccionada.";
+                    if (EsAjax()) return Json(new { ok = false, error = msg, stock = detalle.Variante.Stock });
+                    TempData["MensajeError"] = msg;
+                    return RedirectToReferrerOr("Resumen");
+                }
+            }
+            else
+            {
+                if (cantidad > detalle.Producto.Stock)
+                {
+                    var msg = "La cantidad supera el stock disponible.";
+                    if (EsAjax()) return Json(new { ok = false, error = msg, stock = detalle.Producto.Stock });
+                    TempData["MensajeError"] = msg;
+                    return RedirectToReferrerOr("Resumen");
+                }
             }
 
             detalle.Cantidad = cantidad;
@@ -317,7 +607,7 @@ namespace Simone.Controllers
             var detalles = await _carrito.LoadCartDetails(carrito.CarritoID);
             var subtotal = detalles.Sum(cd => cd.Precio * cd.Cantidad);
 
-            // ---------- Envío por vendedor (vendedor = AspNetUsers.Id del que subió el producto) ----------
+            // Envío por vendedor
             var vendedorUserIds = detalles
                 .Where(d => d.Producto != null && !string.IsNullOrWhiteSpace(d.Producto!.VendedorID))
                 .Select(d => d.Producto!.VendedorID!)
@@ -385,14 +675,12 @@ namespace Simone.Controllers
                 ViewBag.FallbackAdmin = true;
             }
 
-            // ---------- NUEVO: convertir {userId -> $} a {NombreTienda -> $} ----------
-            // 1) Traer (userId, VendedorId)
+            // Mapa legible {NombreTienda -> $}
             var usuarios = await _context.Users.AsNoTracking()
                 .Where(u => vendedorUserIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.VendedorId, u.NombreCompleto, u.Email })
                 .ToListAsync(ct);
 
-            // 2) Traer nombres de tienda por VendedorId
             var tiendaIds = usuarios.Where(x => x.VendedorId.HasValue)
                                     .Select(x => x.VendedorId!.Value)
                                     .Distinct()
@@ -404,7 +692,6 @@ namespace Simone.Controllers
                     .Where(t => tiendaIds.Contains(t.VendedorId))
                     .ToDictionaryAsync(t => t.VendedorId, t => t.Nombre, ct);
 
-            // 3) Construir {NombreTienda legible -> $}
             var envioPorTienda = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in envioPorVendedor)
             {
@@ -412,9 +699,9 @@ namespace Simone.Controllers
                 string etiqueta;
 
                 if (u?.VendedorId != null && mapTienda.TryGetValue(u.VendedorId.Value, out var tiendaNombre) && !string.IsNullOrWhiteSpace(tiendaNombre))
-                    etiqueta = tiendaNombre;                                 // ✅ Nombre de la tienda
+                    etiqueta = tiendaNombre;
                 else
-                    etiqueta = u?.NombreCompleto ?? u?.Email ?? kv.Key;      // fallback
+                    etiqueta = u?.NombreCompleto ?? u?.Email ?? kv.Key;
 
                 if (!envioPorTienda.ContainsKey(etiqueta))
                     envioPorTienda[etiqueta] = 0m;
@@ -426,8 +713,8 @@ namespace Simone.Controllers
             ViewBag.Subtotal = subtotal;
             ViewBag.TotalCompra = subtotal;
             ViewBag.EnvioTotal = envioTotal;
-            ViewBag.EnvioPorVendedor = envioPorVendedor; // por compatibilidad
-            ViewBag.EnvioPorTienda = envioPorTienda;     // ← usar este en la vista
+            ViewBag.EnvioPorVendedor = envioPorVendedor; // compat
+            ViewBag.EnvioPorTienda = envioPorTienda;
             ViewBag.EnvioMensajes = envioMensajes;
             ViewBag.CanComputeShipping = !string.IsNullOrWhiteSpace(user.Provincia);
             ViewBag.HasAddress = !string.IsNullOrWhiteSpace(user.Direccion);
@@ -473,15 +760,19 @@ namespace Simone.Controllers
                 return View("Resumen", user);
             }
 
-            // Stock
-            var faltantes = detalles.Where(d => d.Producto != null && d.Producto.Stock < d.Cantidad).ToList();
+            // Verificación previa con variantes
+            var faltantes = detalles.Where(d =>
+                (d.Variante != null && d.Variante.Stock < d.Cantidad) ||
+                (d.Variante == null && d.Producto != null && d.Producto.Stock < d.Cantidad))
+                .ToList();
+
             if (faltantes.Any())
             {
                 ViewBag.HasAddress = true;
                 ViewBag.CarritoDetalles = detalles;
                 ViewBag.TotalCompra = detalles.Sum(cd => cd.Precio * cd.Cantidad);
                 TempData["MensajeError"] = "Stock insuficiente para: " +
-                    string.Join(", ", faltantes.Select(f => $"{f.Producto!.Nombre} (disp: {f.Producto.Stock}, pediste: {f.Cantidad})"));
+                    string.Join(", ", faltantes.Select(f => $"{(f.Producto?.Nombre ?? "Producto")}{(f.Variante != null ? $" [{f.Variante.Color}/{f.Variante.Talla}]" : "")}"));
                 return View("Resumen", user);
             }
 
@@ -551,7 +842,7 @@ namespace Simone.Controllers
                 {
                     Directory.CreateDirectory(UploadsFolderAbs());
 
-                    // Resolver banco elegido (valida admin/tienda y Activo)
+                    // Resolver banco elegido
                     var (okBanco, metaBancoObj, destinoPago, errBanco) =
                         await ResolverBancoSeleccionadoAsync(BancoSeleccionado ?? "", ct);
 
@@ -787,6 +1078,81 @@ namespace Simone.Controllers
             System.IO.File.WriteAllText(metaPath, JsonSerializer.Serialize(metaObj));
         }
 
+        // >>> GALERÍA — helpers para cargar imágenes del producto <<<
+        private string ProductFolderAbs(int productId) =>
+            Path.Combine(_env.WebRootPath, "images", "Productos", productId.ToString());
+
+        private async Task<(string? portada, List<string> imagenes)> CargarGaleriaAsync(int productoId, CancellationToken ct)
+        {
+            // 1) Intentar JSON de galería
+            try
+            {
+                var folder = ProductFolderAbs(productoId);
+                var metaPath = Path.Combine(folder, $"product-{productoId}.gallery.json");
+                if (System.IO.File.Exists(metaPath))
+                {
+                    using var s = System.IO.File.OpenRead(metaPath);
+                    using var doc = await JsonDocument.ParseAsync(s, cancellationToken: ct);
+                    string? portada = null;
+                    var imgs = new List<string>();
+
+                    if (doc.RootElement.TryGetProperty("portada", out var p) && p.ValueKind == JsonValueKind.String)
+                        portada = p.GetString();
+
+                    if (doc.RootElement.TryGetProperty("images", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var e in arr.EnumerateArray())
+                        {
+                            if (e.ValueKind == JsonValueKind.String)
+                            {
+                                var rel = e.GetString();
+                                if (!string.IsNullOrWhiteSpace(rel))
+                                    imgs.Add(NormalizeRel(rel!));
+                            }
+                        }
+                    }
+
+                    return (NormalizeRel(portada), imgs.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo leer el JSON de galería para producto {pid}", productoId);
+            }
+
+            // 2) Fallback a DB ProductoImagenes
+            try
+            {
+                var filas = await _context.ProductoImagenes
+                    .AsNoTracking()
+                    .Where(pi => pi.ProductoID == productoId)
+                    .OrderBy(pi => pi.Orden)
+                    .ToListAsync(ct);
+
+                if (filas.Count > 0)
+                {
+                    var portada = filas.FirstOrDefault(x => x.Principal)?.Path ?? filas.First().Path;
+                    var imgs = filas.Select(x => NormalizeRel(x.Path)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+                    return (NormalizeRel(portada), imgs);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo leer ProductoImagenes para producto {pid}", productoId);
+            }
+
+            // 3) Sin datos
+            return (null, new List<string>());
+        }
+
+        private static string? NormalizeRel(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            var u = url.Replace("\\", "/");
+            return u.StartsWith("/") ? u : "/" + u;
+        }
+        // <<< GALERÍA
+
         // Resuelve admin/tienda con validación de Activo.
         private async Task<(bool ok, object metaBanco, string destino, string? error)>
             ResolverBancoSeleccionadoAsync(string bancoSeleccionado, CancellationToken ct)
@@ -808,7 +1174,9 @@ namespace Simone.Controllers
             {
                 var codigo = parts[1].Trim().ToLowerInvariant();
                 var admin = (await _bancosSvc.GetAdminAsync(ct)).Where(c => c.Activo).ToList();
-                var sel = admin.FirstOrDefault(c => string.Equals(c.Codigo?.Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+                var sel = admin.FirstOrDefault(c =>
+    string.Equals(c.Codigo?.Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+
                 if (sel == null) return (false, new { }, "admin", "Banco del administrador inválido o inactivo.");
 
                 var meta = new
@@ -835,7 +1203,8 @@ namespace Simone.Controllers
                 if (parts.Length >= 3)
                 {
                     var codigo = parts[2].Trim();
-                    sel = cuentas.FirstOrDefault(c => string.Equals(c.Codigo?.Trim(), codigo, StringComparison.OrdinalIgnoreCase));
+                    sel = cuentas.FirstOrDefault(c =>
+    string.Equals(c.Codigo?.Trim(), codigo, StringComparison.OrdinalIgnoreCase));
                     if (sel == null)
                         return (false, new { }, "tienda", "La cuenta seleccionada del vendedor no existe o no está activa.");
                 }
