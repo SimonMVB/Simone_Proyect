@@ -1,22 +1,24 @@
-@@using Simone.Models
+@using Simone.Models
 @using System
 @using System.Linq
-@using System.Text.Json
 @using System.Globalization
 @model List<Producto>
 
 @{
     ViewData["Type"] = "Productos";
     ViewData["Title"] = "Gestión de " + ViewData["Type"];
-    var lowStockThreshold = 10; // puedes ajustar el umbral
+    var lowStockThreshold = 10;
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
+
+    // Diccionario de galerías (opcional)
+    var galeriasDict = ViewBag.Galerias as Dictionary<int, List<string>>;
 }
 
 <!-- Font Awesome -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <!-- Google Fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 
 <style>
     :root {
@@ -26,8 +28,8 @@
         --accent-gold: #D4AF37;
         --light-gray: #F8F8F8;
         --medium-gray: #E0E0E0;
-        --dark-gray: #333333;
-        --text-color: #333333;
+        --dark-gray: #333;
+        --text-color: #333;
         --text-light: #777;
         --success-color: #28a745;
         --warning-color: #ffc107;
@@ -43,7 +45,7 @@
 
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Playfair Display',serif;
-        font-weight: 600
+        font-weight: 700
     }
 
     .management-container {
@@ -57,7 +59,7 @@
         justify-content: space-between;
         align-items: center;
         margin-bottom: 2rem;
-        padding: 1.5rem;
+        padding: 1.25rem 1.5rem;
         background: #fff;
         border-radius: 12px;
         box-shadow: 0 5px 15px rgba(0,0,0,.05)
@@ -90,7 +92,7 @@
         display: inline-flex;
         align-items: center;
         gap: .5rem;
-        transition: all .25s ease;
+        transition: .25s;
         text-decoration: none
     }
 
@@ -114,10 +116,6 @@
             background: var(--accent-purple);
             color: #fff;
             border-color: var(--accent-purple)
-        }
-
-        .pill-btn i {
-            font-size: .9rem
         }
 
     .stats-cards {
@@ -145,8 +143,8 @@
     .stat-label {
         color: var(--text-light);
         font-size: .85rem;
-        text-transform: uppercase;
-        letter-spacing: .5px
+        letter-spacing: .5px;
+        text-transform: uppercase
     }
 
     .toolbar {
@@ -164,7 +162,7 @@
 
     .search-input {
         width: 100%;
-        padding: .75rem 1rem .75rem 2.5rem;
+        padding: .75rem 2.5rem .75rem 2.5rem;
         border: 1px solid var(--medium-gray);
         border-radius: 30px;
         font-size: .95rem
@@ -184,6 +182,17 @@
         color: var(--text-light)
     }
 
+    .clear-icon {
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: transparent;
+        border: none;
+        color: #999;
+        cursor: pointer
+    }
+
     .filter-select {
         padding: .7rem 1rem;
         border: 1px solid var(--medium-gray);
@@ -196,12 +205,6 @@
             outline: none;
             border-color: var(--accent-purple)
         }
-
-    .right-tools {
-        margin-left: auto;
-        display: flex;
-        gap: .5rem
-    }
 
     .management-table {
         width: 100%;
@@ -218,19 +221,17 @@
             color: #fff;
             padding: 1rem;
             text-align: left;
-            font-weight: 500;
-            position: sticky;
-            top: 0
+            font-weight: 500
         }
 
             .management-table th.sortable {
                 cursor: pointer
             }
 
-                .management-table th.sortable .sort-indicator {
-                    opacity: .7;
-                    margin-left: .35rem
-                }
+            .management-table th .sort-indicator {
+                opacity: .7;
+                margin-left: .35rem
+            }
 
         .management-table td {
             padding: 1rem;
@@ -267,8 +268,7 @@
         align-items: center;
         justify-content: center;
         color: var(--text-light);
-        font-size: .8rem;
-        text-align: center
+        font-size: .8rem
     }
 
     .action-btn {
@@ -280,7 +280,7 @@
         align-items: center;
         justify-content: center;
         margin-right: .35rem;
-        transition: all .25s ease;
+        transition: .2s;
         cursor: pointer
     }
 
@@ -353,9 +353,9 @@
     .variant-count {
         background: var(--accent-purple);
         color: #fff;
-        border-radius: 50%;
         width: 18px;
         height: 18px;
+        border-radius: 50%;
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -385,20 +385,6 @@
         color: var(--accent-purple)
     }
 
-    .empty-state {
-        background: #fff;
-        border-radius: 12px;
-        padding: 3rem;
-        text-align: center;
-        box-shadow: 0 5px 15px rgba(0,0,0,.05)
-    }
-
-        .empty-state i {
-            font-size: 4rem;
-            color: var(--medium-gray);
-            margin-bottom: 1.25rem
-        }
-
     .pagination {
         display: flex;
         gap: .35rem;
@@ -427,30 +413,206 @@
             color: #fff
         }
 
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px)
+    /* Mini carrusel en celda */
+    .thumb-carousel {
+        position: relative;
+        width: 80px;
+        height: 80px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid var(--medium-gray);
+        background: #fff
+    }
+
+    .thumb-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block
+    }
+
+    .thumb-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 22px;
+        height: 22px;
+        border: none;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,255,255,.85);
+        color: #333;
+        cursor: pointer;
+        opacity: 0;
+        transition: .2s
+    }
+
+    .thumb-carousel:hover .thumb-nav {
+        opacity: 1
+    }
+
+    .thumb-nav.prev {
+        left: 4px
+    }
+
+    .thumb-nav.next {
+        right: 4px
+    }
+
+    .thumb-dots {
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 4px
+    }
+
+        .thumb-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.75)
         }
 
-        to {
-            opacity: 1;
-            transform: translateY(0)
+            .thumb-dots span.active {
+                background: #fff
+            }
+
+    .thumb-zoom {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 22px;
+        height: 22px;
+        border: none;
+        border-radius: 6px;
+        background: rgba(0,0,0,.45);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: .2s
+    }
+
+    .thumb-carousel:hover .thumb-zoom {
+        opacity: 1
+    }
+
+    /* Lightbox */
+    .gallery-lightbox {
+        position: relative;
+        background: #000;
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+        justify-content: center
+    }
+
+    .g-stage {
+        width: 100%;
+        height: 60vh;
+        display: flex;
+        align-items: center;
+        justify-content: center
+    }
+
+    #gImage {
+        max-width: 100%;
+        max-height: 60vh;
+        object-fit: contain
+    }
+
+    .g-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        border: none;
+        background: rgba(255,255,255,.15);
+        color: #fff;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center
+    }
+
+    .g-prev {
+        left: 12px
+    }
+
+    .g-next {
+        right: 12px
+    }
+
+    .g-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.2);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center
+    }
+
+    .g-thumbs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 10px;
+        background: #111
+    }
+
+        .g-thumbs img {
+            width: 88px;
+            height: 88px;
+            object-fit: cover;
+            border: 2px solid transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            opacity: .85
         }
+
+            .g-thumbs img.active {
+                border-color: #fff;
+                opacity: 1
+            }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-10px)
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0)
+    }
+
     }
 
     .fade-in {
         animation: fadeIn .5s ease-out
     }
+    @@media(max - width:1200px) {
+        .management-table
 
-    @@media (max-width:1200px) {
-        .management-container {
-            overflow-x: auto
-        }
+    {
+        min-width: 1000px
+    }
 
-        .management-table {
-            min-width: 1000px
-        }
     }
 </style>
 
@@ -468,7 +630,6 @@
         </div>
     </div>
 
-    <!-- Stats -->
     <div class="stats-cards">
         <div class="stat-card"><div class="stat-number" id="totalProducts">0</div><div class="stat-label">Total Productos</div></div>
         <div class="stat-card"><div class="stat-number" id="inStockProducts">0</div><div class="stat-label">En Stock</div></div>
@@ -477,11 +638,11 @@
         <div class="stat-card"><div class="stat-number" id="variantProducts">0</div><div class="stat-label">Con Variantes</div></div>
     </div>
 
-    <!-- Toolbar -->
     <div class="toolbar">
         <div class="search-box">
             <i class="fas fa-search search-icon"></i>
             <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, marca, categoría...">
+            <button type="button" class="clear-icon" id="clearSearch" title="Limpiar"><i class="fas fa-xmark"></i></button>
         </div>
 
         <select class="filter-select" id="categoryFilter">
@@ -508,7 +669,7 @@
             <option value="without-variants">Sin variantes</option>
         </select>
 
-        <div class="right-tools">
+        <div class="right-tools" style="margin-left:auto;">
             <select class="filter-select" id="rowsPerPage">
                 <option value="10">10 / pág.</option>
                 <option value="20">20 / pág.</option>
@@ -535,80 +696,87 @@
                     </tr>
                 </thead>
                 <tbody id="productTbody">
-                    @foreach (var producto in Model)
+                    @foreach (var p in Model)
                     {
-                        var hasVariants = producto.Variantes != null && producto.Variantes.Any();
-                        var variantCount = hasVariants ? producto.Variantes.Count : 0;
+                        var hasVariants = p.Variantes != null && p.Variantes.Any();
+                        var variantCount = hasVariants ? p.Variantes.Count : 0;
 
                         var colors = hasVariants
-                        ? producto.Variantes.Select(v => v.Color).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList()
+                        ? p.Variantes.Select(v => v.Color).Where(c => !string.IsNullOrWhiteSpace(c)).Distinct().ToList()
                         : new List<string>();
-
                         var sizes = hasVariants
-                        ? producto.Variantes.Select(v => v.Talla).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList()
+                        ? p.Variantes.Select(v => v.Talla).Where(t => !string.IsNullOrWhiteSpace(t)).Distinct().ToList()
                         : new List<string>();
 
-                        var totalStock = hasVariants ? producto.Variantes.Sum(v => v.Stock) : producto.Stock;
+                        var totalStock = hasVariants ? p.Variantes.Sum(v => v.Stock) : p.Stock;
                         var stockClass = totalStock <= 0 ? "stock-out" : (totalStock <= lowStockThreshold ? "stock-low" : "stock-high");
                         var stockText = totalStock <= 0 ? "Sin stock" : $"{totalStock} unidades";
                         var dataStatus = totalStock <= 0 ? "out-of-stock" : (totalStock <= lowStockThreshold ? "low-stock" : "in-stock");
 
-                        var topColors = colors.Take(3).ToList();
-
-                        // Rango de precios si hay variantes
                         decimal minVarPrice = hasVariants
-                        ? producto.Variantes.Where(v => v.PrecioVenta.HasValue).Select(v => v.PrecioVenta!.Value).DefaultIfEmpty(0m).Min()
+                        ? p.Variantes.Where(v => v.PrecioVenta.HasValue).Select(v => v.PrecioVenta!.Value).DefaultIfEmpty(0m).Min()
                         : 0m;
                         decimal maxVarPrice = hasVariants
-                        ? producto.Variantes.Where(v => v.PrecioVenta.HasValue).Select(v => v.PrecioVenta!.Value).DefaultIfEmpty(0m).Max()
+                        ? p.Variantes.Where(v => v.PrecioVenta.HasValue).Select(v => v.PrecioVenta!.Value).DefaultIfEmpty(0m).Max()
                         : 0m;
 
-
-                        var variantJson = hasVariants
-                        ? JsonSerializer.Serialize(producto.Variantes.Select(v => new { v.Color, v.Talla, v.PrecioVenta, v.Stock, v.SKU }))
-                        : "[]";
+                        // imágenes (galería si está, sino portada)
+                        var imgs = (galeriasDict != null && galeriasDict.TryGetValue(p.ProductoID, out var list) && list?.Any() == true)
+                        ? list
+                        : (!string.IsNullOrWhiteSpace(p.ImagenPath) ? new List<string> { p.ImagenPath! } : new List<string>());
+                        var imgsJson = System.Text.Json.JsonSerializer.Serialize(imgs);
                         <tr class="product-row"
-                            data-id="@producto.ProductoID"
-                            data-name="@producto.Nombre?.ToLower()"
-                            data-category="@producto.Categoria?.Nombre?.ToLower()"
-                            data-brand="@producto.Marca?.ToLower()"
+                            data-id="@p.ProductoID"
+                            data-name="@p.Nombre?.ToLower()"
+                            data-category="@p.Categoria?.Nombre?.ToLower()"
+                            data-brand="@p.Marca?.ToLower()"
                             data-stock="@totalStock"
-                            data-price="@producto.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture)"
+                            data-price="@p.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture)"
+                            data-price-min="@(hasVariants? minVarPrice.ToString("0.00", CultureInfo.InvariantCulture) : p.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture))"
+                            data-price-max="@(hasVariants? maxVarPrice.ToString("0.00", CultureInfo.InvariantCulture) : p.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture))"
                             data-has-variants="@(hasVariants.ToString().ToLower())"
                             data-status="@dataStatus">
 
                             <td>
                                 <div style="display:flex;flex-direction:column;gap:.4rem;">
-                                    <strong>@producto.Nombre</strong>
+                                    <strong>@p.Nombre</strong>
                                     <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap">
-                                        <span class="category-badge">@producto.Categoria?.Nombre</span>
+                                        <span class="category-badge">@p.Categoria?.Nombre</span>
                                         @if (hasVariants)
                                         {
                                             <span class="variant-badge"><i class="fas fa-layer-group"></i> Variantes <span class="variant-count">@variantCount</span></span>
                                         }
                                     </div>
-                                    <div style="font-size:.85rem;color:var(--text-light)"><i class="fas fa-tag"></i> @producto.Marca</div>
+                                    <div style="font-size:.85rem;color:var(--text-light)"><i class="fas fa-tag"></i> @p.Marca</div>
                                 </div>
                             </td>
 
                             <td>
-                                @if (!string.IsNullOrEmpty(producto.ImagenPath))
+                                @if (imgs.Any())
                                 {
-                                    <img src="@producto.ImagenPath" alt="Imagen de @producto.Nombre" class="product-image" loading="lazy" />
+                                    <div class="thumb-carousel" tabindex="0" role="group"
+                                         aria-label="Galería de @p.Nombre"
+                                         data-images='@Html.Raw(imgsJson)'
+                                         data-pid="@p.ProductoID">
+                                        <img class="thumb-img" src="@(imgs[0])" alt="@(p.Nombre ?? "Producto")" loading="lazy" />
+                                        <button type="button" class="thumb-nav prev" aria-label="Imagen anterior"><i class="fas fa-chevron-left"></i></button>
+                                        <button type="button" class="thumb-nav next" aria-label="Imagen siguiente"><i class="fas fa-chevron-right"></i></button>
+                                        <div class="thumb-dots" aria-hidden="true"></div>
+                                        <button type="button" class="thumb-zoom" data-open-gallery="@p.ProductoID" title="Ampliar"><i class="fas fa-up-right-and-down-left-from-center"></i></button>
+                                    </div>
                                 }
                                 else
                                 {
-                                    <div class="no-image" aria-label="Sin imagen"><i class="fas fa-image" aria-hidden="true"></i></div>
+                                    <div class="no-image" aria-label="Sin imagen"><i class="fas fa-image"></i></div>
                                 }
                             </td>
 
                             <td>
-                                <div class="description-text" title="@producto.Descripcion">
-                                    @producto.Descripcion
-                                </div>
+                                <div class="description-text" title="@p.Descripcion">@p.Descripcion</div>
 
                                 @if (hasVariants)
                                 {
+                                    var topColors = colors.Take(3).ToList();
                                     <div style="margin-top:.35rem;font-size:.85rem;color:var(--text-light)">
                                         <strong>Colores:</strong>
                                         @for (int i = 0; i < topColors.Count; i++)
@@ -619,6 +787,7 @@
                                             </span>
                                             if (i < topColors.Count - 1)
                                             {
+
                                                 <span>, </span>
                                             }
                                         }
@@ -638,13 +807,13 @@
                                 else
                                 {
                                     <div style="font-size:.85rem;color:var(--text-light);margin-top:.35rem">
-                                        @if (!string.IsNullOrEmpty(producto.Color))
+                                        @if (!string.IsNullOrWhiteSpace(p.Color))
                                         {
-                                            <span><strong>Color:</strong> @producto.Color</span>
+                                            <span><strong>Color:</strong> @p.Color</span>
                                         }
-                                        @if (!string.IsNullOrEmpty(producto.Talla))
+                                        @if (!string.IsNullOrWhiteSpace(p.Talla))
                                         {
-                                            <span style="margin-left:.5rem"><strong>Talla:</strong> @producto.Talla</span>
+                                            <span style="margin-left:.5rem"><strong>Talla:</strong> @p.Talla</span>
                                         }
                                     </div>
                                 }
@@ -668,33 +837,31 @@
                                             <text> - @maxVarPrice.ToString("C2", culture)</text>
                                         }
                                     </div>
-                                    <div style="font-size:.75rem;color:var(--text-light)">Compra: @producto.PrecioCompra.ToString("C2", culture)</div>
+                                    <div style="font-size:.75rem;color:var(--text-light)">Compra: @p.PrecioCompra.ToString("C2", culture)</div>
                                 }
                                 else
                                 {
-                                    <div class="price-tag">@producto.PrecioVenta.ToString("C2", culture)</div>
-                                    <div style="font-size:.75rem;color:var(--text-light)">Compra: @producto.PrecioCompra.ToString("C2", culture)</div>
+                                    <div class="price-tag">@p.PrecioVenta.ToString("C2", culture)</div>
+                                    <div style="font-size:.75rem;color:var(--text-light)">Compra: @p.PrecioCompra.ToString("C2", culture)</div>
                                 }
                             </td>
 
                             <td>
                                 <div style="display:flex;gap:.25rem">
                                     <form method="get" asp-controller="Panel" asp-action="EditarProducto" style="display:inline">
-                                        <input type="hidden" name="productoID" value="@producto.ProductoID" />
+                                        <input type="hidden" name="productoID" value="@p.ProductoID" />
                                         <button type="submit" class="action-btn edit-btn" title="Editar"><i class="fas fa-edit"></i></button>
                                     </form>
 
                                     @if (hasVariants)
                                     {
-                                        <button type="button" class="action-btn variants-btn" title="Ver variantes"
-                                                data-open-variants="@producto.ProductoID">
+                                        <button type="button" class="action-btn variants-btn" title="Ver variantes" data-open-variants="@p.ProductoID">
                                             <i class="fas fa-list"></i>
                                         </button>
                                     }
 
-                                    <form method="post" asp-controller="Panel" asp-action="EliminarProducto"
-                                          onsubmit="return confirm('¿Estás seguro de eliminar este producto?');" style="display:inline">
-                                        <input type="hidden" name="productoID" value="@producto.ProductoID" />
+                                    <form method="post" asp-controller="Panel" asp-action="EliminarProducto" onsubmit="return confirm('¿Eliminar este producto?');" style="display:inline">
+                                        <input type="hidden" name="productoID" value="@p.ProductoID" />
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="action-btn delete-btn" title="Eliminar"><i class="fas fa-trash"></i></button>
                                     </form>
@@ -702,10 +869,11 @@
                             </td>
                         </tr>
 
-                        @* JSON embebido para el modal de variantes (no requiere AJAX) *@
+                        @* JSON embebido para el modal de variantes *@
                         @if (hasVariants)
                         {
-                            <script type="application/json" id="variants-@producto.ProductoID">
+                            var variantJson = System.Text.Json.JsonSerializer.Serialize(p.Variantes.Select(v => new { v.Color, v.Talla, v.PrecioVenta, v.Stock, v.SKU }));
+                            <script type="application/json" id="variants-@p.ProductoID">
                                 @Html.Raw(variantJson)
                             </script>
                         }
@@ -718,8 +886,8 @@
     }
     else
     {
-        <div class="empty-state">
-            <i class="fas fa-box-open"></i>
+        <div class="empty-state" style="background:#fff;border-radius:12px;padding:3rem;text-align:center;box-shadow:0 5px 15px rgba(0,0,0,.05)">
+            <i class="fas fa-box-open" style="font-size:4rem;color:var(--medium-gray);margin-bottom:1.25rem"></i>
             <h3>No hay productos disponibles</h3>
             <p>Comienza agregando tu primer producto al catálogo.</p>
             <a asp-controller="Panel" asp-action="AnadirProducto" class="add-btn"><i class="fas fa-plus"></i> Añadir Primer Producto</a>
@@ -736,9 +904,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <div id="variantesContent" class="table-responsive">
-                    <!-- contenido dinámico -->
-                </div>
+                <div id="variantesContent" class="table-responsive"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -747,315 +913,273 @@
     </div>
 </div>
 
+<!-- Modal Galería -->
+<div id="galleryModal" class="modal fade" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body p-0">
+                <div class="gallery-lightbox">
+                    <button class="g-close" data-bs-dismiss="modal" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+                    <button class="g-nav g-prev" aria-label="Anterior"><i class="fas fa-chevron-left"></i></button>
+                    <div class="g-stage"><img id="gImage" alt="Imagen ampliada" /></div>
+                    <button class="g-nav g-next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
+                </div>
+                <div class="g-thumbs" id="gThumbs"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        (function () {
-            const lowThreshold = @lowStockThreshold;
+        (function(){
+          const lowThreshold = @lowStockThreshold;
+          const qs = s => document.querySelector(s);
+          const qsa = s => Array.from(document.querySelectorAll(s));
 
-            const qs = s => document.querySelector(s);
-            const qsa = s => Array.from(document.querySelectorAll(s));
+          const searchInput = qs('#searchInput');
+          const clearSearchBtn = qs('#clearSearch');
+          const categoryFilter = qs('#categoryFilter');
+          const stockFilter = qs('#stockFilter');
+          const variantFilter = qs('#variantFilter');
+          const statusPills = qsa('.pill-btn[data-status]');
+          const rowsPerPageEl = qs('#rowsPerPage');
+          const resetBtn = qs('#resetFilters');
+          const exportCsvBtn = qs('#exportCsv');
+          const tbody = qs('#productTbody');
+          const paginationEl = qs('#pagination');
 
-            const searchInput = qs('#searchInput');
-            const categoryFilter = qs('#categoryFilter');
-            const stockFilter = qs('#stockFilter');
-            const variantFilter = qs('#variantFilter');
-            const statusPills = qsa('.pill-btn[data-status]');
-            const rowsPerPageEl = qs('#rowsPerPage');
-            const resetBtn = qs('#resetFilters');
-            const exportCsvBtn = qs('#exportCsv');
-            const tbody = qs('#productTbody');
-            const paginationEl = qs('#pagination');
+          const norm = s => {
+            s = (s||'').toString();
+            try{ return s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase(); }
+            catch{ return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
+          };
 
-            // Normaliza: quita acentos y pasa a minúsculas
-            const norm = (s) => {
-                s = (s || '').toString();
-                try {
-                    return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-                } catch {
-                    // Fallback sin RegExp Unicode
-                    return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-                }
-            };
+          const state = {
+            search:'', category:'', stock:'', variant:'', status:'all',
+            sort:{ by:'name', dir:'asc' }, page:1,
+            rowsPerPage: parseInt(localStorage.getItem('rowsPerPage') || '10', 10)
+          };
 
-            const state = {
-                search: '',
-                category: '',
-                stock: '',
-                variant: '',
-                status: 'all',
-                sort: { by: 'name', dir: 'asc' },
-                page: 1,
-                rowsPerPage: parseInt(localStorage.getItem('rowsPerPage') || '10', 10)
-            };
+          (function restore(){
+            const saved = localStorage.getItem('prodFilters');
+            if (saved) { try{ Object.assign(state, JSON.parse(saved)); }catch{} }
+            searchInput.value = state.search || '';
+            categoryFilter.value = state.category || '';
+            stockFilter.value = state.stock || '';
+            variantFilter.value = state.variant || '';
+            rowsPerPageEl.value = String(state.rowsPerPage);
+            statusPills.forEach(p => p.classList.toggle('active', p.dataset.status === state.status));
+          })();
 
-            // Restore filters
-            (function restore() {
-                const saved = localStorage.getItem('prodFilters');
-                if (saved) { try { Object.assign(state, JSON.parse(saved)); } catch { } }
-                searchInput.value = state.search || '';
-                categoryFilter.value = state.category || '';
-                stockFilter.value = state.stock || '';
-                variantFilter.value = state.variant || '';
-                rowsPerPageEl.value = String(state.rowsPerPage);
-                statusPills.forEach(p => p.classList.toggle('active', p.dataset.status === state.status));
-            })();
-
-            function persist() {
-                localStorage.setItem('prodFilters', JSON.stringify({
-                    search: state.search, category: state.category, stock: state.stock,
-                    variant: state.variant, status: state.status, sort: state.sort, page: state.page
-                }));
-                localStorage.setItem('rowsPerPage', String(state.rowsPerPage));
-            }
-
-            function getRows() {
-                return qsa('.product-row');
-            }
-
-            function applyFiltersAndSort() {
-                const term = norm(state.search);
-                const rows = getRows();
-
-                rows.forEach(row => {
-                    const name = norm(row.dataset.name || '');
-                    const brand = norm(row.dataset.brand || '');
-                    const category = norm(row.dataset.category || '');
-                    const stock = parseInt(row.dataset.stock || '0', 10);
-                    const hasVariants = row.dataset.hasVariants === 'true';
-                    const status = row.dataset.status;
-
-                    let show = true;
-
-                    if (term && !(name.includes(term) || brand.includes(term) || category.includes(term))) show = false;
-                    if (state.category && category !== norm(state.category)) show = false;
-
-                    if (state.stock === 'high' && stock <= lowThreshold) show = false;
-                    if (state.stock === 'low' && (stock > lowThreshold || stock === 0)) show = false;
-                    if (state.stock === 'out' && stock > 0) show = false;
-
-                    if (state.variant === 'with-variants' && !hasVariants) show = false;
-                    if (state.variant === 'without-variants' && hasVariants) show = false;
-
-                    if (state.status !== 'all' && status !== state.status) show = false;
-
-                    row.style.display = show ? '' : 'none';
-                });
-
-                // sort visible rows
-                const visible = rows.filter(r => r.style.display !== 'none');
-                const { by, dir } = state.sort;
-
-                visible.sort((a, b) => {
-                    const mult = dir === 'asc' ? 1 : -1;
-                    if (by === 'name') {
-                        return mult * (a.dataset.name || '').localeCompare(b.dataset.name || '');
-                    } else if (by === 'stock') {
-                        return mult * (parseInt(a.dataset.stock) - parseInt(b.dataset.stock));
-                    } else if (by === 'price') {
-                        return mult * ((parseFloat(a.dataset.price) || 0) - (parseFloat(b.dataset.price) || 0));
-                    }
-                    return 0;
-                });
-
-                // re-append in sorted order (only visible)
-                visible.forEach(v => tbody.appendChild(v));
-
-                renderPagination();
-                updateStatistics();
-                persist();
-            }
-
-            function renderPagination() {
-                const visible = getRows().filter(r => r.style.display !== 'none');
-                const total = visible.length;
-                const per = state.rowsPerPage;
-                const pages = Math.max(1, Math.ceil(total / per));
-                state.page = Math.min(state.page, pages);
-
-                // paging
-                visible.forEach(r => r.classList.add('hidden-by-page'));
-                const start = (state.page - 1) * per;
-                const end = start + per;
-                visible.slice(start, end).forEach(r => r.classList.remove('hidden-by-page'));
-                visible.slice(0, start).forEach(r => r.classList.add('hidden-by-page'));
-                visible.slice(end).forEach(r => r.classList.add('hidden-by-page'));
-
-                // controls
-                paginationEl.innerHTML = '';
-                const addBtn = (label, page, disabled = false, active = false) => {
-                    const btn = document.createElement('button');
-                    btn.className = 'page-btn' + (active ? ' active' : '');
-                    btn.textContent = label;
-                    btn.disabled = disabled;
-                    btn.addEventListener('click', () => { state.page = page; applyFiltersAndSort(); });
-                    paginationEl.appendChild(btn);
-                };
-                addBtn('«', 1, state.page === 1);
-                addBtn('‹', Math.max(1, state.page - 1), state.page === 1);
-
-                const windowSize = 5;
-                const half = Math.floor(windowSize / 2);
-                let startPage = Math.max(1, state.page - half);
-                let endPage = Math.min(pages, startPage + windowSize - 1);
-                startPage = Math.max(1, endPage - windowSize + 1);
-
-                for (let p = startPage; p <= endPage; p++) addBtn(String(p), p, false, p === state.page);
-
-                addBtn('›', Math.min(pages, state.page + 1), state.page === pages);
-                addBtn('»', pages, state.page === pages);
-            }
-
-            function updateStatistics() {
-                const rows = getRows().filter(r => r.style.display !== 'none' && !r.classList.contains('hidden-by-page'));
-                const allVisible = getRows().filter(r => r.style.display !== 'none');
-
-                const totalProducts = allVisible.length;
-                const inStock = allVisible.filter(r => r.dataset.status === 'in-stock').length;
-                const lowStock = allVisible.filter(r => r.dataset.status === 'low-stock').length;
-                const outStock = allVisible.filter(r => r.dataset.status === 'out-of-stock').length;
-                const withVar = allVisible.filter(r => r.dataset.hasVariants === 'true').length;
-
-                qs('#totalProducts').textContent = totalProducts;
-                qs('#inStockProducts').textContent = inStock;
-                qs('#lowStockProducts').textContent = lowStock;
-                qs('#outOfStockProducts').textContent = outStock;
-                qs('#variantProducts').textContent = withVar;
-            }
-
-            // Events
-            searchInput.addEventListener('input', e => { state.search = e.target.value; state.page = 1; applyFiltersAndSort(); });
-            categoryFilter.addEventListener('change', e => { state.category = e.target.value; state.page = 1; applyFiltersAndSort(); });
-            stockFilter.addEventListener('change', e => { state.stock = e.target.value; state.page = 1; applyFiltersAndSort(); });
-            variantFilter.addEventListener('change', e => { state.variant = e.target.value; state.page = 1; applyFiltersAndSort(); });
-            rowsPerPageEl.addEventListener('change', e => { state.rowsPerPage = parseInt(e.target.value, 10); state.page = 1; applyFiltersAndSort(); });
-
-            statusPills.forEach(p => p.addEventListener('click', () => {
-                statusPills.forEach(x => x.classList.remove('active'));
-                p.classList.add('active');
-                state.status = p.dataset.status;
-                state.page = 1;
-                applyFiltersAndSort();
+          function persist(){
+            localStorage.setItem('prodFilters', JSON.stringify({
+              search:state.search, category:state.category, stock:state.stock, variant:state.variant,
+              status:state.status, sort:state.sort, page:state.page
             }));
+            localStorage.setItem('rowsPerPage', String(state.rowsPerPage));
+          }
 
-            // Sorting
-            qsa('th.sortable').forEach(th => {
-                th.addEventListener('click', () => {
-                    const by = th.dataset.sort;
-                    if (state.sort.by === by) {
-                        state.sort.dir = (state.sort.dir === 'asc') ? 'desc' : 'asc';
-                    } else {
-                        state.sort.by = by; state.sort.dir = 'asc';
-                    }
-                    // Update sort icons
-                    qsa('th.sortable .sort-indicator i').forEach(i => i.className = 'fas fa-sort');
-                    const icon = th.querySelector('.sort-indicator i');
-                    icon.className = state.sort.dir === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
-                    applyFiltersAndSort();
-                });
+          const debounce = (fn,ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
+
+          function getRows(){ return qsa('.product-row'); }
+
+          function applyFiltersAndSort(){
+            const term = norm(state.search);
+            const rows = getRows();
+
+            rows.forEach(row=>{
+              const name = norm(row.dataset.name||'');
+              const brand = norm(row.dataset.brand||'');
+              const category = norm(row.dataset.category||'');
+              const stock = parseInt(row.dataset.stock||'0',10);
+              const hasVariants = row.dataset.hasVariants==='true';
+              const status = row.dataset.status;
+
+              let show = true;
+              if (term && !(name.includes(term)||brand.includes(term)||category.includes(term))) show=false;
+              if (state.category && category !== norm(state.category)) show=false;
+              if (state.stock==='high' && stock<=lowThreshold) show=false;
+              if (state.stock==='low' && (stock>lowThreshold || stock===0)) show=false;
+              if (state.stock==='out' && stock>0) show=false;
+              if (state.variant==='with-variants' && !hasVariants) show=false;
+              if (state.variant==='without-variants' && hasVariants) show=false;
+              if (state.status!=='all' && status!==state.status) show=false;
+
+              row.style.display = show ? '' : 'none';
             });
 
-            // Reset
-            resetBtn.addEventListener('click', () => {
-                state.search = ''; state.category = ''; state.stock = ''; state.variant = ''; state.status = 'all';
-                state.sort = { by: 'name', dir: 'asc' }; state.page = 1;
-                searchInput.value = ''; categoryFilter.value = ''; stockFilter.value = ''; variantFilter.value = '';
-                statusPills.forEach(p => p.classList.toggle('active', p.dataset.status === 'all'));
-                applyFiltersAndSort();
+            const visible = rows.filter(r=>r.style.display!=='none');
+            const {by,dir} = state.sort;
+            visible.sort((a,b)=>{
+              const mult = dir==='asc'?1:-1;
+              if (by==='name'){ return mult*((a.dataset.name||'').localeCompare(b.dataset.name||'')); }
+              if (by==='stock'){ return mult*(parseInt(a.dataset.stock)-parseInt(b.dataset.stock)); }
+              if (by==='price'){
+                const aMin = parseFloat(a.dataset.priceMin||a.dataset.price||'0')||0;
+                const bMin = parseFloat(b.dataset.priceMin||b.dataset.price||'0')||0;
+                return mult*(aMin - bMin);
+              }
+              return 0;
             });
+            visible.forEach(v=>tbody.appendChild(v));
 
-            // Export visible (sin paginar)
-            exportCsvBtn.addEventListener('click', () => {
-                const visible = getRows().filter(r => r.style.display !== 'none');
-                const rows = visible.map(r => {
-                    const name = r.querySelector('td:first-child strong')?.textContent?.trim() || '';
-                    const cat = r.querySelector('.category-badge')?.textContent?.trim() || '';
-                    const brand = r.dataset.brand || '';
-                    const stock = r.dataset.stock || '0';
-                    const price = r.dataset.price || '0';
-                    const type = r.dataset.hasVariants === 'true' ? 'Con variantes' : 'Simple';
-                    return [name, cat, brand, stock, price, type];
-                });
-                const header = ['Nombre', 'Categoría', 'Marca', 'Stock', 'PrecioVenta', 'Tipo'];
-                const csv = [header, ...rows].map(a => a.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'productos.csv';
-                document.body.appendChild(a); a.click(); a.remove();
+            renderPagination();
+            updateStatistics();
+            persist();
+          }
+
+          function renderPagination(){
+            const visible = getRows().filter(r=>r.style.display!=='none');
+            const total = visible.length;
+            const per = state.rowsPerPage;
+            const pages = Math.max(1, Math.ceil(total/per));
+            state.page = Math.min(state.page, pages);
+
+            visible.forEach(r=>r.classList.add('hidden-by-page'));
+            const start=(state.page-1)*per, end=start+per;
+            visible.slice(start,end).forEach(r=>r.classList.remove('hidden-by-page'));
+
+            paginationEl.innerHTML='';
+            const addBtn=(lbl,page,dis=false,act=false)=>{
+              const btn=document.createElement('button'); btn.className='page-btn'+(act?' active':''); btn.textContent=lbl; btn.disabled=dis;
+              btn.addEventListener('click',()=>{ state.page=page; applyFiltersAndSort(); });
+              paginationEl.appendChild(btn);
+            };
+            addBtn('«',1,state.page===1);
+            addBtn('‹',Math.max(1,state.page-1),state.page===1);
+            const windowSize=5, half=Math.floor(windowSize/2);
+            let startPage=Math.max(1,state.page-half);
+            let endPage=Math.min(pages,startPage+windowSize-1);
+            startPage=Math.max(1,endPage-windowSize+1);
+            for(let p=startPage;p<=endPage;p++) addBtn(String(p),p,false,p===state.page);
+            addBtn('›',Math.min(pages,state.page+1),state.page===pages);
+            addBtn('»',pages,state.page===pages);
+          }
+
+          function updateStatistics(){
+            const all = getRows().filter(r=>r.style.display!=='none');
+            qs('#totalProducts').textContent = all.length;
+            qs('#inStockProducts').textContent = all.filter(r=>r.dataset.status==='in-stock').length;
+            qs('#lowStockProducts').textContent = all.filter(r=>r.dataset.status==='low-stock').length;
+            qs('#outOfStockProducts').textContent = all.filter(r=>r.dataset.status==='out-of-stock').length;
+            qs('#variantProducts').textContent = all.filter(r=>r.dataset.hasVariants==='true').length;
+          }
+
+          // Eventos filtros/orden
+          searchInput.addEventListener('input', debounce(e=>{ state.search=e.target.value; state.page=1; applyFiltersAndSort(); },250));
+          clearSearchBtn.addEventListener('click', ()=>{ searchInput.value=''; state.search=''; state.page=1; applyFiltersAndSort(); });
+          categoryFilter.addEventListener('change', e=>{ state.category=e.target.value; state.page=1; applyFiltersAndSort(); });
+          stockFilter.addEventListener('change', e=>{ state.stock=e.target.value; state.page=1; applyFiltersAndSort(); });
+          variantFilter.addEventListener('change', e=>{ state.variant=e.target.value; state.page=1; applyFiltersAndSort(); });
+          rowsPerPageEl.addEventListener('change', e=>{ state.rowsPerPage=parseInt(e.target.value,10); state.page=1; applyFiltersAndSort(); });
+
+          statusPills.forEach(p=>p.addEventListener('click', ()=>{
+            statusPills.forEach(x=>x.classList.remove('active')); p.classList.add('active');
+            state.status=p.dataset.status; state.page=1; applyFiltersAndSort();
+          }));
+
+          qsa('th.sortable').forEach(th=>{
+            th.addEventListener('click', ()=>{
+              const by = th.dataset.sort;
+              state.sort.by===by ? state.sort.dir = (state.sort.dir==='asc'?'desc':'asc') : (state.sort.by=by, state.sort.dir='asc');
+              qsa('th.sortable .sort-indicator i').forEach(i=>i.className='fas fa-sort');
+              const icon=th.querySelector('.sort-indicator i');
+              icon.className = state.sort.dir==='asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+              applyFiltersAndSort();
             });
+          });
 
-            // Variantes modal
-            document.addEventListener('click', (e) => {
-                const btn = e.target.closest('[data-open-variants]');
-                if (!btn) return;
-                const pid = btn.getAttribute('data-open-variants');
-                openVariantes(pid);
-            });
-
-            async function openVariantes(productId) {
-                const modalEl = document.getElementById('variantesModal');
-                const modalTitle = document.getElementById('variantesModalTitle');
-                const content = document.getElementById('variantesContent');
-
-                const row = document.querySelector(`.product-row[data-id="${productId}"]`);
-                const name = row?.querySelector('strong')?.textContent || 'Producto';
-                modalTitle.textContent = `Variantes de: ${name}`;
-                content.innerHTML = '<div class="py-3 text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-
-                // 1) intentar leer JSON embebido
-                let data = [];
-                const script = document.getElementById(`variants-${productId}`);
-                if (script) {
-                    try { data = JSON.parse(script.textContent || '[]'); } catch { data = []; }
-                }
-
-                // 2) si no hay embebido, intentar AJAX
-                if (!data || data.length === 0) {
-                    try {
-                        const resp = await fetch(`/Panel/VariantesJson?productoId=${productId}`, { headers: { 'Accept': 'application/json' } });
-                        if (resp.ok) data = await resp.json();
-                    } catch { /* ignore */ }
-                }
-
-                if (!data || data.length === 0) {
-                    content.innerHTML = '<div class="py-3 text-muted">No se encontraron variantes.</div>';
-                } else {
-                    const rows = data.map(v => `
-                        <tr>
-                            <td>${escapeHtml(v.Color ?? '')}</td>
-                            <td>${escapeHtml(v.Talla ?? '')}</td>
-                            <td>${(Number(v.PrecioVenta) || 0).toFixed(2)}</td>
-                            <td>${v.Stock ?? 0}</td>
-                            <td>${escapeHtml(v.SKU ?? '')}</td>
-                        </tr>
-                    `).join('');
-                    content.innerHTML = `
-                        <table class="table table-sm">
-                            <thead class="table-light">
-                                <tr><th>Color</th><th>Talla</th><th>Precio</th><th>Stock</th><th>SKU</th></tr>
-                            </thead>
-                            <tbody>${rows}</tbody>
-                        </table>`;
-                }
-
-                if (window.bootstrap) {
-                    new bootstrap.Modal(modalEl).show();
-                } else {
-                    modalEl.style.display = 'block';
-                }
-            }
-
-            function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])); }
-
-            // Inicializar
+          resetBtn.addEventListener('click', ()=>{
+            state.search=''; state.category=''; state.stock=''; state.variant=''; state.status='all';
+            state.sort={by:'name',dir:'asc'}; state.page=1;
+            searchInput.value=''; categoryFilter.value=''; stockFilter.value=''; variantFilter.value='';
+            statusPills.forEach(p=>p.classList.toggle('active', p.dataset.status==='all'));
             applyFiltersAndSort();
+          });
+
+          exportCsvBtn.addEventListener('click', ()=>{
+            const visible = getRows().filter(r=>r.style.display!=='none');
+            const rows = visible.map(r=>{
+              const name = r.querySelector('td:first-child strong')?.textContent?.trim() || '';
+              const cat = r.querySelector('.category-badge')?.textContent?.trim() || '';
+              const brand = r.dataset.brand || '';
+              const stock = r.dataset.stock || '0';
+              const price = r.dataset.priceMin || r.dataset.price || '0';
+              const type = r.dataset.hasVariants==='true' ? 'Con variantes' : 'Simple';
+              return [name, cat, brand, stock, price, type];
+            });
+            const header = ['Nombre','Categoría','Marca','Stock','PrecioVentaMin','Tipo'];
+            const csv = [header,...rows].map(a=>a.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
+            const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+            const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='productos.csv'; document.body.appendChild(a); a.click(); a.remove();
+          });
+
+          // ====== MINI-CARRUSEL ======
+          function buildDots(host,n){ const d=host.querySelector('.thumb-dots'); d.innerHTML=''; for(let i=0;i<n;i++){ const s=document.createElement('span'); d.appendChild(s);} }
+          function setSlide(host,idx){
+            const images = JSON.parse(host.dataset.images||'[]'); if(!images.length) return;
+            idx = (idx+images.length)%images.length; host.dataset.idx=String(idx);
+            const img=host.querySelector('.thumb-img'); if(img) img.src=images[idx];
+            qsa('.thumb-dots span',host).forEach((dot,i)=>dot.classList.toggle('active', i===idx));
+          }
+          function initCarousel(host){
+            const imgs = JSON.parse(host.dataset.images||'[]');
+            host.dataset.idx='0'; buildDots(host, imgs.length); setSlide(host,0);
+            const prev=host.querySelector('.thumb-nav.prev'); const next=host.querySelector('.thumb-nav.next');
+            prev?.addEventListener('click', e=>{ e.stopPropagation(); setSlide(host, parseInt(host.dataset.idx||'0')-1); });
+            next?.addEventListener('click', e=>{ e.stopPropagation(); setSlide(host, parseInt(host.dataset.idx||'0')+1); });
+            host.addEventListener('wheel', e=>{ e.preventDefault(); const dir=e.deltaY>0?1:-1; setSlide(host, parseInt(host.dataset.idx||'0')+dir); }, {passive:false});
+            let sx=0; host.addEventListener('touchstart', e=>sx=e.touches[0].clientX, {passive:true});
+            host.addEventListener('touchend', e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>30) setSlide(host, parseInt(host.dataset.idx||'0')+(dx<0?1:-1)); });
+            let timer=null; host.addEventListener('mouseenter', ()=>{ if(imgs.length>1) timer=setInterval(()=>setSlide(host, parseInt(host.dataset.idx||'0')+1),2500); });
+            host.addEventListener('mouseleave', ()=>{ if(timer){ clearInterval(timer); timer=null; }});
+          }
+          qsa('.thumb-carousel').forEach(initCarousel);
+
+          // ====== LIGHTBOX ======
+          let gImages=[]; let gIndex=0;
+          const gModal=document.getElementById('galleryModal');
+          const gImg=document.getElementById('gImage');
+          const gThumbs=document.getElementById('gThumbs');
+
+          function renderLightbox(){
+            if(!gImages.length) return;
+            gIndex=(gIndex+gImages.length)%gImages.length;
+            gImg.src=gImages[gIndex];
+            gThumbs.innerHTML='';
+            gImages.forEach((u,i)=>{ const t=document.createElement('img'); t.src=u; t.alt=''; if(i===gIndex) t.classList.add('active'); t.addEventListener('click',()=>{ gIndex=i; renderLightbox(); }); gThumbs.appendChild(t); });
+          }
+          function openLightbox(images,start=0){
+            gImages=images; gIndex=start; renderLightbox();
+            if(window.bootstrap) new bootstrap.Modal(gModal).show(); else gModal.style.display='block';
+          }
+
+          document.addEventListener('click', e=>{
+            const btn=e.target.closest('[data-open-gallery]'); if(!btn) return;
+            const pid=btn.getAttribute('data-open-gallery');
+            const host=document.querySelector(`.thumb-carousel[data-pid="${pid}"]`);
+            if(!host) return;
+            const images=JSON.parse(host.dataset.images||'[]');
+            const start=parseInt(host.dataset.idx||'0');
+            if(images.length) openLightbox(images,start);
+          });
+          gModal?.querySelector('.g-prev')?.addEventListener('click',()=>{ gIndex--; renderLightbox(); });
+          gModal?.querySelector('.g-next')?.addEventListener('click',()=>{ gIndex++; renderLightbox(); });
+          document.addEventListener('keydown', e=>{
+            if(!gModal.classList.contains('show')) return;
+            if(e.key==='ArrowLeft'){ gIndex--; renderLightbox(); }
+            if(e.key==='ArrowRight'){ gIndex++; renderLightbox(); }
+          });
+
+          // Inicializar
+          applyFiltersAndSort();
         })();
     </script>
 }
 
 @functions {
-    // Normaliza: quita acentos, guiones y espacios extra, y pasa a minúsculas
     private static string NormalizeColorKey(string s)
     {
         s = (s ?? "").Trim().ToLowerInvariant();
@@ -1065,167 +1189,65 @@
         var filtered = formD.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark);
         return new string(filtered.ToArray()).Normalize(System.Text.NormalizationForm.FormC);
     }
-
-    // Diccionario de colores
-    private static readonly Dictionary<string, string> ColorMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    private static readonly Dictionary<string, string> ColorMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        // NEUTROS / METÁLICOS / BLANCOS
         ["negro"] = "#000000",
         ["blanco"] = "#FFFFFF",
         ["gris"] = "#808080",
         ["gris claro"] = "#D3D3D3",
         ["gris medio"] = "#A9A9A9",
         ["gris oscuro"] = "#505050",
-        ["antracita"] = "#2F2F2F",
-        ["grafito"] = "#383838",
-        ["plomo"] = "#6D6D6D",
-        ["pizarra"] = "#708090",
-        ["humo"] = "#BEBEBE",
         ["plata"] = "#C0C0C0",
-        ["perla"] = "#F2F1ED",
-        ["hueso"] = "#E5E2D8",
         ["marfil"] = "#FFFFF0",
-        ["crema"] = "#FFFDD0",
-        ["champan"] = "#F7E7CE",
         ["beige"] = "#F5F5DC",
-        ["lino"] = "#FAF0E6",
-        ["arena"] = "#EED6A7",
-        ["arena clara"] = "#F1E3C6",
-        ["arena oscura"] = "#C9B082",
         ["camel"] = "#C19A6B",
-        ["caqui"] = "#C3B091",
-        ["khaki"] = "#C3B091",
-        ["topo"] = "#B2A193",
-        ["taupe"] = "#B2A193",
-        ["peltre"] = "#99A0A7",
-        ["acero"] = "#7A8B8B",
-        ["carbon"] = "#1C1C1C",
-
-        // MARRONES
         ["marron"] = "#8B4513",
         ["cafe"] = "#6F4E37",
         ["chocolate"] = "#5D2D0D",
-        ["castano"] = "#7B3F00",
-        ["avellana"] = "#8E6E53",
-        ["canela"] = "#A97142",
-        ["cobre"] = "#B87333",
-        ["bronce"] = "#CD7F32",
-        ["oro"] = "#D4AF37",
-        ["dorado"] = "#D4AF37",
         ["terracota"] = "#E2725B",
         ["ladrillo"] = "#B22222",
-        ["oxido"] = "#B7410E",
-        ["cognac"] = "#9A463D",
-        ["conac"] = "#9A463D",
-
-        // ROJOS / NARANJAS / AMARILLOS
         ["rojo"] = "#FF0000",
-        ["carmesi"] = "#DC143C",
-        ["carmin"] = "#960018",
-        ["escarlata"] = "#FF2400",
         ["granate"] = "#800020",
-        ["burdeos"] = "#800020",
-        ["borgona"] = "#800020",
         ["vino"] = "#722F37",
-        ["vino tinto"] = "#5E2129",
-        ["cereza"] = "#DE3163",
         ["coral"] = "#FF7F50",
-        ["coral claro"] = "#F88379",
         ["salmon"] = "#FA8072",
-        ["salmon claro"] = "#FFA07A",
         ["naranja"] = "#FFA500",
-        ["naranja quemado"] = "#CC5500",
-        ["mandarina"] = "#FF8C00",
-        ["albaricoque"] = "#FBCEB1",
-        ["durazno"] = "#FFDAB9",
-        ["melocoton"] = "#FFDAB9",
-        ["melon"] = "#FDBCB4",
-        ["ambar"] = "#FFBF00",
-        ["ocre"] = "#CC7722",
         ["mostaza"] = "#FFDB58",
         ["amarillo"] = "#FFFF00",
-        ["amarillo pastel"] = "#FFF59D",
-
-        // ROSAS
         ["rosa"] = "#FFC0CB",
-        ["rosa claro"] = "#FFDDE2",
-        ["rosa palo"] = "#D8A7B1",
-        ["rosa viejo"] = "#C08081",
-        ["rosa chicle"] = "#FF69B4",
         ["fucsia"] = "#FF00FF",
         ["magenta"] = "#FF00FF",
-
-        // MORADOS / VIOLETAS
         ["morado"] = "#800080",
         ["purpura"] = "#6A0DAD",
         ["violeta"] = "#8A2BE2",
         ["lavanda"] = "#E6E6FA",
         ["lila"] = "#C8A2C8",
-        ["berenjena"] = "#580F41",
         ["indigo"] = "#4B0082",
-        ["anil"] = "#3F00FF",
-
-        // AZULES
         ["azul"] = "#0000FF",
         ["azul cielo"] = "#87CEEB",
-        ["celeste"] = "#87CEEB",
-        ["azul bebe"] = "#BFEFFF",
-        ["azul pastel"] = "#A7C7E7",
-        ["azul acero"] = "#4682B4",
         ["azul rey"] = "#0033A0",
         ["azul marino"] = "#003366",
-        ["azul oscuro"] = "#00008B",
-        ["azul electrico"] = "#0066FF",
-        ["azul zafiro"] = "#0F52BA",
-        ["azul cobalto"] = "#0047AB",
-        ["azul prusia"] = "#003153",
         ["azul petroleo"] = "#0F4C5C",
-        ["petroleo"] = "#0F4C5C",
-        ["azul turquesa"] = "#40E0D0",
         ["turquesa"] = "#40E0D0",
-        ["aqua"] = "#00FFFF",
-        ["aguamarina"] = "#7FFFD4",
-        ["cyan"] = "#00FFFF",
-        ["cian"] = "#00FFFF",
         ["teal"] = "#008080",
-
-        // VERDES
         ["verde"] = "#008000",
         ["verde claro"] = "#90EE90",
-        ["verde pastel"] = "#ACE1AF",
         ["verde lima"] = "#32CD32",
-        ["lima"] = "#32CD32",
-        ["verde menta"] = "#98FF98",
-        ["menta"] = "#98FF98",
         ["verde esmeralda"] = "#50C878",
-        ["esmeralda"] = "#50C878",
         ["verde botella"] = "#006A4E",
-        ["verde bosque"] = "#228B22",
-        ["verde militar"] = "#556B2F",
-        ["verde oliva"] = "#808000",
-        ["oliva"] = "#808000",
-        ["olivo"] = "#808000",
-        ["verde caza"] = "#355E3B",
-        ["verde musgo"] = "#8A9A5B",
-        ["verde pistacho"] = "#93C572",
-        ["mentol"] = "#C1FFD7"
+        ["oliva"] = "#808000"
     };
-
-    // API que utiliza la normalización y el diccionario
     private string GetColorCode(string colorName)
     {
         var key = NormalizeColorKey(colorName);
         if (ColorMap.TryGetValue(key, out var hex)) return hex;
-
-        // Heurísticas muy básicas (opcional)
         if (key.Contains("marino") && key.Contains("azul")) return ColorMap["azul marino"];
         if (key.Contains("petroleo") && (key.Contains("azul") || key.Contains("verde"))) return ColorMap["azul petroleo"];
         if (key.Contains("pastel"))
         {
             foreach (var baseName in new[] { "rosa", "azul", "verde", "amarillo", "lila", "violeta" })
-                if (key.Contains(baseName) && ColorMap.TryGetValue($"{baseName} pastel", out var pastel))
-                    return pastel;
+                if (key.Contains(baseName) && ColorMap.TryGetValue($"{baseName}", out var h)) return h;
         }
-        return "#CCCCCC"; // Fallback
+        return "#CCCCCC";
     }
 }

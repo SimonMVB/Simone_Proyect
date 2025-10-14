@@ -1,0 +1,12 @@
+[
+  {
+    "codigo": "pichincha",
+    "nombre": "Banco Pichincha",
+    "numero": "2212845521",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "Martin Buena\u00F1o",
+    "ruc": "2350910200",
+    "logoPath": "/images/Bancos/pichincha.webp",
+    "activo": true
+  }
+]

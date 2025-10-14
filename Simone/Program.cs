@@ -10,6 +10,10 @@ using Simone.Models;
 using Simone.Services;
 using System.Globalization;
 using System.IO;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
+
 using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -50,7 +54,6 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 // =====================================
 // 3) Cultura (decimales con coma) + Sesión/Cookies/Form
 // =====================================
-// Cultura base (puedes cambiar a es-ES si prefieres)
 var appCulture = new CultureInfo("es-EC")
 {
     NumberFormat =
@@ -75,7 +78,7 @@ builder.Services.AddSession(o =>
     o.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-// Límite de subida alineado con el formulario (64 MB)
+// Límite de subida (64 MB)
 builder.Services.Configure<FormOptions>(o =>
 {
     o.MultipartBodyLengthLimit = 64L * 1024 * 1024;
@@ -143,6 +146,22 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+/* ===========================================================
+   Redirección canónica: neoagora.ec  ->  www.neoagora.ec   (301)
+   Colocada ANTES de UseHttpsRedirection para evitar bucles.
+   =========================================================== */
+app.Use(async (ctx, next) =>
+{
+    if (ctx.Request.Host.Host.Equals("neoagora.ec", StringComparison.OrdinalIgnoreCase))
+    {
+        // Forzamos https y www
+        var url = $"https://www.neoagora.ec{ctx.Request.PathBase}{ctx.Request.Path}{ctx.Request.QueryString}";
+        ctx.Response.Redirect(url, permanent: true);
+        return;
+    }
+    await next();
+});
+
 app.UseHttpsRedirection();
 
 // Archivos estáticos con caché moderada (24h)
@@ -153,7 +172,6 @@ if (Directory.Exists(webRoot))
         FileProvider = new PhysicalFileProvider(webRoot),
         OnPrepareResponse = ctx =>
         {
-            // Evita re-descargas innecesarias de imágenes/CSS/JS
             const int seconds = 60 * 60 * 24; // 1 día
             ctx.Context.Response.Headers["Cache-Control"] = $"public,max-age={seconds}";
         }
@@ -188,14 +206,31 @@ using (var scope = app.Services.CreateScope())
         Directory.CreateDirectory(Path.Combine(wr, "uploads", "comprobantes"));
         Directory.CreateDirectory(Path.Combine(wr, "images", "Productos"));
 
-        // Migraciones
         var db = services.GetRequiredService<TiendaDbContext>();
-        await db.Database.MigrateAsync();
 
-        // Seed Identity
+        // 1) Aplica migraciones si existen
+        var pending = await db.Database.GetPendingMigrationsAsync();
+        if (pending.Any())
+        {
+            logger.LogInformation("Aplicando {count} migraciones pendientes...", pending.Count());
+            await db.Database.MigrateAsync();
+        }
+        else
+        {
+            // 2) Si NO hay migraciones, crea la BD/tables según el modelo (por si está vacía)
+            var creator = db.Database.GetService<IRelationalDatabaseCreator>();
+            var hasTables = await creator.HasTablesAsync();
+            if (!hasTables)
+            {
+                logger.LogWarning("BD sin tablas y sin migraciones. Ejecutando EnsureCreated...");
+                await db.Database.EnsureCreatedAsync();
+            }
+        }
+
+        // Seed de Identity
         await CrearRolesYAdmin(services, logger);
 
-        // Seed dominio
+        // Seed de dominio (categorías/subcategorías)
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
 
@@ -206,6 +241,7 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Error al inicializar datos.");
     }
 }
+
 
 app.Run();
 
