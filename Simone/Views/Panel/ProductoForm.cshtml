@@ -643,36 +643,32 @@
         .summary-item:last-child {
             border-bottom: none
         }
+
     @@media (max-width:1024px) {
-        .product-form-container
+        .product-form-container {
+            grid-template-columns: 1fr;
+        }
 
-    {
-        grid-template-columns: 1fr
+        .form-sidebar {
+            position: static;
+        }
     }
 
-    .form-sidebar {
-        position: static
-    }
-
-    }
     @@media (max-width:768px) {
-        .form-grid
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
 
-    {
-        grid-template-columns: 1fr
-    }
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 16px;
+        }
 
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 16px
-    }
-
-    .toggle-section {
-        flex-direction: column;
-        align-items: flex-start
-    }
-
+        .toggle-section {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
 
     .spinner {
@@ -683,17 +679,15 @@
         border-radius: 50%;
         animation: spin 1s linear infinite
     }
+
     @@keyframes spin {
-        0%
+        0% {
+            transform: rotate(0deg)
+        }
 
-    {
-        transform: rotate(0)
-    }
-
-    100% {
-        transform: rotate(360deg)
-    }
-
+        100% {
+            transform: rotate(360deg)
+        }
     }
 </style>
 
@@ -797,21 +791,24 @@
                             </div>
 
                             <div class="form-group">
-                                <label class="form-label required" for="PrecioCompra">Precio de Compra</label>
-                                <input class="form-input" id="PrecioCompra" name="PrecioCompra" type="number" step="0.01" min="0.01" required
-                                       value="@(producto != null ? producto.PrecioCompra.ToString("0.00", CultureInfo.InvariantCulture) : "")"
-                                       inputmode="decimal" data-validation="required,number,min:0.01" />
-                                <div class="form-error" id="PrecioCompraError">El precio de compra debe ser mayor a 0</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label required" for="PrecioCompra">Precio de Compra</label>
+                                    <input class="form-input" id="PrecioCompra" name="PrecioCompra"
+                                           type="text" inputmode="decimal" pattern="[\d.,]+"
+                                           value="@(producto != null ? producto.PrecioCompra.ToString("0.00", culture) : "")"
+                                           data-validation="required,number,min:0.01" />
+                                    <div class="form-error" id="PrecioCompraError">El precio de compra debe ser mayor a 0</div>
+                                </div>
 
-                            <div class="form-group">
-                                <label class="form-label required" for="PrecioVenta">Precio de Venta</label>
-                                <input class="form-input" id="PrecioVenta" name="PrecioVenta" type="number" step="0.01" min="0.01" required
-                                       value="@(producto != null ? producto.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture) : "")"
-                                       inputmode="decimal" data-validation="required,number,min:0.01" />
-                                <div class="form-note" id="pvMargin" aria-live="polite"></div>
-                                <div class="form-error" id="PrecioVentaError">El precio de venta debe ser mayor a 0</div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label required" for="PrecioVenta">Precio de Venta</label>
+                                    <input class="form-input" id="PrecioVenta" name="PrecioVenta"
+                                           type="text" inputmode="decimal" pattern="[\d.,]+"
+                                           value="@(producto != null ? producto.PrecioVenta.ToString("0.00", culture) : "")"
+                                           data-validation="required,number,min:0.01" />
+                                    <div class="form-note" id="pvMargin" aria-live="polite"></div>
+                                    <div class="form-error" id="PrecioVentaError">El precio de venta debe ser mayor a 0</div>
+                                </div>
 
                             <div class="form-group base-only">
                                 <label class="form-label" for="Color">Color</label>
@@ -1009,10 +1006,13 @@
                                                         <input type="hidden" name="Variantes[@i].Talla" value="@variante.Talla" />
                                                         <span>@variante.Talla</span>
                                                     </td>
-                                                    <td>
-                                                        <input class="variant-input" name="Variantes[@i].Precio" type="number" step="0.01" min="0.01"
-                                                               value="@((variante.PrecioVenta ?? 0m).ToString("0.00", CultureInfo.InvariantCulture))" required />
-                                                    </td>
+                                                        <td>
+                                                            <input class="variant-input" name="Variantes[@i].Precio"
+                                                                   type="text" inputmode="decimal" pattern="[\d.,]+"
+                                                                   value="@((variante.PrecioVenta ?? 0m).ToString("0.00", culture))"
+                                                                   required />
+                                                        </td>
+
                                                     <td>
                                                         <input class="variant-input" name="Variantes[@i].Stock" type="number" step="1" min="0" value="@variante.Stock" required />
                                                     </td>
@@ -1085,6 +1085,7 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+
     <script>
         (() => {
             "use strict";
@@ -1093,20 +1094,26 @@
             const $  = (id) => document.getElementById(id);
             const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-            // Convierte "15,00" o "15" a número real
+            // "15,00" / "15.00" / "15" -> número real
             const toNum = (x) => {
                 const s = (x ?? "").toString()
                     .replace(/\s+/g, "")
-                    .replace(/\.(?=\d{3}(?:\D|$))/g, "")  // quita separadores de miles con punto
+                    .replace(/\.(?=\d{3}(?:\D|$))/g, "")   // quita miles con punto
                     .replace(/,(?=\d{1,2}(?:\D|$))/g, "."); // coma decimal -> punto
                 const n = parseFloat(s);
                 return Number.isFinite(n) ? n : 0;
             };
-            const toEs = n => (Number.isFinite(n) ? n : 0)
-                .toLocaleString('es-EC', { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 }); // FIX: render uniforme
-            const fmtUSD  = (n) => new Intl.NumberFormat("es-EC",{style:"currency",currency:"USD",minimumFractionDigits:2}).format(n||0);
-            const debounce= (fn, ms=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms);} };
-            const toast   = (t,k="info",ms=3600)=>{
+
+            // Para inputs type=number: SIEMPRE con punto
+            const toFixedDot = (n) => (Number.isFinite(n) ? n : 0).toFixed(2);
+
+            // Para ENVIAR a servidor (es-EC): con coma y sin miles
+            const toEs = (n) => (Number.isFinite(n) ? n : 0)
+                .toLocaleString("es-EC", { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            const fmtUSD = (n) => new Intl.NumberFormat("es-EC", { style:"currency", currency:"USD", minimumFractionDigits:2 }).format(n||0);
+            const debounce = (fn, ms=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms);} };
+            const toast = (t,k="info",ms=3600)=>{
                 const bg = {info:"linear-gradient(135deg,var(--primary),var(--primary-light))",
                             success:"linear-gradient(135deg,var(--success),#34d399)",
                             warning:"linear-gradient(135deg,var(--warning),#fbbf24)",
@@ -1121,7 +1128,7 @@
                 objectUrls: new Set(),
                 initialCatId: @(producto != null ? producto.CategoriaID : 0),
                 initialSubId: @(producto != null ? producto.SubcategoriaID : 0),
-                subcategorias: @Html.Raw(JsonSerializer.Serialize(
+                subcategorias: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
                                     subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
                             ))
         };
@@ -1171,7 +1178,6 @@
                     const newCatId = parseInt(e.target.value||"0",10);
                     fillSubs(newCatId);
 
-                    // si la subcategoría anterior existe bajo la nueva categoría, consérvala
                     const keep = Array.from(selSub.options).some(o=>o.value===String(STATE.initialSubId));
                     selSub.value = keep ? String(STATE.initialSubId) : "";
                     validateField(selCat);
@@ -1184,6 +1190,7 @@
                 const pc=$("PrecioCompra"), pv=$("PrecioVenta"), pvMargin=$("pvMargin");
                 if(!pc||!pv||!pvMargin) return;
 
+                // NO reescribimos el valor en blur (para que no “desaparezca”):
                 const refresh=()=>{
                     const a=toNum(pc.value), b=toNum(pv.value);
                     if(!STATE.hasVariants){
@@ -1210,15 +1217,13 @@
                 const MAX_FILES=8, MAX_MB=8;
                 const ALLOWED_TYPES=["image/jpeg","image/png","image/webp","image/gif"];
                 const gal=$("galeria"), uploadArea=$("imageUploadArea"), filesInput=$("Imagenes");
-                const portadaIdx=$("ImagenPrincipalIndex"), imgAlert=$("imgAlert");
-                const imageCountBadge=$("imageCountBadge"), progressBar=$("uploadProgress"), progressFill=$("progressFill");
+                const portadaIdx=$("ImagenPrincipalIndex");
+                const imageCountBadge=$("imageCountBadge");
                 if(!gal||!uploadArea||!filesInput) return;
 
                 let files=[];
 
-                const showError=(m)=>{
-                    if(imgAlert){ imgAlert.textContent=m; imgAlert.style.display="block"; setTimeout(()=>imgAlert.style.display="none",5000); }
-                };
+                const showError=(m)=> toast(m,"error");
 
                 const validateFile=(f)=>{
                     if(!ALLOWED_TYPES.includes(f.type)){ showError("Formato no permitido. Use JPEG, PNG, WebP o GIF."); return false; }
@@ -1264,7 +1269,6 @@
                     const starBtn=card.querySelector('.image-btn'); if(starBtn) starBtn.classList.add('active');
 
                     if(isNew){
-                        // índice relativo dentro de las NUEVAS
                         const newCards = $$('#galeria .image-thumbnail[data-new="1"]');
                         const index = newCards.indexOf(card);
                         if(portadaIdx) portadaIdx.value = String(index >= 0 ? index : 0);
@@ -1302,11 +1306,6 @@
                     const toAdd    = newFiles.slice(0,slots);
                     if(!toAdd.length) return;
 
-                    if(progressBar && progressFill){
-                        progressBar.style.display="block"; progressFill.style.width="0%";
-                        let p=0; const it=setInterval(()=>{ p+=Math.random()*30; if(p>=100){p=100;clearInterval(it);setTimeout(()=>progressBar.style.display="none",400);} progressFill.style.width=p+"%"; },100);
-                    }
-
                     files.push(...toAdd);
                     toAdd.forEach(f=>gal.appendChild(createImageThumbnail(f,true)));
                     updateImageCount();
@@ -1323,10 +1322,14 @@
                 filesInput.addEventListener("change",e=>{handleFileSelection(e.target.files); e.target.value="";});
 
                 window.addEventListener("beforeunload",(e)=>{
-                    // FIX: no mostrar diálogo si estamos enviando
                     if (STATE.isSubmitting) return;
                     const form=$("productoForm");
                     if(form && form.checkValidity && !form.checkValidity()){ e.preventDefault(); e.returnValue=""; }
+                });
+
+                window.addEventListener("unload", ()=>{
+                    STATE.objectUrls.forEach(u=>{ try{ URL.revokeObjectURL(u);}catch{} });
+                    STATE.objectUrls.clear();
                 });
 
                 updateImageCount();
@@ -1357,28 +1360,43 @@
                 const box=$("boxVariantes"), chk=$("chkVariantes");
                 if(!box||!chk) return;
 
-                const baseOnly = $$(".base-only"), badge=$("productTypeBadge");
+                const baseOnlyWraps = $$(".base-only");
+                const baseOnlyInputs = $$(".base-only input, .base-only select, .base-only textarea");
+                const precioVentaEl = $("PrecioVenta");
+                const badge=$("productTypeBadge");
+
+                const setBaseOnlyEnabled = (enabled)=>{
+                    baseOnlyWraps.forEach(x=>x.style.display = enabled ? "flex" : "none");
+                    baseOnlyInputs.forEach(i=> i.disabled = !enabled);
+                    if(precioVentaEl) precioVentaEl.disabled = !enabled;
+                };
 
                 const toggle=()=>{
                     const on=chk.checked; STATE.hasVariants=on;
                     box.style.display = on ? "block":"none";
-                    baseOnly.forEach(x=>x.style.display = on ? "none":"flex");
+                    setBaseOnlyEnabled(!on);
                     if(badge) badge.textContent = on ? "Con Variantes":"Producto Simple";
                     const pt=$("previewType"); if(pt) pt.textContent = on ? "Con Variantes":"Producto Simple";
                     updatePreview();
                 };
                 chk.addEventListener("change",toggle);
+                setBaseOnlyEnabled(!STATE.hasVariants);
 
                 const inpCol=$("inpColores"), inpTal=$("inpTallas");
                 const tagsCol=$("tagsColores"), tagsTal=$("tagsTallas");
 
                 const addTag=(val,cont,type)=>{
-                    if(!val.trim()) return;
+                    const v = (val||"").trim();
+                    if(!v) return;
+                    const selector = type==='color' ? 'input[name="Colores"]' : 'input[name="Tallas"]';
+                    const exists = Array.from(cont.querySelectorAll(selector)).some(i=> (i.value||"").toLowerCase()===v.toLowerCase());
+                    if(exists){ toast("Ese valor ya está en la lista","warning"); return; }
+
                     const t=document.createElement("span");
                     t.className="tag";
-                    t.innerHTML = `${val.trim()}
+                    t.innerHTML = `${v}
                         <button type="button" class="tag-remove" onclick="removeTag(this,'${type}')"><i class="fas fa-times"></i></button>
-                        <input type="hidden" name="${type==='color'?'Colores':'Tallas'}" value="${val.trim()}" />`;
+                        <input type="hidden" name="${type==='color'?'Colores':'Tallas'}" value="${v}" />`;
                     cont.appendChild(t);
                 };
                 const handleTag=(input,container,type)=>{
@@ -1405,12 +1423,13 @@
                 const chkGlobal=$("chkPrecioGlobal"), inpGlobal=$("inpPrecioGlobal"), btnApplyGlobal=$("btnApplyGlobal");
                 if(chkGlobal && inpGlobal && btnApplyGlobal){
                     chkGlobal.addEventListener("change",()=>{ inpGlobal.disabled=!chkGlobal.checked; btnApplyGlobal.disabled=!chkGlobal.checked; });
-                    btnApplyGlobal.addEventListener("click",()=>{
-                        const price=toNum(inpGlobal.value);
-                        if(price<=0){ toast("Ingrese un precio válido para aplicar","warning"); return; }
-                        $$('input[name$=".Precio"]').forEach(i=>i.value=toEs(price)); // FIX: set 2 decimales
-                        updateVariantSummary(); toast("Precio aplicado a todas las variantes","success");
-                    });
+                            btnApplyGlobal.addEventListener("click",()=>{
+          const price = toNum(inpGlobal.value);
+          if(price <= 0){ toast("Ingrese un precio válido para aplicar","warning"); return; }
+          $$('input[name$=".Precio"]').forEach(i => i.value = toEs(price)); // <-- coma
+          updateVariantSummary(); toast("Precio aplicado a todas las variantes","success");
+        });
+
                 }
 
                 const chkPorTalla=$("chkPrecioPorTalla"), boxPorTalla=$("boxPrecioPorTalla");
@@ -1434,7 +1453,8 @@
                             $$("#tblVars tbody tr").forEach(tr=>{
                                 const talla = tr.querySelector('input[name$=".Talla"]')?.value;
                                 const priceInput = tr.querySelector('input[name$=".Precio"]');
-                                if(talla && map[talla] && priceInput) priceInput.value = toEs(map[talla]); // FIX
+                                if(talla && map[talla] && priceInput) priceInput.value = toEs(map[talla]); // <-- coma
+
                             });
                             updateVariantSummary(); toast("Precios aplicados por talla","success");
                         };
@@ -1453,16 +1473,29 @@
                 const tb=document.querySelector("#tblVars tbody"); const note=$("noteVars");
                 if(!tb) return;
                 if(!colors.length||!sizes.length){ toast("Agregue al menos un color y una talla","warning"); return; }
-                tb.innerHTML="";
+
+                const existing = new Set($$("#tblVars tbody tr").map(tr=>{
+                    const c = tr.querySelector('input[name$=".Color"]')?.value?.toLowerCase()||"";
+                    const t = tr.querySelector('input[name$=".Talla"]')?.value?.toLowerCase()||"";
+                    return `${c}|||${t}`;
+                }));
+
                 colors.forEach(color=>{
                     sizes.forEach(size=>{
+                        const key = `${color.toLowerCase()}|||${size.toLowerCase()}`;
+                        if(existing.has(key)) return;
+                        existing.add(key);
                         const tr=document.createElement("tr");
-                        tr.innerHTML=`
-                            <td><span>${color}</span><input type="hidden" name="Variantes[0].Color" value="${color}"></td>
-                            <td><span>${size}</span><input type="hidden"  name="Variantes[0].Talla" value="${size}"></td>
-                            <td><input class="variant-input" name="Variantes[0].Precio" type="number" step="0.01" min="0.01" placeholder="0.00" required oninput="validateVariantInput(this)"></td>
-                            <td><input class="variant-input" name="Variantes[0].Stock"  type="number" step="1"   min="0"    placeholder="0"    required oninput="validateVariantInput(this)"></td>
-                            <td><div class="variant-actions"><button type="button" class="image-btn" title="Eliminar" onclick="removeVariant(this)"><i class="fas fa-trash"></i></button></div></td>`;
+                              tr.innerHTML = `
+        <td><span>${color}</span><input type="hidden" name="Variantes[0].Color" value="${color}"></td>
+        <td><span>${size}</span><input type="hidden" name="Variantes[0].Talla" value="${size}"></td>
+        <td><input class="variant-input" name="Variantes[0].Precio"
+                   type="text" inputmode="decimal" pattern="[\\d.,]+"
+                   placeholder="0,00" required oninput="validateVariantInput(this)"></td>
+        <td><input class="variant-input" name="Variantes[0].Stock"
+                   type="number" step="1" min="0" placeholder="0" required oninput="validateVariantInput(this)"></td>
+        <td><div class="variant-actions"><button type="button" class="image-btn" title="Eliminar" onclick="removeVariant(this)"><i class="fas fa-trash"></i></button></div></td>`;
+
                         tb.appendChild(tr);
                     });
                 });
@@ -1470,7 +1503,7 @@
                 if(note) note.style.display="none";
                 $("variantSummary").style.display="block";
                 updateVariantCount(); updateVariantSummary();
-                toast(`${colors.length * sizes.length} combinaciones generadas`,"success");
+                toast(`${colors.length * sizes.length} combinaciones procesadas`,"success");
             }
 
             function reindexVariantRows(){
@@ -1560,17 +1593,20 @@
                 const first=document.querySelector(".input-has-error,.error"); if(first){ first.scrollIntoView({behavior:"smooth",block:"center"}); first.focus?.(); }
             }
 
-            function normalizeNumbersBeforeSubmit(){ // FIX crítico: normalizar justo antes del POST
-                // Precios base
-                ['PrecioCompra','PrecioVenta'].forEach(id=>{
-                    const el=$(id);
-                    if(el && el.value) el.value = toEs(toNum(el.value)); // "15,00" -> "15.00"
-                });
-                // Variantes
-                $$('input[name^="Variantes"][name$=".Precio"]').forEach(i=>{
-                    if(i.value) i.value = toEs(toNum(i.value));
-                });
-            }
+            // Al ENVIAR: convertir a "es-EC" (coma) para el binder del servidor
+                    function normalizeNumbersBeforeSubmit(){
+          ['PrecioCompra','PrecioVenta'].forEach(id=>{
+            const el=$(id);
+            if(el && el.value) el.value = toEs(toNum(el.value));   // 20 -> "20,00"
+          });
+          $$('input[name^="Variantes"][name$=".Precio"]').forEach(i=>{
+            if(i.value) i.value = toEs(toNum(i.value));            // "12,50"
+          });
+          $$('input[name^="Variantes"][name$=".Stock"]').forEach(i=>{
+            if(i.value) i.value = String(Math.max(0, Math.trunc(toNum(i.value))));
+          });
+        }
+
 
             function updatePreview(){
                 const pc=toNum($("PrecioCompra")?.value), pv=toNum($("PrecioVenta")?.value);
@@ -1621,13 +1657,13 @@
 
                 if(STATE.validationErrors.length>0){ showValidationErrors(); toast("Corrija los errores antes de enviar","error"); return false; }
 
-                // FIX: normalizar valores numéricos justo antes de enviar
+                // Convertir a coma justo antes de POST
                 normalizeNumbersBeforeSubmit();
 
                 STATE.isSubmitting=true;
                 const btn=$("btnSubmit"); if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner spinner"></i> Guardando...'; }
 
-                // Si no hay variantes, elimina inputs de Variantes (evita que el servidor interprete listas vacías)
+                // Si no hay variantes, elimina inputs de Variantes
                 if(!STATE.hasVariants) $$('input[name^="Variantes["]').forEach(i=>i.remove());
 
                 toast("Guardando producto...","info");

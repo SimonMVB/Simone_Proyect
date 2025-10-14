@@ -1113,36 +1113,53 @@ namespace Simone.Controllers
             return list.ToArray();
         }
 
-        // Lee variantes cuando llegan como Variantes[i].*
+        // Lee variantes cuando llegan como Variantes[i].* (robusto ante huecos y filas vacías)
         private (string[]? Colores, string[]? Tallas, string[]? Precios, int[]? Stocks) ReadVariantesFromForm()
         {
             var form = Request?.Form;
             if (form == null) return (null, null, null, null);
 
-            var indices = new HashSet<int>();
+            // Captura solo los índices realmente presentes en el POST
+            var indices = new SortedSet<int>();
             foreach (var key in form.Keys)
             {
                 var m = Regex.Match(key, @"^Variantes\[(\d+)\]\.(Color|Talla|Precio|Stock)$");
-                if (m.Success && int.TryParse(m.Groups[1].Value, out var i)) indices.Add(i);
+                if (m.Success && int.TryParse(m.Groups[1].Value, out var i))
+                    indices.Add(i);
             }
             if (indices.Count == 0) return (null, null, null, null);
 
-            var max = indices.Max();
-            var col = new string[max + 1];
-            var tal = new string[max + 1];
-            var pre = new string[max + 1];
-            var stk = new int[max + 1];
+            var col = new List<string>(indices.Count);
+            var tal = new List<string>(indices.Count);
+            var pre = new List<string>(indices.Count);
+            var stk = new List<int>(indices.Count);
 
-            for (int i = 0; i <= max; i++)
+            foreach (var i in indices)
             {
-                col[i] = form[$"Variantes[{i}].Color"];
-                tal[i] = form[$"Variantes[{i}].Talla"];
-                pre[i] = form[$"Variantes[{i}].Precio"];
-                int.TryParse(form[$"Variantes[{i}].Stock"], out stk[i]);
+                var c = form[$"Variantes[{i}].Color"];
+                var t = form[$"Variantes[{i}].Talla"];
+                var p = form[$"Variantes[{i}].Precio"];
+                int.TryParse(form[$"Variantes[{i}].Stock"], out var s);
+
+                // Ignora filas totalmente vacías que pueden quedar al borrar en el DOM
+                if (string.IsNullOrWhiteSpace(c) &&
+                    string.IsNullOrWhiteSpace(t) &&
+                    string.IsNullOrWhiteSpace(p) &&
+                    s == 0)
+                {
+                    continue;
+                }
+
+                col.Add(c);
+                tal.Add(t);
+                pre.Add(p);
+                stk.Add(s);
             }
 
-            return (col, tal, pre, stk);
+            if (col.Count == 0) return (null, null, null, null);
+            return (col.ToArray(), tal.ToArray(), pre.ToArray(), stk.ToArray());
         }
+
 
         private string GenerateSKU(Producto producto, string color, string talla)
         {
@@ -1220,22 +1237,23 @@ namespace Simone.Controllers
                 var folder = ProductFolderAbs(producto.ProductoID);
                 Directory.CreateDirectory(folder);
 
-                // Seguridad de path
+                // Seguridad de path (evita path traversal)
                 if (!Path.GetFullPath(folder).StartsWith(Path.GetFullPath(GalleryRootAbs()), StringComparison.OrdinalIgnoreCase))
                     return (false, "Ruta de galería inválida.");
 
-                // Cargar existentes desde JSON (si no hay, escanea)
+                // Cargar existentes desde JSON (o escanear si no hay metadata)
                 var metaPath = Path.Combine(folder, $"product-{producto.ProductoID}.gallery.json");
                 var imagenesExistentes = await LoadExistingImages(metaPath);
                 if (imagenesExistentes.Count == 0 && Directory.Exists(folder))
                 {
                     imagenesExistentes = Directory.GetFiles(folder)
                         .Where(f => _allowedImgExt.Contains(Path.GetExtension(f)))
+                        .OrderBy(f => f)
                         .Select(f => $"/images/Productos/{producto.ProductoID}/{Path.GetFileName(f)}".Replace("\\", "/"))
                         .ToList();
                 }
 
-                // --- Procesar "ignore" ---
+                // --- Procesar "ignore" (URLs existentes y, opcionalmente, índices de nuevas) ---
                 var indicesNuevasAIgnorar = new HashSet<int>();
                 var urlsExistentesAEliminar = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1267,10 +1285,10 @@ namespace Simone.Controllers
                     }
                 }
 
-                // Quitar existentes marcadas para eliminar (por URL exacta)
+
                 if (urlsExistentesAEliminar.Count > 0 && imagenesExistentes.Count > 0)
                 {
-                    var toKeep = new List<string>();
+                    var toKeep = new List<string>(imagenesExistentes.Count);
                     foreach (var url in imagenesExistentes)
                     {
                         if (!urlsExistentesAEliminar.Contains(url))
@@ -1279,7 +1297,6 @@ namespace Simone.Controllers
                         }
                         else
                         {
-                            // borrar archivo físico
                             try
                             {
                                 var nombre = url.Split('/', '\\').Last();
@@ -1310,7 +1327,7 @@ namespace Simone.Controllers
                     archivos.Add(imagenLegacy);
                 }
 
-                // Validar/guardar nuevas (hasta completar el máximo)
+                // Validar/guardar nuevas respetando el máximo global
                 var nuevasUrls = new List<string>();
                 foreach (var archivo in archivos)
                 {
@@ -1323,7 +1340,7 @@ namespace Simone.Controllers
                     nuevasUrls.Add(resultado.Url!);
                 }
 
-                // Combinar y deduplicar (máx 8)
+                // Combinar y deduplicar (máx _maxFiles)
                 var todasLasImagenes = imagenesExistentes
                     .Concat(nuevasUrls)
                     .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -1331,34 +1348,40 @@ namespace Simone.Controllers
                     .Take(_maxFiles)
                     .ToList();
 
-                // Portada
+                // **Enforce servidor**: al menos una imagen
+                if (todasLasImagenes.Count == 0)
+                    return (false, "Debe agregar al menos una imagen.");
+
+                // Determinar portada
                 string? imagenPrincipal = null;
 
+                // Si se marcó una nueva como portada, el índice es relativo a la colección de nuevas válidas
                 if (imagenPrincipalIndex.HasValue && imagenPrincipalIndex.Value >= 0
                     && imagenPrincipalIndex.Value < nuevasUrls.Count)
                 {
                     imagenPrincipal = nuevasUrls[imagenPrincipalIndex.Value];
                 }
+                // Si se marcó una existente como portada
                 else if (!string.IsNullOrWhiteSpace(existingImagenPath)
                          && todasLasImagenes.Contains(existingImagenPath!))
                 {
                     imagenPrincipal = existingImagenPath!;
                 }
+                // Preservar portada previa si aún existe
                 else if (!string.IsNullOrWhiteSpace(producto.ImagenPath)
                          && todasLasImagenes.Contains(producto.ImagenPath))
                 {
-                    // Preservar portada previa si sigue existiendo
                     imagenPrincipal = producto.ImagenPath;
                 }
-                else if (todasLasImagenes.Any())
+                // Fallback: primera
+                else
                 {
                     imagenPrincipal = todasLasImagenes[0];
                 }
 
+                // Guardar metadata y limpiar archivos huérfanos
                 await GuardarMetadata(metaPath, todasLasImagenes, imagenPrincipal);
-
                 producto.ImagenPath = imagenPrincipal;
-
                 await LimpiarImagenesNoUsadas(folder, todasLasImagenes);
 
                 return (true, "");

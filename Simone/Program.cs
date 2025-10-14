@@ -1,19 +1,17 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Localization;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
 using System.Globalization;
 using System.IO;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
-
 using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -54,21 +52,24 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 // =====================================
 // 3) Cultura (decimales con coma) + Sesión/Cookies/Form
 // =====================================
-var appCulture = new CultureInfo("es-EC")
-{
-    NumberFormat =
-    {
-        NumberDecimalSeparator = ",",
-        NumberGroupSeparator = "."
-    }
-};
-CultureInfo.DefaultThreadCurrentCulture = appCulture;
-CultureInfo.DefaultThreadCurrentUICulture = appCulture;
+var appCulture = new CultureInfo("es-EC");
+appCulture.NumberFormat.NumberDecimalSeparator = ",";
+appCulture.NumberFormat.CurrencyDecimalSeparator = ",";
+appCulture.NumberFormat.NumberGroupSeparator = ".";
+appCulture.NumberFormat.CurrencyGroupSeparator = ".";
 
+// Opciones de localización (y orden de detección de cultura)
 var requestLocalizationOptions = new RequestLocalizationOptions()
     .SetDefaultCulture(appCulture.Name)
     .AddSupportedCultures(appCulture.Name)
     .AddSupportedUICultures(appCulture.Name);
+
+requestLocalizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
+{
+    new QueryStringRequestCultureProvider(),
+    new CookieRequestCultureProvider(),
+    new AcceptLanguageHeaderRequestCultureProvider()
+};
 
 builder.Services.AddSession(o =>
 {
@@ -137,6 +138,10 @@ builder.WebHost.UseWebRoot("wwwroot");
 
 var app = builder.Build();
 
+// Fijar cultura por defecto del hilo (model binder, formateo)
+CultureInfo.DefaultThreadCurrentCulture = appCulture;
+CultureInfo.DefaultThreadCurrentUICulture = appCulture;
+
 // =====================================
 // 6) Pipeline
 // =====================================
@@ -148,7 +153,6 @@ if (!app.Environment.IsDevelopment())
 
 /* ===========================================================
    Redirección canónica: neoagora.ec  ->  www.neoagora.ec   (301)
-   Colocada ANTES de UseHttpsRedirection para evitar bucles.
    =========================================================== */
 app.Use(async (ctx, next) =>
 {
@@ -164,6 +168,9 @@ app.Use(async (ctx, next) =>
 
 app.UseHttpsRedirection();
 
+// Localización ANTES de Routing/Endpoints
+app.UseRequestLocalization(requestLocalizationOptions);
+
 // Archivos estáticos con caché moderada (24h)
 if (Directory.Exists(webRoot))
 {
@@ -178,7 +185,6 @@ if (Directory.Exists(webRoot))
     });
 }
 
-app.UseRequestLocalization(requestLocalizationOptions);
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -241,7 +247,6 @@ using (var scope = app.Services.CreateScope())
         logger.LogError(ex, "Error al inicializar datos.");
     }
 }
-
 
 app.Run();
 
