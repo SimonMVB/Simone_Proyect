@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -11,8 +13,6 @@ using Simone.Data;
 using Simone.Models;
 using Simone.Services;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,20 +50,14 @@ builder.Services.AddIdentity<Usuario, Roles>(options =>
 .AddDefaultTokenProviders();
 
 // =====================================
-// 3) Cultura (decimales con coma) + Sesión/Cookies/Form
+// 3) Localización (UI en es-EC)
 // =====================================
-var appCulture = new CultureInfo("es-EC");
-appCulture.NumberFormat.NumberDecimalSeparator = ",";
-appCulture.NumberFormat.CurrencyDecimalSeparator = ",";
-appCulture.NumberFormat.NumberGroupSeparator = ".";
-appCulture.NumberFormat.CurrencyGroupSeparator = ".";
-
-// Opciones de localización (y orden de detección de cultura)
 var requestLocalizationOptions = new RequestLocalizationOptions()
-    .SetDefaultCulture(appCulture.Name)
-    .AddSupportedCultures(appCulture.Name)
-    .AddSupportedUICultures(appCulture.Name);
+    .SetDefaultCulture("es-EC")
+    .AddSupportedCultures("es-EC")
+    .AddSupportedUICultures("es-EC");
 
+// mantenemos los providers habituales (querystring/cookie/Accept-Language)
 requestLocalizationOptions.RequestCultureProviders = new List<IRequestCultureProvider>
 {
     new QueryStringRequestCultureProvider(),
@@ -71,6 +65,9 @@ requestLocalizationOptions.RequestCultureProviders = new List<IRequestCulturePro
     new AcceptLanguageHeaderRequestCultureProvider()
 };
 
+// =====================================
+// 4) Sesión, límites de subida, cookies
+// =====================================
 builder.Services.AddSession(o =>
 {
     o.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -79,10 +76,9 @@ builder.Services.AddSession(o =>
     o.Cookie.SameSite = SameSiteMode.Lax;
 });
 
-// Límite de subida (64 MB)
 builder.Services.Configure<FormOptions>(o =>
 {
-    o.MultipartBodyLengthLimit = 64L * 1024 * 1024;
+    o.MultipartBodyLengthLimit = 64L * 1024 * 1024; // 64 MB
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -97,7 +93,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // =====================================
-// 4) Servicios de dominio
+// 5) Servicios de dominio
 // =====================================
 builder.Services.AddScoped<PagosResolver>();
 builder.Services.AddScoped<CategoriasService>();
@@ -116,34 +112,36 @@ builder.Services.AddScoped<EnviosResolver>();
 builder.Services.AddScoped<EnviosCarritoService>();
 
 // =====================================
-// 5) MVC + filtro global + (opcional) runtime compilation en Dev
+// 6) MVC + Model Binder de decimales
 // =====================================
-var mvc = builder.Services.AddControllersWithViews(options =>
+var mvcBuilder = builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add<CarritoActionFilter>();
+    // inserta nuestro binder al principio para que gane prioridad
+    options.ModelBinderProviders.Insert(0, new Simone.Infrastructure.DecimalModelBinderProvider());
 });
 
 if (builder.Environment.IsDevelopment())
 {
-    try { mvc.AddRazorRuntimeCompilation(); } catch { /* ignorar si no está el paquete */ }
+    try { mvcBuilder.AddRazorRuntimeCompilation(); } catch { /* ignorar si falta el paquete */ }
 }
 
 // =====================================
-// 5.1) Asegurar wwwroot ANTES de Build/UseStaticFiles
+// 7) Asegurar wwwroot antes de Build
 // =====================================
 var contentRoot = builder.Environment.ContentRootPath;
 var webRoot = Path.Combine(contentRoot, "wwwroot");
-Directory.CreateDirectory(webRoot);        // crea wwwroot si no existe
+Directory.CreateDirectory(webRoot);
 builder.WebHost.UseWebRoot("wwwroot");
 
 var app = builder.Build();
 
-// Fijar cultura por defecto del hilo (model binder, formateo)
-CultureInfo.DefaultThreadCurrentCulture = appCulture;
-CultureInfo.DefaultThreadCurrentUICulture = appCulture;
+// (Opcional) Cultura por defecto de los hilos: UI en es-EC
+CultureInfo.DefaultThreadCurrentCulture = CultureInfo.GetCultureInfo("es-EC");
+CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.GetCultureInfo("es-EC");
 
 // =====================================
-// 6) Pipeline
+// 8) Pipeline
 // =====================================
 if (!app.Environment.IsDevelopment())
 {
@@ -152,13 +150,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 /* ===========================================================
-   Redirección canónica: neoagora.ec  ->  www.neoagora.ec   (301)
+   Redirección canónica: neoagora.ec -> www.neoagora.ec (301)
    =========================================================== */
 app.Use(async (ctx, next) =>
 {
     if (ctx.Request.Host.Host.Equals("neoagora.ec", StringComparison.OrdinalIgnoreCase))
     {
-        // Forzamos https y www
         var url = $"https://www.neoagora.ec{ctx.Request.PathBase}{ctx.Request.Path}{ctx.Request.QueryString}";
         ctx.Response.Redirect(url, permanent: true);
         return;
@@ -167,11 +164,9 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseHttpsRedirection();
-
-// Localización ANTES de Routing/Endpoints
 app.UseRequestLocalization(requestLocalizationOptions);
 
-// Archivos estáticos con caché moderada (24h)
+// Archivos estáticos con caché de 24h
 if (Directory.Exists(webRoot))
 {
     app.UseStaticFiles(new StaticFileOptions
@@ -179,7 +174,7 @@ if (Directory.Exists(webRoot))
         FileProvider = new PhysicalFileProvider(webRoot),
         OnPrepareResponse = ctx =>
         {
-            const int seconds = 60 * 60 * 24; // 1 día
+            const int seconds = 60 * 60 * 24;
             ctx.Context.Response.Headers["Cache-Control"] = $"public,max-age={seconds}";
         }
     });
@@ -195,7 +190,7 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // =====================================
-// 7) Migraciones + Seed + Carpetas de trabajo
+// 9) Migraciones + Seed + Carpetas
 // =====================================
 using (var scope = app.Services.CreateScope())
 {
@@ -207,14 +202,14 @@ using (var scope = app.Services.CreateScope())
         var env = services.GetRequiredService<IWebHostEnvironment>();
         var wr = env.WebRootPath ?? webRoot;
 
-        // Carpetas necesarias para IO
+        // Carpetas necesarias
         Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "App_Data"));
         Directory.CreateDirectory(Path.Combine(wr, "uploads", "comprobantes"));
         Directory.CreateDirectory(Path.Combine(wr, "images", "Productos"));
 
         var db = services.GetRequiredService<TiendaDbContext>();
 
-        // 1) Aplica migraciones si existen
+        // Aplica migraciones si existen
         var pending = await db.Database.GetPendingMigrationsAsync();
         if (pending.Any())
         {
@@ -223,7 +218,7 @@ using (var scope = app.Services.CreateScope())
         }
         else
         {
-            // 2) Si NO hay migraciones, crea la BD/tables según el modelo (por si está vacía)
+            // Si no hay migraciones y la BD está vacía, crea el esquema
             var creator = db.Database.GetService<IRelationalDatabaseCreator>();
             var hasTables = await creator.HasTablesAsync();
             if (!hasTables)
@@ -234,9 +229,9 @@ using (var scope = app.Services.CreateScope())
         }
 
         // Seed de Identity
-        await CrearRolesYAdmin(services, logger);
+        await Simone.Infrastructure.Bootstrapper.CrearRolesYAdmin(services, logger);
 
-        // Seed de dominio (categorías/subcategorías)
+        // Seed de dominio
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
 
@@ -250,67 +245,162 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// =====================================
-// Helpers
-// =====================================
-static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
+
+// =====================================================================
+// Infraestructura (Binder de decimales y Bootstrapper para el seeding)
+// =====================================================================
+namespace Simone.Infrastructure
 {
-    var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
-    var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();
-
-    string[] roles = { "Administrador", "Vendedor", "Cliente" };
-    string[] descripcion = { "Administrador del sistema", "Vendedor del sistema", "Cliente del sistema" };
-
-    for (var i = 0; i < roles.Length; i++)
+    /// <summary>
+    /// Model binder provider para que los decimales funcionen con punto o coma,
+    /// y se ignoren separadores de miles.
+    /// </summary>
+    public class DecimalModelBinderProvider : IModelBinderProvider
     {
-        if (!await roleManager.RoleExistsAsync(roles[i]))
+        public IModelBinder GetBinder(ModelBinderProviderContext context)
         {
-            var create = await roleManager.CreateAsync(new Roles(roles[i], descripcion[i]));
-            if (!create.Succeeded)
+            if (context.Metadata.ModelType == typeof(decimal) || context.Metadata.ModelType == typeof(decimal?))
             {
-                var errores = string.Join(", ", create.Errors.Select(e => e.Description));
-                logger.LogError("Error al crear el rol {Rol}: {Err}", roles[i], errores);
+                return new DecimalModelBinder();
             }
+            return null!;
         }
     }
 
-    var adminEmail = "admin@tienda.com";
-    var adminPassword = "Admin123!";
-    var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
-
-    if (existingAdmin == null)
+    public class DecimalModelBinder : IModelBinder
     {
-        var adminRole = await roleManager.FindByNameAsync("Administrador");
+        public Task BindModelAsync(ModelBindingContext bindingContext)
+        {
+            var valueProviderResult = bindingContext.ValueProvider.GetValue(bindingContext.ModelName);
 
-        var adminUser = new Usuario
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            NombreCompleto = "Administrador General",
-            EmailConfirmed = true,
-            RolID = adminRole?.Id ?? string.Empty,
-            Direccion = "NAN",
-            Telefono = "NAN",
-            Referencia = "NAN",
-        };
+            if (valueProviderResult == ValueProviderResult.None)
+                return Task.CompletedTask;
 
-        var result = await userManager.CreateAsync(adminUser, adminPassword);
-        if (result.Succeeded)
-        {
-            await userManager.AddToRoleAsync(adminUser, "Administrador");
-            logger.LogInformation("Administrador creado con éxito.");
-        }
-        else
-        {
-            var errores = string.Join(", ", result.Errors.Select(e => e.Description));
-            logger.LogError("Error al crear el admin: {Err}", errores);
+            bindingContext.ModelState.SetModelValue(bindingContext.ModelName, valueProviderResult);
+
+            var value = valueProviderResult.FirstValue;
+            if (string.IsNullOrWhiteSpace(value))
+                return Task.CompletedTask;
+
+            // Normalización:
+            // - quitar espacios
+            // - quitar separadores de miles comunes (punto o coma, cuando luego hay decimales)
+            // - forzar separador decimal punto
+            value = value.Trim();
+
+            // Si trae ambos "," y ".", intentemos detectar cuál es el decimal (el último símbolo suele ser el decimal)
+            // Para simplificar: quitamos miles y dejamos un único separador como '.'
+            // 1.234,56  -> 1234.56
+            // 1,234.56  -> 1234.56
+            // 1234,56   -> 1234.56
+            // 1234.56   -> 1234.56
+            var hasComma = value.Contains(',');
+            var hasDot = value.Contains('.');
+
+            if (hasComma && hasDot)
+            {
+                // Usamos el último de los dos como separador decimal, el otro lo eliminamos
+                var lastComma = value.LastIndexOf(',');
+                var lastDot = value.LastIndexOf('.');
+                if (lastComma > lastDot)
+                {
+                    // coma = decimal, punto = miles
+                    value = value.Replace(".", string.Empty).Replace(',', '.');
+                }
+                else
+                {
+                    // punto = decimal, coma = miles
+                    value = value.Replace(",", string.Empty);
+                }
+            }
+            else if (hasComma && !hasDot)
+            {
+                // Solo coma -> tratar como decimal
+                value = value.Replace(',', '.');
+            }
+            else
+            {
+                // Solo punto o ninguno: ya está bien
+            }
+
+            if (decimal.TryParse(value, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var result))
+            {
+                bindingContext.Result = ModelBindingResult.Success(Math.Round(result, 2));
+            }
+            else
+            {
+                bindingContext.ModelState.TryAddModelError(bindingContext.ModelName, "Valor decimal inválido");
+            }
+
+            return Task.CompletedTask;
         }
     }
-    else
+
+    public static class Bootstrapper
     {
-        if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
+        /// <summary>
+        /// Crea roles básicos y un usuario admin si no existe.
+        /// </summary>
+        public static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
         {
-            await userManager.AddToRoleAsync(existingAdmin, "Administrador");
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
+            var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();
+
+            string[] roles = { "Administrador", "Vendedor", "Cliente" };
+            string[] descripcion = { "Administrador del sistema", "Vendedor del sistema", "Cliente del sistema" };
+
+            for (var i = 0; i < roles.Length; i++)
+            {
+                if (!await roleManager.RoleExistsAsync(roles[i]))
+                {
+                    var create = await roleManager.CreateAsync(new Roles(roles[i], descripcion[i]));
+                    if (!create.Succeeded)
+                    {
+                        var errores = string.Join(", ", create.Errors.Select(e => e.Description));
+                        logger.LogError("Error al crear el rol {Rol}: {Err}", roles[i], errores);
+                    }
+                }
+            }
+
+            var adminEmail = "admin@tienda.com";
+            var adminPassword = "Admin123!";
+            var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+
+            if (existingAdmin == null)
+            {
+                var adminRole = await roleManager.FindByNameAsync("Administrador");
+
+                var adminUser = new Usuario
+                {
+                    UserName = adminEmail,
+                    Email = adminEmail,
+                    NombreCompleto = "Administrador General",
+                    EmailConfirmed = true,
+                    RolID = adminRole?.Id ?? string.Empty,
+                    Direccion = "NAN",
+                    Telefono = "NAN",
+                    Referencia = "NAN",
+                };
+
+                var result = await userManager.CreateAsync(adminUser, adminPassword);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(adminUser, "Administrador");
+                    logger.LogInformation("Administrador creado con éxito.");
+                }
+                else
+                {
+                    var errores = string.Join(", ", result.Errors.Select(e => e.Description));
+                    logger.LogError("Error al crear el admin: {Err}", errores);
+                }
+            }
+            else
+            {
+                if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
+                {
+                    await userManager.AddToRoleAsync(existingAdmin, "Administrador");
+                }
+            }
         }
     }
 }

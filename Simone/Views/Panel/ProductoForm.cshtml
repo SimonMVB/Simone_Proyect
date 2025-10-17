@@ -20,10 +20,22 @@
     var subcatsForSelectedCat = (producto?.CategoriaID > 0)
         ? subcategorias.Where(s => s.CategoriaID == producto.CategoriaID).ToList()
         : new List<Simone.Models.Subcategorias>();
+
+    // Formateo local (coma) para inputs de texto
+    string FormatPrice(decimal? price)
+    {
+        var culture = new System.Globalization.CultureInfo("es-EC");
+        return price.HasValue ? price.Value.ToString("0.##", culture) : "";
+    }
 }
 
 <div class="container-fluid">
-    <h2 class="mb-3">@ViewData["Title"]</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">@ViewData["Title"]</h2>
+        <a asp-action="Productos" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Volver
+        </a>
+    </div>
 
     <form asp-action="@(isEdit ? "EditarProducto" : "AnadirProducto")"
           method="post" enctype="multipart/form-data" id="producto-form">
@@ -35,71 +47,107 @@
         }
 
         <div class="row">
-            <div class="col-md-8">
+            <!-- COLUMNA IZQUIERDA -->
+            <div class="col-lg-8">
                 <!-- Información Básica -->
-                <div class="card mb-4">
-                    <div class="card-header"><h5 class="card-title mb-0">Información Básica</h5></div>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-info-circle me-2"></i>Información Básica
+                        </h5>
+                    </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label" for="nombreProducto">Nombre del Producto *</label>
-                            <input class="form-control" id="nombreProducto" name="nombreProducto"
-                                   value="@producto?.Nombre" required maxlength="160">
+                            <label class="form-label fw-semibold" for="nombreProducto">Nombre del Producto *</label>
+                            <input class="form-control form-control-lg" id="nombreProducto" name="nombreProducto"
+                                   value="@producto?.Nombre" required maxlength="160"
+                                   placeholder="Ingrese el nombre del producto">
                         </div>
 
-                        <div class="mb-3">
-                            <label class="form-label" for="descripcion">Descripción</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3">@producto?.Descripcion</textarea>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="descripcion">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="4"
+                                      placeholder="Describa las características del producto">@producto?.Descripcion</textarea>
                         </div>
 
-                        <div class="row g-3">
+                        <div class="row g-3 mb-4">
                             <div class="col-md-4">
-                                <label class="form-label" for="marca">Marca</label>
-                                <input class="form-control" id="marca" name="marca" value="@producto?.Marca" maxlength="80">
+                                <label class="form-label fw-semibold" for="marca">Marca</label>
+                                <input class="form-control" id="marca" name="marca" value="@producto?.Marca" maxlength="80"
+                                       placeholder="Marca del producto">
                             </div>
+
+                            <!-- Precio compra (texto con inputmode decimal para permitir coma) -->
                             <div class="col-md-4">
-                                <label class="form-label" for="precioCompra">Precio de Compra *</label>
-                                <input type="number" inputmode="decimal" step="0.01" min="0"
-                                       class="form-control" id="precioCompra" name="precioCompra"
-                                       value="@(producto?.PrecioCompra.ToString(System.Globalization.CultureInfo.InvariantCulture))" required>
+                                <label class="form-label fw-semibold" for="precioCompra">Precio de Compra *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" inputmode="decimal" pattern="^\d+([,\.]\d{1,2})?$"
+                                           class="form-control" id="precioCompra" name="precioCompra"
+                                           value="@FormatPrice(producto?.PrecioCompra)" required
+                                           placeholder="0,00">
+                                </div>
                             </div>
+
+                            <!-- Precio venta base -->
                             <div class="col-md-4" id="wrap-precio-venta" style="@(usarVariantes ? "display:none" : "")">
-                                <label class="form-label" for="precioVenta">Precio de Venta *</label>
-                                <input type="number" inputmode="decimal" step="0.01" min="0"
-                                       class="form-control" id="precioVenta" name="precioVenta"
-                                       value="@(producto?.PrecioVenta.ToString(System.Globalization.CultureInfo.InvariantCulture))"
-                                       @(usarVariantes ? "disabled" : "required")>
+                                <label class="form-label fw-semibold" for="precioVenta">Precio de Venta *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" inputmode="decimal" pattern="^\d+([,\.]\d{1,2})?$"
+                                           class="form-control" id="precioVenta" name="precioVenta"
+                                           value="@FormatPrice(producto?.PrecioVenta)"
+                                           @(usarVariantes ? "disabled" : "required")
+                                           placeholder="0,00">
+                                </div>
                             </div>
                         </div>
 
                         <!-- Toggle variantes -->
-                        <div class="form-check form-switch mt-3">
-                            <input class="form-check-input" type="checkbox" id="UsarVariantes" @(usarVariantes ? "checked" : null)>
-                            <label class="form-check-label" for="UsarVariantes">Gestionar por variantes (Color/Talla)</label>
-                            <small class="text-muted d-block">Si activas variantes, el precio/stock se toma por variante y el producto base no requiere talla/color.</small>
+                        <div class="card bg-light border-0 mb-4">
+                            <div class="card-body py-3">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" id="UsarVariantes" @(usarVariantes ? "checked" : "")>
+                                    <label class="form-check-label fw-semibold" for="UsarVariantes">
+                                        Gestionar por variantes (Color/Talla)
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Si activas variantes, el precio/stock se toma por variante y el producto base no requiere talla/color.
+                                </small>
+                            </div>
                         </div>
 
                         <!-- Campos de producto simple -->
-                        <div class="row g-3 mt-2" id="wrap-simple" style="@(usarVariantes ? "display:none" : "")">
+                        <div class="row g-3 mb-4" id="wrap-simple" style="@(usarVariantes ? "display:none" : "")">
                             <div class="col-md-4">
-                                <label class="form-label" for="talla">Talla</label>
-                                <input class="form-control" id="talla" name="talla" value="@producto?.Talla" @(usarVariantes ? "disabled" : null)>
+                                <label class="form-label fw-semibold" for="talla">Talla</label>
+                                <input class="form-control" id="talla" name="talla" value="@producto?.Talla"
+                                       @(usarVariantes ? "disabled" : "") placeholder="Ej: M, L, XL">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="color">Color</label>
-                                <input class="form-control" id="color" name="color" value="@producto?.Color" @(usarVariantes ? "disabled" : null)>
+                                <label class="form-label fw-semibold" for="color">Color</label>
+                                <input class="form-control" id="color" name="color" value="@producto?.Color"
+                                       @(usarVariantes ? "disabled" : "") placeholder="Ej: Rojo, Azul">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label" for="stock">Stock *</label>
+                                <label class="form-label fw-semibold" for="stock">Stock *</label>
                                 <input type="number" min="0" class="form-control" id="stock" name="stock"
-                                       value="@(producto?.Stock ?? 0)" @(usarVariantes ? "disabled" : "required")>
+                                       value="@(producto?.Stock ?? 0)" @(usarVariantes ? "disabled" : "required")
+                                       placeholder="0">
                             </div>
                         </div>
 
                         <!-- Variantes -->
-                        <div id="variantes-container" class="card mt-3" style="@(usarVariantes ? "" : "display:none")">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">Variantes</h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-variante">Agregar variante</button>
+                        <div id="variantes-container" class="card border-primary" style="@(usarVariantes ? "" : "display:none")">
+                            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-list me-2"></i>Variantes
+                                </h6>
+                                <button type="button" class="btn btn-sm btn-light" id="btn-agregar-variante">
+                                    <i class="fas fa-plus me-1"></i>Agregar variante
+                                </button>
                             </div>
                             <div class="card-body">
                                 <div id="variantes-list">
@@ -107,34 +155,37 @@
                                     {
                                         foreach (var v in variantes)
                                         {
-                                            <div class="variante-item card mb-3">
+                                            <div class="variante-item card mb-3 border">
                                                 <div class="card-body">
-                                                    <div class="row g-2">
+                                                    <div class="row g-3 align-items-end">
                                                         <div class="col-md-3">
-                                                            <label class="form-label">Color *</label>
-                                                            <input class="form-control" name="VarColor" value="@v.Color" required>
+                                                            <label class="form-label fw-semibold">Color *</label>
+                                                            <input class="form-control" name="VarColor" value="@v.Color" required
+                                                                   placeholder="Color">
                                                         </div>
                                                         <div class="col-md-3">
-                                                            <label class="form-label">Talla *</label>
-                                                            <input class="form-control" name="VarTalla" value="@v.Talla" required>
+                                                            <label class="form-label fw-semibold">Talla *</label>
+                                                            <input class="form-control" name="VarTalla" value="@v.Talla" required
+                                                                   placeholder="Talla">
                                                         </div>
                                                         <div class="col-md-2">
-                                                            <label class="form-label">Precio Venta *</label>
-                                                            <input type="number"
-                                                                   inputmode="decimal"
-                                                                   step="0.01"
-                                                                   min="0"
-                                                                   class="form-control"
-                                                                   name="VarPrecioVenta"
-                                                                   value="@((producto?.PrecioVenta)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
-                                                                   required>
+                                                            <label class="form-label fw-semibold">Precio Venta *</label>
+                                                            <div class="input-group">
+                                                                <span class="input-group-text">$</span>
+                                                                <input type="text" inputmode="decimal" pattern="^\d+([,\.]\d{1,2})?$"
+                                                                       class="form-control"
+                                                                       name="VarPrecioVenta" value="@FormatPrice(v.PrecioVenta)" required placeholder="0,00">
+                                                            </div>
                                                         </div>
                                                         <div class="col-md-2">
-                                                            <label class="form-label">Stock *</label>
-                                                            <input type="number" min="0" class="form-control" name="VarStock" value="@v.Stock" required>
+                                                            <label class="form-label fw-semibold">Stock *</label>
+                                                            <input type="number" min="0" class="form-control" name="VarStock"
+                                                                   value="@v.Stock" required placeholder="0">
                                                         </div>
                                                         <div class="col-md-2 d-flex align-items-end">
-                                                            <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">Quitar</button>
+                                                            <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">
+                                                                <i class="fas fa-trash me-1"></i>Quitar
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -142,41 +193,60 @@
                                         }
                                     }
                                 </div>
-                                <small class="text-muted">Evita duplicados de combinación Color/Talla. El sistema valida y no permite precios ≤ precio de compra.</small>
+                                <div class="alert alert-info mt-3 mb-0">
+                                    <small>
+                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                        Evita duplicados de combinación Color/Talla. El sistema valida y no permite precios ≤ precio de compra.
+                                    </small>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Imágenes -->
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between">
-                        <h5 class="card-title mb-0">Imágenes (máx. 8)</h5>
-                        <small class="text-muted"><span id="img-count">@galeria.Count</span>/8</small>
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-images me-2"></i>Imágenes del Producto
+                        </h5>
+                        <small class="text-light"><span id="img-count">@galeria.Count</span>/8 imágenes</small>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label" for="Imagenes">Subir Imágenes</label>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="Imagenes">Subir Imágenes</label>
                             <input type="file" class="form-control" id="Imagenes" name="Imagenes" multiple accept="image/*">
-                            <small class="text-muted">Puedes seleccionar varias imágenes.</small>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Puedes seleccionar varias imágenes. Formatos: JPG, PNG, GIF. Máximo 8 imágenes.
+                            </div>
                         </div>
 
-                        <div id="imagenes-preview" class="row">
+                        <div id="imagenes-preview" class="row g-3">
                             @if (galeria.Any())
                             {
                                 for (int i = 0; i < galeria.Count; i++)
                                 {
-                                    <div class="col-md-3 mb-3 imagen-preview-item" data-url="@galeria[i]" data-is-new="0">
-                                        <div class="card">
-                                            <img src="@galeria[i]" class="card-img-top" style="height:150px;object-fit:cover;">
-                                            <div class="card-body p-2 d-flex flex-column gap-2">
+                                    <div class="col-xl-3 col-lg-4 col-md-6 mb-3 imagen-preview-item" data-url="@galeria[i]" data-is-new="0">
+                                        <div class="card h-100 border">
+                                            <div class="position-relative">
+                                                <img src="@galeria[i]" class="card-img-top" style="height:180px;object-fit:cover;">
+                                                <div class="position-absolute top-0 end-0 m-2">
+                                                    <span class="badge bg-primary">Existente</span>
+                                                </div>
+                                            </div>
+                                            <div class="card-body p-3">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="radio"
                                                            name="existingImagenPath" value="@galeria[i]"
-                                                           @(string.Equals(portada, galeria[i], System.StringComparison.OrdinalIgnoreCase) ? "checked" : null)>
-                                                    <label class="form-check-label">Principal</label>
+                                                           @(string.Equals(portada, galeria[i], System.StringComparison.OrdinalIgnoreCase) ? "checked" : "")>
+                                                    <label class="form-check-label fw-semibold">Establecer como principal</label>
                                                 </div>
-                                                <button type="button" class="btn btn-sm btn-danger btn-eliminar-imagen">Eliminar</button>
+                                            </div>
+                                            <div class="card-footer bg-transparent border-top-0">
+                                                <button type="button" class="btn btn-sm btn-outline-danger w-100 btn-eliminar-imagen">
+                                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -187,46 +257,64 @@
                 </div>
             </div>
 
-            <!-- LADO DERECHO -->
-            <div class="col-md-4">
-                <div class="card mb-4">
-                    <div class="card-header"><h5 class="card-title mb-0">Categorías y Proveedor</h5></div>
+            <!-- COLUMNA DERECHA -->
+            <div class="col-lg-4">
+                <!-- Categorías y Proveedor -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-tags me-2"></i>Categorías y Proveedor
+                        </h5>
+                    </div>
                     <div class="card-body">
                         <div class="mb-3">
-                            <label class="form-label" for="categoriaID">Categoría *</label>
-                            <select class="form-control" id="categoriaID" name="categoriaID" asp-for="CategoriaID"
+                            <label class="form-label fw-semibold" for="categoriaID">Categoría *</label>
+                            <select class="form-select" id="categoriaID" name="categoriaID" asp-for="CategoriaID"
                                     asp-items="@(new SelectList(categorias, "CategoriaID", "Nombre", producto?.CategoriaID))" required>
                                 <option value="">Seleccione una categoría</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="subcategoriaID">Subcategoría *</label>
-                            <select class="form-control" id="subcategoriaID" name="subcategoriaID" data-selected="@producto?.SubcategoriaID" required
+                            <label class="form-label fw-semibold" for="subcategoriaID">Subcategoría *</label>
+                            <select class="form-select" id="subcategoriaID" name="subcategoriaID" data-selected="@producto?.SubcategoriaID" required
                                     asp-items="@(new SelectList(subcatsForSelectedCat, "SubcategoriaID", "NombreSubcategoria", producto?.SubcategoriaID))">
                                 <option value="">Seleccione una subcategoría</option>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label" for="proveedorID">Proveedor *</label>
-                            <select class="form-control" id="proveedorID" name="proveedorID" asp-for="ProveedorID"
+                            <label class="form-label fw-semibold" for="proveedorID">Proveedor *</label>
+                            <select class="form-select" id="proveedorID" name="proveedorID" asp-for="ProveedorID"
                                     asp-items="@(new SelectList(proveedores, "ProveedorID", "NombreProveedor", producto?.ProveedorID))" required>
                                 <option value="">Seleccione un proveedor</option>
                             </select>
                         </div>
                     </div>
                 </div>
+
+                <!-- Acciones -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-cog me-2"></i>Acciones
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Guardar Producto
+                            </button>
+                            <a asp-action="Productos" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">Guardar Producto</button>
-            <a asp-action="Productos" class="btn btn-secondary">Cancelar</a>
-        </div>
-
         <input type="hidden" name="ImagenesIgnore" id="ImagenesIgnore" value="[]" />
-        <!-- Para nuevas imágenes como portada (índice relativo a NUEVAS) -->
         <input type="hidden" name="ImagenPrincipalIndex" id="ImagenPrincipalIndex" value="-1" />
     </form>
 </div>
@@ -234,6 +322,60 @@
 @section Scripts {
     <script>
         (function () {
+            // ===== Normalización a coma para cultura ES =====
+            // Reglas: detectar el separador decimal que el usuario usó por última vez; remover el otro como miles.
+            function toCommaDecimal(raw) {
+                if (raw == null) return "";
+                let s = String(raw).trim();
+                if (!s) return "";
+                // sólo dígitos, coma y punto
+                s = s.replace(/[^\d,\.]/g, "");
+
+                const lastComma = s.lastIndexOf(",");
+                const lastDot = s.lastIndexOf(".");
+
+                if (lastComma === -1 && lastDot === -1) return s;              // sólo enteros
+                const decSep = (lastComma > lastDot) ? "," : ".";
+
+                if (decSep === ",") {
+                    // '.' se asume miles → elimínalo
+                    s = s.replace(/\./g, "");
+                    // normaliza a una sola coma
+                    const parts = s.split(",");
+                    return parts.length > 1 ? (parts[0] + "," + parts.slice(1).join("")) : s;
+                } else {
+                    // ',' se asume miles → elimínalo
+                    s = s.replace(/,/g, "");
+                    // cambia el punto decimal por coma
+                    const parts = s.split(".");
+                    return parts.length > 1 ? (parts[0] + "," + parts.slice(1).join("")) : s;
+                }
+            }
+
+            function normalizeForm($form) {
+                // Campos simples de precio (texto con coma)
+                ["#precioCompra", "#precioVenta"].forEach(sel => {
+                    const $el = $form.find(sel);
+                    if ($el.length && !$el.prop("disabled")) {
+                        $el.val(toCommaDecimal($el.val()));
+                    }
+                });
+                // Campos de precio en variantes
+                $form.find('input[name="VarPrecioVenta"]').each(function () {
+                    this.value = toCommaDecimal(this.value);
+                });
+            }
+
+            // Normaliza al enviar
+            $('#producto-form').on('submit', function () {
+                normalizeForm($(this));
+            });
+
+            // Normaliza al salir del campo (mejor UX)
+            $(document).on("blur", '#precioCompra, #precioVenta, input[name="VarPrecioVenta"]', function () {
+                this.value = toCommaDecimal(this.value);
+            });
+
             // ===== Variantes ON/OFF =====
             function toggleVariantesUI(on) {
                 if (on) {
@@ -247,6 +389,7 @@
                     $('#talla, #color').prop('disabled', false);
                 }
             }
+
             $('#UsarVariantes').on('change', function () {
                 toggleVariantesUI($(this).is(':checked'));
             });
@@ -255,41 +398,48 @@
             // ===== Agregar / quitar variante =====
             $('#btn-agregar-variante').on('click', function () {
                 const tpl = `
-                <div class="variante-item card mb-3">
+                <div class="variante-item card mb-3 border">
                     <div class="card-body">
-                        <div class="row g-2">
+                        <div class="row g-3 align-items-end">
                             <div class="col-md-3">
-                                <label class="form-label">Color *</label>
-                                <input class="form-control" name="VarColor" required>
+                                <label class="form-label fw-semibold">Color *</label>
+                                <input class="form-control" name="VarColor" required placeholder="Color">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Talla *</label>
-                                <input class="form-control" name="VarTalla" required>
+                                <label class="form-label fw-semibold">Talla *</label>
+                                <input class="form-control" name="VarTalla" required placeholder="Talla">
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Precio Venta *</label>
-                                <input type="number" inputmode="decimal" step="0.01" min="0" class="form-control" name="VarPrecioVenta" required>
+                                <label class="form-label fw-semibold">Precio Venta *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" inputmode="decimal" pattern="^\\d+([,\\.]\\d{1,2})?$"
+                                           class="form-control" name="VarPrecioVenta" required placeholder="0,00">
+                                </div>
                             </div>
                             <div class="col-md-2">
-                                <label class="form-label">Stock *</label>
-                                <input type="number" min="0" class="form-control" name="VarStock" required>
+                                <label class="form-label fw-semibold">Stock *</label>
+                                <input type="number" min="0" class="form-control" name="VarStock" required placeholder="0">
                             </div>
-                            <div class="col-md-2 d-flex align-items-end">
-                                <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">Quitar</button>
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">
+                                    <i class="fas fa-trash me-1"></i>Quitar
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>`;
                 $('#variantes-list').append(tpl);
             });
+
             $(document).on('click', '.btn-quitar-variante', function () {
                 $(this).closest('.variante-item').remove();
             });
 
-            // ===== Imágenes =====
-            let imagenesIgnore = [];                 // URLs existentes a eliminar
+            // ===== Gestión de Imágenes (igual que tu lógica original) =====
+            let imagenesIgnore = [];
             const $imagenesInput = $('#Imagenes');
-            const fileMap = new Map();              // uid -> File (mantiene orden de inserción)
+            const fileMap = new Map();
             let uidSeq = 0;
 
             function updateFileInputFromMap() {
@@ -308,7 +458,7 @@
                 $newItems.each(function (idx) {
                     $(this).find('input[type=radio][name=ImagenPrincipalIndex]').val(idx);
                 });
-                // Si no hay nueva seleccionada, y ninguna existente marcada, poner -1
+
                 if ($('input[name="ImagenPrincipalIndex"]:checked').length === 0 &&
                     $('input[name="existingImagenPath"]:checked').length === 0) {
                     $('#ImagenPrincipalIndex').val(-1);
@@ -323,13 +473,11 @@
 
                 if (current + files.length > 8) {
                     alert('No puede exceder 8 imágenes.');
-                    // Restaurar a los que ya estaban en el Map (sin los recién seleccionados)
                     updateFileInputFromMap();
                     return;
                 }
 
                 files.forEach((file) => {
-                    // Si ya está (mismo objeto), sáltalo
                     if ([...fileMap.values()].includes(file)) return;
 
                     const uid = 'f' + (++uidSeq);
@@ -338,15 +486,24 @@
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const card = `
-                        <div class="col-md-3 mb-3 imagen-preview-item" data-is-new="1" data-uid="${uid}">
-                            <div class="card">
-                                <img src="${e.target.result}" class="card-img-top" style="height:150px;object-fit:cover;">
-                                <div class="card-body p-2 d-flex flex-column gap-2">
+                        <div class="col-xl-3 col-lg-4 col-md-6 mb-3 imagen-preview-item" data-is-new="1" data-uid="${uid}">
+                            <div class="card h-100 border">
+                                <div class="position-relative">
+                                    <img src="${e.target.result}" class="card-img-top" style="height:180px;object-fit:cover;">
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-success">Nueva</span>
+                                    </div>
+                                </div>
+                                <div class="card-body p-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="ImagenPrincipalIndex" value="0">
-                                        <label class="form-check-label">Principal</label>
+                                        <label class="form-check-label fw-semibold">Establecer como principal</label>
                                     </div>
-                                    <button type="button" class="btn btn-sm btn-danger btn-eliminar-imagen">Eliminar</button>
+                                </div>
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <button type="button" class="btn btn-sm btn-outline-danger w-100 btn-eliminar-imagen">
+                                        <i class="fas fa-trash me-1"></i>Eliminar
+                                    </button>
                                 </div>
                             </div>
                         </div>`;
@@ -357,23 +514,21 @@
                     reader.readAsDataURL(file);
                 });
 
-                // Refrescar input real a partir del Map (para poder eliminar antes de enviar)
                 updateFileInputFromMap();
             });
 
             // Elegir principal nueva
             $(document).on('change', 'input[name="ImagenPrincipalIndex"]', function () {
-                // Nada que hacer: el value ya está reindexado por DOM
+                // El value ya está reindexado por DOM
             });
 
             // Elegir principal existente
             $(document).on('change', 'input[name="existingImagenPath"]', function () {
-                // Desmarcar selección de nuevas (para evitar ambigüedad visual)
                 $('input[name="ImagenPrincipalIndex"]').prop('checked', false);
                 $('#ImagenPrincipalIndex').val(-1);
             });
 
-            // Eliminar imagen (nueva o existente)
+            // Eliminar imagen
             $(document).on('click', '.btn-eliminar-imagen', function () {
                 const $item = $(this).closest('.imagen-preview-item');
                 const isNew = $item.attr('data-is-new') === '1';
@@ -386,12 +541,10 @@
                         updateFileInputFromMap();
                     }
                 } else if (url) {
-                    // Existe en servidor -> agregar a ignore
                     imagenesIgnore.push(url);
                     $('#ImagenesIgnore').val(JSON.stringify(imagenesIgnore));
                 }
 
-                // Si era portada, limpiar radios
                 if ($item.find('input[type=radio]:checked').length) {
                     $('input[name="ImagenPrincipalIndex"]').prop('checked', false);
                     $('input[name="existingImagenPath"]').prop('checked', false);
@@ -417,10 +570,10 @@
                     });
                 });
             }
-            $('#categoriaID').on('change', function () {
-                fillSubcats($(this).val(), null);
-            });
-            // Si abrimos en edición y el select de subcats está vacío, cargarlo
+
+            $('#categoriaID').on('change', function () { fillSubcats($(this).val(), null); });
+
+            // Inicializar subcategorías al cargar
             (function initSubcatsOnLoad() {
                 const catVal = $('#categoriaID').val();
                 const selected = $('#subcategoriaID').data('selected');
