@@ -1,0 +1,352 @@
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model Simone.Models.Producto
+@{
+    var producto = Model ?? (ViewBag.Producto as Simone.Models.Producto);
+    var categorias = ViewBag.Categorias as List<Simone.Models.Categorias> ?? new();
+    var proveedores = ViewBag.Proveedores as List<Simone.Models.Proveedores> ?? new();
+    var subcategorias = ViewBag.Subcategorias as List<Simone.Models.Subcategorias> ?? new();
+    var variantes = ViewBag.Variantes as List<Simone.Models.ProductoVariante> ?? new();
+
+    var galeria = ViewBag.Galeria as List<string> ?? new();
+    var portada = ViewBag.Portada as string;
+
+    bool isEdit = (producto?.ProductoID ?? 0) > 0;
+    ViewData["Title"] = isEdit ? "Editar Producto (Variantes)" : "Añadir Producto (Variantes)";
+
+    var subcatsForSelectedCat = (producto?.CategoriaID > 0)
+        ? subcategorias.Where(s => s.CategoriaID == producto.CategoriaID).ToList()
+        : new List<Simone.Models.Subcategorias>();
+}
+
+<div class="container-fluid">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
+
+    <form asp-action="@(isEdit ? "EditarProducto" : "AnadirProducto")"
+          method="post" enctype="multipart/form-data" id="producto-form">
+        @Html.AntiForgeryToken()
+
+        @if (isEdit)
+        {
+            <input type="hidden" name="productoID" value="@producto!.ProductoID" />
+        }
+
+        <div class="row">
+            <div class="col-lg-8">
+
+                <!-- ===== Información básica (sin campos de simple) ===== -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="card-title mb-0">Información básica</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="nombreProducto">Nombre *</label>
+                            <input class="form-control" id="nombreProducto" name="nombreProducto"
+                                   value="@producto?.Nombre" required maxlength="160">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="descripcion">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3">@producto?.Descripcion</textarea>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="marca">Marca</label>
+                                <input class="form-control" id="marca" name="marca" value="@producto?.Marca" maxlength="80">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="precioCompra">Precio de compra *</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       id="precioCompra" name="precioCompra"
+                                       value="@(producto?.PrecioCompra.ToString(System.Globalization.CultureInfo.InvariantCulture))" required>
+                            </div>
+                            <div class="col-md-4">
+                                <!-- PrecioVenta del producto se recalcula = min(var.Precio) -->
+                                <label class="form-label">Precio de venta (auto)</label>
+                                <input class="form-control" value="Se tomará el mínimo de las variantes" disabled>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== Variantes ===== -->
+                <div class="card mb-4" id="variantes-container">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Variantes (Color / Talla / Precio / Stock)</h5>
+                        <button type="button" class="btn btn-sm btn-primary" id="btn-agregar-variante">
+                            Agregar variante
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="variantes-list">
+                            @if (variantes.Any())
+                            {
+                                foreach (var v in variantes.OrderBy(x => x.Color).ThenBy(x => x.Talla))
+                                {
+                                    <div class="variante-item card mb-3">
+                                        <div class="card-body">
+                                            <div class="row g-2">
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Color *</label>
+                                                    <input class="form-control" name="VarColor" value="@v.Color" required>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label class="form-label">Talla *</label>
+                                                    <input class="form-control" name="VarTalla" value="@v.Talla" required>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Precio venta *</label>
+                                                    <input type="number" inputmode="decimal" step="0.01" min="0"
+                                                           class="form-control" name="VarPrecio"
+                                                           value="@((v.PrecioVenta ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture))" required>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label">Stock *</label>
+                                                    <input type="number" min="0" class="form-control" name="VarStock" value="@v.Stock" required>
+                                                </div>
+                                                <div class="col-md-2 d-flex align-items-end">
+                                                    <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">Quitar</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        <small class="text-muted d-block">
+                            • El precio del producto se fija como el <b>mínimo</b> de las variantes.
+                            • El stock del producto es la <b>suma</b> de los stocks de variantes.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- ===== Imágenes ===== -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5 class="card-title mb-0">Imágenes (máx. 8)</h5>
+                        <small class="text-muted"><span id="img-count">@galeria.Count</span>/8</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="Imagenes">Subir imágenes</label>
+                            <input type="file" class="form-control" id="Imagenes" name="Imagenes" multiple accept="image/*">
+                            <small class="text-muted">Puedes seleccionar varias imágenes.</small>
+                        </div>
+
+                        <div id="imagenes-preview" class="row">
+                            @if (galeria.Any())
+                            {
+                                for (int i = 0; i < galeria.Count; i++)
+                                {
+                                    <div class="col-md-3 mb-3 imagen-preview-item" data-url="@galeria[i]" data-is-new="0">
+                                        <div class="card">
+                                            <img src="@galeria[i]" class="card-img-top" style="height:150px;object-fit:cover;">
+                                            <div class="card-body p-2 d-flex flex-column gap-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio"
+                                                           name="existingImagenPath" value="@galeria[i]"
+                                                           @(string.Equals(portada, galeria[i], System.StringComparison.OrdinalIgnoreCase) ? "checked" : null)>
+                                                    <label class="form-check-label">Principal</label>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-danger btn-eliminar-imagen">Eliminar</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lado derecho -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="card-title mb-0">Categorías y Proveedor</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="categoriaID">Categoría *</label>
+                            <select class="form-control" id="categoriaID" name="categoriaID" asp-for="CategoriaID"
+                                    asp-items="@(new SelectList(categorias, "CategoriaID", "Nombre", producto?.CategoriaID))" required>
+                                <option value="">Seleccione una categoría</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="subcategoriaID">Subcategoría *</label>
+                            <select class="form-control" id="subcategoriaID" name="subcategoriaID" data-selected="@producto?.SubcategoriaID" required
+                                    asp-items="@(new SelectList(subcatsForSelectedCat, "SubcategoriaID", "NombreSubcategoria", producto?.SubcategoriaID))">
+                                <option value="">Seleccione una subcategoría</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="proveedorID">Proveedor *</label>
+                            <select class="form-control" id="proveedorID" name="proveedorID" asp-for="ProveedorID"
+                                    asp-items="@(new SelectList(proveedores, "ProveedorID", "NombreProveedor", producto?.ProveedorID))" required>
+                                <option value="">Seleccione un proveedor</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos de producto simple (deshabilitados aquí para evitar conflicto) -->
+                <input type="hidden" name="talla" value="" />
+                <input type="hidden" name="color" value="" />
+                <input type="hidden" name="stock" value="0" />
+                <input type="hidden" name="precioVenta" value="0" />
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Guardar</button>
+            <a asp-action="Productos" class="btn btn-secondary">Cancelar</a>
+        </div>
+
+        <input type="hidden" name="ImagenesIgnore" id="ImagenesIgnore" value="" />
+        <input type="hidden" name="ImagenPrincipalIndex" id="ImagenPrincipalIndex" value="-1" />
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            // ===== Variantes =====
+            function varianteTpl() {
+                return `
+                <div class="variante-item card mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label">Color *</label>
+                                <input class="form-control" name="VarColor" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Talla *</label>
+                                <input class="form-control" name="VarTalla" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Precio venta *</label>
+                                <input type="number" inputmode="decimal" step="0.01" min="0"
+                                       class="form-control" name="VarPrecio" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Stock *</label>
+                                <input type="number" min="0" class="form-control" name="VarStock" required>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">Quitar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            if ($('#variantes-list .variante-item').length === 0) {
+                $('#variantes-list').append(varianteTpl());
+            }
+
+            $('#btn-agregar-variante').on('click', () => {
+                $('#variantes-list').append(varianteTpl());
+            });
+
+            $(document).on('click', '.btn-quitar-variante', function () {
+                $(this).closest('.variante-item').remove();
+            });
+
+            // Validación mínima al enviar
+            $('#producto-form').on('submit', function () {
+                if ($('#variantes-list .variante-item').length === 0) {
+                    alert('Agrega al menos una variante.');
+                    return false;
+                }
+                return true;
+            });
+
+            // ===== Imágenes =====
+            let imagenesIgnore = [];
+
+            function updateImgCount() {
+                const count = $('#imagenes-preview .imagen-preview-item').length;
+                $('#img-count').text(count);
+            }
+
+            function reindexNewImageRadios() {
+                const $newItems = $('#imagenes-preview .imagen-preview-item[data-is-new="1"]');
+                $newItems.each(function (idx) {
+                    $(this).find('input[type=radio][name=ImagenPrincipalIndex]').val(idx);
+                });
+            }
+
+            $('#Imagenes').on('change', function () {
+                const files = Array.from(this.files || []);
+                const $preview = $('#imagenes-preview');
+                const current = $preview.children().length;
+
+                if (current + files.length > 8) {
+                    alert('No puede exceder 8 imágenes.');
+                    this.value = '';
+                    return;
+                }
+
+                files.forEach((file) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const card = `
+                        <div class="col-md-3 mb-3 imagen-preview-item" data-is-new="1">
+                            <div class="card">
+                                <img src="${e.target.result}" class="card-img-top" style="height:150px;object-fit:cover;">
+                                <div class="card-body p-2 d-flex flex-column gap-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="ImagenPrincipalIndex" value="0">
+                                        <label class="form-check-label">Principal</label>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-danger btn-eliminar-imagen">Eliminar</button>
+                                </div>
+                            </div>
+                        </div>`;
+                        $preview.append(card);
+                        reindexNewImageRadios();
+                        updateImgCount();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            $(document).on('click', '.btn-eliminar-imagen', function () {
+                const $item = $(this).closest('.imagen-preview-item');
+                const url = $item.attr('data-url');
+
+                if (url) {
+                    imagenesIgnore.push(url);
+                    $('#ImagenesIgnore').val(JSON.stringify(imagenesIgnore));
+                }
+                $item.remove();
+                reindexNewImageRadios();
+                updateImgCount();
+            });
+
+            // ===== Subcategorías por categoría =====
+            function fillSubcats(catId, selected) {
+                const $sub = $('#subcategoriaID');
+                $sub.empty().append('<option value="">Seleccione una subcategoría</option>');
+                if (!catId) return;
+
+                $.get('@Url.Action("GetSubcategoriasByCategoria", "Panel")', { categoriaID: catId }, function (data) {
+                    $.each(data, function (_, item) {
+                        const $opt = $('<option/>', { value: item.value, text: item.text });
+                        if (selected && String(item.value) === String(selected)) $opt.attr('selected', 'selected');
+                        $sub.append($opt);
+                    });
+                });
+            }
+            $('#categoriaID').on('change', function () {
+                fillSubcats($(this).val(), null);
+            });
+            (function initSubcatsOnLoad() {
+                const catVal = $('#categoriaID').val();
+                const selected = $('#subcategoriaID').data('selected');
+                if (catVal && $('#subcategoriaID option').length <= 1) fillSubcats(catVal, selected);
+            })();
+        })();
+    </script>
+}

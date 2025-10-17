@@ -78,6 +78,29 @@ namespace Simone.Controllers
         private const long _maxImgBytes = 8 * 1024 * 1024;
         private const long _maxFormBytes = 64L * 1024 * 1024;
 
+        // Parser robusto de decimales para es-EC y variantes (ej. "2.000,50")
+        private decimal ParseDecimalFlexible(string? raw, decimal fallback)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(raw)) return fallback;
+                var es = CultureInfo.GetCultureInfo("es-EC");
+                if (decimal.TryParse(raw, NumberStyles.Any, es, out var v))
+                    return Math.Round(v, 2);
+
+                var norm = raw.Replace(',', '.');
+                if (decimal.TryParse(norm, NumberStyles.Any, CultureInfo.InvariantCulture, out v))
+                    return Math.Round(v, 2);
+
+                var norm2 = raw.Replace(".", string.Empty).Replace(',', '.');
+                if (decimal.TryParse(norm2, NumberStyles.Any, CultureInfo.InvariantCulture, out v))
+                    return Math.Round(v, 2);
+
+                return fallback;
+            }
+            catch { return fallback; }
+        }
+
         // ====================== INICIO ======================
         [HttpGet]
         public IActionResult Index() => View();
@@ -331,6 +354,31 @@ namespace Simone.Controllers
             return View();
         }
 
+        // === AJAX: llenar <select> subcategorías por categoría ===
+        [HttpGet]
+        public async Task<IActionResult> GetSubcategoriasByCategoria(int categoriaID)
+        {
+            if (categoriaID <= 0)
+                return Json(Array.Empty<object>());
+
+            IQueryable<Subcategorias> q = _context.Subcategorias
+                .AsNoTracking()
+                .Where(s => s.CategoriaID == categoriaID);
+
+            if (!IsAdmin())
+            {
+                var uid = CurrentUserId();
+                q = q.Where(s => s.VendedorID == uid);
+            }
+
+            var data = await q
+                .OrderBy(s => s.NombreSubcategoria)
+                .Select(s => new { value = s.SubcategoriaID, text = s.NombreSubcategoria })
+                .ToListAsync();
+
+            return Json(data);
+        }
+
         [HttpGet]
         public async Task<IActionResult> AnadirSubcategoria()
         {
@@ -554,7 +602,7 @@ namespace Simone.Controllers
             return View("ProductoForm");
         }
 
-        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
+        [HttpPost, ValidateAntiForgeryToken, Consumes("multipart/form-data"), RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
         public async Task<IActionResult> AnadirProducto(
             string nombreProducto,
             string descripcion,
@@ -574,18 +622,19 @@ namespace Simone.Controllers
             [FromForm] string[]? VarColor,
             [FromForm] string[]? VarTalla,
             [FromForm] string[]? VarPrecio,
+            [FromForm(Name = "VarPrecioVenta")] string[]? VarPrecioVenta,
             [FromForm] int[]? VarStock)
         {
             try
             {
-                // Validación de subcategoría
+                // Validar subcategoría-categoría
                 var sub = await _context.Subcategorias
                     .Include(s => s.Categoria)
                     .FirstOrDefaultAsync(s => s.SubcategoriaID == subcategoriaID && s.CategoriaID == categoriaID);
 
                 if (sub == null)
                 {
-                    TempData["Err"] = "Subcategoría no encontrada.";
+                    TempData["Err"] = "Subcategoría no encontrada o no pertenece a la categoría seleccionada.";
                     await FillProductoFormBags();
                     return View("ProductoForm");
                 }
@@ -597,6 +646,19 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
+                // Validar proveedor (existe)
+                var provExiste = await _context.Proveedores.AsNoTracking().AnyAsync(p => p.ProveedorID == proveedorID);
+                if (!provExiste)
+                {
+                    TempData["Err"] = "Proveedor no válido.";
+                    await FillProductoFormBags();
+                    return View("ProductoForm");
+                }
+
+                // Alias de vistas antiguas: usar VarPrecioVenta si VarPrecio viene vacío
+                if ((VarPrecio == null || VarPrecio.Length == 0) && VarPrecioVenta != null && VarPrecioVenta.Length > 0)
+                    VarPrecio = VarPrecioVenta;
+
                 // Fallback: si no llegaron Var* pero sí Variantes[i].*, leer del form
                 if (VarColor == null || VarTalla == null || VarPrecio == null || VarStock == null)
                 {
@@ -607,16 +669,20 @@ namespace Simone.Controllers
                     VarStock ??= v.Stocks;
                 }
 
+                // Parse robusto de precios base (sobrescribe binder si vino "2.000,50")
+                var precioCompraEff = ParseDecimalFlexible(Request?.Form["precioCompra"], precioCompra);
+                var precioVentaEff = ParseDecimalFlexible(Request?.Form["precioVenta"], precioVenta);
+
                 // Variantes
                 var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(
-                    VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
+                    VarColor, VarTalla, VarPrecio, VarStock, precioCompraEff);
 
                 if (!string.IsNullOrEmpty(variantError))
                 {
                     TempData["Err"] = variantError;
                     await FillProductoFormBags();
                     ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
-                        precioCompra, precioVenta, stock, proveedorID, categoriaID, subcategoriaID);
+                        precioCompraEff, precioVentaEff, stock, proveedorID, categoriaID, subcategoriaID);
                     return View("ProductoForm");
                 }
 
@@ -627,7 +693,7 @@ namespace Simone.Controllers
                     FechaAgregado = DateTime.UtcNow,
                     Descripcion = descripcion?.Trim(),
                     Marca = marca?.Trim(),
-                    PrecioCompra = Math.Round(precioCompra, 2),
+                    PrecioCompra = Math.Round(precioCompraEff, 2),
                     ProveedorID = proveedorID,
                     CategoriaID = categoriaID,
                     SubcategoriaID = subcategoriaID,
@@ -647,13 +713,13 @@ namespace Simone.Controllers
                     producto.Color = color?.Trim();
                     producto.Stock = Math.Max(0, stock);
 
-                    var pvFinal = Math.Round(precioVenta, 2);
-                    if (pvFinal <= precioCompra)
+                    var pvFinal = Math.Round(precioVentaEff, 2);
+                    if (pvFinal <= precioCompraEff)
                     {
-                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompra}).";
+                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompraEff}).";
                         await FillProductoFormBags();
                         ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
-                            precioCompra, precioVenta, stock, proveedorID, categoriaID, subcategoriaID);
+                            precioCompraEff, precioVentaEff, stock, proveedorID, categoriaID, subcategoriaID);
                         return View("ProductoForm");
                     }
                     producto.PrecioVenta = pvFinal;
@@ -758,7 +824,7 @@ namespace Simone.Controllers
             return View("ProductoForm");
         }
 
-        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
+        [HttpPost, ValidateAntiForgeryToken, Consumes("multipart/form-data"), RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
         public async Task<IActionResult> EditarProducto(
             int productoID,
             string nombreProducto,
@@ -780,6 +846,7 @@ namespace Simone.Controllers
             [FromForm] string[]? VarColor,
             [FromForm] string[]? VarTalla,
             [FromForm] string[]? VarPrecio,
+            [FromForm(Name = "VarPrecioVenta")] string[]? VarPrecioVenta,
             [FromForm] int[]? VarStock)
         {
             try
@@ -811,6 +878,20 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
+                // Validar proveedor
+                var provExiste = await _context.Proveedores.AsNoTracking().AnyAsync(p => p.ProveedorID == proveedorID);
+                if (!provExiste)
+                {
+                    TempData["Err"] = "Proveedor no válido.";
+                    await FillProductoFormBags();
+                    ViewBag.Producto = producto;
+                    return View("ProductoForm");
+                }
+
+                // Alias: usar VarPrecioVenta si VarPrecio viene vacío
+                if ((VarPrecio == null || VarPrecio.Length == 0) && VarPrecioVenta != null && VarPrecioVenta.Length > 0)
+                    VarPrecio = VarPrecioVenta;
+
                 // Fallback: si no llegaron Var* pero sí Variantes[i].*, leer del form
                 if (VarColor == null || VarTalla == null || VarPrecio == null || VarStock == null)
                 {
@@ -821,8 +902,12 @@ namespace Simone.Controllers
                     VarStock ??= v.Stocks;
                 }
 
+                // Parse robusto de precios base
+                var precioCompraEff = ParseDecimalFlexible(Request?.Form["precioCompra"], precioCompra);
+                var precioVentaEff = ParseDecimalFlexible(Request?.Form["precioVenta"], precioVenta);
+
                 var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(
-                    VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
+                    VarColor, VarTalla, VarPrecio, VarStock, precioCompraEff);
 
                 if (!string.IsNullOrEmpty(variantError))
                 {
@@ -835,7 +920,7 @@ namespace Simone.Controllers
                 producto.Nombre = (nombreProducto ?? string.Empty).Trim();
                 producto.Descripcion = descripcion?.Trim();
                 producto.Marca = marca?.Trim();
-                producto.PrecioCompra = Math.Round(precioCompra, 2);
+                producto.PrecioCompra = Math.Round(precioCompraEff, 2);
                 producto.ProveedorID = proveedorID;
                 producto.CategoriaID = categoriaID;
                 producto.SubcategoriaID = subcategoriaID;
@@ -853,10 +938,10 @@ namespace Simone.Controllers
                     producto.Color = color?.Trim();
                     producto.Stock = Math.Max(0, stock);
 
-                    var pvFinal = Math.Round(precioVenta, 2);
-                    if (pvFinal <= precioCompra)
+                    var pvFinal = Math.Round(precioVentaEff, 2);
+                    if (pvFinal <= precioCompraEff)
                     {
-                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompra}).";
+                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompraEff}).";
                         await FillProductoFormBags();
                         ViewBag.Producto = producto;
                         return View("ProductoForm");
@@ -1025,7 +1110,11 @@ namespace Simone.Controllers
             var len = new[] { VarColor.Length, VarTalla.Length, VarPrecio.Length, VarStock.Length }.Min();
             if (len <= 0) return (false, new(), "");
 
-            var prices = ParseDecimalArray(VarPrecio.Take(len).ToArray());
+            // Parse robusto de cada precio de variante
+            var prices = new decimal[len];
+            for (int i = 0; i < len; i++)
+                prices[i] = ParseDecimalFlexible(VarPrecio[i], 0m);
+
             var variants = new List<(string Color, string Talla, decimal Precio, int Stock)>();
             var errors = new List<string>();
 
@@ -1033,7 +1122,7 @@ namespace Simone.Controllers
             {
                 var color = (VarColor[i] ?? "").Trim();
                 var talla = (VarTalla[i] ?? "").Trim();
-                var precio = prices[i];
+                var precio = Math.Round(prices[i], 2);
                 var stock = Math.Max(0, VarStock[i]);
 
                 if (string.IsNullOrWhiteSpace(color))
@@ -1090,30 +1179,19 @@ namespace Simone.Controllers
             return (cleaned.Count > 0, cleaned, "");
         }
 
-        // Acepta "4,00" y "4.00"
+        // Acepta "4,00", "4.00" y "2.000,50"
         private decimal[] ParseDecimalArray(string[] raw)
         {
             var list = new List<decimal>(raw.Length);
-            var es = CultureInfo.GetCultureInfo("es-EC");
-
             foreach (var s in raw)
             {
-                var txt = (s ?? "").Trim();
-                decimal val;
-
-                if (!decimal.TryParse(txt, NumberStyles.Any, es, out val))
-                {
-                    var norm = txt.Replace(',', '.');
-                    if (!decimal.TryParse(norm, NumberStyles.Any, CultureInfo.InvariantCulture, out val))
-                        val = 0m;
-                }
-
+                var val = ParseDecimalFlexible(s, 0m);
                 list.Add(Math.Round(val, 2));
             }
             return list.ToArray();
         }
 
-        // Lee variantes cuando llegan como Variantes[i].* (robusto ante huecos y filas vacías)
+        // Lee variantes cuando llegan como Variantes[i].* (robusto ante huecos y nombres de campo distintos)
         private (string[]? Colores, string[]? Tallas, string[]? Precios, int[]? Stocks) ReadVariantesFromForm()
         {
             var form = Request?.Form;
@@ -1123,7 +1201,7 @@ namespace Simone.Controllers
             var indices = new SortedSet<int>();
             foreach (var key in form.Keys)
             {
-                var m = Regex.Match(key, @"^Variantes\[(\d+)\]\.(Color|Talla|Precio|Stock)$");
+                var m = Regex.Match(key, @"^Variantes\[(\d+)\]\.(Color|Talla|Precio|PrecioVenta|Stock)$");
                 if (m.Success && int.TryParse(m.Groups[1].Value, out var i))
                     indices.Add(i);
             }
@@ -1136,9 +1214,14 @@ namespace Simone.Controllers
 
             foreach (var i in indices)
             {
-                var c = form[$"Variantes[{i}].Color"];
-                var t = form[$"Variantes[{i}].Talla"];
-                var p = form[$"Variantes[{i}].Precio"];
+                var c = form[$"Variantes[{i}].Color"].ToString();
+                var t = form[$"Variantes[{i}].Talla"].ToString();
+
+                // admitir Precio o PrecioVenta
+                var p = form.ContainsKey($"Variantes[{i}].Precio")
+                            ? form[$"Variantes[{i}].Precio"].ToString()
+                            : form[$"Variantes[{i}].PrecioVenta"].ToString();
+
                 int.TryParse(form[$"Variantes[{i}].Stock"], out var s);
 
                 // Ignora filas totalmente vacías que pueden quedar al borrar en el DOM
@@ -1159,7 +1242,6 @@ namespace Simone.Controllers
             if (col.Count == 0) return (null, null, null, null);
             return (col.ToArray(), tal.ToArray(), pre.ToArray(), stk.ToArray());
         }
-
 
         private string GenerateSKU(Producto producto, string color, string talla)
         {
@@ -1284,7 +1366,6 @@ namespace Simone.Controllers
                         _logger.LogWarning(ex, "JSON de ImagenesIgnore inválido");
                     }
                 }
-
 
                 if (urlsExistentesAEliminar.Count > 0 && imagenesExistentes.Count > 0)
                 {

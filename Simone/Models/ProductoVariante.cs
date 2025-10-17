@@ -1,9 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.EntityFrameworkCore;
 
 namespace Simone.Models
 {
+    // Unicidad lógica: no se pueden repetir (ProductoID, Color, Talla)
+    [Index(nameof(ProductoID), nameof(Color), nameof(Talla),
+           IsUnique = true, Name = "UX_ProductoVariante_Producto_Color_Talla")]
     public class ProductoVariante
     {
         // --------------------- Clave ---------------------
@@ -35,7 +39,10 @@ namespace Simone.Models
         [Range(0, int.MaxValue, ErrorMessage = "El stock debe ser 0 o mayor.")]
         public int Stock { get; set; }
 
+        [StringLength(64)]
         public string? SKU { get; set; }
+
+        [StringLength(300)]
         public string? ImagenPath { get; set; }
 
         // --------------------- Navegación ----------------
@@ -49,51 +56,34 @@ namespace Simone.Models
 
         // --------------------- Conveniencias (no mapeadas) ----------------
 
-        /// <summary>
-        /// ¿La variante define su propio precio de venta?
-        /// </summary>
+        /// <summary>¿La variante define su propio precio de venta?</summary>
         [NotMapped]
         public bool TienePrecioPropio => PrecioVenta.HasValue && PrecioVenta.Value > 0m;
 
-        /// <summary>
-        /// Precio de compra efectivo (override si existe; si no, del producto).
-        /// </summary>
+        /// <summary>Precio de compra efectivo (override si existe; si no, del producto).</summary>
         [NotMapped]
-        public decimal PrecioCompraEfectivo =>
-            PrecioCompra ?? (Producto?.PrecioCompra ?? 0m);
+        public decimal PrecioCompraEfectivo => PrecioCompra ?? (Producto?.PrecioCompra ?? 0m);
 
-        /// <summary>
-        /// Precio de venta efectivo (override si existe; si no, del producto).
-        /// </summary>
+        /// <summary>Precio de venta efectivo (override si existe; si no, del producto).</summary>
         [NotMapped]
-        public decimal PrecioVentaEfectivo =>
-            PrecioVenta ?? (Producto?.PrecioVenta ?? 0m);
+        public decimal PrecioVentaEfectivo => PrecioVenta ?? (Producto?.PrecioVenta ?? 0m);
 
-        /// <summary>
-        /// Margen efectivo (venta - compra) usando precios efectivos.
-        /// </summary>
+        /// <summary>Margen efectivo (venta - compra) usando precios efectivos.</summary>
         [NotMapped]
         public decimal MargenEfectivo => PrecioVentaEfectivo - PrecioCompraEfectivo;
 
-        /// <summary>
-        /// Imagen a mostrar: propia si existe; de lo contrario, la principal del producto
-        /// (con placeholder seguro si tampoco hay).
-        /// </summary>
+        /// <summary>Imagen a mostrar: propia si existe; si no, la principal del producto.</summary>
         [NotMapped]
         public string ImagenEfectiva =>
             !string.IsNullOrWhiteSpace(ImagenPath)
                 ? ImagenPath!
                 : (Producto?.ImagenPrincipalOrPlaceholder ?? "/images/product-placeholder.png");
 
-        /// <summary>
-        /// Etiqueta amigable para UI (chips, tablas, etc.)
-        /// </summary>
+        /// <summary>Etiqueta amigable para UI (chips, tablas, etc.)</summary>
         [NotMapped]
         public string Etiqueta => $"{Color} / {Talla}";
 
-        /// <summary>
-        /// ¿Tiene stock (>0)?
-        /// </summary>
+        /// <summary>¿Tiene stock (>0)?</summary>
         [NotMapped]
         public bool TieneStock => Stock > 0;
     }

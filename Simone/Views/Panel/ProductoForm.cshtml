@@ -1,1699 +1,433 @@
-@using System.Globalization
-@using System.Text.Json
-@using Simone.Models
+@using Microsoft.AspNetCore.Mvc.Rendering
+@model Simone.Models.Producto
 @{
-    ViewData["Title"] = ViewBag.Producto != null ? "Editar Producto" : "Añadir Producto";
+    // Modelo o ViewBag.Producto (al editar)
+    var producto = Model ?? (ViewBag.Producto as Simone.Models.Producto);
 
-    var producto = ViewBag.Producto as Producto;
+    var categorias = ViewBag.Categorias as List<Simone.Models.Categorias> ?? new();
+    var proveedores = ViewBag.Proveedores as List<Simone.Models.Proveedores> ?? new();
+    var subcategorias = ViewBag.Subcategorias as List<Simone.Models.Subcategorias> ?? new();
 
-    var categorias = ViewBag.Categorias as IEnumerable<Categorias> ?? Enumerable.Empty<Categorias>();
-    var proveedores = ViewBag.Proveedores as IEnumerable<Proveedores> ?? Enumerable.Empty<Proveedores>();
-    var subcatsSrc = (IEnumerable<Subcategorias>)(ViewBag.Subcategorias as IEnumerable<Subcategorias>
-                      ?? ViewBag.subcategorias as IEnumerable<Subcategorias> ?? new List<Subcategorias>());
+    var variantes = ViewBag.Variantes as List<Simone.Models.ProductoVariante> ?? new();
+    var galeria = ViewBag.Galeria as List<string> ?? new();
+    var portada = ViewBag.Portada as string;
 
-    // Variantes (si estás editando)
-    var variantesInit = (ViewBag.Variantes as IEnumerable<ProductoVariante>)?.ToList() ?? new List<ProductoVariante>();
-    var hasVariantesInit = variantesInit.Any();
+    bool isEdit = (producto?.ProductoID ?? 0) > 0;
+    bool usarVariantes = (producto?.TieneVariantes ?? false) || variantes.Any();
+    ViewData["Title"] = isEdit ? "Editar Producto" : "Añadir Producto";
 
-    // Galería
-    var galListTop = ViewBag.Galeria as IEnumerable<string>;
-    int imgCountInit = galListTop?.Count() ?? (string.IsNullOrWhiteSpace(producto?.ImagenPath) ? 0 : 1);
-
-    var culture = CultureInfo.CreateSpecificCulture("es-EC");
+    // Subcats filtradas para la categoría elegida (útil al abrir en "Editar")
+    var subcatsForSelectedCat = (producto?.CategoriaID > 0)
+        ? subcategorias.Where(s => s.CategoriaID == producto.CategoriaID).ToList()
+        : new List<Simone.Models.Subcategorias>();
 }
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-<link href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" rel="stylesheet" />
+<div class="container-fluid">
+    <h2 class="mb-3">@ViewData["Title"]</h2>
 
-<style>
-    :root {
-        --primary: #7c3aed;
-        --primary-light: #8b5cf6;
-        --primary-dark: #6d28d9;
-        --secondary: #f8fafc;
-        --accent: #e879f9;
-        --success: #10b981;
-        --warning: #f59e0b;
-        --error: #ef4444;
-        --surface: #fff;
-        --border: #e2e8f0;
-        --text-primary: #1e293b;
-        --text-secondary: #64748b;
-        --text-muted: #94a3b8;
-        --shadow-sm: 0 1px 2px 0 rgba(0,0,0,.05);
-        --shadow: 0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -1px rgba(0,0,0,.06);
-        --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05);
-        --radius: 12px;
-        --radius-sm: 8px;
-        --transition: all .2s ease-in-out
-    }
+    <form asp-action="@(isEdit ? "EditarProducto" : "AnadirProducto")"
+          method="post" enctype="multipart/form-data" id="producto-form">
+        @Html.AntiForgeryToken()
 
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0
-    }
-
-    body {
-        font-family: 'Inter',system-ui,-apple-system,sans-serif;
-        line-height: 1.6;
-        color: var(--text-primary);
-        background: #f8fafc
-    }
-
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 16px
-    }
-
-    .page-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 24px;
-        padding: 16px 0
-    }
-
-    .page-title {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--text-primary)
-    }
-
-        .page-title i {
-            color: var(--primary);
-            font-size: 28px
+        @if (isEdit)
+        {
+            <input type="hidden" name="productoID" value="@producto!.ProductoID" />
         }
 
-    .back-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 16px;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        color: var(--text-secondary);
-        text-decoration: none;
-        font-weight: 500;
-        transition: var(--transition)
-    }
-
-        .back-btn:hover {
-            background: #f8fafc;
-            border-color: var(--primary);
-            color: var(--primary)
-        }
-
-    .product-form-container {
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        gap: 24px
-    }
-
-    .form-section {
-        background: var(--surface);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        margin-bottom: 24px
-    }
-
-    .section-header {
-        padding: 16px 20px;
-        border-bottom: 1px solid var(--border);
-        background: linear-gradient(90deg,#f8fafc,#fff);
-        display: flex;
-        justify-content: space-between;
-        align-items: center
-    }
-
-    .section-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 8px
-    }
-
-        .section-title i {
-            color: var(--primary)
-        }
-
-    .section-badge {
-        background: var(--primary);
-        color: #fff;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        margin-left: 8px
-    }
-
-    .section-content {
-        padding: 20px
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: repeat(2,1fr);
-        gap: 16px
-    }
-
-    .form-grid-full {
-        grid-column: 1 / -1
-    }
-
-    .form-group {
-        display: flex;
-        flex-direction: column;
-        gap: 6px
-    }
-
-    .form-label {
-        font-weight: 500;
-        font-size: 14px;
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        gap: 4px
-    }
-
-    .required::after {
-        content: "*";
-        color: var(--error);
-        margin-left: 2px
-    }
-
-    .form-input, .form-select, .form-textarea {
-        padding: 12px 14px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        font-family: inherit;
-        font-size: 14px;
-        background: var(--surface);
-        transition: var(--transition);
-        width: 100%
-    }
-
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(124,58,237,.1)
-        }
-
-        .form-input.error, .form-select.error, .form-textarea.error {
-            border-color: var(--error);
-            box-shadow: 0 0 0 3px rgba(239,68,68,.1)
-        }
-
-    .form-textarea {
-        min-height: 120px;
-        resize: vertical
-    }
-
-    .form-note {
-        font-size: 12px;
-        color: var(--text-muted);
-        margin-top: 4px
-    }
-
-    .form-error {
-        font-size: 12px;
-        color: var(--error);
-        margin-top: 4px;
-        display: none
-    }
-
-    .input-has-error {
-        border-color: var(--error) !important
-    }
-    /* Imágenes */
-    .image-upload-area {
-        border: 2px dashed var(--border);
-        border-radius: var(--radius-sm);
-        background: #f8fafc;
-        padding: 32px 20px;
-        text-align: center;
-        transition: var(--transition);
-        cursor: pointer;
-        position: relative
-    }
-
-        .image-upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(124,58,237,.02)
-        }
-
-        .image-upload-area.drag-over {
-            border-color: var(--primary);
-            background: rgba(124,58,237,.05)
-        }
-
-        .image-upload-area i {
-            font-size: 40px;
-            color: var(--text-muted);
-            margin-bottom: 12px
-        }
-
-    .gallery-preview {
-        display: grid;
-        grid-template-columns: repeat(auto-fill,minmax(140px,1fr));
-        gap: 16px;
-        margin-top: 16px
-    }
-
-    .image-thumbnail {
-        position: relative;
-        border-radius: var(--radius-sm);
-        overflow: hidden;
-        border: 1px solid var(--border);
-        aspect-ratio: 1/1;
-        transition: var(--transition)
-    }
-
-        .image-thumbnail:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg)
-        }
-
-        .image-thumbnail img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block
-        }
-
-    .image-actions {
-        position: absolute;
-        bottom: 8px;
-        right: 8px;
-        display: flex;
-        gap: 6px;
-        opacity: 0;
-        transition: var(--transition)
-    }
-
-    .image-thumbnail:hover .image-actions {
-        opacity: 1
-    }
-
-    .image-btn {
-        width: 32px;
-        height: 32px;
-        border: none;
-        border-radius: 6px;
-        background: rgba(255,255,255,.9);
-        color: var(--text-secondary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: var(--transition);
-        box-shadow: var(--shadow-sm)
-    }
-
-        .image-btn:hover {
-            background: var(--surface);
-            color: var(--primary);
-            transform: translateY(-1px)
-        }
-
-        .image-btn.active {
-            background: var(--primary);
-            color: #fff
-        }
-
-    .image-badge {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        background: var(--primary);
-        color: #fff;
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 10px;
-        font-weight: 600
-    }
-    /* Variantes */
-    .toggle-section {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 20px;
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: var(--radius-sm)
-    }
-
-    .toggle-label {
-        font-weight: 500;
-        color: var(--text-primary)
-    }
-
-    .toggle-switch {
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 26px
-    }
-
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0
-        }
-
-    .toggle-slider {
-        position: absolute;
-        cursor: pointer;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: #cbd5e1;
-        transition: var(--transition);
-        border-radius: 34px
-    }
-
-        .toggle-slider:before {
-            content: "";
-            position: absolute;
-            height: 18px;
-            width: 18px;
-            left: 4px;
-            bottom: 4px;
-            background: #fff;
-            transition: var(--transition);
-            border-radius: 50%
-        }
-
-    input:checked + .toggle-slider {
-        background: var(--primary)
-    }
-
-        input:checked + .toggle-slider:before {
-            transform: translateX(24px)
-        }
-
-    .tags-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 8px
-    }
-
-    .tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
-        background: #f1f5f9;
-        border: 1px solid #e2e8f0;
-        border-radius: 20px;
-        font-size: 13px;
-        color: var(--text-primary);
-        transition: var(--transition)
-    }
-
-    .tag-remove {
-        border: none;
-        background: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 16px;
-        height: 16px;
-        border-radius: 50%;
-        transition: var(--transition)
-    }
-
-        .tag-remove:hover {
-            background: var(--error);
-            color: #fff
-        }
-
-    .variants-table-container {
-        overflow-x: auto;
-        border: 1px solid var(--border);
-        border-radius: var(--radius-sm);
-        margin-top: 16px;
-        max-height: 400px;
-        overflow-y: auto
-    }
-
-    .variants-table {
-        width: 100%;
-        border-collapse: collapse
-    }
-
-        .variants-table th {
-            background: #f8fafc;
-            padding: 12px 16px;
-            text-align: left;
-            font-weight: 500;
-            font-size: 13px;
-            color: var(--text-secondary);
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0
-        }
-
-        .variants-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            font-size: 14px
-        }
-
-        .variants-table tr:last-child td {
-            border-bottom: none
-        }
-
-        .variants-table tr:hover td {
-            background: rgba(124,58,237,.02)
-        }
-
-    .variant-actions {
-        display: flex;
-        gap: 8px
-    }
-
-    .variant-input {
-        border: 1px solid var(--border);
-        border-radius: 4px;
-        padding: 6px 8px;
-        font-size: 13px;
-        width: 100%;
-        transition: var(--transition)
-    }
-
-        .variant-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(124,58,237,.1)
-        }
-
-        .variant-input.error {
-            border-color: var(--error)
-        }
-
-    .price-rules {
-        background: #f8fafc;
-        border-radius: var(--radius-sm);
-        padding: 16px;
-        margin-bottom: 16px
-    }
-
-    .price-rule {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-        padding: 12px;
-        background: #fff;
-        border-radius: var(--radius-sm);
-        border: 1px solid var(--border)
-    }
-
-        .price-rule:last-child {
-            margin-bottom: 0
-        }
-
-    .price-rule-input {
-        width: 120px !important
-    }
-
-    .form-sidebar {
-        position: sticky;
-        top: 24px;
-        height: fit-content
-    }
-
-    .action-card {
-        background: var(--surface);
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 20px;
-        margin-bottom: 24px
-    }
-
-    .action-title {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 16px;
-        color: var(--text-primary)
-    }
-
-    .form-actions {
-        display: flex;
-        flex-direction: column;
-        gap: 12px
-    }
-
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 12px 16px;
-        border: none;
-        border-radius: var(--radius-sm);
-        font-family: inherit;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: var(--transition);
-        text-decoration: none
-    }
-
-    .btn-primary {
-        background: var(--primary);
-        color: #fff
-    }
-
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow)
-        }
-
-    .btn-secondary {
-        background: #f1f5f9;
-        color: var(--text-primary);
-        border: 1px solid var(--border)
-    }
-
-        .btn-secondary:hover {
-            background: #e2e8f0
-        }
-
-    .btn-success {
-        background: var(--success);
-        color: #fff
-    }
-
-        .btn-success:hover {
-            background: #059669
-        }
-
-    .btn:disabled {
-        opacity: .6;
-        cursor: not-allowed;
-        transform: none !important
-    }
-
-    .alert {
-        padding: 12px 16px;
-        border-radius: var(--radius-sm);
-        margin-bottom: 20px;
-        display: flex;
-        align-items: center;
-        gap: 8px
-    }
-
-    .alert-success {
-        background: #ecfdf5;
-        border: 1px solid #a7f3d0;
-        color: #065f46
-    }
-
-    .alert-error {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        color: #991b1b
-    }
-
-    .summary-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-        border-bottom: 1px solid var(--border)
-    }
-
-        .summary-item:last-child {
-            border-bottom: none
-        }
-
-    @@media (max-width:1024px) {
-        .product-form-container {
-            grid-template-columns: 1fr;
-        }
-
-        .form-sidebar {
-            position: static;
-        }
-    }
-
-    @@media (max-width:768px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .page-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 16px;
-        }
-
-        .toggle-section {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-    }
-
-    .spinner {
-        width: 16px;
-        height: 16px;
-        border: 2px solid transparent;
-        border-top: 2px solid currentColor;
-        border-radius: 50%;
-        animation: spin 1s linear infinite
-    }
-
-    @@keyframes spin {
-        0% {
-            transform: rotate(0deg)
-        }
-
-        100% {
-            transform: rotate(360deg)
-        }
-    }
-</style>
-
-<div class="container">
-    <div class="page-header">
-        <div class="page-title">
-            <i class="fas fa-box-open"></i>
-            <h1>@ViewData["Title"]</h1>
-        </div>
-        <a class="back-btn" asp-controller="Panel" asp-action="Productos">
-            <i class="fas fa-arrow-left"></i> Volver a Productos
-        </a>
-    </div>
-
-    @if (TempData["Ok"] != null)
-    {
-        <div class="alert alert-success"><i class="fas fa-check-circle"></i>@TempData["Ok"]</div>
-    }
-    @if (TempData["Err"] != null)
-    {
-        <div class="alert alert-error"><i class="fas fa-exclamation-triangle"></i>@TempData["Err"]</div>
-    }
-
-    <div class="product-form-container">
-        <!-- MAIN -->
-        <div class="form-main">
-            <form method="post"
-                  asp-controller="Panel"
-                  asp-action="@(producto != null ? "EditarProducto" : "AnadirProducto")"
-                  enctype="multipart/form-data"
-                  id="productoForm"
-                  novalidate
-                  onsubmit="return validateForm()">
-
-                @Html.AntiForgeryToken()
-                @if (producto != null)
-                {
-                    <input type="hidden" name="ProductoID" value="@producto.ProductoID" />
-                }
-
+        <div class="row">
+            <div class="col-md-8">
                 <!-- Información Básica -->
-                <div class="form-section" aria-labelledby="sec-basic">
-                    <div class="section-header">
-                        <h2 class="section-title" id="sec-basic"><i class="fas fa-info-circle"></i>Información Básica</h2>
-                        <span class="section-badge" id="productTypeBadge">@(hasVariantesInit ? "Con Variantes" : "Producto Simple")</span>
-                    </div>
-                    <div class="section-content">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label required" for="NombreProducto">Nombre del Producto</label>
-                                <input class="form-input" id="NombreProducto" name="NombreProducto" maxlength="120" required
-                                       value="@(producto?.Nombre ?? "")" data-validation="required" />
-                                <div class="form-error" id="NombreProductoError">El nombre del producto es requerido</div>
-                            </div>
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="card-title mb-0">Información Básica</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="nombreProducto">Nombre del Producto *</label>
+                            <input class="form-control" id="nombreProducto" name="nombreProducto"
+                                   value="@producto?.Nombre" required maxlength="160">
+                        </div>
 
-                            <div class="form-group">
-                                <label class="form-label required" for="Marca">Marca</label>
-                                <input class="form-input" id="Marca" name="Marca" maxlength="80" required
-                                       value="@(producto?.Marca ?? "")" data-validation="required" />
-                                <div class="form-error" id="MarcaError">La marca es requerida</div>
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="descripcion">Descripción</label>
+                            <textarea class="form-control" id="descripcion" name="descripcion" rows="3">@producto?.Descripcion</textarea>
+                        </div>
 
-                            <div class="form-group">
-                                <label class="form-label required" for="CategoriaID">Categoría</label>
-                                <select class="form-select" id="CategoriaID" name="CategoriaID" required data-validation="required">
-                                    <option value="">Seleccione una categoría</option>
-                                    @foreach (var c in categorias)
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="marca">Marca</label>
+                                <input class="form-control" id="marca" name="marca" value="@producto?.Marca" maxlength="80">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="precioCompra">Precio de Compra *</label>
+                                <input type="number" inputmode="decimal" step="0.01" min="0"
+                                       class="form-control" id="precioCompra" name="precioCompra"
+                                       value="@(producto?.PrecioCompra.ToString(System.Globalization.CultureInfo.InvariantCulture))" required>
+                            </div>
+                            <div class="col-md-4" id="wrap-precio-venta" style="@(usarVariantes ? "display:none" : "")">
+                                <label class="form-label" for="precioVenta">Precio de Venta *</label>
+                                <input type="number" inputmode="decimal" step="0.01" min="0"
+                                       class="form-control" id="precioVenta" name="precioVenta"
+                                       value="@(producto?.PrecioVenta.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+                                       @(usarVariantes ? "disabled" : "required")>
+                            </div>
+                        </div>
+
+                        <!-- Toggle variantes -->
+                        <div class="form-check form-switch mt-3">
+                            <input class="form-check-input" type="checkbox" id="UsarVariantes" @(usarVariantes ? "checked" : null)>
+                            <label class="form-check-label" for="UsarVariantes">Gestionar por variantes (Color/Talla)</label>
+                            <small class="text-muted d-block">Si activas variantes, el precio/stock se toma por variante y el producto base no requiere talla/color.</small>
+                        </div>
+
+                        <!-- Campos de producto simple -->
+                        <div class="row g-3 mt-2" id="wrap-simple" style="@(usarVariantes ? "display:none" : "")">
+                            <div class="col-md-4">
+                                <label class="form-label" for="talla">Talla</label>
+                                <input class="form-control" id="talla" name="talla" value="@producto?.Talla" @(usarVariantes ? "disabled" : null)>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="color">Color</label>
+                                <input class="form-control" id="color" name="color" value="@producto?.Color" @(usarVariantes ? "disabled" : null)>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="stock">Stock *</label>
+                                <input type="number" min="0" class="form-control" id="stock" name="stock"
+                                       value="@(producto?.Stock ?? 0)" @(usarVariantes ? "disabled" : "required")>
+                            </div>
+                        </div>
+
+                        <!-- Variantes -->
+                        <div id="variantes-container" class="card mt-3" style="@(usarVariantes ? "" : "display:none")">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Variantes</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btn-agregar-variante">Agregar variante</button>
+                            </div>
+                            <div class="card-body">
+                                <div id="variantes-list">
+                                    @if (variantes.Any())
                                     {
-                                        <option value="@c.CategoriaID" selected="@(producto?.CategoriaID == c.CategoriaID ? "selected" : null)">@c.Nombre</option>
-                                    }
-                                </select>
-                                <div class="form-error" id="CategoriaIDError">La categoría es requerida</div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label required" for="SubcategoriaID">Subcategoría</label>
-                                <select class="form-select" id="SubcategoriaID" name="SubcategoriaID" required data-validation="required">
-                                    <option value="">Seleccione una subcategoría</option>
-                                    @if (producto != null)
-                                    {
-                                        foreach (var s in subcatsSrc.Where(x => x.CategoriaID == producto.CategoriaID))
+                                        foreach (var v in variantes)
                                         {
-                                            <option value="@s.SubcategoriaID" selected="@(producto.SubcategoriaID == s.SubcategoriaID ? "selected" : null)">@s.NombreSubcategoria</option>
+                                            <div class="variante-item card mb-3">
+                                                <div class="card-body">
+                                                    <div class="row g-2">
+                                                        <div class="col-md-3">
+                                                            <label class="form-label">Color *</label>
+                                                            <input class="form-control" name="VarColor" value="@v.Color" required>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label">Talla *</label>
+                                                            <input class="form-control" name="VarTalla" value="@v.Talla" required>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <label class="form-label">Precio Venta *</label>
+                                                            <input type="number"
+                                                                   inputmode="decimal"
+                                                                   step="0.01"
+                                                                   min="0"
+                                                                   class="form-control"
+                                                                   name="VarPrecioVenta"
+                                                                   value="@((producto?.PrecioVenta)?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                                                                   required>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <label class="form-label">Stock *</label>
+                                                            <input type="number" min="0" class="form-control" name="VarStock" value="@v.Stock" required>
+                                                        </div>
+                                                        <div class="col-md-2 d-flex align-items-end">
+                                                            <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">Quitar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         }
                                     }
-                                </select>
-                                <div class="form-note" id="subcategoriaNote">Seleccione primero una categoría</div>
-                                <div class="form-error" id="SubcategoriaIDError">La subcategoría es requerida</div>
-                            </div>
-
-                            <div class="form-group">
-                                <label class="form-label required" for="ProveedorID">Proveedor</label>
-                                <select class="form-select" id="ProveedorID" name="ProveedorID" required data-validation="required">
-                                    <option value="">Seleccione un proveedor</option>
-                                    @foreach (var p in proveedores)
-                                    {
-                                        <option value="@p.ProveedorID" selected="@(producto?.ProveedorID == p.ProveedorID ? "selected" : null)">@p.NombreProveedor</option>
-                                    }
-                                </select>
-                                <div class="form-error" id="ProveedorIDError">El proveedor es requerido</div>
-                            </div>
-
-                            <div class="form-group">
-                                <div class="form-group">
-                                    <label class="form-label required" for="PrecioCompra">Precio de Compra</label>
-                                    <input class="form-input" id="PrecioCompra" name="PrecioCompra"
-                                           type="text" inputmode="decimal" pattern="[\d.,]+"
-                                           value="@(producto != null ? producto.PrecioCompra.ToString("0.00", culture) : "")"
-                                           data-validation="required,number,min:0.01" />
-                                    <div class="form-error" id="PrecioCompraError">El precio de compra debe ser mayor a 0</div>
                                 </div>
-
-                                <div class="form-group">
-                                    <label class="form-label required" for="PrecioVenta">Precio de Venta</label>
-                                    <input class="form-input" id="PrecioVenta" name="PrecioVenta"
-                                           type="text" inputmode="decimal" pattern="[\d.,]+"
-                                           value="@(producto != null ? producto.PrecioVenta.ToString("0.00", culture) : "")"
-                                           data-validation="required,number,min:0.01" />
-                                    <div class="form-note" id="pvMargin" aria-live="polite"></div>
-                                    <div class="form-error" id="PrecioVentaError">El precio de venta debe ser mayor a 0</div>
-                                </div>
-
-                            <div class="form-group base-only">
-                                <label class="form-label" for="Color">Color</label>
-                                <input class="form-input" id="Color" name="Color" maxlength="40" value="@(producto?.Color ?? "")" />
-                            </div>
-
-                            <div class="form-group base-only">
-                                <label class="form-label" for="Talla">Talla</label>
-                                <input class="form-input" id="Talla" name="Talla" maxlength="40" value="@(producto?.Talla ?? "")" />
-                            </div>
-
-                            <div class="form-group base-only">
-                                <label class="form-label required" for="Stock">Stock</label>
-                                <input class="form-input" id="Stock" name="Stock" type="number" min="0" step="1" required
-                                       value="@(producto?.Stock ?? 0)" data-validation="required,number,min:0" />
-                                <div class="form-error" id="StockError">El stock debe ser 0 o mayor</div>
-                            </div>
-
-                            <div class="form-group form-grid-full">
-                                <label class="form-label required" for="Descripcion">Descripción</label>
-                                <textarea class="form-textarea" id="Descripcion" name="Descripcion" maxlength="500" required
-                                          data-validation="required">@((producto?.Descripcion ?? ""))</textarea>
-                                <div class="form-error" id="DescripcionError">La descripción es requerida</div>
-                                <div class="form-note" style="text-align:right;">
-                                    <span id="charCount">@((producto?.Descripcion?.Length ?? 0))</span>/500 caracteres
-                                </div>
+                                <small class="text-muted">Evita duplicados de combinación Color/Talla. El sistema valida y no permite precios ≤ precio de compra.</small>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- Imágenes -->
-                <div class="form-section" aria-labelledby="sec-images">
-                    <div class="section-header">
-                        <h2 class="section-title" id="sec-images"><i class="fas fa-images"></i>Imágenes del Producto</h2>
-                        <span class="section-badge" id="imageCountBadge">@imgCountInit/8 imágenes</span>
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between">
+                        <h5 class="card-title mb-0">Imágenes (máx. 8)</h5>
+                        <small class="text-muted"><span id="img-count">@galeria.Count</span>/8</small>
                     </div>
-                    <div class="section-content">
-                        <div class="image-upload-area" id="imageUploadArea" tabindex="0">
-                            <i class="fas fa-cloud-arrow-up"></i>
-                            <p>Arrastra y suelta las imágenes aquí</p>
-                            <span>o haz clic para seleccionar archivos</span>
-
-                            <input type="file" id="Imagenes" name="Imagenes" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="display:none" />
-                            <input type="file" id="ImagenLegacy" name="Imagen" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none" />
-
-                            <input type="hidden" id="ImagenPrincipalIndex" name="ImagenPrincipalIndex" value="0" />
-                            <input type="hidden" id="ExistingImagenPath" name="ExistingImagenPath" value="@(ViewBag.Portada ?? producto?.ImagenPath ?? "")" />
-                            <input type="hidden" id="ImagenesIgnore" name="ImagenesIgnore" />
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="Imagenes">Subir Imágenes</label>
+                            <input type="file" class="form-control" id="Imagenes" name="Imagenes" multiple accept="image/*">
+                            <small class="text-muted">Puedes seleccionar varias imágenes.</small>
                         </div>
 
-                        <div id="galeria" class="gallery-preview" aria-live="polite">
-                            @if (galListTop != null && galListTop.Any())
+                        <div id="imagenes-preview" class="row">
+                            @if (galeria.Any())
                             {
-                                var portada = ViewBag.Portada as string ?? producto?.ImagenPath ?? "";
-                                foreach (var url in galListTop)
+                                for (int i = 0; i < galeria.Count; i++)
                                 {
-                                    var isCover = string.Equals(portada, url, StringComparison.OrdinalIgnoreCase);
-                                    <div class="image-thumbnail" data-existing="1" data-url="@url">
-                                        @if (isCover)
-                                        {
-                                            <span class="image-badge">Principal</span>
-                                        }
-                                        <img src="@url" alt="Imagen del producto" loading="lazy" />
-                                        <div class="image-actions">
-                                            <button type="button" class="image-btn @(isCover ? "active" : "")" onclick="markExistingCover(this, '@url')" title="Marcar como principal"><i class="fas fa-star"></i></button>
-                                            <button type="button" class="image-btn" onclick="flagExistingRemoval(this, '@url')" title="Eliminar imagen"><i class="fas fa-trash"></i></button>
+                                    <div class="col-md-3 mb-3 imagen-preview-item" data-url="@galeria[i]" data-is-new="0">
+                                        <div class="card">
+                                            <img src="@galeria[i]" class="card-img-top" style="height:150px;object-fit:cover;">
+                                            <div class="card-body p-2 d-flex flex-column gap-2">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio"
+                                                           name="existingImagenPath" value="@galeria[i]"
+                                                           @(string.Equals(portada, galeria[i], System.StringComparison.OrdinalIgnoreCase) ? "checked" : null)>
+                                                    <label class="form-check-label">Principal</label>
+                                                </div>
+                                                <button type="button" class="btn btn-sm btn-danger btn-eliminar-imagen">Eliminar</button>
+                                            </div>
                                         </div>
                                     </div>
                                 }
                             }
-                            else if (!string.IsNullOrWhiteSpace(producto?.ImagenPath))
-                            {
-                                <div class="image-thumbnail" data-existing="1" data-url="@producto.ImagenPath">
-                                    <span class="image-badge">Principal</span>
-                                    <img src="@producto.ImagenPath" alt="Imagen actual del producto" loading="lazy" />
-                                    <div class="image-actions">
-                                        <button type="button" class="image-btn active" onclick="markExistingCover(this, '@producto.ImagenPath')" title="Marcar como principal"><i class="fas fa-star"></i></button>
-                                        <button type="button" class="image-btn" onclick="flagExistingRemoval(this, '@producto.ImagenPath')" title="Eliminar imagen"><i class="fas fa-trash"></i></button>
-                                    </div>
-                                </div>
-                            }
                         </div>
                     </div>
-                </div>
-
-                <!-- Variantes -->
-                @{
-                    decimal minVarPrice = 0m, maxVarPrice = 0m;
-                    if (hasVariantesInit && variantesInit.Any())
-                    {
-                        minVarPrice = variantesInit.Min(v => (v.PrecioVenta ?? 0m));
-                        maxVarPrice = variantesInit.Max(v => (v.PrecioVenta ?? 0m));
-                    }
-                }
-                <div class="form-section" aria-labelledby="sec-variants">
-                    <div class="section-header">
-                        <h2 class="section-title" id="sec-variants"><i class="fas fa-layer-group"></i>Variantes del Producto</h2>
-                        <span class="section-badge" id="variantCountBadge">@(hasVariantesInit? variantesInit.Count + " variantes" : "0 variantes")</span>
-                    </div>
-                    <div class="section-content">
-                        <div class="toggle-section">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="chkVariantes" @(hasVariantesInit ? "checked" : "") />
-                                <span class="toggle-slider"></span>
-                            </label>
-                            <span class="toggle-label">Activar variantes (Color × Talla)</span>
-                            <span class="form-note">Con variantes, ingresa el <strong>precio final</strong> por combinación.</span>
-                        </div>
-
-                        <div id="boxVariantes" style="display:@(hasVariantesInit ? "block" : "none");">
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label class="form-label" for="inpColores">Colores</label>
-                                    <input class="form-input" id="inpColores" placeholder="Negro, Vino, Marrón" />
-                                    <div class="tags-container" id="tagsColores">
-                                        @if (hasVariantesInit)
-                                        {
-                                            foreach (var color in variantesInit.Select(v => v.Color).Distinct())
-                                            {
-                                                <span class="tag">
-                                                    @color
-                                                    <button type="button" class="tag-remove" onclick="removeTag(this, 'color')"><i class="fas fa-times"></i></button>
-                                                    <input type="hidden" name="Colores" value="@color" />
-                                                </span>
-                                            }
-                                        }
-                                    </div>
-                                </div>
-
-                                <div class="form-group">
-                                    <label class="form-label" for="inpTallas">Tallas</label>
-                                    <input class="form-input" id="inpTallas" placeholder="S, M, L, XL" />
-                                    <div class="tags-container" id="tagsTallas">
-                                        @if (hasVariantesInit)
-                                        {
-                                            foreach (var talla in variantesInit.Select(v => v.Talla).Distinct())
-                                            {
-                                                <span class="tag">
-                                                    @talla
-                                                    <button type="button" class="tag-remove" onclick="removeTag(this, 'talla')"><i class="fas fa-times"></i></button>
-                                                    <input type="hidden" name="Tallas" value="@talla" />
-                                                </span>
-                                            }
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="price-rules">
-                                <div class="price-rule">
-                                    <label class="toggle-switch"><input type="checkbox" id="chkPrecioGlobal" /><span class="toggle-slider"></span></label>
-                                    <span class="toggle-label">Un solo precio para todas</span>
-                                    <div style="display:flex;gap:8px;align-items:center">
-                                        <input class="form-input price-rule-input" id="inpPrecioGlobal" type="number" step="0.01" min="0" placeholder="0.00" disabled />
-                                        <button type="button" class="btn btn-success" id="btnApplyGlobal" disabled>Aplicar</button>
-                                    </div>
-                                </div>
-
-                                <div class="price-rule">
-                                    <label class="toggle-switch"><input type="checkbox" id="chkPrecioPorTalla" /><span class="toggle-slider"></span></label>
-                                    <span class="toggle-label">Mismo precio por talla</span>
-                                </div>
-                                <div id="boxPrecioPorTalla" style="display:none;margin-top:8px;"></div>
-                            </div>
-
-                            <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;flex-wrap:wrap;">
-                                <button type="button" class="btn btn-primary" id="btnGen"><i class="fas fa-table"></i> Generar combinaciones</button>
-                                <button type="button" class="btn btn-secondary" id="btnClearVars" title="Limpiar"><i class="fas fa-eraser"></i> Limpiar</button>
-                            </div>
-
-                            <div class="variants-table-container">
-                                <table class="variants-table" id="tblVars" aria-live="polite">
-                                    <thead>
-                                        <tr>
-                                            <th>Color</th>
-                                            <th>Talla</th>
-                                            <th>Precio</th>
-                                            <th>Stock</th>
-                                            <th>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @if (hasVariantesInit)
-                                        {
-                                            var i = 0;
-                                            foreach (var variante in variantesInit)
-                                            {
-                                                <tr>
-                                                    <td>
-                                                        <input type="hidden" name="Variantes[@i].Color" value="@variante.Color" />
-                                                        <span>@variante.Color</span>
-                                                    </td>
-                                                    <td>
-                                                        <input type="hidden" name="Variantes[@i].Talla" value="@variante.Talla" />
-                                                        <span>@variante.Talla</span>
-                                                    </td>
-                                                        <td>
-                                                            <input class="variant-input" name="Variantes[@i].Precio"
-                                                                   type="text" inputmode="decimal" pattern="[\d.,]+"
-                                                                   value="@((variante.PrecioVenta ?? 0m).ToString("0.00", culture))"
-                                                                   required />
-                                                        </td>
-
-                                                    <td>
-                                                        <input class="variant-input" name="Variantes[@i].Stock" type="number" step="1" min="0" value="@variante.Stock" required />
-                                                    </td>
-                                                    <td>
-                                                        <div class="variant-actions">
-                                                            <button type="button" class="image-btn" title="Eliminar" onclick="removeVariant(this)"><i class="fas fa-trash"></i></button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                                i++;
-                                            }
-                                        }
-                                    </tbody>
-                                </table>
-                                <div class="form-note" id="noteVars" style="padding:16px;text-align:center;@(hasVariantesInit ? "display:none" : "")">No hay variantes generadas.</div>
-                            </div>
-
-                            <div id="variantSummary" style="display:@(hasVariantesInit ? "block" : "none");margin-top:16px;padding:16px;background:#f8fafc;border-radius:12px;">
-                                <h4 style="margin-bottom:12px;font-size:14px;font-weight:600;">Resumen de Variantes</h4>
-                                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
-                                    <div class="summary-item"><span>Total de combinaciones:</span><span class="summary-value" id="summaryTotal">@(hasVariantesInit? variantesInit.Count: 0)</span></div>
-                                    <div class="summary-item"><span>Stock total:</span><span class="summary-value" id="summaryStock">@(hasVariantesInit? variantesInit.Sum(v => v.Stock) : 0)</span></div>
-                                    <div class="summary-item"><span>Precio mínimo:</span><span class="summary-value" id="summaryMinPrice">@minVarPrice.ToString("C2", culture)</span></div>
-                                    <div class="summary-item"><span>Precio máximo:</span><span class="summary-value" id="summaryMaxPrice">@maxVarPrice.ToString("C2", culture)</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </form>
-        </div>
-
-        <!-- SIDEBAR -->
-        <div class="form-sidebar">
-            <div class="action-card">
-                <h3 class="action-title">Acciones</h3>
-                <div class="form-actions">
-                    <button class="btn btn-primary" id="btnSubmit" type="submit" form="productoForm">
-                        <i class="fas fa-floppy-disk"></i>Guardar Producto
-                    </button>
-                    <a asp-controller="Panel" asp-action="Productos" class="btn btn-secondary">
-                        <i class="fas fa-times"></i>Cancelar
-                    </a>
-                </div>
-                <div class="form-note" style="margin-top:12px;text-align:center;">
-                    <i class="fas fa-clock"></i> <span id="lastSaved">No guardado</span>
                 </div>
             </div>
 
-            <div class="action-card">
-                <h3 class="action-title">Vista Previa</h3>
-                <div class="form-note">
-                    <div class="summary-item"><span>Tipo:</span><span class="summary-value" id="previewType">@(hasVariantesInit ? "Con Variantes" : "Producto Simple")</span></div>
-                    <div class="summary-item"><span>Stock total:</span><span class="summary-value" id="previewStock">@(producto?.Stock ?? 0) unidades</span></div>
-                    <div class="summary-item"><span>Precio final:</span><span class="summary-value" id="previewPrice">@((producto?.PrecioVenta ?? 0m).ToString("C2", culture))</span></div>
-                    <div class="summary-item"><span>Margen:</span><span class="summary-value" id="previewMargin">@(((producto?.PrecioVenta ?? 0m) - (producto?.PrecioCompra ?? 0m)).ToString("C2", culture))</span></div>
-                    <div class="summary-item"><span>Imágenes:</span><span class="summary-value" id="previewImages">@imgCountInit</span></div>
-                </div>
-            </div>
+            <!-- LADO DERECHO -->
+            <div class="col-md-4">
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="card-title mb-0">Categorías y Proveedor</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label" for="categoriaID">Categoría *</label>
+                            <select class="form-control" id="categoriaID" name="categoriaID" asp-for="CategoriaID"
+                                    asp-items="@(new SelectList(categorias, "CategoriaID", "Nombre", producto?.CategoriaID))" required>
+                                <option value="">Seleccione una categoría</option>
+                            </select>
+                        </div>
 
-            <div class="action-card" id="validationCard" style="display:none;">
-                <h3 class="action-title" style="color:var(--error);"><i class="fas fa-exclamation-triangle"></i> Errores de Validación</h3>
-                <div class="form-note"><ul id="validationErrors" style="color:var(--error);font-size:13px;padding-left:16px;"></ul></div>
+                        <div class="mb-3">
+                            <label class="form-label" for="subcategoriaID">Subcategoría *</label>
+                            <select class="form-control" id="subcategoriaID" name="subcategoriaID" data-selected="@producto?.SubcategoriaID" required
+                                    asp-items="@(new SelectList(subcatsForSelectedCat, "SubcategoriaID", "NombreSubcategoria", producto?.SubcategoriaID))">
+                                <option value="">Seleccione una subcategoría</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="proveedorID">Proveedor *</label>
+                            <select class="form-control" id="proveedorID" name="proveedorID" asp-for="ProveedorID"
+                                    asp-items="@(new SelectList(proveedores, "ProveedorID", "NombreProveedor", producto?.ProveedorID))" required>
+                                <option value="">Seleccione un proveedor</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Guardar Producto</button>
+            <a asp-action="Productos" class="btn btn-secondary">Cancelar</a>
+        </div>
+
+        <input type="hidden" name="ImagenesIgnore" id="ImagenesIgnore" value="[]" />
+        <!-- Para nuevas imágenes como portada (índice relativo a NUEVAS) -->
+        <input type="hidden" name="ImagenPrincipalIndex" id="ImagenPrincipalIndex" value="-1" />
+    </form>
 </div>
 
 @section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-    <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
-
     <script>
-        (() => {
-            "use strict";
+        (function () {
+            // ===== Variantes ON/OFF =====
+            function toggleVariantesUI(on) {
+                if (on) {
+                    $('#variantes-container').show();
+                    $('#wrap-precio-venta, #wrap-simple').hide();
+                    $('#precioVenta, #stock, #talla, #color').prop('disabled', true).prop('required', false);
+                } else {
+                    $('#variantes-container').hide();
+                    $('#wrap-precio-venta, #wrap-simple').show();
+                    $('#precioVenta, #stock').prop('disabled', false).prop('required', true);
+                    $('#talla, #color').prop('disabled', false);
+                }
+            }
+            $('#UsarVariantes').on('change', function () {
+                toggleVariantesUI($(this).is(':checked'));
+            });
+            toggleVariantesUI($('#UsarVariantes').is(':checked'));
 
-            // ---------- Helpers ----------
-            const $  = (id) => document.getElementById(id);
-            const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-            // "15,00" / "15.00" / "15" -> número real
-            const toNum = (x) => {
-                const s = (x ?? "").toString()
-                    .replace(/\s+/g, "")
-                    .replace(/\.(?=\d{3}(?:\D|$))/g, "")   // quita miles con punto
-                    .replace(/,(?=\d{1,2}(?:\D|$))/g, "."); // coma decimal -> punto
-                const n = parseFloat(s);
-                return Number.isFinite(n) ? n : 0;
-            };
-
-            // Para inputs type=number: SIEMPRE con punto
-            const toFixedDot = (n) => (Number.isFinite(n) ? n : 0).toFixed(2);
-
-            // Para ENVIAR a servidor (es-EC): con coma y sin miles
-            const toEs = (n) => (Number.isFinite(n) ? n : 0)
-                .toLocaleString("es-EC", { useGrouping: false, minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-            const fmtUSD = (n) => new Intl.NumberFormat("es-EC", { style:"currency", currency:"USD", minimumFractionDigits:2 }).format(n||0);
-            const debounce = (fn, ms=120)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms);} };
-            const toast = (t,k="info",ms=3600)=>{
-                const bg = {info:"linear-gradient(135deg,var(--primary),var(--primary-light))",
-                            success:"linear-gradient(135deg,var(--success),#34d399)",
-                            warning:"linear-gradient(135deg,var(--warning),#fbbf24)",
-                            error:"linear-gradient(135deg,var(--error),#f87171)"}[k];
-                Toastify({text:t,duration:ms,gravity:"top",position:"right",stopOnFocus:true,style:{background:bg}}).showToast();
-            };
-
-            const STATE = {
-                hasVariants: @(hasVariantesInit ? "true" : "false"),
-                isSubmitting: false,
-                validationErrors: [],
-                objectUrls: new Set(),
-                initialCatId: @(producto != null ? producto.CategoriaID : 0),
-                initialSubId: @(producto != null ? producto.SubcategoriaID : 0),
-                subcategorias: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-                                    subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID })
-                            ))
-        };
-
-            document.addEventListener("DOMContentLoaded", () => {
-                initializeForm();
-                setupEventListeners();
-                updatePreview();
+            // ===== Agregar / quitar variante =====
+            $('#btn-agregar-variante').on('click', function () {
+                const tpl = `
+                <div class="variante-item card mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label">Color *</label>
+                                <input class="form-control" name="VarColor" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Talla *</label>
+                                <input class="form-control" name="VarTalla" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Precio Venta *</label>
+                                <input type="number" inputmode="decimal" step="0.01" min="0" class="form-control" name="VarPrecioVenta" required>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Stock *</label>
+                                <input type="number" min="0" class="form-control" name="VarStock" required>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-danger w-100 btn-quitar-variante">Quitar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+                $('#variantes-list').append(tpl);
+            });
+            $(document).on('click', '.btn-quitar-variante', function () {
+                $(this).closest('.variante-item').remove();
             });
 
-            function initializeForm(){
-                initializeSubcategories();
-                initializePricing();
-                initializeImages();
-                initializeVariants();
-                initializeValidation();
-                hookFormSubmit();
+            // ===== Imágenes =====
+            let imagenesIgnore = [];                 // URLs existentes a eliminar
+            const $imagenesInput = $('#Imagenes');
+            const fileMap = new Map();              // uid -> File (mantiene orden de inserción)
+            let uidSeq = 0;
+
+            function updateFileInputFromMap() {
+                const dt = new DataTransfer();
+                for (const f of fileMap.values()) dt.items.add(f);
+                $imagenesInput[0].files = dt.files;
             }
 
-            // ---------- Subcategorías ----------
-            function initializeSubcategories(){
-                const selCat=$("CategoriaID"), selSub=$("SubcategoriaID");
-                if(!selCat||!selSub) return;
+            function updateImgCount() {
+                const count = $('#imagenes-preview .imagen-preview-item').length;
+                $('#img-count').text(count);
+            }
 
-                const fillSubs=(catId)=>{
-                    selSub.innerHTML='<option value="">Seleccione una subcategoría</option>';
-                    const note=$("subcategoriaNote");
-                    if(!catId){ selSub.disabled=true; if(note) note.style.display="block"; return; }
-                    const list = STATE.subcategorias.filter(x=>x.CategoriaID==catId);
-                    for(const s of list){
-                        const o=document.createElement("option");
-                        o.value=s.SubcategoriaID; o.textContent=s.NombreSubcategoria;
-                        selSub.appendChild(o);
-                    }
-                    selSub.disabled = list.length===0;
-                    if(note) note.style.display = list.length===0 ? "block":"none";
-                    if(!list.length) toast("No hay subcategorías para esta categoría","warning");
-                };
+            function reindexNewImageRadios() {
+                const $newItems = $('#imagenes-preview .imagen-preview-item[data-is-new="1"]');
+                $newItems.each(function (idx) {
+                    $(this).find('input[type=radio][name=ImagenPrincipalIndex]').val(idx);
+                });
+                // Si no hay nueva seleccionada, y ninguna existente marcada, poner -1
+                if ($('input[name="ImagenPrincipalIndex"]:checked').length === 0 &&
+                    $('input[name="existingImagenPath"]:checked').length === 0) {
+                    $('#ImagenPrincipalIndex').val(-1);
+                }
+            }
 
-                const currentCat = parseInt(selCat.value||"0",10);
-                if(currentCat){
-                    fillSubs(currentCat);
-                    if (STATE.initialSubId) selSub.value = String(STATE.initialSubId);
+            // Carga nuevas imágenes
+            $imagenesInput.on('change', function () {
+                const files = Array.from(this.files || []);
+                const $preview = $('#imagenes-preview');
+                const current = $preview.children().length;
+
+                if (current + files.length > 8) {
+                    alert('No puede exceder 8 imágenes.');
+                    // Restaurar a los que ya estaban en el Map (sin los recién seleccionados)
+                    updateFileInputFromMap();
+                    return;
                 }
 
-                selCat.addEventListener("change", e=>{
-                    const newCatId = parseInt(e.target.value||"0",10);
-                    fillSubs(newCatId);
+                files.forEach((file) => {
+                    // Si ya está (mismo objeto), sáltalo
+                    if ([...fileMap.values()].includes(file)) return;
 
-                    const keep = Array.from(selSub.options).some(o=>o.value===String(STATE.initialSubId));
-                    selSub.value = keep ? String(STATE.initialSubId) : "";
-                    validateField(selCat);
-                });
-                selSub.addEventListener("change", ()=>validateField(selSub));
-            }
+                    const uid = 'f' + (++uidSeq);
+                    fileMap.set(uid, file);
 
-            // ---------- Precios ----------
-            function initializePricing(){
-                const pc=$("PrecioCompra"), pv=$("PrecioVenta"), pvMargin=$("pvMargin");
-                if(!pc||!pv||!pvMargin) return;
-
-                // NO reescribimos el valor en blur (para que no “desaparezca”):
-                const refresh=()=>{
-                    const a=toNum(pc.value), b=toNum(pv.value);
-                    if(!STATE.hasVariants){
-                        const ok=b>a;
-                        pvMargin.textContent = `Margen vs compra: ${fmtUSD(b-a)} ${ok?"":"(insuficiente)"}`;
-                        pvMargin.style.color = ok ? "var(--text-muted)" : "var(--error)";
-                    }else{
-                        pvMargin.textContent="Con variantes, ingresa el precio final por combinación.";
-                        pvMargin.style.color="var(--text-muted)";
-                    }
-                    updatePreview();
-                };
-
-                ["input","change","blur"].forEach(ev=>{
-                    pc.addEventListener(ev,debounce(refresh,80));
-                    pv.addEventListener(ev,debounce(refresh,80));
-                });
-
-                refresh();
-            }
-
-            // ---------- Imágenes ----------
-            function initializeImages(){
-                const MAX_FILES=8, MAX_MB=8;
-                const ALLOWED_TYPES=["image/jpeg","image/png","image/webp","image/gif"];
-                const gal=$("galeria"), uploadArea=$("imageUploadArea"), filesInput=$("Imagenes");
-                const portadaIdx=$("ImagenPrincipalIndex");
-                const imageCountBadge=$("imageCountBadge");
-                if(!gal||!uploadArea||!filesInput) return;
-
-                let files=[];
-
-                const showError=(m)=> toast(m,"error");
-
-                const validateFile=(f)=>{
-                    if(!ALLOWED_TYPES.includes(f.type)){ showError("Formato no permitido. Use JPEG, PNG, WebP o GIF."); return false; }
-                    if(f.size > MAX_MB*1024*1024){ showError(`El archivo es demasiado grande. Máximo ${MAX_MB}MB.`); return false; }
-                    return true;
-                };
-
-                const updateImageCount=()=>{
-                    const existingCount = $$('#galeria .image-thumbnail[data-existing="1"]:not(.removed)').length;
-                    const newCount      = files.length;
-                    const total         = existingCount + newCount;
-                    if(imageCountBadge) imageCountBadge.textContent = `${total}/${MAX_FILES} imágenes`;
-                    const preview=$("previewImages"); if(preview) preview.textContent = total;
-                    return total;
-                };
-
-                const createImageThumbnail=(file,isNew=true)=>{
-                    const card=document.createElement("div");
-                    card.className="image-thumbnail";
-                    if(isNew) card.dataset.new="1";
-
-                    const img=document.createElement("img");
-                    const url=URL.createObjectURL(file); STATE.objectUrls.add(url);
-                    img.src=url; img.alt="Vista previa de imagen"; img.loading="lazy";
-
-                    const actions=document.createElement("div"); actions.className="image-actions";
-                    const starBtn=document.createElement("button"); starBtn.type="button"; starBtn.className="image-btn"; starBtn.title="Marcar como principal"; starBtn.innerHTML='<i class="fas fa-star"></i>';
-                    starBtn.onclick=()=>markAsCover(card,isNew);
-                    const delBtn=document.createElement("button"); delBtn.type="button"; delBtn.className="image-btn"; delBtn.title="Eliminar imagen"; delBtn.innerHTML='<i class="fas fa-trash"></i>';
-                    delBtn.onclick=()=>removeImage(card,isNew,url);
-
-                    actions.appendChild(starBtn); actions.appendChild(delBtn);
-                    card.appendChild(img); card.appendChild(actions);
-                    return card;
-                };
-
-                const markAsCover=(card,isNew)=>{
-                    $$('.image-badge').forEach(b=>b.remove());
-                    $$('.image-btn.active').forEach(b=>b.classList.remove('active'));
-
-                    const badge=document.createElement("span"); badge.className="image-badge"; badge.textContent="Principal";
-                    card.appendChild(badge);
-                    const starBtn=card.querySelector('.image-btn'); if(starBtn) starBtn.classList.add('active');
-
-                    if(isNew){
-                        const newCards = $$('#galeria .image-thumbnail[data-new="1"]');
-                        const index = newCards.indexOf(card);
-                        if(portadaIdx) portadaIdx.value = String(index >= 0 ? index : 0);
-                        const existing = $("ExistingImagenPath"); if(existing) existing.value = "";
-                    }else{
-                        const url=card.dataset.url;
-                        const existing=$("ExistingImagenPath"); if(existing) existing.value = url || "";
-                        if(portadaIdx) portadaIdx.value = "-1";
-                    }
-                };
-
-                const removeImage=(card,isNew,url)=>{
-                    if(!confirm("¿Está seguro de que desea eliminar esta imagen?")) return;
-                    if(isNew){
-                        const idx = $$('#galeria .image-thumbnail[data-new="1"]').indexOf(card);
-                        if(idx>=0) files.splice(idx,1);
-                        if(url){ URL.revokeObjectURL(url); STATE.objectUrls.delete(url); }
-                    }else{
-                        card.classList.add('removed'); card.style.opacity="0.4";
-                        const ignore = $("ImagenesIgnore");
-                        if(ignore){
-                            let arr=[]; try{ arr=JSON.parse(ignore.value||"[]"); }catch{ arr=[]; }
-                            const u = card.dataset.url; if(u) arr.push(u);
-                            ignore.value = JSON.stringify(arr);
-                        }
-                    }
-                    card.remove(); updateImageCount();
-                };
-
-                const handleFileSelection=(fileList)=>{
-                    const newFiles = Array.from(fileList).filter(validateFile);
-                    const current  = updateImageCount();
-                    const slots    = MAX_FILES - current;
-                    if(slots<=0){ showError(`Límite de ${MAX_FILES} imágenes alcanzado.`); return; }
-                    const toAdd    = newFiles.slice(0,slots);
-                    if(!toAdd.length) return;
-
-                    files.push(...toAdd);
-                    toAdd.forEach(f=>gal.appendChild(createImageThumbnail(f,true)));
-                    updateImageCount();
-
-                    const dt=new DataTransfer();
-                    files.forEach(f=>dt.items.add(f));
-                    filesInput.files=dt.files;
-                };
-
-                uploadArea.addEventListener("click",()=>filesInput.click());
-                uploadArea.addEventListener("dragover",e=>{e.preventDefault();uploadArea.classList.add("drag-over");});
-                uploadArea.addEventListener("dragleave",()=>uploadArea.classList.remove("drag-over"));
-                uploadArea.addEventListener("drop",e=>{e.preventDefault();uploadArea.classList.remove("drag-over");handleFileSelection(e.dataTransfer.files);});
-                filesInput.addEventListener("change",e=>{handleFileSelection(e.target.files); e.target.value="";});
-
-                window.addEventListener("beforeunload",(e)=>{
-                    if (STATE.isSubmitting) return;
-                    const form=$("productoForm");
-                    if(form && form.checkValidity && !form.checkValidity()){ e.preventDefault(); e.returnValue=""; }
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const card = `
+                        <div class="col-md-3 mb-3 imagen-preview-item" data-is-new="1" data-uid="${uid}">
+                            <div class="card">
+                                <img src="${e.target.result}" class="card-img-top" style="height:150px;object-fit:cover;">
+                                <div class="card-body p-2 d-flex flex-column gap-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="ImagenPrincipalIndex" value="0">
+                                        <label class="form-check-label">Principal</label>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-danger btn-eliminar-imagen">Eliminar</button>
+                                </div>
+                            </div>
+                        </div>`;
+                        $preview.append(card);
+                        reindexNewImageRadios();
+                        updateImgCount();
+                    };
+                    reader.readAsDataURL(file);
                 });
 
-                window.addEventListener("unload", ()=>{
-                    STATE.objectUrls.forEach(u=>{ try{ URL.revokeObjectURL(u);}catch{} });
-                    STATE.objectUrls.clear();
-                });
+                // Refrescar input real a partir del Map (para poder eliminar antes de enviar)
+                updateFileInputFromMap();
+            });
 
-                updateImageCount();
-            }
+            // Elegir principal nueva
+            $(document).on('change', 'input[name="ImagenPrincipalIndex"]', function () {
+                // Nada que hacer: el value ya está reindexado por DOM
+            });
 
-            // Globales para imágenes existentes
-            window.markExistingCover=(btn,url)=>{
-                const card=btn.closest('.image-thumbnail'); if(!card) return;
-                $$('.image-badge').forEach(b=>b.remove());
-                $$('.image-btn.active').forEach(b=>b.classList.remove('active'));
-                const badge=document.createElement("span"); badge.className="image-badge"; badge.textContent="Principal"; card.appendChild(badge);
-                btn.classList.add('active');
-                const existing=$("ExistingImagenPath"); if(existing) existing.value=url||"";
-                const idx=$("ImagenPrincipalIndex"); if(idx) idx.value="-1";
-            };
-            window.flagExistingRemoval=(btn,url)=>{
-                const card=btn.closest('.image-thumbnail'); if(!card||!confirm("¿Eliminar esta imagen?")) return;
-                card.classList.add('removed'); card.style.opacity="0.4";
-                const ignore=$("ImagenesIgnore");
-                if(ignore){
-                    let arr=[]; try{arr=JSON.parse(ignore.value||"[]");}catch{arr=[];}
-                    arr.push(url); ignore.value=JSON.stringify(arr);
-                }
-            };
+            // Elegir principal existente
+            $(document).on('change', 'input[name="existingImagenPath"]', function () {
+                // Desmarcar selección de nuevas (para evitar ambigüedad visual)
+                $('input[name="ImagenPrincipalIndex"]').prop('checked', false);
+                $('#ImagenPrincipalIndex').val(-1);
+            });
 
-            // ---------- Variantes ----------
-            function initializeVariants(){
-                const box=$("boxVariantes"), chk=$("chkVariantes");
-                if(!box||!chk) return;
+            // Eliminar imagen (nueva o existente)
+            $(document).on('click', '.btn-eliminar-imagen', function () {
+                const $item = $(this).closest('.imagen-preview-item');
+                const isNew = $item.attr('data-is-new') === '1';
+                const url = $item.attr('data-url');
 
-                const baseOnlyWraps = $$(".base-only");
-                const baseOnlyInputs = $$(".base-only input, .base-only select, .base-only textarea");
-                const precioVentaEl = $("PrecioVenta");
-                const badge=$("productTypeBadge");
-
-                const setBaseOnlyEnabled = (enabled)=>{
-                    baseOnlyWraps.forEach(x=>x.style.display = enabled ? "flex" : "none");
-                    baseOnlyInputs.forEach(i=> i.disabled = !enabled);
-                    if(precioVentaEl) precioVentaEl.disabled = !enabled;
-                };
-
-                const toggle=()=>{
-                    const on=chk.checked; STATE.hasVariants=on;
-                    box.style.display = on ? "block":"none";
-                    setBaseOnlyEnabled(!on);
-                    if(badge) badge.textContent = on ? "Con Variantes":"Producto Simple";
-                    const pt=$("previewType"); if(pt) pt.textContent = on ? "Con Variantes":"Producto Simple";
-                    updatePreview();
-                };
-                chk.addEventListener("change",toggle);
-                setBaseOnlyEnabled(!STATE.hasVariants);
-
-                const inpCol=$("inpColores"), inpTal=$("inpTallas");
-                const tagsCol=$("tagsColores"), tagsTal=$("tagsTallas");
-
-                const addTag=(val,cont,type)=>{
-                    const v = (val||"").trim();
-                    if(!v) return;
-                    const selector = type==='color' ? 'input[name="Colores"]' : 'input[name="Tallas"]';
-                    const exists = Array.from(cont.querySelectorAll(selector)).some(i=> (i.value||"").toLowerCase()===v.toLowerCase());
-                    if(exists){ toast("Ese valor ya está en la lista","warning"); return; }
-
-                    const t=document.createElement("span");
-                    t.className="tag";
-                    t.innerHTML = `${v}
-                        <button type="button" class="tag-remove" onclick="removeTag(this,'${type}')"><i class="fas fa-times"></i></button>
-                        <input type="hidden" name="${type==='color'?'Colores':'Tallas'}" value="${v}" />`;
-                    cont.appendChild(t);
-                };
-                const handleTag=(input,container,type)=>{
-                    if(!input||!container) return;
-                    input.addEventListener("keydown",e=>{
-                        if(e.key==="Enter"||e.key===","){ e.preventDefault(); addTag(input.value,container,type); input.value=""; updateVariantCount(); }
-                    });
-                    input.addEventListener("blur",()=>{ if(input.value.trim()){ addTag(input.value,container,type); input.value=""; updateVariantCount(); } });
-                };
-                handleTag(inpCol,tagsCol,'color'); handleTag(inpTal,tagsTal,'talla');
-
-                const btnGen=$("btnGen"), btnClear=$("btnClearVars");
-                if(btnGen) btnGen.addEventListener("click",generateCombinations);
-                if(btnClear){
-                    btnClear.addEventListener("click",()=>{
-                        if(!confirm("¿Está seguro de limpiar todas las variantes?")) return;
-                        const tb=document.querySelector("#tblVars tbody"); if(tb) tb.innerHTML="";
-                        $("noteVars").style.display="block"; $("variantSummary").style.display="none";
-                        updateVariantCount();
-                    });
+                if (isNew) {
+                    const uid = $item.attr('data-uid');
+                    if (uid && fileMap.has(uid)) {
+                        fileMap.delete(uid);
+                        updateFileInputFromMap();
+                    }
+                } else if (url) {
+                    // Existe en servidor -> agregar a ignore
+                    imagenesIgnore.push(url);
+                    $('#ImagenesIgnore').val(JSON.stringify(imagenesIgnore));
                 }
 
-                // Reglas de precio
-                const chkGlobal=$("chkPrecioGlobal"), inpGlobal=$("inpPrecioGlobal"), btnApplyGlobal=$("btnApplyGlobal");
-                if(chkGlobal && inpGlobal && btnApplyGlobal){
-                    chkGlobal.addEventListener("change",()=>{ inpGlobal.disabled=!chkGlobal.checked; btnApplyGlobal.disabled=!chkGlobal.checked; });
-                            btnApplyGlobal.addEventListener("click",()=>{
-          const price = toNum(inpGlobal.value);
-          if(price <= 0){ toast("Ingrese un precio válido para aplicar","warning"); return; }
-          $$('input[name$=".Precio"]').forEach(i => i.value = toEs(price)); // <-- coma
-          updateVariantSummary(); toast("Precio aplicado a todas las variantes","success");
-        });
-
+                // Si era portada, limpiar radios
+                if ($item.find('input[type=radio]:checked').length) {
+                    $('input[name="ImagenPrincipalIndex"]').prop('checked', false);
+                    $('input[name="existingImagenPath"]').prop('checked', false);
+                    $('#ImagenPrincipalIndex').val(-1);
                 }
 
-                const chkPorTalla=$("chkPrecioPorTalla"), boxPorTalla=$("boxPrecioPorTalla");
-                if(chkPorTalla && boxPorTalla){
-                    chkPorTalla.addEventListener("change",()=>{
-                        boxPorTalla.style.display = chkPorTalla.checked ? "block":"none";
-                        if(!chkPorTalla.checked) return;
+                $item.remove();
+                reindexNewImageRadios();
+                updateImgCount();
+            });
 
-                        const tallas = $$('#tagsTallas .tag input').map(i=>i.value);
-                        boxPorTalla.innerHTML="";
-                        tallas.forEach(t=>{
-                            const row=document.createElement("div");
-                            row.style.cssText="display:flex;align-items:center;gap:8px;margin-bottom:8px";
-                            row.innerHTML=`<span style="min-width:80px;">${t}</span><input type="number" step="0.01" class="form-input price-rule-input" data-talla="${t}" placeholder="0.00" />`;
-                            boxPorTalla.appendChild(row);
-                        });
-                        const apply=document.createElement("button");
-                        apply.type="button"; apply.className="btn btn-success"; apply.textContent="Aplicar"; apply.style.marginTop="8px";
-                        apply.onclick=()=>{
-                            const map={}; $$("input[data-talla]").forEach(i=>{ const v=toNum(i.value); if(v>0) map[i.getAttribute("data-talla")] = v; });
-                            $$("#tblVars tbody tr").forEach(tr=>{
-                                const talla = tr.querySelector('input[name$=".Talla"]')?.value;
-                                const priceInput = tr.querySelector('input[name$=".Precio"]');
-                                if(talla && map[talla] && priceInput) priceInput.value = toEs(map[talla]); // <-- coma
+            // ===== Subcategorías por categoría (AJAX) =====
+            function fillSubcats(catId, selected) {
+                const $sub = $('#subcategoriaID');
+                $sub.empty().append('<option value="">Seleccione una subcategoría</option>');
+                if (!catId) return;
 
-                            });
-                            updateVariantSummary(); toast("Precios aplicados por talla","success");
-                        };
-                        boxPorTalla.appendChild(apply);
-                    });
-                }
-
-                updateVariantCount();
-            }
-
-            window.removeTag=(btn)=>{ const tag=btn.closest('.tag'); if(tag) tag.remove(); updateVariantCount(); };
-
-            function generateCombinations(){
-                const colors=$$('#tagsColores .tag input').map(i=>i.value.trim()).filter(Boolean);
-                const sizes =$$('#tagsTallas  .tag input').map(i=>i.value.trim()).filter(Boolean);
-                const tb=document.querySelector("#tblVars tbody"); const note=$("noteVars");
-                if(!tb) return;
-                if(!colors.length||!sizes.length){ toast("Agregue al menos un color y una talla","warning"); return; }
-
-                const existing = new Set($$("#tblVars tbody tr").map(tr=>{
-                    const c = tr.querySelector('input[name$=".Color"]')?.value?.toLowerCase()||"";
-                    const t = tr.querySelector('input[name$=".Talla"]')?.value?.toLowerCase()||"";
-                    return `${c}|||${t}`;
-                }));
-
-                colors.forEach(color=>{
-                    sizes.forEach(size=>{
-                        const key = `${color.toLowerCase()}|||${size.toLowerCase()}`;
-                        if(existing.has(key)) return;
-                        existing.add(key);
-                        const tr=document.createElement("tr");
-                              tr.innerHTML = `
-        <td><span>${color}</span><input type="hidden" name="Variantes[0].Color" value="${color}"></td>
-        <td><span>${size}</span><input type="hidden" name="Variantes[0].Talla" value="${size}"></td>
-        <td><input class="variant-input" name="Variantes[0].Precio"
-                   type="text" inputmode="decimal" pattern="[\\d.,]+"
-                   placeholder="0,00" required oninput="validateVariantInput(this)"></td>
-        <td><input class="variant-input" name="Variantes[0].Stock"
-                   type="number" step="1" min="0" placeholder="0" required oninput="validateVariantInput(this)"></td>
-        <td><div class="variant-actions"><button type="button" class="image-btn" title="Eliminar" onclick="removeVariant(this)"><i class="fas fa-trash"></i></button></div></td>`;
-
-                        tb.appendChild(tr);
+                $.get('@Url.Action("GetSubcategoriasByCategoria", "Panel")', { categoriaID: catId }, function (data) {
+                    $.each(data, function (_, item) {
+                        const $opt = $('<option/>', { value: item.value, text: item.text });
+                        if (selected && String(item.value) === String(selected)) $opt.attr('selected', 'selected');
+                        $sub.append($opt);
                     });
                 });
-                reindexVariantRows();
-                if(note) note.style.display="none";
-                $("variantSummary").style.display="block";
-                updateVariantCount(); updateVariantSummary();
-                toast(`${colors.length * sizes.length} combinaciones procesadas`,"success");
             }
-
-            function reindexVariantRows(){
-                $$("#tblVars tbody tr").forEach((tr,i)=>{
-                    const setName=(sel,prop)=>{ const el=tr.querySelector(sel); if(el) el.name=`Variantes[${i}].${prop}`; };
-                    setName('input[name$=".Color"]',"Color");
-                    setName('input[name$=".Talla"]',"Talla");
-                    setName('input[name$=".Precio"]',"Precio");
-                    setName('input[name$=".Stock"]',"Stock");
-                });
-            }
-
-            window.removeVariant=(btn)=>{
-                const tr=btn.closest('tr'); if(!tr) return;
-                if(!confirm("¿Eliminar esta variante?")) return;
-                tr.remove(); reindexVariantRows(); updateVariantCount(); updateVariantSummary();
-                if(!$("tblVars").querySelector("tbody tr")){ $("noteVars").style.display="block"; $("variantSummary").style.display="none"; }
-            };
-
-            window.validateVariantInput=(input)=>{
-                const value=toNum(input.value), min=toNum(input.getAttribute("min")||0);
-                if(value<min) input.classList.add("error"); else input.classList.remove("error");
-                updateVariantSummary();
-            };
-
-            function updateVariantCount(){
-                const count=$$("#tblVars tbody tr").length;
-                const badge=$("variantCountBadge"); if(badge) badge.textContent=`${count} variante${count!==1?'s':''}`;
-            }
-
-            function updateVariantSummary(){
-                const rows=$$("#tblVars tbody tr");
-                const summary=$("variantSummary");
-                if(!rows.length){ if(summary) summary.style.display="none"; return; }
-                let totalStock=0, minPrice=Infinity, maxPrice=0;
-                rows.forEach(row=>{
-                    const price=toNum(row.querySelector('input[name$=".Precio"]')?.value);
-                    const stock=toNum(row.querySelector('input[name$=".Stock"]')?.value);
-                    totalStock+=stock;
-                    if(price>0){ minPrice=Math.min(minPrice,price); maxPrice=Math.max(maxPrice,price); }
-                });
-                $("summaryTotal").textContent=rows.length;
-                $("summaryStock").textContent=totalStock;
-                $("summaryMinPrice").textContent=fmtUSD(minPrice===Infinity?0:minPrice);
-                $("summaryMaxPrice").textContent=fmtUSD(maxPrice);
-                summary.style.display="block";
-                const previewStock=$("previewStock"); if(previewStock) previewStock.textContent=`${totalStock} unidades`;
-            }
-
-            // ---------- Validación / Envío ----------
-            function initializeValidation(){
-                const desc=$("Descripcion"), cc=$("charCount");
-                if(cc) cc.textContent=(desc?.value??"").length;
-                if(desc && cc){
-                    desc.addEventListener("input",debounce(()=>{
-                        const len=(desc.value||"").length;
-                        cc.textContent=len; cc.style.color = len>500 ? "var(--error)":"var(--text-muted)";
-                        validateField(desc);
-                    },100));
+            $('#categoriaID').on('change', function () {
+                fillSubcats($(this).val(), null);
+            });
+            // Si abrimos en edición y el select de subcats está vacío, cargarlo
+            (function initSubcatsOnLoad() {
+                const catVal = $('#categoriaID').val();
+                const selected = $('#subcategoriaID').data('selected');
+                if (catVal && $('#subcategoriaID option').length <= 1) {
+                    fillSubcats(catVal, selected);
                 }
-                $$("[data-validation]").forEach(f=>{
-                    f.addEventListener("blur",()=>validateField(f));
-                    f.addEventListener("input",()=>{ f.classList.remove("input-has-error","error"); const e=$(f.id+"Error"); if(e) e.style.display="none"; });
-                });
-            }
-
-            function validateField(field){
-                const rules=field.getAttribute("data-validation")||"";
-                const value=(field.value||"").trim(); const errorEl=$(field.id+"Error");
-                let ok=true, msg="";
-                if(rules.includes("required") && !value){ ok=false; msg=errorEl?.textContent || "Este campo es requerido"; }
-                else if(rules.includes("number") && value){
-                    const num=toNum(value);
-                    if(isNaN(num)) { ok=false; msg="Debe ser un número válido"; }
-                    else if(rules.includes("min:0.01") && num<0.01){ ok=false; msg="Debe ser mayor a 0"; }
-                    else if(rules.includes("min:0") && num<0){ ok=false; msg="Debe ser mayor o igual a 0"; }
-                }
-                if(ok){ field.classList.remove("input-has-error","error"); if(errorEl) errorEl.style.display="none"; }
-                else { field.classList.add("input-has-error","error"); if(errorEl){ errorEl.textContent=msg; errorEl.style.display="block"; } }
-                return ok;
-            }
-
-            function showValidationErrors(){
-                const card=$("validationCard"), list=$("validationErrors"); if(!card||!list) return;
-                list.innerHTML=""; STATE.validationErrors.forEach(e=>{ const li=document.createElement("li"); li.textContent=e; list.appendChild(li); });
-                card.style.display = STATE.validationErrors.length>0 ? "block":"none";
-                const first=document.querySelector(".input-has-error,.error"); if(first){ first.scrollIntoView({behavior:"smooth",block:"center"}); first.focus?.(); }
-            }
-
-            // Al ENVIAR: convertir a "es-EC" (coma) para el binder del servidor
-                    function normalizeNumbersBeforeSubmit(){
-          ['PrecioCompra','PrecioVenta'].forEach(id=>{
-            const el=$(id);
-            if(el && el.value) el.value = toEs(toNum(el.value));   // 20 -> "20,00"
-          });
-          $$('input[name^="Variantes"][name$=".Precio"]').forEach(i=>{
-            if(i.value) i.value = toEs(toNum(i.value));            // "12,50"
-          });
-          $$('input[name^="Variantes"][name$=".Stock"]').forEach(i=>{
-            if(i.value) i.value = String(Math.max(0, Math.trunc(toNum(i.value))));
-          });
-        }
-
-
-            function updatePreview(){
-                const pc=toNum($("PrecioCompra")?.value), pv=toNum($("PrecioVenta")?.value);
-                const stock = STATE.hasVariants ? (toNum($("summaryStock")?.textContent||0)) : toNum($("Stock")?.value);
-                const finalPrice=pv, margin=finalPrice-pc;
-                if($("previewPrice"))  $("previewPrice").textContent = fmtUSD(finalPrice);
-                if($("previewMargin")) $("previewMargin").textContent= fmtUSD(margin);
-                if($("previewStock"))  $("previewStock").textContent = `${stock} unidades`;
-                if($("lastSaved"))     $("lastSaved").textContent    = `Editado: ${new Date().toLocaleTimeString()}`;
-            }
-
-            function validateForm(){
-                if(STATE.isSubmitting){ toast("El formulario ya se está enviando...","warning"); return false; }
-                STATE.validationErrors=[];
-
-                $$("[data-validation]").forEach(f=>{
-                    if(!validateField(f)){
-                        const label=f.previousElementSibling?.textContent?.replace('*','')?.trim() || f.name;
-                        STATE.validationErrors.push(`${label} es requerido o inválido`);
-                    }
-                });
-
-                if(!STATE.hasVariants){
-                    const pc=toNum($("PrecioCompra")?.value), pv=toNum($("PrecioVenta")?.value);
-                    if(!(pv>pc)){
-                        STATE.validationErrors.push("El precio de venta debe ser mayor al precio de compra");
-                        $("PrecioVenta")?.classList.add("input-has-error","error");
-                    }
-                }else{
-                    const rows=$$("#tblVars tbody tr");
-                    if(!rows.length){
-                        STATE.validationErrors.push("Debe agregar al menos una variante cuando las variantes están activadas");
-                    }else{
-                        let hasErr=false, pc=toNum($("PrecioCompra")?.value);
-                        rows.forEach(row=>{
-                            const p=row.querySelector('input[name$=".Precio"]');
-                            const s=row.querySelector('input[name$=".Stock"]');
-                            const price=toNum(p?.value), stock=toNum(s?.value);
-                            if(!p?.value || price<=0 || price<=pc){ p?.classList.add("error"); hasErr=true; }
-                            if(!s?.value || stock<0){ s?.classList.add("error"); hasErr=true; }
-                        });
-                        if(hasErr) STATE.validationErrors.push("Algunas variantes tienen precios o stocks inválidos (el precio debe ser > compra)");
-                    }
-                }
-
-                const imageCount = $$('#galeria .image-thumbnail:not(.removed)').length;
-                if(imageCount===0) STATE.validationErrors.push("Debe agregar al menos una imagen");
-
-                if(STATE.validationErrors.length>0){ showValidationErrors(); toast("Corrija los errores antes de enviar","error"); return false; }
-
-                // Convertir a coma justo antes de POST
-                normalizeNumbersBeforeSubmit();
-
-                STATE.isSubmitting=true;
-                const btn=$("btnSubmit"); if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner spinner"></i> Guardando...'; }
-
-                // Si no hay variantes, elimina inputs de Variantes
-                if(!STATE.hasVariants) $$('input[name^="Variantes["]').forEach(i=>i.remove());
-
-                toast("Guardando producto...","info");
-                return true;
-            }
-
-            function hookFormSubmit(){
-                const form=$("productoForm"); if(!form) return;
-                form.addEventListener("submit",(e)=>{
-                    if(!validateForm()){
-                        e.preventDefault(); STATE.isSubmitting=false;
-                        const btn=$("btnSubmit"); if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-floppy-disk"></i> Guardar Producto'; }
-                    }
-                });
-            }
-
-            // ---------- Otros listeners ----------
-            function setupEventListeners(){
-                setInterval(()=>{ if(document.activeElement?.form===$("productoForm")){ const ls=$("lastSaved"); if(ls) ls.textContent=`Auto-guardado: ${new Date().toLocaleTimeString()}`; } },30000);
-
-                if(window.innerWidth<768){
-                    $$(".form-input,.form-select,.form-textarea").forEach(i=>{
-                        i.addEventListener("focus",function(){ this.scrollIntoView({behavior:"smooth",block:"center"}); });
-                    });
-                }
-
-                $$("#NombreProducto,#Marca,#Stock,#PrecioCompra,#PrecioVenta").forEach(i=>{
-                    i.addEventListener("input",debounce(updatePreview,200));
-                });
-            }
+            })();
         })();
     </script>
 }

@@ -34,12 +34,14 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Descuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("PrecioUnitario")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductoID")
@@ -49,6 +51,7 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Subtotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("VentaID")
@@ -201,33 +204,6 @@ namespace Simone.Data.Migrations
                     b.HasIndex("UsuarioId");
 
                     b.ToTable("ActividadesUsuarios");
-                });
-
-            modelBuilder.Entity("Simone.Models.AsistenciaEmpleados", b =>
-                {
-                    b.Property<int>("AsistenciaID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AsistenciaID"));
-
-                    b.Property<int>("EmpleadoID")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("Fecha")
-                        .HasColumnType("datetime2");
-
-                    b.Property<TimeSpan?>("HoraEntrada")
-                        .HasColumnType("time");
-
-                    b.Property<TimeSpan?>("HoraSalida")
-                        .HasColumnType("time");
-
-                    b.HasKey("AsistenciaID");
-
-                    b.HasIndex("EmpleadoID");
-
-                    b.ToTable("AsistenciaEmpleados");
                 });
 
             modelBuilder.Entity("Simone.Models.AuditoriaProductos", b =>
@@ -475,6 +451,7 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Total")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("CompraID");
@@ -596,12 +573,14 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("PrecioUnitario")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Subtotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("DetalleCompraID");
@@ -628,12 +607,14 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("PrecioUnitario")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
                     b.Property<decimal?>("Subtotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("DetalleID");
@@ -766,6 +747,7 @@ namespace Simone.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("Monto")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Observaciones")
@@ -790,9 +772,11 @@ namespace Simone.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<decimal>("PrecioAnterior")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PrecioNuevo")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductoID")
@@ -817,16 +801,29 @@ namespace Simone.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ImagenID"));
 
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Principal")
+                        .HasColumnType("bit");
+
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
                     b.Property<string>("RutaImagen")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(300)");
 
                     b.HasKey("ImagenID");
 
-                    b.HasIndex("ProductoID");
+                    b.HasIndex("ProductoID", "RutaImagen")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ImagenesProductos_Producto_Ruta");
+
+                    b.HasIndex(new[] { "ProductoID", "RutaImagen" }, "IX_ImagenesProductos_Producto_Ruta")
+                        .IsUnique();
 
                     b.ToTable("ImagenesProductos");
                 });
@@ -999,7 +996,9 @@ namespace Simone.Data.Migrations
                         .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTime>("FechaAgregado")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
 
                     b.Property<string>("ImagenPath")
                         .HasMaxLength(300)
@@ -1015,9 +1014,11 @@ namespace Simone.Data.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.Property<decimal>("PrecioCompra")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PrecioVenta")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProveedorID")
@@ -1040,15 +1041,18 @@ namespace Simone.Data.Migrations
 
                     b.HasKey("ProductoID");
 
-                    b.HasIndex("CategoriaID");
-
                     b.HasIndex("ProveedorID");
 
                     b.HasIndex("SubcategoriaID");
 
-                    b.HasIndex("VendedorID");
+                    b.HasIndex("CategoriaID", "SubcategoriaID");
 
-                    b.ToTable("Productos");
+                    b.HasIndex("VendedorID", "Nombre");
+
+                    b.ToTable("Productos", t =>
+                        {
+                            t.HasCheckConstraint("CK_Producto_Precios", "[PrecioCompra] >= 0 AND [PrecioVenta] >= 0 AND [Stock] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Simone.Models.ProductoImagen", b =>
@@ -1059,26 +1063,44 @@ namespace Simone.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductoImagenID"));
 
-                    b.Property<DateTime>("CreadoUtc")
+                    b.Property<int?>("Alto")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Ancho")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaSubidaUtc")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Orden")
-                        .HasColumnType("int");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
 
                     b.Property<string>("Path")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<long?>("PesoBytes")
+                        .HasColumnType("bigint");
+
                     b.Property<bool>("Principal")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
                     b.HasKey("ProductoImagenID");
 
-                    b.HasIndex("ProductoID");
+                    b.HasIndex("ProductoID", "Path")
+                        .IsUnique();
 
                     b.ToTable("ProductoImagenes");
                 });
@@ -1097,19 +1119,23 @@ namespace Simone.Data.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ImagenPath")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<decimal?>("PrecioCompra")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal?>("PrecioVenta")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
                     b.Property<string>("SKU")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
 
                     b.Property<int>("Stock")
                         .HasColumnType("int");
@@ -1121,10 +1147,20 @@ namespace Simone.Data.Migrations
 
                     b.HasKey("ProductoVarianteID");
 
+                    b.HasIndex("SKU")
+                        .IsUnique()
+                        .HasFilter("[SKU] IS NOT NULL");
+
                     b.HasIndex("ProductoID", "Color", "Talla")
                         .IsUnique();
 
-                    b.ToTable("ProductoVariantes");
+                    b.HasIndex(new[] { "ProductoID", "Color", "Talla" }, "UX_ProductoVariante_Producto_Color_Talla")
+                        .IsUnique();
+
+                    b.ToTable("ProductoVariantes", t =>
+                        {
+                            t.HasCheckConstraint("CK_ProductoVariante_Valores", "([PrecioCompra] IS NULL OR [PrecioCompra] >= 0) AND ([PrecioVenta] IS NULL OR [PrecioVenta] > 0) AND [Stock] >= 0");
+                        });
                 });
 
             modelBuilder.Entity("Simone.Models.ProgramasFidelizacion", b =>
@@ -1139,6 +1175,7 @@ namespace Simone.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Descuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("NombrePrograma")
@@ -1169,6 +1206,7 @@ namespace Simone.Data.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<decimal>("Descuento")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("FechaFin")
@@ -1493,6 +1531,7 @@ namespace Simone.Data.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UsuarioId")
@@ -1628,17 +1667,6 @@ namespace Simone.Data.Migrations
                     b.Navigation("Usuario");
                 });
 
-            modelBuilder.Entity("Simone.Models.AsistenciaEmpleados", b =>
-                {
-                    b.HasOne("Simone.Models.Empleados", "Empleado")
-                        .WithMany()
-                        .HasForeignKey("EmpleadoID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Empleado");
-                });
-
             modelBuilder.Entity("Simone.Models.AuditoriaProductos", b =>
                 {
                     b.HasOne("Simone.Models.Producto", "Producto")
@@ -1664,7 +1692,7 @@ namespace Simone.Data.Migrations
                     b.HasOne("Simone.Models.Carrito", "Carrito")
                         .WithMany("CarritoDetalles")
                         .HasForeignKey("CarritoID")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Simone.Models.Producto", "Producto")
@@ -1856,7 +1884,7 @@ namespace Simone.Data.Migrations
                     b.HasOne("Simone.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Producto");

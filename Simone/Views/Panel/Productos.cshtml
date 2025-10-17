@@ -7,10 +7,10 @@
 @{
     ViewData["Type"] = "Productos";
     ViewData["Title"] = "Gestión de " + ViewData["Type"];
-    var lowStockThreshold = 10;
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
+    var lowStockThreshold = 10;
 
-    // Diccionario de galerías (opcional)
+    // Diccionario de galerías precalculadas (opcional)
     var galeriasDict = ViewBag.Galerias as Dictionary<int, List<string>>;
 }
 
@@ -22,156 +22,147 @@
 
 <style>
     :root {
-        --primary-dark: #1A1A1A;
-        --primary-light: #FFFFFF;
-        --accent-purple: #4B0082;
-        --accent-gold: #D4AF37;
-        --light-gray: #F8F8F8;
-        --medium-gray: #E0E0E0;
-        --dark-gray: #333;
-        --text-color: #333;
-        --text-light: #777;
-        --success-color: #28a745;
-        --warning-color: #ffc107;
-        --danger-color: #dc3545;
-        --info-color: #17a2b8
+        --primary: #4B0082;
+        --primary-2: #5E2D8C;
+        --text: #333;
+        --muted: #777;
+        --bg: #f5f5f7;
+        --white: #fff;
+        --gray-100: #F8F8F8;
+        --gray-200: #E0E0E0;
+        --gray-500: #999;
+        --gray-700: #333;
+        --success: #28a745;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --info: #17a2b8;
+        --shadow: 0 5px 15px rgba(0,0,0,.05);
     }
 
     body {
         font-family: 'Montserrat',sans-serif;
-        background: #f5f5f7;
-        color: var(--text-color)
+        background: var(--bg);
+        color: var(--text);
     }
 
     h1, h2, h3, h4, h5, h6 {
         font-family: 'Playfair Display',serif;
-        font-weight: 700
+        font-weight: 700;
     }
 
     .management-container {
         max-width: 1400px;
         margin: 2rem auto;
-        padding: 0 15px
+        padding: 0 16px;
     }
 
     .management-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        gap: 10px;
         padding: 1.25rem 1.5rem;
-        background: #fff;
         border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0,0,0,.05)
+        background: var(--white);
+        box-shadow: var(--shadow);
+        margin-bottom: 1.25rem;
     }
 
     .management-title {
+        margin: 0;
         font-size: 1.8rem;
-        color: var(--accent-purple);
+        color: var(--primary);
         display: flex;
         align-items: center;
-        margin: 0
-    }
-
-        .management-title i {
-            margin-right: 1rem
-        }
-
-    .header-actions {
-        display: flex;
         gap: .75rem;
-        align-items: center;
-        flex-wrap: wrap
     }
 
     .pill-btn, .add-btn {
         border: none;
-        padding: .65rem 1.25rem;
         border-radius: 30px;
+        padding: .65rem 1.1rem;
         font-weight: 600;
         display: inline-flex;
         align-items: center;
         gap: .5rem;
-        transition: .25s;
-        text-decoration: none
-    }
-
-    .add-btn {
-        background: linear-gradient(135deg,var(--accent-purple),#5E2D8C);
-        color: #fff
-    }
-
-        .add-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(75,0,130,.3)
-        }
-
-    .pill-btn {
-        background: #fff;
-        border: 1px solid var(--medium-gray);
-        color: var(--dark-gray)
+        background: var(--white);
+        color: var(--gray-700);
+        border: 1px solid var(--gray-200);
+        transition: .2s;
+        text-decoration: none;
     }
 
         .pill-btn.active {
-            background: var(--accent-purple);
+            background: var(--primary);
+            border-color: var(--primary);
             color: #fff;
-            border-color: var(--accent-purple)
+        }
+
+    .add-btn {
+        background: linear-gradient(135deg,var(--primary),var(--primary-2));
+        color: #fff;
+        border: 0;
+    }
+
+        .add-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(75,0,130,.28);
         }
 
     .stats-cards {
         display: grid;
         grid-template-columns: repeat(auto-fit,minmax(200px,1fr));
-        gap: 1rem;
-        margin-bottom: 1.25rem
+        gap: 12px;
+        margin-bottom: 12px;
     }
 
     .stat-card {
         background: #fff;
-        padding: 1rem 1.25rem;
+        padding: 1rem 1.1rem;
         border-radius: 12px;
-        box-shadow: 0 5px 15px rgba(0,0,0,.05);
+        box-shadow: var(--shadow);
         text-align: center;
-        border-left: 4px solid var(--accent-purple)
+        border-left: 4px solid var(--primary);
     }
 
     .stat-number {
         font-size: 1.6rem;
+        color: var(--primary);
         font-weight: 700;
-        color: var(--accent-purple)
     }
 
     .stat-label {
-        color: var(--text-light);
+        color: var(--muted);
         font-size: .85rem;
+        text-transform: uppercase;
         letter-spacing: .5px;
-        text-transform: uppercase
     }
 
     .toolbar {
         display: flex;
         gap: .75rem;
         flex-wrap: wrap;
-        margin-bottom: 1rem
+        margin: 0 0 1rem 0;
     }
 
     .search-box {
         flex: 1;
         min-width: 260px;
-        position: relative
+        position: relative;
     }
 
     .search-input {
         width: 100%;
-        padding: .75rem 2.5rem .75rem 2.5rem;
-        border: 1px solid var(--medium-gray);
+        border: 1px solid var(--gray-200);
         border-radius: 30px;
-        font-size: .95rem
+        padding: .75rem 2.6rem .75rem 2.5rem;
+        font-size: .95rem;
     }
 
         .search-input:focus {
             outline: none;
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 0 3px rgba(75,0,130,.1)
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(75,0,130,.1);
         }
 
     .search-icon {
@@ -179,7 +170,7 @@
         left: 1rem;
         top: 50%;
         transform: translateY(-50%);
-        color: var(--text-light)
+        color: var(--muted);
     }
 
     .clear-icon {
@@ -188,22 +179,21 @@
         top: 50%;
         transform: translateY(-50%);
         background: transparent;
-        border: none;
-        color: #999;
-        cursor: pointer
+        border: 0;
+        color: var(--gray-500);
     }
 
     .filter-select {
         padding: .7rem 1rem;
-        border: 1px solid var(--medium-gray);
+        border: 1px solid var(--gray-200);
         border-radius: 30px;
         background: #fff;
-        min-width: 150px
+        min-width: 150px;
     }
 
         .filter-select:focus {
             outline: none;
-            border-color: var(--accent-purple)
+            border-color: var(--primary);
         }
 
     .management-table {
@@ -213,128 +203,123 @@
         background: #fff;
         border-radius: 12px;
         overflow: hidden;
-        box-shadow: 0 5px 15px rgba(0,0,0,.05)
+        box-shadow: var(--shadow);
     }
 
         .management-table th {
-            background: var(--accent-purple);
+            background: var(--primary);
             color: #fff;
             padding: 1rem;
             text-align: left;
-            font-weight: 500
+            font-weight: 500;
         }
 
             .management-table th.sortable {
-                cursor: pointer
+                cursor: pointer;
             }
 
             .management-table th .sort-indicator {
                 opacity: .7;
-                margin-left: .35rem
+                margin-left: .35rem;
             }
 
         .management-table td {
             padding: 1rem;
-            border-bottom: 1px solid var(--medium-gray);
-            vertical-align: middle
-        }
-
-        .management-table tr:last-child td {
-            border-bottom: none
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: middle;
         }
 
         .management-table tr:hover td {
-            background: rgba(75,0,130,.03)
+            background: rgba(75,0,130,.03);
         }
 
-    .hidden-by-page {
-        display: none !important
-    }
-
-    .product-image {
+    .product-image, .no-image {
         width: 80px;
         height: 80px;
-        object-fit: cover;
         border-radius: 8px;
-        border: 1px solid var(--medium-gray)
+        border: 1px solid var(--gray-200);
     }
 
     .no-image {
-        width: 80px;
-        height: 80px;
-        background: var(--light-gray);
-        border-radius: 8px;
+        background: #f1f1f1;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: var(--text-light);
-        font-size: .8rem
+        color: var(--muted);
+        font-size: .85rem;
     }
 
     .action-btn {
-        border: none;
-        border-radius: 50%;
         width: 36px;
         height: 36px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-right: .35rem;
-        transition: .2s;
-        cursor: pointer
+        border-radius: 50%;
+        border: 0;
+        margin-right: .3rem;
+        cursor: pointer;
     }
 
     .edit-btn {
         background: rgba(23,162,184,.1);
-        color: var(--info-color)
+        color: var(--info);
     }
 
         .edit-btn:hover {
-            background: var(--info-color);
-            color: #fff
+            background: var(--info);
+            color: #fff;
         }
 
     .delete-btn {
         background: rgba(220,53,69,.1);
-        color: var(--danger-color)
+        color: var(--danger);
     }
 
         .delete-btn:hover {
-            background: var(--danger-color);
-            color: #fff
+            background: var(--danger);
+            color: #fff;
         }
 
     .variants-btn {
         background: rgba(108,117,125,.1);
-        color: var(--dark-gray)
+        color: #444;
     }
 
         .variants-btn:hover {
-            background: var(--dark-gray);
-            color: #fff
+            background: #444;
+            color: #fff;
         }
 
     .stock-indicator {
         display: inline-block;
-        padding: .25rem .75rem;
+        padding: .25rem .65rem;
         border-radius: 20px;
         font-size: .85rem;
-        font-weight: 500
+        font-weight: 600;
     }
 
     .stock-high {
         background: rgba(40,167,69,.1);
-        color: var(--success-color)
+        color: var(--success);
     }
 
     .stock-low {
         background: rgba(255,193,7,.15);
-        color: var(--warning-color)
+        color: var(--warning);
     }
 
     .stock-out {
         background: rgba(220,53,69,.12);
-        color: var(--danger-color)
+        color: var(--danger);
+    }
+
+    .category-badge {
+        background: rgba(75,0,130,.1);
+        color: var(--primary);
+        padding: .2rem .55rem;
+        border-radius: 16px;
+        font-size: .78rem;
     }
 
     .variant-badge {
@@ -346,89 +331,46 @@
         padding: .25rem .6rem;
         border-radius: 20px;
         font-size: .75rem;
-        font-weight: 600;
-        margin-left: .5rem
+        font-weight: 700;
     }
 
     .variant-count {
-        background: var(--accent-purple);
-        color: #fff;
         width: 18px;
         height: 18px;
         border-radius: 50%;
+        background: var(--primary);
         display: inline-flex;
         align-items: center;
         justify-content: center;
         font-size: .68rem;
-        margin-left: .35rem
-    }
-
-    .category-badge {
-        background: rgba(75,0,130,.1);
-        color: var(--accent-purple);
-        padding: .25rem .6rem;
-        border-radius: 20px;
-        font-size: .8rem
     }
 
     .description-text {
+        max-width: 420px;
+        overflow: hidden;
+        display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
-        display: -webkit-box;
-        overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 380px
+        color: var(--muted);
     }
 
-    .price-tag {
-        font-weight: 700;
-        color: var(--accent-purple)
-    }
-
-    .pagination {
-        display: flex;
-        gap: .35rem;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: flex-end;
-        margin-top: 1rem
-    }
-
-    .page-btn {
-        border: 1px solid var(--medium-gray);
-        background: #fff;
-        border-radius: 8px;
-        padding: .45rem .75rem;
-        cursor: pointer
-    }
-
-        .page-btn[disabled] {
-            opacity: .5;
-            cursor: not-allowed
-        }
-
-        .page-btn.active {
-            background: var(--accent-purple);
-            border-color: var(--accent-purple);
-            color: #fff
-        }
-
-    /* Mini carrusel en celda */
+    /* Mini carrusel */
     .thumb-carousel {
         position: relative;
         width: 80px;
         height: 80px;
-        border-radius: 8px;
         overflow: hidden;
-        border: 1px solid var(--medium-gray);
-        background: #fff
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        background: #fff;
     }
 
     .thumb-img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        display: block
+        display: block;
     }
 
     .thumb-nav {
@@ -444,42 +386,21 @@
         justify-content: center;
         background: rgba(255,255,255,.85);
         color: #333;
-        cursor: pointer;
         opacity: 0;
-        transition: .2s
+        transition: .2s;
     }
 
     .thumb-carousel:hover .thumb-nav {
-        opacity: 1
+        opacity: 1;
     }
 
     .thumb-nav.prev {
-        left: 4px
+        left: 4px;
     }
 
     .thumb-nav.next {
-        right: 4px
+        right: 4px;
     }
-
-    .thumb-dots {
-        position: absolute;
-        bottom: 4px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 4px
-    }
-
-        .thumb-dots span {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: rgba(255,255,255,.75)
-        }
-
-            .thumb-dots span.active {
-                background: #fff
-            }
 
     .thumb-zoom {
         position: absolute;
@@ -494,13 +415,58 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
         opacity: 0;
-        transition: .2s
+        transition: .2s;
     }
 
     .thumb-carousel:hover .thumb-zoom {
-        opacity: 1
+        opacity: 1;
+    }
+
+    .thumb-dots {
+        position: absolute;
+        bottom: 4px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 4px;
+    }
+
+        .thumb-dots span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255,255,255,.75);
+        }
+
+            .thumb-dots span.active {
+                background: #fff;
+            }
+
+    .pagination {
+        display: flex;
+        gap: .35rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        margin-top: 1rem;
+    }
+
+    .page-btn {
+        border: 1px solid var(--gray-200);
+        background: #fff;
+        border-radius: 8px;
+        padding: .45rem .75rem;
+        cursor: pointer;
+    }
+
+        .page-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+    .hidden-by-page {
+        display: none !important;
     }
 
     /* Lightbox */
@@ -510,7 +476,7 @@
         min-height: 60vh;
         display: flex;
         align-items: center;
-        justify-content: center
+        justify-content: center;
     }
 
     .g-stage {
@@ -518,13 +484,13 @@
         height: 60vh;
         display: flex;
         align-items: center;
-        justify-content: center
+        justify-content: center;
     }
 
     #gImage {
         max-width: 100%;
         max-height: 60vh;
-        object-fit: contain
+        object-fit: contain;
     }
 
     .g-nav {
@@ -539,15 +505,15 @@
         border-radius: 50%;
         display: flex;
         align-items: center;
-        justify-content: center
+        justify-content: center;
     }
 
     .g-prev {
-        left: 12px
+        left: 12px;
     }
 
     .g-next {
-        right: 12px
+        right: 12px;
     }
 
     .g-close {
@@ -562,57 +528,26 @@
         color: #fff;
         display: flex;
         align-items: center;
-        justify-content: center
+        justify-content: center;
     }
-
-    .g-thumbs {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        padding: 10px;
-        background: #111
-    }
-
-        .g-thumbs img {
-            width: 88px;
-            height: 88px;
-            object-fit: cover;
-            border: 2px solid transparent;
-            border-radius: 6px;
-            cursor: pointer;
-            opacity: .85
-        }
-
-            .g-thumbs img.active {
-                border-color: #fff;
-                opacity: 1
-            }
 
     @@keyframes fadeIn {
         from
 
     {
         opacity: 0;
-        transform: translateY(-10px)
+        transform: translateY(-10px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0)
+        transform: translateY(0);
     }
 
     }
 
     .fade-in {
-        animation: fadeIn .5s ease-out
-    }
-    @@media(max - width:1200px) {
-        .management-table
-
-    {
-        min-width: 1000px
-    }
-
+        animation: fadeIn .45s ease-out;
     }
 </style>
 
@@ -621,15 +556,45 @@
         <h2 class="management-title">
             <i class="fas fa-box-open"></i> @ViewData["Title"]
         </h2>
-        <div class="header-actions">
-            <button type="button" class="pill-btn active" data-status="all"><i class="fas fa-border-all"></i> Todos</button>
-            <button type="button" class="pill-btn" data-status="in-stock"><i class="fas fa-check"></i> En stock</button>
-            <button type="button" class="pill-btn" data-status="low-stock"><i class="fas fa-battery-quarter"></i> Stock bajo</button>
-            <button type="button" class="pill-btn" data-status="out-of-stock"><i class="fas fa-ban"></i> Sin stock</button>
-            <a asp-controller="Panel" asp-action="AnadirProducto" class="add-btn"><i class="fas fa-plus"></i> Añadir Producto</a>
+
+        <div class="header-actions" style="display:flex; gap:.6rem; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="pill-btn active" data-status="all">
+                <i class="fas fa-border-all"></i> Todos
+            </button>
+            <button type="button" class="pill-btn" data-status="in-stock">
+                <i class="fas fa-check"></i> En stock
+            </button>
+            <button type="button" class="pill-btn" data-status="low-stock">
+                <i class="fas fa-battery-quarter"></i> Stock bajo
+            </button>
+            <button type="button" class="pill-btn" data-status="out-of-stock">
+                <i class="fas fa-ban"></i> Sin stock
+            </button>
+
+            <!-- ▾ Añadir producto (elige tipo) -->
+            <div class="btn-group">
+                <button type="button" class="add-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-plus"></i> Añadir Producto
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item"
+                           asp-controller="Panel" asp-action="AnadirProducto" asp-route-mode="simple">
+                            <i class="fas fa-box me-1"></i> Producto simple
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item"
+                           asp-controller="Panel" asp-action="AnadirProducto" asp-route-mode="variantes">
+                            <i class="fas fa-layer-group me-1"></i> Producto con variantes
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </div>
 
+    <!-- KPIs -->
     <div class="stats-cards">
         <div class="stat-card"><div class="stat-number" id="totalProducts">0</div><div class="stat-label">Total Productos</div></div>
         <div class="stat-card"><div class="stat-number" id="inStockProducts">0</div><div class="stat-label">En Stock</div></div>
@@ -638,14 +603,15 @@
         <div class="stat-card"><div class="stat-number" id="variantProducts">0</div><div class="stat-label">Con Variantes</div></div>
     </div>
 
+    <!-- Filtros -->
     <div class="toolbar">
         <div class="search-box">
             <i class="fas fa-search search-icon"></i>
-            <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, marca, categoría...">
-            <button type="button" class="clear-icon" id="clearSearch" title="Limpiar"><i class="fas fa-xmark"></i></button>
+            <input id="searchInput" class="search-input" placeholder="Buscar por nombre, marca, categoría..." />
+            <button id="clearSearch" type="button" class="clear-icon" title="Limpiar"><i class="fas fa-xmark"></i></button>
         </div>
 
-        <select class="filter-select" id="categoryFilter">
+        <select id="categoryFilter" class="filter-select">
             <option value="">Todas las categorías</option>
             @if (ViewBag.Categorias != null)
             {
@@ -656,35 +622,35 @@
             }
         </select>
 
-        <select class="filter-select" id="stockFilter">
+        <select id="stockFilter" class="filter-select">
             <option value="">Todo el stock</option>
             <option value="high">Stock Alto (&gt; @lowStockThreshold)</option>
             <option value="low">Stock Bajo (&lt;= @lowStockThreshold)</option>
             <option value="out">Sin Stock</option>
         </select>
 
-        <select class="filter-select" id="variantFilter">
+        <select id="variantFilter" class="filter-select">
             <option value="">Todos los tipos</option>
             <option value="with-variants">Con variantes</option>
             <option value="without-variants">Sin variantes</option>
         </select>
 
-        <div class="right-tools" style="margin-left:auto;">
-            <select class="filter-select" id="rowsPerPage">
+        <div style="margin-left:auto; display:flex; gap:.5rem; align-items:center;">
+            <select id="rowsPerPage" class="filter-select">
                 <option value="10">10 / pág.</option>
                 <option value="20">20 / pág.</option>
                 <option value="50">50 / pág.</option>
                 <option value="100">100 / pág.</option>
             </select>
-            <button type="button" class="pill-btn" id="resetFilters"><i class="fas fa-rotate-left"></i> Reiniciar</button>
-            <button type="button" class="pill-btn" id="exportCsv"><i class="fas fa-file-csv"></i> Exportar CSV</button>
+            <button id="resetFilters" type="button" class="pill-btn"><i class="fas fa-rotate-left"></i> Reiniciar</button>
+            <button id="exportCsv" type="button" class="pill-btn"><i class="fas fa-file-csv"></i> Exportar CSV</button>
         </div>
     </div>
 
     @if (Model != null && Model.Count > 0)
     {
         <div class="table-container" style="position:relative;">
-            <table class="management-table" id="productsTable">
+            <table id="productsTable" class="management-table">
                 <thead>
                     <tr>
                         <th class="sortable" data-sort="name">Producto <span class="sort-indicator"><i class="fas fa-sort"></i></span></th>
@@ -720,7 +686,7 @@
                         ? p.Variantes.Where(v => v.PrecioVenta.HasValue).Select(v => v.PrecioVenta!.Value).DefaultIfEmpty(0m).Max()
                         : 0m;
 
-                        // imágenes (galería si está, sino portada)
+                        // Galería: usa ViewBag.Galerias si está; sino ImagenPath
                         var imgs = (galeriasDict != null && galeriasDict.TryGetValue(p.ProductoID, out var list) && list?.Any() == true)
                         ? list
                         : (!string.IsNullOrWhiteSpace(p.ImagenPath) ? new List<string> { p.ImagenPath! } : new List<string>());
@@ -737,6 +703,7 @@
                             data-has-variants="@(hasVariants.ToString().ToLower())"
                             data-status="@dataStatus">
 
+                            <!-- Nombre / etiquetas -->
                             <td>
                                 <div style="display:flex;flex-direction:column;gap:.4rem;">
                                     <strong>@p.Nombre</strong>
@@ -747,10 +714,11 @@
                                             <span class="variant-badge"><i class="fas fa-layer-group"></i> Variantes <span class="variant-count">@variantCount</span></span>
                                         }
                                     </div>
-                                    <div style="font-size:.85rem;color:var(--text-light)"><i class="fas fa-tag"></i> @p.Marca</div>
+                                    <div style="font-size:.85rem;color:var(--muted)"><i class="fas fa-tag"></i> @p.Marca</div>
                                 </div>
                             </td>
 
+                            <!-- Mini galería -->
                             <td>
                                 @if (imgs.Any())
                                 {
@@ -771,13 +739,13 @@
                                 }
                             </td>
 
+                            <!-- Info -->
                             <td>
                                 <div class="description-text" title="@p.Descripcion">@p.Descripcion</div>
-
                                 @if (hasVariants)
                                 {
                                     var topColors = colors.Take(3).ToList();
-                                    <div style="margin-top:.35rem;font-size:.85rem;color:var(--text-light)">
+                                    <div style="margin-top:.35rem;font-size:.85rem;color:var(--muted)">
                                         <strong>Colores:</strong>
                                         @for (int i = 0; i < topColors.Count; i++)
                                         {
@@ -806,7 +774,7 @@
                                 }
                                 else
                                 {
-                                    <div style="font-size:.85rem;color:var(--text-light);margin-top:.35rem">
+                                    <div style="font-size:.85rem;color:var(--muted);margin-top:.35rem">
                                         @if (!string.IsNullOrWhiteSpace(p.Color))
                                         {
                                             <span><strong>Color:</strong> @p.Color</span>
@@ -819,33 +787,36 @@
                                 }
                             </td>
 
+                            <!-- Stock -->
                             <td>
                                 <span class="stock-indicator @stockClass">@stockText</span>
                                 @if (hasVariants)
                                 {
-                                    <div style="font-size:.75rem;color:var(--text-light);margin-top:.25rem">@variantCount combinaciones</div>
+                                    <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem">@variantCount combinaciones</div>
                                 }
                             </td>
 
+                            <!-- Precio -->
                             <td>
                                 @if (hasVariants && minVarPrice > 0 && maxVarPrice > 0)
                                 {
-                                    <div class="price-tag" title="Rango de precios por variante">
+                                    <div class="price-tag" title="Rango de precios por variante" style="font-weight:700; color:var(--primary)">
                                         @minVarPrice.ToString("C2", culture)
                                         @if (minVarPrice != maxVarPrice)
                                         {
                                             <text> - @maxVarPrice.ToString("C2", culture)</text>
                                         }
                                     </div>
-                                    <div style="font-size:.75rem;color:var(--text-light)">Compra: @p.PrecioCompra.ToString("C2", culture)</div>
+                                    <div style="font-size:.75rem;color:var(--muted)">Compra: @p.PrecioCompra.ToString("C2", culture)</div>
                                 }
                                 else
                                 {
-                                    <div class="price-tag">@p.PrecioVenta.ToString("C2", culture)</div>
-                                    <div style="font-size:.75rem;color:var(--text-light)">Compra: @p.PrecioCompra.ToString("C2", culture)</div>
+                                    <div class="price-tag" style="font-weight:700; color:var(--primary)">@p.PrecioVenta.ToString("C2", culture)</div>
+                                    <div style="font-size:.75rem;color:var(--muted)">Compra: @p.PrecioCompra.ToString("C2", culture)</div>
                                 }
                             </td>
 
+                            <!-- Acciones -->
                             <td>
                                 <div style="display:flex;gap:.25rem">
                                     <form method="get" asp-controller="Panel" asp-action="EditarProducto" style="display:inline">
@@ -860,7 +831,8 @@
                                         </button>
                                     }
 
-                                    <form method="post" asp-controller="Panel" asp-action="EliminarProducto" onsubmit="return confirm('¿Eliminar este producto?');" style="display:inline">
+                                    <form method="post" asp-controller="Panel" asp-action="EliminarProducto"
+                                          onsubmit="return confirm('¿Eliminar este producto?');" style="display:inline">
                                         <input type="hidden" name="productoID" value="@p.ProductoID" />
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="action-btn delete-btn" title="Eliminar"><i class="fas fa-trash"></i></button>
@@ -872,7 +844,9 @@
                         @* JSON embebido para el modal de variantes *@
                         @if (hasVariants)
                         {
-                            var variantJson = System.Text.Json.JsonSerializer.Serialize(p.Variantes.Select(v => new { v.Color, v.Talla, v.PrecioVenta, v.Stock, v.SKU }));
+                            var variantJson = System.Text.Json.JsonSerializer.Serialize(
+                            p.Variantes.Select(v => new { v.Color, v.Talla, v.PrecioVenta, v.Stock, v.SKU })
+                            );
                             <script type="application/json" id="variants-@p.ProductoID">
                                 @Html.Raw(variantJson)
                             </script>
@@ -881,16 +855,24 @@
                 </tbody>
             </table>
 
-            <div class="pagination" id="pagination"></div>
+            <div id="pagination" class="pagination"></div>
         </div>
     }
     else
     {
-        <div class="empty-state" style="background:#fff;border-radius:12px;padding:3rem;text-align:center;box-shadow:0 5px 15px rgba(0,0,0,.05)">
-            <i class="fas fa-box-open" style="font-size:4rem;color:var(--medium-gray);margin-bottom:1.25rem"></i>
+        <div class="empty-state" style="background:#fff;border-radius:12px;padding:3rem;text-align:center;box-shadow:var(--shadow)">
+            <i class="fas fa-box-open" style="font-size:4rem;color:var(--gray-200);margin-bottom:1.25rem"></i>
             <h3>No hay productos disponibles</h3>
             <p>Comienza agregando tu primer producto al catálogo.</p>
-            <a asp-controller="Panel" asp-action="AnadirProducto" class="add-btn"><i class="fas fa-plus"></i> Añadir Primer Producto</a>
+            <div class="btn-group">
+                <a class="add-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-plus"></i> Añadir Producto
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" asp-controller="Panel" asp-action="AnadirProducto" asp-route-mode="simple"><i class="fas fa-box me-1"></i> Producto simple</a></li>
+                    <li><a class="dropdown-item" asp-controller="Panel" asp-action="AnadirProducto" asp-route-mode="variantes"><i class="fas fa-layer-group me-1"></i> Producto con variantes</a></li>
+                </ul>
+            </div>
         </div>
     }
 </div>
@@ -900,7 +882,7 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="variantesModalTitle">Variantes del Producto</h5>
+                <h5 id="variantesModalTitle" class="modal-title">Variantes del Producto</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
@@ -924,7 +906,7 @@
                     <div class="g-stage"><img id="gImage" alt="Imagen ampliada" /></div>
                     <button class="g-nav g-next" aria-label="Siguiente"><i class="fas fa-chevron-right"></i></button>
                 </div>
-                <div class="g-thumbs" id="gThumbs"></div>
+                <div id="gThumbs" class="g-thumbs"></div>
             </div>
         </div>
     </div>
@@ -933,248 +915,295 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        (function(){
-          const lowThreshold = @lowStockThreshold;
-          const qs = s => document.querySelector(s);
-          const qsa = s => Array.from(document.querySelectorAll(s));
+        (function () {
+            const lowThreshold = @lowStockThreshold;
 
-          const searchInput = qs('#searchInput');
-          const clearSearchBtn = qs('#clearSearch');
-          const categoryFilter = qs('#categoryFilter');
-          const stockFilter = qs('#stockFilter');
-          const variantFilter = qs('#variantFilter');
-          const statusPills = qsa('.pill-btn[data-status]');
-          const rowsPerPageEl = qs('#rowsPerPage');
-          const resetBtn = qs('#resetFilters');
-          const exportCsvBtn = qs('#exportCsv');
-          const tbody = qs('#productTbody');
-          const paginationEl = qs('#pagination');
+            const qs  = s => document.querySelector(s);
+            const qsa = s => Array.from(document.querySelectorAll(s));
 
-          const norm = s => {
-            s = (s||'').toString();
-            try{ return s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLowerCase(); }
-            catch{ return s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase(); }
-          };
+            const searchInput   = qs('#searchInput');
+            const clearSearch   = qs('#clearSearch');
+            const categoryF     = qs('#categoryFilter');
+            const stockF        = qs('#stockFilter');
+            const variantF      = qs('#variantFilter');
+            const statusPills   = qsa('.pill-btn[data-status]');
+            const rowsPerPageEl = qs('#rowsPerPage');
+            const resetBtn      = qs('#resetFilters');
+            const exportBtn     = qs('#exportCsv');
+            const tbody         = qs('#productTbody');
+            const paginationEl  = qs('#pagination');
 
-          const state = {
-            search:'', category:'', stock:'', variant:'', status:'all',
-            sort:{ by:'name', dir:'asc' }, page:1,
-            rowsPerPage: parseInt(localStorage.getItem('rowsPerPage') || '10', 10)
-          };
-
-          (function restore(){
-            const saved = localStorage.getItem('prodFilters');
-            if (saved) { try{ Object.assign(state, JSON.parse(saved)); }catch{} }
-            searchInput.value = state.search || '';
-            categoryFilter.value = state.category || '';
-            stockFilter.value = state.stock || '';
-            variantFilter.value = state.variant || '';
-            rowsPerPageEl.value = String(state.rowsPerPage);
-            statusPills.forEach(p => p.classList.toggle('active', p.dataset.status === state.status));
-          })();
-
-          function persist(){
-            localStorage.setItem('prodFilters', JSON.stringify({
-              search:state.search, category:state.category, stock:state.stock, variant:state.variant,
-              status:state.status, sort:state.sort, page:state.page
-            }));
-            localStorage.setItem('rowsPerPage', String(state.rowsPerPage));
-          }
-
-          const debounce = (fn,ms=250)=>{ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
-
-          function getRows(){ return qsa('.product-row'); }
-
-          function applyFiltersAndSort(){
-            const term = norm(state.search);
-            const rows = getRows();
-
-            rows.forEach(row=>{
-              const name = norm(row.dataset.name||'');
-              const brand = norm(row.dataset.brand||'');
-              const category = norm(row.dataset.category||'');
-              const stock = parseInt(row.dataset.stock||'0',10);
-              const hasVariants = row.dataset.hasVariants==='true';
-              const status = row.dataset.status;
-
-              let show = true;
-              if (term && !(name.includes(term)||brand.includes(term)||category.includes(term))) show=false;
-              if (state.category && category !== norm(state.category)) show=false;
-              if (state.stock==='high' && stock<=lowThreshold) show=false;
-              if (state.stock==='low' && (stock>lowThreshold || stock===0)) show=false;
-              if (state.stock==='out' && stock>0) show=false;
-              if (state.variant==='with-variants' && !hasVariants) show=false;
-              if (state.variant==='without-variants' && hasVariants) show=false;
-              if (state.status!=='all' && status!==state.status) show=false;
-
-              row.style.display = show ? '' : 'none';
-            });
-
-            const visible = rows.filter(r=>r.style.display!=='none');
-            const {by,dir} = state.sort;
-            visible.sort((a,b)=>{
-              const mult = dir==='asc'?1:-1;
-              if (by==='name'){ return mult*((a.dataset.name||'').localeCompare(b.dataset.name||'')); }
-              if (by==='stock'){ return mult*(parseInt(a.dataset.stock)-parseInt(b.dataset.stock)); }
-              if (by==='price'){
-                const aMin = parseFloat(a.dataset.priceMin||a.dataset.price||'0')||0;
-                const bMin = parseFloat(b.dataset.priceMin||b.dataset.price||'0')||0;
-                return mult*(aMin - bMin);
-              }
-              return 0;
-            });
-            visible.forEach(v=>tbody.appendChild(v));
-
-            renderPagination();
-            updateStatistics();
-            persist();
-          }
-
-          function renderPagination(){
-            const visible = getRows().filter(r=>r.style.display!=='none');
-            const total = visible.length;
-            const per = state.rowsPerPage;
-            const pages = Math.max(1, Math.ceil(total/per));
-            state.page = Math.min(state.page, pages);
-
-            visible.forEach(r=>r.classList.add('hidden-by-page'));
-            const start=(state.page-1)*per, end=start+per;
-            visible.slice(start,end).forEach(r=>r.classList.remove('hidden-by-page'));
-
-            paginationEl.innerHTML='';
-            const addBtn=(lbl,page,dis=false,act=false)=>{
-              const btn=document.createElement('button'); btn.className='page-btn'+(act?' active':''); btn.textContent=lbl; btn.disabled=dis;
-              btn.addEventListener('click',()=>{ state.page=page; applyFiltersAndSort(); });
-              paginationEl.appendChild(btn);
+            const norm = s => {
+                s = (s || '').toString();
+                try { return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase(); }
+                catch { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); }
             };
-            addBtn('«',1,state.page===1);
-            addBtn('‹',Math.max(1,state.page-1),state.page===1);
-            const windowSize=5, half=Math.floor(windowSize/2);
-            let startPage=Math.max(1,state.page-half);
-            let endPage=Math.min(pages,startPage+windowSize-1);
-            startPage=Math.max(1,endPage-windowSize+1);
-            for(let p=startPage;p<=endPage;p++) addBtn(String(p),p,false,p===state.page);
-            addBtn('›',Math.min(pages,state.page+1),state.page===pages);
-            addBtn('»',pages,state.page===pages);
-          }
 
-          function updateStatistics(){
-            const all = getRows().filter(r=>r.style.display!=='none');
-            qs('#totalProducts').textContent = all.length;
-            qs('#inStockProducts').textContent = all.filter(r=>r.dataset.status==='in-stock').length;
-            qs('#lowStockProducts').textContent = all.filter(r=>r.dataset.status==='low-stock').length;
-            qs('#outOfStockProducts').textContent = all.filter(r=>r.dataset.status==='out-of-stock').length;
-            qs('#variantProducts').textContent = all.filter(r=>r.dataset.hasVariants==='true').length;
-          }
+            const state = {
+                search: '', category: '', stock: '', variant: '', status: 'all',
+                sort: { by: 'name', dir: 'asc' }, page: 1,
+                rowsPerPage: parseInt(localStorage.getItem('rowsPerPage') || '10', 10)
+            };
 
-          // Eventos filtros/orden
-          searchInput.addEventListener('input', debounce(e=>{ state.search=e.target.value; state.page=1; applyFiltersAndSort(); },250));
-          clearSearchBtn.addEventListener('click', ()=>{ searchInput.value=''; state.search=''; state.page=1; applyFiltersAndSort(); });
-          categoryFilter.addEventListener('change', e=>{ state.category=e.target.value; state.page=1; applyFiltersAndSort(); });
-          stockFilter.addEventListener('change', e=>{ state.stock=e.target.value; state.page=1; applyFiltersAndSort(); });
-          variantFilter.addEventListener('change', e=>{ state.variant=e.target.value; state.page=1; applyFiltersAndSort(); });
-          rowsPerPageEl.addEventListener('change', e=>{ state.rowsPerPage=parseInt(e.target.value,10); state.page=1; applyFiltersAndSort(); });
+            // Restaurar filtros
+            (function restore() {
+                const saved = localStorage.getItem('prodFilters');
+                if (saved) { try { Object.assign(state, JSON.parse(saved)); } catch { } }
+                searchInput.value   = state.search || '';
+                categoryF.value     = state.category || '';
+                stockF.value        = state.stock || '';
+                variantF.value      = state.variant || '';
+                rowsPerPageEl.value = String(state.rowsPerPage);
+                statusPills.forEach(p => p.classList.toggle('active', p.dataset.status === state.status));
+            })();
 
-          statusPills.forEach(p=>p.addEventListener('click', ()=>{
-            statusPills.forEach(x=>x.classList.remove('active')); p.classList.add('active');
-            state.status=p.dataset.status; state.page=1; applyFiltersAndSort();
-          }));
+            function persist() {
+                localStorage.setItem('prodFilters', JSON.stringify({
+                    search: state.search, category: state.category, stock: state.stock, variant: state.variant,
+                    status: state.status, sort: state.sort, page: state.page
+                }));
+                localStorage.setItem('rowsPerPage', String(state.rowsPerPage));
+            }
 
-          qsa('th.sortable').forEach(th=>{
-            th.addEventListener('click', ()=>{
-              const by = th.dataset.sort;
-              state.sort.by===by ? state.sort.dir = (state.sort.dir==='asc'?'desc':'asc') : (state.sort.by=by, state.sort.dir='asc');
-              qsa('th.sortable .sort-indicator i').forEach(i=>i.className='fas fa-sort');
-              const icon=th.querySelector('.sort-indicator i');
-              icon.className = state.sort.dir==='asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
-              applyFiltersAndSort();
+            const debounce = (fn, ms = 250) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+            const getRows = () => qsa('.product-row');
+
+            function applyFiltersAndSort() {
+                const term = norm(state.search);
+                const rows = getRows();
+
+                rows.forEach(row => {
+                    const name = norm(row.dataset.name || '');
+                    const brand = norm(row.dataset.brand || '');
+                    const category = norm(row.dataset.category || '');
+                    const stock = parseInt(row.dataset.stock || '0', 10);
+                    const hasVariants = row.dataset.hasVariants === 'true';
+                    const status = row.dataset.status;
+
+                    let show = true;
+                    if (term && !(name.includes(term) || brand.includes(term) || category.includes(term))) show = false;
+                    if (state.category && category !== norm(state.category)) show = false;
+                    if (state.stock === 'high' && stock <= lowThreshold) show = false;
+                    if (state.stock === 'low' && (stock > lowThreshold || stock === 0)) show = false;
+                    if (state.stock === 'out' && stock > 0) show = false;
+                    if (state.variant === 'with-variants' && !hasVariants) show = false;
+                    if (state.variant === 'without-variants' && hasVariants) show = false;
+                    if (state.status !== 'all' && status !== state.status) show = false;
+
+                    row.style.display = show ? '' : 'none';
+                });
+
+                const visible = rows.filter(r => r.style.display !== 'none');
+                const { by, dir } = state.sort;
+
+                visible.sort((a, b) => {
+                    const mult = dir === 'asc' ? 1 : -1;
+                    if (by === 'name')  return mult * ((a.dataset.name || '').localeCompare(b.dataset.name || ''));
+                    if (by === 'stock') return mult * (parseInt(a.dataset.stock) - parseInt(b.dataset.stock));
+                    if (by === 'price') {
+                        const aMin = parseFloat(a.dataset.priceMin || a.dataset.price || '0') || 0;
+                        const bMin = parseFloat(b.dataset.priceMin || b.dataset.price || '0') || 0;
+                        return mult * (aMin - bMin);
+                    }
+                    return 0;
+                });
+                visible.forEach(v => tbody.appendChild(v));
+
+                renderPagination();
+                updateStatistics();
+                persist();
+            }
+
+            function renderPagination() {
+                const visible = getRows().filter(r => r.style.display !== 'none');
+                const total = visible.length;
+                const per = state.rowsPerPage;
+                const pages = Math.max(1, Math.ceil(total / per));
+                state.page = Math.min(state.page, pages);
+
+                visible.forEach(r => r.classList.add('hidden-by-page'));
+                const start = (state.page - 1) * per;
+                const end = start + per;
+                visible.slice(start, end).forEach(r => r.classList.remove('hidden-by-page'));
+
+                paginationEl.innerHTML = '';
+                const addBtn = (lbl, page, dis = false, act = false) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'page-btn' + (act ? ' active' : '');
+                    btn.textContent = lbl;
+                    btn.disabled = dis;
+                    btn.addEventListener('click', () => { state.page = page; applyFiltersAndSort(); });
+                    paginationEl.appendChild(btn);
+                };
+                addBtn('«', 1, state.page === 1);
+                addBtn('‹', Math.max(1, state.page - 1), state.page === 1);
+                const windowSize = 5, half = Math.floor(windowSize / 2);
+                let startPage = Math.max(1, state.page - half);
+                let endPage = Math.min(pages, startPage + windowSize - 1);
+                startPage = Math.max(1, endPage - windowSize + 1);
+                for (let p = startPage; p <= endPage; p++) addBtn(String(p), p, false, p === state.page);
+                addBtn('›', Math.min(pages, state.page + 1), state.page === pages);
+                addBtn('»', pages, state.page === pages);
+            }
+
+            function updateStatistics() {
+                const all = getRows().filter(r => r.style.display !== 'none');
+                qs('#totalProducts').textContent    = all.length;
+                qs('#inStockProducts').textContent  = all.filter(r => r.dataset.status === 'in-stock').length;
+                qs('#lowStockProducts').textContent = all.filter(r => r.dataset.status === 'low-stock').length;
+                qs('#outOfStockProducts').textContent = all.filter(r => r.dataset.status === 'out-of-stock').length;
+                qs('#variantProducts').textContent  = all.filter(r => r.dataset.hasVariants === 'true').length;
+            }
+
+            // Eventos
+            searchInput.addEventListener('input', debounce(e => { state.search = e.target.value; state.page = 1; applyFiltersAndSort(); }, 220));
+            clearSearch.addEventListener('click', () => { searchInput.value = ''; state.search = ''; state.page = 1; applyFiltersAndSort(); });
+            categoryF.addEventListener('change', e => { state.category = e.target.value; state.page = 1; applyFiltersAndSort(); });
+            stockF.addEventListener('change', e => { state.stock = e.target.value; state.page = 1; applyFiltersAndSort(); });
+            variantF.addEventListener('change', e => { state.variant = e.target.value; state.page = 1; applyFiltersAndSort(); });
+            rowsPerPageEl.addEventListener('change', e => { state.rowsPerPage = parseInt(e.target.value, 10); state.page = 1; applyFiltersAndSort(); });
+
+            statusPills.forEach(p => p.addEventListener('click', () => {
+                statusPills.forEach(x => x.classList.remove('active')); p.classList.add('active');
+                state.status = p.dataset.status; state.page = 1; applyFiltersAndSort();
+            }));
+
+            qsa('th.sortable').forEach(th => {
+                th.addEventListener('click', () => {
+                    const by = th.dataset.sort;
+                    state.sort.by === by ? state.sort.dir = (state.sort.dir === 'asc' ? 'desc' : 'asc') : (state.sort.by = by, state.sort.dir = 'asc');
+                    qsa('th.sortable .sort-indicator i').forEach(i => i.className = 'fas fa-sort');
+                    const icon = th.querySelector('.sort-indicator i');
+                    icon.className = state.sort.dir === 'asc' ? 'fas fa-sort-up' : 'fas fa-sort-down';
+                    applyFiltersAndSort();
+                });
             });
-          });
 
-          resetBtn.addEventListener('click', ()=>{
-            state.search=''; state.category=''; state.stock=''; state.variant=''; state.status='all';
-            state.sort={by:'name',dir:'asc'}; state.page=1;
-            searchInput.value=''; categoryFilter.value=''; stockFilter.value=''; variantFilter.value='';
-            statusPills.forEach(p=>p.classList.toggle('active', p.dataset.status==='all'));
+            resetBtn.addEventListener('click', () => {
+                state.search = ''; state.category = ''; state.stock = ''; state.variant = ''; state.status = 'all';
+                state.sort = { by: 'name', dir: 'asc' }; state.page = 1;
+                searchInput.value = ''; categoryF.value = ''; stockF.value = ''; variantF.value = '';
+                statusPills.forEach(p => p.classList.toggle('active', p.dataset.status === 'all'));
+                applyFiltersAndSort();
+            });
+
+            exportBtn.addEventListener('click', () => {
+                const visible = getRows().filter(r => r.style.display !== 'none');
+                const rows = visible.map(r => {
+                    const name = r.querySelector('td:first-child strong')?.textContent?.trim() || '';
+                    const cat = r.querySelector('.category-badge')?.textContent?.trim() || '';
+                    const brand = r.dataset.brand || '';
+                    const stock = r.dataset.stock || '0';
+                    const price = r.dataset.priceMin || r.dataset.price || '0';
+                    const type = r.dataset.hasVariants === 'true' ? 'Con variantes' : 'Simple';
+                    return [name, cat, brand, stock, price, type];
+                });
+                const header = ['Nombre', 'Categoría', 'Marca', 'Stock', 'PrecioVentaMin', 'Tipo'];
+                const csv = [header, ...rows].map(a => a.map(x => `"${String(x).replace(/"/g, '""')}"`).join(',')).join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'productos.csv'; document.body.appendChild(a); a.click(); a.remove();
+            });
+
+            // ===== Mini carrusel =====
+            function buildDots(host, n) { const d = host.querySelector('.thumb-dots'); d.innerHTML = ''; for (let i = 0; i < n; i++) d.appendChild(document.createElement('span')); }
+            function setSlide(host, idx) {
+                const images = JSON.parse(host.dataset.images || '[]'); if (!images.length) return;
+                idx = (idx + images.length) % images.length; host.dataset.idx = String(idx);
+                const img = host.querySelector('.thumb-img'); if (img) img.src = images[idx];
+                qsa('.thumb-dots span', host).forEach((dot, i) => dot.classList.toggle('active', i === idx));
+            }
+            function initCarousel(host) {
+                const imgs = JSON.parse(host.dataset.images || '[]');
+                host.dataset.idx = '0'; buildDots(host, imgs.length); setSlide(host, 0);
+                host.querySelector('.thumb-nav.prev')?.addEventListener('click', e => { e.stopPropagation(); setSlide(host, parseInt(host.dataset.idx || '0') - 1); });
+                host.querySelector('.thumb-nav.next')?.addEventListener('click', e => { e.stopPropagation(); setSlide(host, parseInt(host.dataset.idx || '0') + 1); });
+                host.addEventListener('wheel', e => { e.preventDefault(); const dir = e.deltaY > 0 ? 1 : -1; setSlide(host, parseInt(host.dataset.idx || '0') + dir); }, { passive: false });
+                let sx = 0; host.addEventListener('touchstart', e => sx = e.touches[0].clientX, { passive: true });
+                host.addEventListener('touchend', e => { const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 30) setSlide(host, parseInt(host.dataset.idx || '0') + (dx < 0 ? 1 : -1)); });
+            }
+            qsa('.thumb-carousel').forEach(initCarousel);
+
+            // ===== Lightbox =====
+            let gImages = [], gIndex = 0;
+            const gModal = document.getElementById('galleryModal');
+            const gImg   = document.getElementById('gImage');
+            const gThumbs = document.getElementById('gThumbs');
+
+            function renderLightbox() {
+                if (!gImages.length) return;
+                gIndex = (gIndex + gImages.length) % gImages.length;
+                gImg.src = gImages[gIndex];
+                gThumbs.innerHTML = '';
+                gImages.forEach((u, i) => {
+                    const t = document.createElement('img'); t.src = u; t.alt = '';
+                    if (i === gIndex) t.classList.add('active');
+                    t.addEventListener('click', () => { gIndex = i; renderLightbox(); });
+                    gThumbs.appendChild(t);
+                });
+            }
+            function openLightbox(images, start = 0) {
+                gImages = images; gIndex = start; renderLightbox();
+                if (window.bootstrap) new bootstrap.Modal(gModal).show(); else gModal.style.display = 'block';
+            }
+
+            document.addEventListener('click', e => {
+                const btn = e.target.closest('[data-open-gallery]'); if (!btn) return;
+                const pid = btn.getAttribute('data-open-gallery');
+                const host = document.querySelector(`.thumb-carousel[data-pid="${pid}"]`);
+                if (!host) return;
+                const images = JSON.parse(host.dataset.images || '[]');
+                const start  = parseInt(host.dataset.idx || '0');
+                if (images.length) openLightbox(images, start);
+            });
+            gModal?.querySelector('.g-prev')?.addEventListener('click', () => { gIndex--; renderLightbox(); });
+            gModal?.querySelector('.g-next')?.addEventListener('click', () => { gIndex++; renderLightbox(); });
+            document.addEventListener('keydown', e => {
+                if (!gModal.classList.contains('show')) return;
+                if (e.key === 'ArrowLeft')  { gIndex--; renderLightbox(); }
+                if (e.key === 'ArrowRight') { gIndex++; renderLightbox(); }
+            });
+
+            // ===== Modal de Variantes =====
+            document.addEventListener('click', e => {
+                const btn = e.target.closest('[data-open-variants]'); if (!btn) return;
+                const pid = btn.getAttribute('data-open-variants');
+                const script = document.getElementById(`variants-${pid}`);
+                if (!script) return;
+
+                let data = [];
+                try { data = JSON.parse(script.textContent || '[]'); } catch { data = []; }
+                const host = document.getElementById('variantesContent');
+                const title = document.getElementById('variantesModalTitle');
+
+                title.textContent = `Variantes del producto #${pid}`;
+                if (!data.length) {
+                    host.innerHTML = '<div class="alert alert-info m-0">No hay variantes registradas.</div>';
+                } else {
+                    const rows = data.map((v, i) => `
+                        <tr>
+                            <td>${i + 1}</td>
+                            <td>${(v.Color || '').toString()}</td>
+                            <td>${(v.Talla || '').toString()}</td>
+                            <td>${(v.PrecioVenta ?? 0).toFixed(2)}</td>
+                            <td>${v.Stock ?? 0}</td>
+                            <td><code>${(v.SKU || '').toString()}</code></td>
+                        </tr>
+                    `).join('');
+                    host.innerHTML = `
+                        <table class="table table-sm table-striped mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th><th>Color</th><th>Talla</th><th>Precio</th><th>Stock</th><th>SKU</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rows}</tbody>
+                        </table>`;
+                }
+                new bootstrap.Modal('#variantesModal').show();
+            });
+
+            // Init
             applyFiltersAndSort();
-          });
-
-          exportCsvBtn.addEventListener('click', ()=>{
-            const visible = getRows().filter(r=>r.style.display!=='none');
-            const rows = visible.map(r=>{
-              const name = r.querySelector('td:first-child strong')?.textContent?.trim() || '';
-              const cat = r.querySelector('.category-badge')?.textContent?.trim() || '';
-              const brand = r.dataset.brand || '';
-              const stock = r.dataset.stock || '0';
-              const price = r.dataset.priceMin || r.dataset.price || '0';
-              const type = r.dataset.hasVariants==='true' ? 'Con variantes' : 'Simple';
-              return [name, cat, brand, stock, price, type];
-            });
-            const header = ['Nombre','Categoría','Marca','Stock','PrecioVentaMin','Tipo'];
-            const csv = [header,...rows].map(a=>a.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(',')).join('\n');
-            const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
-            const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='productos.csv'; document.body.appendChild(a); a.click(); a.remove();
-          });
-
-          // ====== MINI-CARRUSEL ======
-          function buildDots(host,n){ const d=host.querySelector('.thumb-dots'); d.innerHTML=''; for(let i=0;i<n;i++){ const s=document.createElement('span'); d.appendChild(s);} }
-          function setSlide(host,idx){
-            const images = JSON.parse(host.dataset.images||'[]'); if(!images.length) return;
-            idx = (idx+images.length)%images.length; host.dataset.idx=String(idx);
-            const img=host.querySelector('.thumb-img'); if(img) img.src=images[idx];
-            qsa('.thumb-dots span',host).forEach((dot,i)=>dot.classList.toggle('active', i===idx));
-          }
-          function initCarousel(host){
-            const imgs = JSON.parse(host.dataset.images||'[]');
-            host.dataset.idx='0'; buildDots(host, imgs.length); setSlide(host,0);
-            const prev=host.querySelector('.thumb-nav.prev'); const next=host.querySelector('.thumb-nav.next');
-            prev?.addEventListener('click', e=>{ e.stopPropagation(); setSlide(host, parseInt(host.dataset.idx||'0')-1); });
-            next?.addEventListener('click', e=>{ e.stopPropagation(); setSlide(host, parseInt(host.dataset.idx||'0')+1); });
-            host.addEventListener('wheel', e=>{ e.preventDefault(); const dir=e.deltaY>0?1:-1; setSlide(host, parseInt(host.dataset.idx||'0')+dir); }, {passive:false});
-            let sx=0; host.addEventListener('touchstart', e=>sx=e.touches[0].clientX, {passive:true});
-            host.addEventListener('touchend', e=>{ const dx=e.changedTouches[0].clientX-sx; if(Math.abs(dx)>30) setSlide(host, parseInt(host.dataset.idx||'0')+(dx<0?1:-1)); });
-            let timer=null; host.addEventListener('mouseenter', ()=>{ if(imgs.length>1) timer=setInterval(()=>setSlide(host, parseInt(host.dataset.idx||'0')+1),2500); });
-            host.addEventListener('mouseleave', ()=>{ if(timer){ clearInterval(timer); timer=null; }});
-          }
-          qsa('.thumb-carousel').forEach(initCarousel);
-
-          // ====== LIGHTBOX ======
-          let gImages=[]; let gIndex=0;
-          const gModal=document.getElementById('galleryModal');
-          const gImg=document.getElementById('gImage');
-          const gThumbs=document.getElementById('gThumbs');
-
-          function renderLightbox(){
-            if(!gImages.length) return;
-            gIndex=(gIndex+gImages.length)%gImages.length;
-            gImg.src=gImages[gIndex];
-            gThumbs.innerHTML='';
-            gImages.forEach((u,i)=>{ const t=document.createElement('img'); t.src=u; t.alt=''; if(i===gIndex) t.classList.add('active'); t.addEventListener('click',()=>{ gIndex=i; renderLightbox(); }); gThumbs.appendChild(t); });
-          }
-          function openLightbox(images,start=0){
-            gImages=images; gIndex=start; renderLightbox();
-            if(window.bootstrap) new bootstrap.Modal(gModal).show(); else gModal.style.display='block';
-          }
-
-          document.addEventListener('click', e=>{
-            const btn=e.target.closest('[data-open-gallery]'); if(!btn) return;
-            const pid=btn.getAttribute('data-open-gallery');
-            const host=document.querySelector(`.thumb-carousel[data-pid="${pid}"]`);
-            if(!host) return;
-            const images=JSON.parse(host.dataset.images||'[]');
-            const start=parseInt(host.dataset.idx||'0');
-            if(images.length) openLightbox(images,start);
-          });
-          gModal?.querySelector('.g-prev')?.addEventListener('click',()=>{ gIndex--; renderLightbox(); });
-          gModal?.querySelector('.g-next')?.addEventListener('click',()=>{ gIndex++; renderLightbox(); });
-          document.addEventListener('keydown', e=>{
-            if(!gModal.classList.contains('show')) return;
-            if(e.key==='ArrowLeft'){ gIndex--; renderLightbox(); }
-            if(e.key==='ArrowRight'){ gIndex++; renderLightbox(); }
-          });
-
-          // Inicializar
-          applyFiltersAndSort();
         })();
     </script>
 }
@@ -1189,6 +1218,7 @@
         var filtered = formD.Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark);
         return new string(filtered.ToArray()).Normalize(System.Text.NormalizationForm.FormC);
     }
+
     private static readonly Dictionary<string, string> ColorMap = new(StringComparer.OrdinalIgnoreCase)
     {
         ["negro"] = "#000000",
@@ -1237,6 +1267,7 @@
         ["verde botella"] = "#006A4E",
         ["oliva"] = "#808000"
     };
+
     private string GetColorCode(string colorName)
     {
         var key = NormalizeColorKey(colorName);

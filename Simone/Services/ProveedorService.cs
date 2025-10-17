@@ -1,80 +1,125 @@
+// Services/ProveedorService.cs
 using Simone.Models;
 using Simone.Data;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Simone.Services
 {
     public class ProveedorService
     {
         private readonly TiendaDbContext _context;
+        private readonly ILogger<ProveedorService> _logger;
 
-        public ProveedorService(TiendaDbContext context)
+        public ProveedorService(TiendaDbContext context, ILogger<ProveedorService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
-        // Agregar una nueva proveedor de manera asíncrona
-        public async Task<bool> AddAsync(Proveedores proveedor)
+        // ==================== CREATE ====================
+        public async Task<bool> AddAsync(Proveedores proveedor, CancellationToken ct = default)
+        {
+            if (proveedor == null) return false;
+
+            proveedor.NombreProveedor = (proveedor.NombreProveedor ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(proveedor.NombreProveedor)) return false;
+
+            try
+            {
+                await _context.Proveedores.AddAsync(proveedor, ct);
+                await _context.SaveChangesAsync(ct);
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogWarning(ex, "Conflicto/BD al crear proveedor {@Proveedor}", proveedor);
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al crear proveedor {@Proveedor}", proveedor);
+                return false;
+            }
+        }
+
+        // ==================== READ ====================
+        public async Task<List<Proveedores>> GetAllAsync(CancellationToken ct = default)
+        {
+            return await _context.Proveedores
+                .AsNoTracking()
+                .OrderBy(p => p.NombreProveedor)
+                .ToListAsync(ct);
+        }
+
+        public async Task<Proveedores?> GetByIdAsync(int id, CancellationToken ct = default)
+        {
+            // FindAsync usa la PK y es más eficiente
+            return await _context.Proveedores.FindAsync(new object[] { id }, ct);
+        }
+
+        // ==================== UPDATE ====================
+        public async Task<bool> UpdateAsync(Proveedores proveedor, CancellationToken ct = default)
+        {
+            if (proveedor == null) return false;
+
+            proveedor.NombreProveedor = (proveedor.NombreProveedor ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(proveedor.NombreProveedor)) return false;
+
+            try
+            {
+                _context.Proveedores.Update(proveedor);
+                await _context.SaveChangesAsync(ct);
+                return true;
+            }
+            catch (DbUpdateException ex)
+            {
+                _logger.LogWarning(ex, "Conflicto/BD al actualizar proveedor {ProveedorID}", proveedor?.ProveedorID);
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al actualizar proveedor {ProveedorID}", proveedor?.ProveedorID);
+                return false;
+            }
+        }
+
+        // ==================== DELETE ====================
+        public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
         {
             try
             {
-                await _context.Proveedores.AddAsync(proveedor); // Usamos AddAsync
-                await _context.SaveChangesAsync(); // Guardar los cambios de manera asíncrona
-                return true; // Retorna true si el proveedor se ha agregado correctamente
-            }
-            catch
-            {
-                return false; // Retorna false si hubo algún error
-            }
-        }
+                var proveedor = await _context.Proveedores.FindAsync(new object[] { id }, ct);
+                if (proveedor == null) return false;
 
-        // Obtener todos los proveedores de manera asíncrona
-        public async Task<List<Proveedores>> GetAllAsync()
-        {
-            return await _context.Proveedores.ToListAsync(); // Usamos ToListAsync
-        }
+                // Evita borrar si hay productos que referencian este proveedor
+                bool tieneProductos = await _context.Productos
+                    .AsNoTracking()
+                    .AnyAsync(p => p.ProveedorID == id, ct);
 
-        // Obtener una proveedor por su ID de manera asíncrona
-        public async Task<Proveedores> GetByIdAsync(int id)
-        {
-            return await _context.Proveedores.FindAsync(id); // Usamos FindAsync
-        }
-
-        // Actualizar una proveedor de manera asíncrona
-        public async Task<bool> UpdateAsync(Proveedores proveedores)
-        {
-            try
-            {
-                _context.Proveedores.Update(proveedores); // Actualizar proveedor
-                await _context.SaveChangesAsync(); // Guardar los cambios de manera asíncrona
-                return true; // Retorna true si el proveedor se actualiza correctamente
-            }
-            catch
-            {
-                return false; // Retorna false si hubo algún error
-            }
-        }
-
-        // Eliminar un proveedor de manera asíncrona
-        public async Task<bool> DeleteAsync(int id)
-        {
-            try
-            {
-                var proveedor = await _context.Proveedores.FindAsync(id); // Buscar el proveedor de manera asíncrona
-                if (proveedor != null)
+                if (tieneProductos)
                 {
-                    _context.Proveedores.Remove(proveedor); // Eliminar proveedor
-                    await _context.SaveChangesAsync(); // Guardar cambios de manera asíncrona
-                    return true; // Retorna true si el proveedor se elimina correctamente
+                    _logger.LogWarning("No se elimina Proveedor {ProveedorID}: tiene productos asociados.", id);
+                    return false;
                 }
-                return false; // Retorna false si no se encuentra el proveedor
+
+                _context.Proveedores.Remove(proveedor);
+                await _context.SaveChangesAsync(ct);
+                return true;
             }
-            catch
+            catch (DbUpdateException ex)
             {
-                return false; // Retorna false si hubo algún error
+                _logger.LogWarning(ex, "No se pudo eliminar proveedor {ProveedorID} por dependencias.", id);
+                return false;
+            }
+            catch (System.Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al eliminar proveedor {ProveedorID}", id);
+                return false;
             }
         }
     }
