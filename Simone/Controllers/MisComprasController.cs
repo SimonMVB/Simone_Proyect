@@ -42,6 +42,36 @@ namespace Simone.Controllers
 
         // ========================= Helpers (rutas / meta / comprobantes) =========================
 
+
+        /// <summary>
+        /// Lee "envio.total" desde venta-{id}.meta.json si existe.
+        /// </summary>
+        private decimal? BuscarEnvioTotal(int ventaId)
+        {
+            try
+            {
+                var metaPath = Path.Combine(UploadsFolderAbs(), $"venta-{ventaId}.meta.json");
+                if (!System.IO.File.Exists(metaPath)) return null;
+
+                var json = System.IO.File.ReadAllText(metaPath);
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("envio", out var envio) &&
+                    envio.ValueKind == JsonValueKind.Object &&
+                    envio.TryGetProperty("total", out var totalElem) &&
+                    totalElem.ValueKind == JsonValueKind.Number &&
+                    totalElem.TryGetDecimal(out var total))
+                {
+                    return total;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "No se pudo leer envio.total del meta de la venta {VentaID}", ventaId);
+            }
+            return null;
+        }
+
+
         private string WebRootAbs()
             => _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
 
@@ -71,8 +101,8 @@ namespace Simone.Controllers
         }
 
         /// <summary>
-        /// Busca "venta-{id}.*" dentro de /wwwroot/uploads/comprobantes y devuelve una URL relativa.
-        /// Toma el archivo permitido más reciente (jpg, png, webp, pdf).
+        /// Busca "venta-{id}.*" dentro de /wwwroot/uploads/comprobantes y devuelve una URL relativa
+        /// con cache-buster (?v=) para evitar imágenes antiguas del navegador.
         /// </summary>
         private string? BuscarComprobanteUrl(int ventaId)
         {
@@ -85,8 +115,11 @@ namespace Simone.Controllers
                                  .ToList();
             if (files.Count == 0) return null;
 
-            var rel = Path.GetRelativePath(WebRootAbs(), files[0]).Replace("\\", "/");
-            return NormalizarCompUrl("/" + rel.TrimStart('/'));
+            var file = files[0];
+            var rel = Path.GetRelativePath(WebRootAbs(), file).Replace("\\", "/");
+            var ver = System.IO.File.GetLastWriteTimeUtc(file).Ticks.ToString();
+
+            return NormalizarCompUrl("/" + rel.TrimStart('/')) + "?v=" + ver;
         }
 
         /// <summary>
@@ -241,25 +274,35 @@ namespace Simone.Controllers
             }
 
             // ---- Enriquecer con comprobante + meta ----
-            // 1) Comprobante: primero la ruta guardada en el perfil (por compat), luego /uploads/comprobantes
-            var compUrl =
-                NormalizarCompUrl(venta.Usuario?.FotoComprobanteDeposito) ??
-                BuscarComprobanteUrl(venta.VentaID);
 
-            // 2) Metadatos por venta (preferido). Fallback al perfil si existiera.
+            // 1) Comprobante: PRIORIDAD a /uploads/comprobantes (último + cache-buster); fallback: campo de perfil
+            var compUrl = BuscarComprobanteUrl(venta.VentaID)
+                          ?? NormalizarCompUrl(venta.Usuario?.FotoComprobanteDeposito);
+
+            // 2) Metadatos por venta (depositante + banco)
             var (depMeta, bancoMeta) = BuscarMetaDeposito(venta.VentaID);
             var depositante = !string.IsNullOrWhiteSpace(depMeta)
                                 ? depMeta!.Trim()
-                                : (string.IsNullOrWhiteSpace(venta.Usuario?.NombreDepositante)
-                                    ? null
-                                    : venta.Usuario!.NombreDepositante!.Trim());
+                                : (string.IsNullOrWhiteSpace(venta.Usuario?.NombreDepositante) ? null
+                                   : venta.Usuario!.NombreDepositante!.Trim());
 
-            // Exponer a la vista (tu cshtml ya usa estos nombres)
+            // 3) Subtotales y envío
+            var subtotal = venta.DetalleVentas?.Sum(d => d.Subtotal) ?? 0m;
+
+            // Intentar leer envío del meta. Si no hay, usar diferencia Total - Subtotal (no negativa).
+            var envioMeta = BuscarEnvioTotal(venta.VentaID);
+            var envioTotal = envioMeta ?? Math.Max(0m, (venta.Total is decimal t ? t : 0m) - subtotal);
+
+
+            // ---- Exponer a la vista ----
             ViewBag.ComprobanteUrl = compUrl;
             ViewBag.Depositante = depositante;
             ViewBag.Banco = bancoMeta;
+            ViewBag.Subtotal = subtotal;
+            ViewBag.EnvioTotal = envioTotal;
 
             return View(venta);
         }
+
     }
 }

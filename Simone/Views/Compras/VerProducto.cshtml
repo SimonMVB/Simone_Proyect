@@ -105,8 +105,7 @@
         aspect-ratio: 1;
     }
 
-        .thumb-item:hover,
-        .thumb-item.active {
+        .thumb-item:hover, .thumb-item.active {
             border-color: var(--primary-color);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(232, 180, 184, 0.3);
@@ -157,12 +156,7 @@
         color: #ffc107;
     }
 
-    .rating-count {
-        color: #6c757d;
-        font-size: 0.875rem;
-    }
-
-    .product-sku {
+    .rating-count, .product-sku {
         color: #6c757d;
         font-size: 0.875rem;
     }
@@ -550,50 +544,24 @@
         border: 1px solid #f5c6cb;
     }
 
-    .social-share {
-        display: flex;
-        gap: 0.5rem;
-        margin: 1.5rem 0;
-    }
-
-    .share-btn {
-        width: 48px;
-        height: 48px;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6c757d;
-        transition: var(--transition);
-        text-decoration: none;
-    }
-
-        .share-btn:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
-        }
+    /* Se removió social-share para limpiar estilos no usados */
 
     @@media (max-width: 768px) {
-        .action-buttons
+        .action-buttons {
+            grid-template-columns: 1fr;
+        }
 
-    {
-        grid-template-columns: 1fr;
-    }
+        .gallery-image {
+            height: 300px;
+        }
 
-    .gallery-image {
-        height: 300px;
-    }
+        .current-price {
+            font-size: 2rem;
+        }
 
-    .current-price {
-        font-size: 2rem;
-    }
-
-    .features-grid {
-        grid-template-columns: 1fr;
-    }
-
+        .features-grid {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 
@@ -607,7 +575,7 @@
     </div>
 }
 
-<!-- Breadcrumb Mejorado -->
+<!-- Breadcrumb -->
 <nav class="container mt-4" aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Inicio</a></li>
@@ -622,7 +590,7 @@
 
 <div class="product-container">
     <div class="row g-5">
-        <!-- Galería Mejorada -->
+        <!-- Galería -->
         <div class="col-lg-7">
             <div class="product-gallery">
                 <div class="gallery-main">
@@ -674,7 +642,7 @@
             </div>
         </div>
 
-        <!-- Información del Producto Mejorada -->
+        <!-- Información -->
         <div class="col-lg-5">
             <div class="product-info shadow-lg">
                 <div class="p-4">
@@ -711,7 +679,7 @@
                         </div>
                     </div>
 
-                    <!-- Información de Stock -->
+                    <!-- Stock -->
                     <div class="stock-info @(!hasVar ? (Model.Stock > 5 ? "stock-available" : Model.Stock > 0 ? "stock-low" : "stock-out") : "")" id="stockInfo">
                         @if (!hasVar)
                         {
@@ -783,7 +751,7 @@
                         </div>
                     </div>
 
-                    <!-- Botones de Acción -->
+                    <!-- Botones -->
                     <div class="action-buttons">
                         <form id="formAdd" asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" novalidate>
                             @Html.AntiForgeryToken()
@@ -816,42 +784,8 @@
                         </form>
                     </div>
 
-                    <!-- Compartir -->
-                    <div class="social-share">
-                        <a href="#" class="share-btn" title="Compartir en Facebook">
-                            <i class="fa-brands fa-facebook-f"></i>
-                        </a>
-                        <a href="#" class="share-btn" title="Compartir en Instagram">
-                            <i class="fa-brands fa-instagram"></i>
-                        </a>
-                        <a href="#" class="share-btn" title="Compartir en WhatsApp">
-                            <i class="fa-brands fa-whatsapp"></i>
-                        </a>
-                        <a href="#" class="share-btn" title="Copiar enlace">
-                            <i class="fa-solid fa-link"></i>
-                        </a>
-                    </div>
-
-                    <!-- Características -->
+                    <!-- Características (solo Pago Seguro y Soporte por WhatsApp) -->
                     <div class="features-grid">
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <i class="fa-solid fa-truck-fast"></i>
-                            </div>
-                            <div>
-                                <div class="feature-text">Envío Rápido</div>
-                                <div class="feature-desc">24-48 horas hábiles</div>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <i class="fa-solid fa-arrows-rotate"></i>
-                            </div>
-                            <div>
-                                <div class="feature-text">Devoluciones</div>
-                                <div class="feature-desc">7 días para cambios</div>
-                            </div>
-                        </div>
                         <div class="feature-item">
                             <div class="feature-icon">
                                 <i class="fa-solid fa-shield-halved"></i>
@@ -863,14 +797,15 @@
                         </div>
                         <div class="feature-item">
                             <div class="feature-icon">
-                                <i class="fa-solid fa-headset"></i>
+                                <i class="fa-brands fa-whatsapp"></i>
                             </div>
                             <div>
-                                <div class="feature-text">Soporte</div>
-                                <div class="feature-desc">24/7 por WhatsApp</div>
+                                <div class="feature-text">Soporte por WhatsApp</div>
+                                <div class="feature-desc">Resolvemos tus dudas</div>
                             </div>
                         </div>
                     </div>
+                    <!-- Fin características -->
                 </div>
             </div>
         </div>
@@ -896,10 +831,8 @@
                                 <div class="col-md-6">
                                     <h6 class="fw-bold mb-3">Características principales:</h6>
                                     <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Material de alta calidad</li>
                                         <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Diseño exclusivo Neo Ágora</li>
                                         <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Comodidad garantizada</li>
-                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Lavable a máquina</li>
                                     </ul>
                                 </div>
                                 <div class="col-md-6">
@@ -907,8 +840,7 @@
                                     <ul class="list-unstyled">
                                         <li class="mb-2"><strong>Marca:</strong> @(string.IsNullOrWhiteSpace(Model.Marca) ? "Neo Ágora" : Model.Marca)</li>
                                         <li class="mb-2"><strong>Categoría:</strong> @Model.Categoria?.Nombre</li>
-                                        <li class="mb-2"><strong>Material:</strong> Algodón 100%</li>
-                                        <li class="mb-2"><strong>Cuidados:</strong> Lavar a máquina en agua fría</li>
+                                        @* Eliminados: Material y Cuidados *@
                                     </ul>
                                 </div>
                             </div>
@@ -916,37 +848,7 @@
                     </div>
                 </div>
 
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingShipping">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseShipping" aria-expanded="false" aria-controls="collapseShipping">
-                            <i class="fa-solid fa-truck me-2"></i> Envío y Devoluciones
-                        </button>
-                    </h2>
-                    <div id="collapseShipping" class="accordion-collapse collapse" aria-labelledby="headingShipping" data-bs-parent="#productAccordion">
-                        <div class="accordion-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold mb-3">Política de Envío:</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fa-solid fa-shipping-fast text-primary me-2"></i> Envío gratuito en pedidos superiores a $50</li>
-                                        <li class="mb-2"><i class="fa-solid fa-clock text-primary me-2"></i> Tiempo de entrega: 24-48 horas hábiles</li>
-                                        <li class="mb-2"><i class="fa-solid fa-map-marker-alt text-primary me-2"></i> Envíos a todo Ecuador</li>
-                                        <li class="mb-2"><i class="fa-solid fa-box text-primary me-2"></i> Empaquetado seguro y discreto</li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold mb-3">Política de Devoluciones:</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> 7 días para cambios por talla</li>
-                                        <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> Devoluciones por defectos de fábrica</li>
-                                        <li class="mb-2"><i class="fa-solid fa-tag text-success me-2"></i> Producto debe estar en perfecto estado</li>
-                                        <li class="mb-2"><i class="fa-solid fa-receipt text-success me-2"></i> Conservar factura de compra</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                @* Se eliminó COMPLETAMENTE "Envío y Devoluciones" *@
             </div>
         </div>
     </div>
@@ -987,7 +889,7 @@
     }
 </div>
 
-<!-- Toasts Mejorados -->
+<!-- Toasts -->
 <div class="position-fixed bottom-0 end-0 p-4" style="z-index:1080;">
     <div id="toastSuccess" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
@@ -1012,39 +914,27 @@
 
 @section Scripts {
     <script>
-
         async function refreshMiniCartHTML() {
-            // Busca el contenedor del panel (usa cualquiera de estos selectores)
             const panel = document.querySelector('#offcanvasCart, #miniCart, [data-mini-cart]');
             if (!panel) return;
-
-            // Necesitamos una URL que devuelva SOLO el parcial del carrito
             const url = panel.getAttribute('data-refresh-url');
             if (!url) return;
-
             try {
                 const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 if (!res.ok) return;
-
                 const html = await res.text();
                 panel.innerHTML = html;
-
-                // Por si otros scripts necesitan saber que se re-renderizó
                 window.dispatchEvent(new CustomEvent('miniCart:refreshed'));
-            } catch { /* silencioso */ }
+            } catch {}
         }
 
         const HAS_VARIANTS = @((hasVar ? "true" : "false").ToLower());
         const VARIANTES = HAS_VARIANTS ? @Html.Raw(variantesJson) : [];
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // =========================
-            // Selectores unificados
-            // =========================
+        document.addEventListener('DOMContentLoaded', function () {
             const CART_COUNT_SELECTORS = '#cartCount, #cart-count, [data-cart-count], .cart-count';
             const CART_TOTAL_SELECTORS = '#cartTotal, #cart-total, [data-cart-total], .cart-total';
 
-            // Elementos principales
             const mainImg = document.getElementById('mainImg');
             const stockBadge = document.getElementById('stockBadge');
             const stockInfo = document.getElementById('stockInfo');
@@ -1060,11 +950,9 @@
             let selectedColor = null;
             let selectedTalla = null;
 
-            // =========================
             // Galería
-            // =========================
             document.querySelectorAll('.thumb-item').forEach(thumb => {
-                thumb.addEventListener('click', function() {
+                thumb.addEventListener('click', function () {
                     document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     const newSrc = this.getAttribute('data-src');
@@ -1072,9 +960,7 @@
                 });
             });
 
-            // =========================
             // Cantidad
-            // =========================
             const quantityInput = document.getElementById('Cantidad');
             const quantityHidden = document.getElementById('CantidadHidden');
             const btnMinus = document.getElementById('btnMinus');
@@ -1092,7 +978,7 @@
             }
 
             btnMinus?.addEventListener('click', () => { quantityInput.value = Math.max(1, (parseInt(quantityInput.value) || 1) - 1); updateQuantity(); });
-            btnPlus?.addEventListener('click',  () => {
+            btnPlus?.addEventListener('click', () => {
                 const max = parseInt(quantityInput.getAttribute('max')) || 1;
                 quantityInput.value = Math.min(max, (parseInt(quantityInput.value) || 1) + 1);
                 updateQuantity();
@@ -1100,16 +986,14 @@
             quantityInput?.addEventListener('change', updateQuantity);
             updateQuantity();
 
-            // =========================
             // Variantes
-            // =========================
             function getUniqueColors() {
                 return [...new Set(VARIANTES.map(v => v.color).filter(Boolean))];
             }
             function getTallasByColor(color) {
                 return VARIANTES.filter(v => v.color === color && v.talla)
-                                .map(v => v.talla)
-                                .filter((t, i, a) => a.indexOf(t) === i);
+                    .map(v => v.talla)
+                    .filter((t, i, a) => a.indexOf(t) === i);
             }
             function getVariantByColorAndTalla(color, talla) {
                 return VARIANTES.find(v => v.color === color && v.talla === talla);
@@ -1134,7 +1018,7 @@
                 });
 
                 colorOptions.querySelectorAll('.variant-input').forEach(input => {
-                    input.addEventListener('change', function() {
+                    input.addEventListener('change', function () {
                         selectedColor = this.value;
                         selectedColorText.textContent = selectedColor;
                         renderTallaOptions();
@@ -1173,7 +1057,7 @@
                 });
 
                 tallaOptions.querySelectorAll('.variant-input:not(:disabled)').forEach(input => {
-                    input.addEventListener('change', function() {
+                    input.addEventListener('change', function () {
                         selectedTalla = this.value;
                         selectedTallaText.textContent = selectedTalla;
                         updateVariantSelection();
@@ -1243,13 +1127,11 @@
                 return colorMap[colorName?.toLowerCase?.()] || '#6b7280';
             }
 
-            // =========================
             // Favoritos (AJAX)
-            // =========================
             const favForm = document.getElementById('favForm');
             const btnFav = document.getElementById('btnFav');
 
-            favForm?.addEventListener('submit', async function(e) {
+            favForm?.addEventListener('submit', async function (e) {
                 e.preventDefault();
                 const icon = btnFav.querySelector('i');
                 const wasFavorite = icon.classList.contains('fa-solid');
@@ -1273,33 +1155,10 @@
                 } catch { showToast('error', 'Error al actualizar favoritos'); }
             });
 
-            // =========================
-            // Compartir
-            // =========================
-            document.querySelectorAll('.share-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const url = window.location.href;
-                    const title = document.title;
-
-                    if (this.querySelector('.fa-link')) {
-                        navigator.clipboard.writeText(url).then(() => showToast('success', 'Enlace copiado al portapapeles'));
-                    } else if (this.querySelector('.fa-facebook-f')) {
-                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-                    } else if (this.querySelector('.fa-instagram')) {
-                        window.open(`https://www.instagram.com/`, '_blank');
-                    } else if (this.querySelector('.fa-whatsapp')) {
-                        window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');
-                    }
-                });
-            });
-
-            // =========================
             // Carrito (AJAX)
-            // =========================
             const formAdd = document.getElementById('formAdd');
 
-            formAdd?.addEventListener('submit', async function(e) {
+            formAdd?.addEventListener('submit', async function (e) {
                 e.preventDefault();
 
                 if (HAS_VARIANTS && !varHidden.value) {
@@ -1325,7 +1184,6 @@
 
                     if (data.ok) {
                         showToast('success', 'Producto añadido al carrito');
-                        // Si el backend ya devuelve count/subtotal, úsalo; si no, refresca desde el endpoint
                         await updateCartBadge(data);
                     } else if (data.needLogin) {
                         window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
@@ -1348,52 +1206,44 @@
                 new bootstrap.Toast(toastEl).show();
             }
 
-            // --- NUEVO: función para pintar todos los badges de carrito ---
             function renderCartBadges(count, subtotal) {
                 document.querySelectorAll(CART_COUNT_SELECTORS).forEach(el => { if (el) el.textContent = Number(count || 0); });
                 const formatted = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' })
-                                     .format(Number(subtotal || 0));
+                    .format(Number(subtotal || 0));
                 document.querySelectorAll(CART_TOTAL_SELECTORS).forEach(el => { if (el) el.textContent = formatted; });
             }
 
-            // --- NUEVO: pedir info del carrito con fallback de endpoint ---
             async function fetchCartInfo() {
                 try {
                     let res = await fetch('/Compras/CartInfo');
-                    if (!res.ok) { // fallback si usas CarritoController
-                        res = await fetch('/Carrito/CartInfo');
-                    }
+                    if (!res.ok) { res = await fetch('/Carrito/CartInfo'); }
                     if (res.ok) return await res.json();
-                } catch { /* ignore */ }
+                } catch {}
                 return null;
             }
 
-            // --- NUEVO: actualizar UI (acepta datos precalculados del add-to-cart) ---
-                async function updateCartBadge(preData) {
-        // Pintar contadores rápidamente si ya tenemos datos del POST
-        const countQuick = Number(preData?.count ?? 0);
-        const subtotalQuick = Number(preData?.subtotal ?? preData?.total ?? NaN);
-        if (!Number.isNaN(subtotalQuick) || countQuick > 0) {
-            renderCartBadges(countQuick, subtotalQuick);
-            window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: countQuick, subtotal: subtotalQuick } }));
-            // Refresca el mini-carrito en segundo plano
-            refreshMiniCartHTML();
-            return;
-        }
-
-                    const data = await fetchCartInfo();
-        if (data) {
-            const c = Number(data.count ?? 0);
-            const s = Number(data.subtotal ?? data.total ?? 0);
-            renderCartBadges(c, s);
-            window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: c, subtotal: s } }));
-            refreshMiniCartHTML();
-        }
+            async function updateCartBadge(preData) {
+                const countQuick = Number(preData?.count ?? 0);
+                const subtotalQuick = Number(preData?.subtotal ?? preData?.total ?? NaN);
+                if (!Number.isNaN(subtotalQuick) || countQuick > 0) {
+                    renderCartBadges(countQuick, subtotalQuick);
+                    window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: countQuick, subtotal: subtotalQuick } }));
+                    refreshMiniCartHTML();
+                    return;
+                }
+                const data = await fetchCartInfo();
+                if (data) {
+                    const c = Number(data.count ?? 0);
+                    const s = Number(data.subtotal ?? data.total ?? 0);
+                    renderCartBadges(c, s);
+                    window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: c, subtotal: s } }));
+                    refreshMiniCartHTML();
+                }
             }
 
             // Inicialización
             if (HAS_VARIANTS) { renderColorOptions(); }
-            updateCartBadge(); // cargar estado del carrito al inicio
+            updateCartBadge();
         });
     </script>
 }

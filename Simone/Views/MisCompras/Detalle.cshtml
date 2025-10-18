@@ -25,8 +25,7 @@
     {
         if (string.IsNullOrWhiteSpace(b)) return "—";
         var raw = b.Trim();
-
-        // Si viene con prefijo "admin:xxx" o "tienda:vid:xxx" me quedo con el último segmento
+        // Si viene "admin:pichincha" o "tienda:{vid}:pichincha", me quedo con el último segmento
         var last = raw.Contains(':') ? raw.Split(':').Last() : raw;
         var k = last.ToLowerInvariant();
 
@@ -54,6 +53,17 @@
     var detalle = Model?.DetalleVentas != null ? Model.DetalleVentas.ToList() : new List<DetalleVentas>();
     var subtotal = detalle.Sum(d => d.PrecioUnitario * d.Cantidad);
     var descuentos = detalle.Sum(d => d.Descuento ?? 0m);
+
+    // ==== ENVÍO ====
+    // Usa el que viene del controlador si existe; si no, calcula Total - (Subtotal - Descuentos) y nunca negativo
+    decimal envio = 0m;
+    if (ViewBag.EnvioTotal is decimal et) { envio = et; }
+    else { envio = Math.Max(0m, (Model?.Total ?? 0m) - (subtotal - descuentos)); }
+
+    // Comprobante con cache-buster para que no quede pegado el anterior
+    var urlComprobanteV = !string.IsNullOrWhiteSpace(urlComprobante)
+        ? $"{urlComprobante}{(urlComprobante!.Contains("?") ? "&" : "?")}v={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}"
+        : null;
 }
 
 <!DOCTYPE html>
@@ -133,7 +143,7 @@
         }
 
             .card-modern:hover {
-                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+                box-shadow: 0 8px 30px rgba(0,0,0,.12);
                 transform: translateY(-2px);
             }
 
@@ -147,7 +157,7 @@
         }
 
             .card-header-modern i {
-                margin-right: 0.75rem;
+                margin-right: .75rem;
                 font-size: 1.1rem;
             }
 
@@ -170,12 +180,12 @@
             }
 
         .info-label {
-            font-size: 0.85rem;
+            font-size: .85rem;
             color: var(--gray-600);
             font-weight: 500;
-            margin-bottom: 0.5rem;
+            margin-bottom: .5rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: .5px;
         }
 
         .info-value {
@@ -187,11 +197,11 @@
         .status-badge {
             display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
+            gap: .5rem;
+            padding: .5rem 1rem;
             border-radius: 50px;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: .9rem;
             border-left: 4px solid;
         }
 
@@ -199,25 +209,25 @@
             background: linear-gradient(to right, var(--primary), var(--primary-light));
             border: none;
             color: white;
-            padding: 0.75rem 1.5rem;
+            padding: .75rem 1.5rem;
             border-radius: 50px;
             font-weight: 600;
             transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+            box-shadow: 0 4px 15px rgba(111,66,193,.3);
         }
 
             .btn-primary-modern:hover {
                 background: linear-gradient(to right, var(--primary-dark), var(--primary));
                 color: white;
                 transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
+                box-shadow: 0 6px 20px rgba(111,66,193,.4);
             }
 
         .btn-outline-modern {
             border: 2px solid var(--primary);
             color: var(--primary);
             background: transparent;
-            padding: 0.75rem 1.5rem;
+            padding: .75rem 1.5rem;
             border-radius: 50px;
             font-weight: 600;
             transition: var(--transition);
@@ -227,7 +237,7 @@
                 background: var(--primary);
                 color: white;
                 transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
+                box-shadow: 0 4px 15px rgba(111,66,193,.3);
             }
 
         .table-modern {
@@ -235,12 +245,12 @@
         }
 
             .table-modern thead th {
-                background-color: var(--gray-100);
+                background: var(--gray-100);
                 color: var(--gray-700);
                 font-weight: 600;
                 text-transform: uppercase;
-                font-size: 0.85rem;
-                letter-spacing: 0.5px;
+                font-size: .85rem;
+                letter-spacing: .5px;
                 border-bottom: 2px solid var(--gray-300);
                 padding: 1rem 1.5rem;
             }
@@ -256,7 +266,7 @@
             }
 
             .table-modern tbody tr:hover {
-                background-color: rgba(111, 66, 193, 0.03);
+                background: rgba(111,66,193,.03);
             }
 
         .product-info {
@@ -270,16 +280,16 @@
             height: 60px;
             object-fit: cover;
             border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,.1);
         }
 
         .product-name {
             font-weight: 600;
-            margin-bottom: 0.25rem;
+            margin-bottom: .25rem;
         }
 
         .product-desc {
-            font-size: 0.9rem;
+            font-size: .9rem;
             color: var(--gray-600);
             line-height: 1.4;
         }
@@ -293,13 +303,13 @@
             max-width: 100%;
             max-height: 300px;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,.1);
             transition: var(--transition);
         }
 
             .comprobante-img:hover {
                 transform: scale(1.02);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+                box-shadow: 0 8px 25px rgba(0,0,0,.15);
             }
 
         .comprobante-pdf {
@@ -307,7 +317,7 @@
             height: 400px;
             border: none;
             border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,.1);
         }
 
         .empty-state {
@@ -319,14 +329,14 @@
             .empty-state i {
                 font-size: 3rem;
                 margin-bottom: 1rem;
-                opacity: 0.5;
+                opacity: .5;
             }
 
         .total-display {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);
             padding: 1.5rem;
             border-radius: var(--border-radius);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 15px rgba(0,0,0,.05);
         }
 
         .timeline-container {
@@ -381,18 +391,18 @@
             .timeline-step.active::before {
                 border-color: var(--primary);
                 background: var(--primary);
-                box-shadow: 0 0 0 6px rgba(111, 66, 193, 0.2);
+                box-shadow: 0 0 0 6px rgba(111,66,193,.2);
             }
 
         .step-title {
             font-weight: 600;
             font-size: 1.1rem;
-            margin-bottom: 0.5rem;
+            margin-bottom: .5rem;
             color: var(--gray-800);
         }
 
         .step-status {
-            font-size: 0.9rem;
+            font-size: .9rem;
             color: var(--gray-600);
         }
 
@@ -404,7 +414,7 @@
 
         .badge-rounded {
             border-radius: 50px;
-            padding: 0.5rem 1rem;
+            padding: .5rem 1rem;
             font-weight: 600;
         }
 
@@ -551,6 +561,11 @@
                             <div class="info-value text-danger">-@descuentos.ToString("C", culture)</div>
                         </div>
 
+                        <div class="info-item">
+                            <div class="info-label">Envío</div>
+                            <div class="info-value">@envio.ToString("C", culture)</div>
+                        </div>
+
                         <div class="info-item" style="grid-column: span 2;">
                             <div class="info-label">Total</div>
                             <div class="info-value" style="font-size: 1.5rem; color: var(--primary);">@Model.Total.ToString("C", culture)</div>
@@ -564,32 +579,33 @@
                 <div class="card-modern h-100">
                     <div class="card-header-modern d-flex justify-content-between align-items-center">
                         <div><i class="fas fa-receipt"></i>Comprobante</div>
-                        <div id="compBtns" class="btn-group @(string.IsNullOrWhiteSpace(urlComprobante) ? "d-none" : "") no-print">
-                            <a id="compLink" href="@urlComprobante" target="_blank" class="btn btn-sm btn-outline-modern" title="Ver comprobante">
+                        <div id="compBtns" class="btn-group @(string.IsNullOrWhiteSpace(urlComprobanteV) ? "d-none" : "") no-print">
+                            <a id="compLink" href="@urlComprobanteV" target="_blank" class="btn btn-sm btn-outline-modern" title="Ver comprobante">
                                 <i class="fas fa-external-link-alt"></i>
                             </a>
-                            <a id="compDownload" href="@urlComprobante" download="comprobante-venta-@Model.VentaID" class="btn btn-sm btn-outline-modern" title="Descargar comprobante">
+                            <a id="compDownload" href="@urlComprobanteV" download="comprobante-venta-@Model.VentaID" class="btn btn-sm btn-outline-modern" title="Descargar comprobante">
                                 <i class="fas fa-download"></i>
                             </a>
                         </div>
                     </div>
 
                     <div class="comprobante-container">
-                        @if (!string.IsNullOrWhiteSpace(urlComprobante))
+                        @if (!string.IsNullOrWhiteSpace(urlComprobanteV))
                         {
-                            if (urlComprobante.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                            var isPdf = urlComprobanteV?.Split('?')[0].EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) == true;
+                            if (isPdf)
                             {
-                                <iframe class="comprobante-pdf" src="@urlComprobante#toolbar=0" title="Comprobante PDF"></iframe>
+                                <iframe class="comprobante-pdf" src="@($"{urlComprobanteV}#toolbar=0")" title="Comprobante PDF"></iframe>
                                 <div class="mt-3">
-                                    <a href="@urlComprobante" target="_blank" class="btn btn-outline-modern btn-sm">
+                                    <a href="@urlComprobanteV" target="_blank" class="btn btn-outline-modern btn-sm">
                                         <i class="fas fa-external-link-alt me-2"></i>Abrir PDF
                                     </a>
                                 </div>
                             }
                             else
                             {
-                                <a href="@urlComprobante" target="_blank" title="Ver comprobante en tamaño completo">
-                                    <img class="comprobante-img" src="@urlComprobante" alt="Comprobante de la venta @Model.VentaID" />
+                                <a href="@urlComprobanteV" target="_blank" title="Ver comprobante en tamaño completo">
+                                    <img class="comprobante-img" src="@urlComprobanteV" alt="Comprobante de la venta @Model.VentaID" />
                                 </a>
                                 <div class="mt-3 text-muted">
                                     <i class="fas fa-search-plus me-2"></i>Haga clic en la imagen para ampliar
@@ -665,6 +681,9 @@
                         <div class="col-8 fw-semibold">Descuentos:</div>
                         <div class="col-4 text-end text-danger">-@descuentos.ToString("C", culture)</div>
 
+                        <div class="col-8 fw-semibold">Envío:</div>
+                        <div class="col-4 text-end">@envio.ToString("C", culture)</div>
+
                         <hr class="my-3" />
                         <div class="col-8 fw-bold fs-5">Total:</div>
                         <div class="col-4 text-end fw-bold fs-5 text-primary">@Model.Total.ToString("C", culture)</div>
@@ -725,8 +744,8 @@
             <a class="btn btn-outline-modern" href="@Url.Action("Index", "MisCompras")">
                 <i class="fas fa-arrow-left me-2"></i>Volver a mis compras
             </a>
-            <a id="btnDescargar" class="btn btn-primary-modern @(string.IsNullOrWhiteSpace(urlComprobante) ? "d-none" : "")"
-               href="@urlComprobante" download="comprobante-venta-@Model.VentaID">
+            <a id="btnDescargar" class="btn btn-primary-modern @(string.IsNullOrWhiteSpace(urlComprobanteV) ? "d-none" : "")"
+               href="@urlComprobanteV" download="comprobante-venta-@Model.VentaID">
                 <i class="fas fa-download me-2"></i>Descargar comprobante
             </a>
             <button class="btn btn-outline-modern ms-auto" onclick="window.print()">
@@ -752,7 +771,7 @@
             const depSpan  = document.getElementById('depositanteVal');
             const bankSpan = document.getElementById('bancoVal');
 
-            const hasServerUrl = !!('@(urlComprobante ?? "")');
+            const hasServerUrl = !!('@(urlComprobanteV ?? "")');
 
             async function headOk(url){
                 try{
@@ -763,7 +782,7 @@
 
             function bankPretty(s){
                 if(!s) return '';
-                const raw = String(s).trim();
+                const raw  = String(s).trim();
                 const last = raw.includes(':') ? raw.split(':').pop() : raw;
                 const k = last.toLowerCase();
                 const map = { pichincha:'Banco Pichincha', guayaquil:'Banco Guayaquil', pacifico:'Banco del Pacífico', jep:'Banco JEP' };
@@ -774,45 +793,48 @@
                 if (!meta) return '';
                 // Puede venir:
                 //  - meta.banco: "pichincha"
-                //  - meta.bancoSeleccion: "admin:pichincha"
-                //  - meta.bancoSeleccion: { banco:{ nombre,codigo,... } }  (ConfirmarCompra)
+                //  - meta.bancoSeleccion: "admin:pichincha" | "tienda:{vid}:{codigo}"
+                //  - meta.bancoSeleccion: { banco:{ nombre,codigo,valor,... } }
                 const bs = meta.bancoSeleccion ?? meta.BancoSeleccion ?? meta.banco ?? meta.Banco;
                 if (!bs) return '';
 
-                if (typeof bs === 'string'){
-                    return bankPretty(bs);
-                }
-                // objeto
+                if (typeof bs === 'string') return bankPretty(bs);
                 const bobj = bs.banco ?? bs;
-                return bankPretty(bobj.nombre || bobj.codigo || bobj.valor || '');
+                return bankPretty(bobj?.nombre || bobj?.codigo || bobj?.valor || '');
             }
 
             function renderComprobante(url){
                 if (!compContainer) return;
+
+                // romper cache siempre
+                const urlV = url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now();
+
                 compContainer.innerHTML = '';
-                if (url.toLowerCase().endsWith('.pdf')){
+                const isPdf = urlV.toLowerCase().split('?')[0].endsWith('.pdf');
+
+                if (isPdf){
                     const ifr = document.createElement('iframe');
                     ifr.className = 'comprobante-pdf';
                     ifr.title = 'Comprobante PDF';
-                    ifr.src = `${url}#toolbar=0`;
+                    ifr.src = `${urlV}#toolbar=0`;
                     compContainer.appendChild(ifr);
 
                     const linkDiv = document.createElement('div');
                     linkDiv.className = 'mt-3';
                     const link = document.createElement('a');
-                    link.href = url; link.target = '_blank';
+                    link.href = urlV; link.target = '_blank';
                     link.className = 'btn btn-outline-modern btn-sm';
                     link.innerHTML = '<i class="fas fa-external-link-alt me-2"></i>Abrir PDF';
                     linkDiv.appendChild(link);
                     compContainer.appendChild(linkDiv);
-                }else{
+                } else {
                     const a = document.createElement('a');
-                    a.href = url; a.target = '_blank';
+                    a.href = urlV; a.target = '_blank';
                     a.title = 'Ver comprobante en tamaño completo';
                     const img = document.createElement('img');
                     img.className = 'comprobante-img';
                     img.alt = `Comprobante de la venta ${ventaId}`;
-                    img.src = url;
+                    img.src = urlV;
                     a.appendChild(img);
                     compContainer.appendChild(a);
                     const tip = document.createElement('div');
@@ -820,15 +842,11 @@
                     tip.innerHTML = '<i class="fas fa-search-plus me-2"></i>Haga clic en la imagen para ampliar';
                     compContainer.appendChild(tip);
                 }
-                if (compBtns){
-                    compBtns.classList.remove('d-none');
-                    if (compLink) compLink.href = url;
-                    if (compDownload) compDownload.href = url;
-                }
-                if (btnDescargar){
-                    btnDescargar.classList.remove('d-none');
-                    btnDescargar.href = url;
-                }
+
+                if (compBtns){ compBtns.classList.remove('d-none'); }
+                if (compLink) compLink.href = urlV;
+                if (compDownload) compDownload.href = urlV;
+                if (btnDescargar){ btnDescargar.classList.remove('d-none'); btnDescargar.href = urlV; }
             }
 
             async function tryDetectEverything(){
