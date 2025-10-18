@@ -871,9 +871,13 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="cart-content" class="flex-grow-1 overflow-auto">
+            <div id="cart-content"
+                 class="flex-grow-1 overflow-auto"
+                 data-mini-cart
+                 data-refresh-url="@Url.Action("Mini", "Compras")">
                 @await Html.PartialAsync("_CartPartial", carrito)
             </div>
+
         </div>
     </aside>
 

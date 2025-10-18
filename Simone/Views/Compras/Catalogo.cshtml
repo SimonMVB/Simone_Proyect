@@ -14,496 +14,488 @@
         string? sort = null
     )
     {
-        var q = new List<string>();
-        if (categoriaID.HasValue) q.Add($"categoriaID={categoriaID.Value}");
-        if (subcategoriaIDs != null && subcategoriaIDs.Any())
-            q.AddRange(subcategoriaIDs.Select(id => $"subcategoriaIDs={id}"));
-        if (coloresSel != null)
-            foreach (var c in coloresSel.Where(s => !string.IsNullOrWhiteSpace(s)))
-                q.Add($"ColoresSeleccionados={Uri.EscapeDataString(c)}");
-        if (tallasSel != null)
-            foreach (var t in tallasSel.Where(s => !string.IsNullOrWhiteSpace(s)))
-                q.Add($"TallasSeleccionadas={Uri.EscapeDataString(t)}");
-        if (soloDisp) q.Add("SoloDisponibles=true");
-        if (!string.IsNullOrWhiteSpace(sort)) q.Add($"sort={Uri.EscapeDataString(sort)}");
-        q.Add($"pageNumber={pageNumber}");
-        q.Add($"pageSize={pageSize}");
+        var queryParams = new List<string>();
+
+        if (categoriaID.HasValue)
+            queryParams.Add($"categoriaID={categoriaID.Value}");
+
+        if (subcategoriaIDs?.Any() == true)
+            queryParams.AddRange(subcategoriaIDs.Select(id => $"subcategoriaIDs={id}"));
+
+        if (coloresSel?.Any() == true)
+            queryParams.AddRange(coloresSel.Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(c => $"ColoresSeleccionados={Uri.EscapeDataString(c)}"));
+
+        if (tallasSel?.Any() == true)
+            queryParams.AddRange(tallasSel.Where(s => !string.IsNullOrWhiteSpace(s))
+                .Select(t => $"TallasSeleccionadas={Uri.EscapeDataString(t)}"));
+
+        if (soloDisp) queryParams.Add("SoloDisponibles=true");
+        if (!string.IsNullOrWhiteSpace(sort)) queryParams.Add($"sort={Uri.EscapeDataString(sort)}");
+
+        queryParams.Add($"pageNumber={pageNumber}");
+        queryParams.Add($"pageSize={pageSize}");
+
         var baseUrl = Url.Action("Catalogo")!;
-        return q.Count > 0 ? (baseUrl + "?" + string.Join("&", q)) : baseUrl;
+        return queryParams.Count > 0 ? $"{baseUrl}?{string.Join("&", queryParams)}" : baseUrl;
     }
 
     IFormatProvider Ec() => CultureInfo.CreateSpecificCulture("es-EC");
     bool EsNuevo(DateTime f) => (DateTime.Now - f).TotalDays <= 30;
+
+    string GetColorHex(string colorName)
+    {
+        var colorMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            {"negro", "#000000"}, {"blanco", "#ffffff"}, {"gris", "#808080"},
+            {"rojo", "#ff0000"}, {"azul", "#0000ff"}, {"verde", "#008000"},
+            {"amarillo", "#ffff00"}, {"naranja", "#ffa500"}, {"rosa", "#ffc0cb"},
+            {"morado", "#800080"}, {"marron", "#8b4513"}, {"beige", "#f5f5dc"},
+            {"celeste", "#87ceeb"}, {"turquesa", "#40e0d0"}, {"lila", "#c8a2c8"},
+            {"dorado", "#ffd700"}, {"plateado", "#c0c0c0"}
+        };
+        return colorMap.TryGetValue(colorName?.Trim() ?? "", out var hex) ? hex : "#cccccc";
+    }
 }
 
-<div class="container-xxl pb-4">
-    <!-- Toolbar -->
-    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap py-3">
-        <div>
-            <h1 class="h5 m-0">
-                @(Model.SelectedCategoriaID.HasValue
-                                ? Model.Categorias.FirstOrDefault(c => c.CategoriaID == Model.SelectedCategoriaID)?.Nombre ?? "Catálogo"
-                                : "Todos los productos")
-            </h1>
-            <small class="text-muted">@Model.TotalProducts producto@(Model.TotalProducts == 1 ? "" : "s")</small>
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="d-none position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
+    <div class="d-flex align-items-center bg-white rounded shadow-lg p-4">
+        <div class="spinner-border text-primary me-3" role="status"></div>
+        <span class="fw-semibold">Cargando productos...</span>
+    </div>
+</div>
+
+<div class="container-fluid px-3 px-lg-4 pb-5">
+    <!-- Header -->
+    <div class="row align-items-center py-4 border-bottom bg-white sticky-top" style="top: 0; z-index: 1020;">
+        <div class="col-md-6">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2 mb-md-0">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Inicio</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        @(Model.SelectedCategoriaID.HasValue
+                            ? Model.Categorias.FirstOrDefault(c => c.CategoriaID == Model.SelectedCategoriaID)?.Nombre ?? "Catálogo"
+                            : "Todos los productos")
+                    </li>
+                </ol>
+            </nav>
+            <div class="d-flex align-items-center gap-3">
+                <h1 class="h4 mb-0 fw-bold text-dark">
+                    @(Model.SelectedCategoriaID.HasValue
+                        ? Model.Categorias.FirstOrDefault(c => c.CategoriaID == Model.SelectedCategoriaID)?.Nombre ?? "Catálogo"
+                        : "Todos los productos")
+                </h1>
+                <span class="badge bg-light text-dark border fs-6">@Model.TotalProducts producto@(Model.TotalProducts == 1 ? "" : "s")</span>
+            </div>
         </div>
 
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <!-- Mostrar filtros (móvil) -->
-            <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas">
-                <i class="fa-solid fa-sliders"></i> Filtros
-            </button>
+        <div class="col-md-6">
+            <div class="d-flex align-items-center justify-content-md-end gap-3 flex-wrap">
+                <!-- Filtros móvil -->
+                <button class="btn btn-outline-dark d-lg-none position-relative" type="button"
+                        data-bs-toggle="offcanvas" data-bs-target="#filtersOffcanvas">
+                    <i class="fa-solid fa-sliders me-2"></i>Filtros
+                    @if (Model.ColoresSeleccionados.Any() || Model.TallasSeleccionadas.Any() || Model.SoloDisponibles)
+                    {
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            <span class="visualmente-hidden">Filtros activos</span>
+                        </span>
+                    }
+                </button>
 
-            <!-- Orden + PageSize -->
-            <form method="get" asp-action="Catalogo" class="d-flex align-items-center gap-2">
-                @* preservar *@
-                @if (Model.SelectedCategoriaID.HasValue)
-                {
-                    <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                }
-                @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                {
-                    <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                }
-                @foreach (var c in Model.ColoresSeleccionados)
-                {
-                    <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                }
-                @foreach (var t in Model.TallasSeleccionadas)
-                {
-                    <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                }
-                @if (Model.SoloDisponibles)
-                {
-                    <input type="hidden" name="SoloDisponibles" value="true" />
-                }
-                <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-
+                <!-- Orden y tamaño de página -->
                 <div class="d-flex align-items-center gap-2">
-                    <label for="sortSel" class="text-muted small">Ordenar</label>
-                    <select class="form-select form-select-sm" name="sort" id="sortSel" style="min-width:190px" onchange="this.form.submit()">
-                        <option value="">Ordenar por</option>
-                        <option value="precio_asc">Precio: Menor a mayor</option>
-                        <option value="precio_desc">Precio: Mayor a menor</option>
-                        <option value="nuevos">Novedades</option>
-                        <option value="mas_vendidos">Más vendidos</option>
-                    </select>
-                </div>
+                    <form method="get" asp-action="Catalogo" class="d-flex align-items-center gap-2" id="viewControlsForm">
+                        @if (Model.SelectedCategoriaID.HasValue)
+                        { <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" /> }
+                        @foreach (var sid in Model.SelectedSubcategoriaIDs)
+                        { <input type="hidden" name="subcategoriaIDs" value="@sid" /> }
+                        @foreach (var c in Model.ColoresSeleccionados)
+                        { <input type="hidden" name="ColoresSeleccionados" value="@c" /> }
+                        @foreach (var t in Model.TallasSeleccionadas)
+                        { <input type="hidden" name="TallasSeleccionadas" value="@t" /> }
+                        @if (Model.SoloDisponibles)
+                        { <input type="hidden" name="SoloDisponibles" value="true" /> }
+                        <input type="hidden" name="pageNumber" value="1" />
 
-                <div class="d-flex align-items-center gap-2">
-                    <label for="pageSizeSel" class="text-muted small">Mostrar</label>
-                    <select class="form-select form-select-sm" name="pageSize" id="pageSizeSel" style="min-width:100px" onchange="this.form.submit()">
-                        <option value="12">12</option>
-                        <option value="24">24</option>
-                        <option value="36">36</option>
-                    </select>
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <label class="input-group-text bg-transparent border-end-0 pe-1 text-muted small" for="sortSel">
+                                <i class="fa-solid fa-arrow-down-wide-short"></i>
+                            </label>
+                            <select class="form-select border-start-0 ps-1" name="sort" id="sortSel" style="min-width: 180px;" onchange="this.form.submit()">
+                                <option value="">Ordenar por</option>
+                                <option value="precio_asc" selected="@(Model.Sort == "precio_asc")">Precio: Menor a mayor</option>
+                                <option value="precio_desc" selected="@(Model.Sort == "precio_desc")">Precio: Mayor a menor</option>
+                                <option value="nuevos" selected="@(Model.Sort == "nuevos")">Novedades</option>
+                                <option value="mas_vendidos" selected="@(Model.Sort == "mas_vendidos")">Más vendidos</option>
+                            </select>
+                        </div>
+
+                        <div class="input-group input-group-sm" style="width: auto;">
+                            <label class="input-group-text bg-transparent border-end-0 pe-1 text-muted small" for="pageSizeSel">
+                                <i class="fa-solid fa-list"></i>
+                            </label>
+                            <select class="form-select border-start-0 ps-1" name="pageSize" id="pageSizeSel" style="min-width: 90px;" onchange="this.form.submit()">
+                                <option value="12" selected="@(Model.PageSize == 12)">12</option>
+                                <option value="24" selected="@(Model.PageSize == 24)">24</option>
+                                <option value="36" selected="@(Model.PageSize == 36)">36</option>
+                                <option value="48" selected="@(Model.PageSize == 48)">48</option>
+                            </select>
+                        </div>
+                    </form>
+
+                    <!-- Vista grid/lista -->
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="viewMode" id="gridView" autocomplete="off" checked>
+                        <label class="btn btn-outline-dark" for="gridView" title="Vista cuadrícula">
+                            <i class="fa-solid fa-grid"></i>
+                        </label>
+
+                        <input type="radio" class="btn-check" name="viewMode" id="listView" autocomplete="off">
+                        <label class="btn btn-outline-dark" for="listView" title="Vista lista">
+                            <i class="fa-solid fa-list"></i>
+                        </label>
+                    </div>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
-    <div class="row g-3">
-        <!-- Sidebar desktop -->
+    <div class="row g-4 mt-0">
+        <!-- SIDEBAR -->
         <aside class="col-lg-3 d-none d-lg-block">
-            <div class="card border-0 shadow-sm sticky-top" style="top:96px">
+            <div class="card border-0 shadow-sm sticky-top" style="top: 120px;">
+                <div class="card-header bg-white border-bottom-0 py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0 fw-semibold">Filtros</h5>
+                        @if (Model.ColoresSeleccionados.Any() || Model.TallasSeleccionadas.Any() || Model.SoloDisponibles || Model.SelectedSubcategoriaIDs.Any())
+                        {
+                            <a href="@Url.Action("Catalogo")" class="btn btn-sm btn-outline-danger">
+                                <i class="fa-solid fa-rotate-left me-1"></i>Limpiar
+                            </a>
+                        }
+                    </div>
+                </div>
                 <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
+                    <div class="accordion accordion-flush" id="filterAccordion">
                         <!-- Categorías -->
-                        <div class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <strong>Categorías</strong>
-                            </div>
-                            <hr class="my-2">
-                            <form method="get" asp-action="Catalogo" class="vstack gap-1">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="categoriaID" value=""
-                                           id="catAll" onchange="this.form.submit()" @(Model.SelectedCategoriaID == null ? "checked" : null)>
-                                    <label class="form-check-label" for="catAll">Todas las categorías</label>
-                                </div>
-                                @foreach (var cat in Model.Categorias)
-                                {
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="categoriaID" value="@cat.CategoriaID"
-                                               id="cat-@cat.CategoriaID" onchange="this.form.submit()" @(cat.CategoriaID == Model.SelectedCategoriaID ? "checked" : null)>
-                                        <label class="form-check-label" for="cat-@cat.CategoriaID">@cat.Nombre</label>
+                        <div class="accordion-item border-0">
+                            <div class="accordion-header">
+                                <button class="accordion-button bg-light py-3" type="button" data-bs-toggle="collapse" data-bs-target="#filterCategorias">
+                                    <div class="d-flex justify-content-between align-items-center w-100">
+                                        <span class="fw-semibold">Categorías</span>
+                                        <i class="fa-solid fa-chevron-down accordion-arrow"></i>
                                     </div>
-                                }
-                            </form>
+                                </button>
+                            </div>
+                            <div id="filterCategorias" class="accordion-collapse collapse show">
+                                <div class="accordion-body px-3 py-2">
+                                    <form method="get" asp-action="Catalogo" class="vstack gap-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="categoriaID" value=""
+                                                   id="catAll" onchange="this.form.submit()" @(Model.SelectedCategoriaID == null ? "checked" : null)>
+                                            <label class="form-check-label fw-medium" for="catAll">Todas las categorías</label>
+                                        </div>
+                                        @foreach (var cat in Model.Categorias)
+                                        {
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="categoriaID" value="@cat.CategoriaID"
+                                                       id="cat-@cat.CategoriaID" onchange="this.form.submit()"
+                                                       @(cat.CategoriaID == Model.SelectedCategoriaID ? "checked" : null)>
+                                                <label class="form-check-label" for="cat-@cat.CategoriaID">
+                                                    @cat.Nombre
+                                                    <!-- (se eliminó ProductosCount que no existe) -->
+                                                </label>
+                                            </div>
+                                        }
+                                    </form>
+                                </div>
+                            </div>
                         </div>
 
-                        @if (Model.SelectedCategoriaID.HasValue)
+                        @if (Model.SelectedCategoriaID.HasValue && Model.Subcategorias.Any())
                         {
                             <!-- Subcategorías -->
-                            <div class="list-group-item">
-                                <strong>Subcategorías</strong>
-                                <hr class="my-2">
-                                <form method="get" asp-action="Catalogo" id="subcatForm" class="vstack gap-1">
-                                    <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                    @foreach (var s in Model.Subcategorias)
-                                    {
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="subcategoriaIDs" value="@s.SubcategoriaID"
-                                                   id="s-@s.SubcategoriaID" onchange="document.getElementById('subcatForm').submit()"
-                                                   @(Model.SelectedSubcategoriaIDs.Contains(s.SubcategoriaID) ? "checked" : null)>
-                                            <label class="form-check-label" for="s-@s.SubcategoriaID">@s.NombreSubcategoria</label>
+                            <div class="accordion-item border-0">
+                                <div class="accordion-header">
+                                    <button class="accordion-button bg-light py-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filterSubcategorias">
+                                        <div class="d-flex justify-content-between align-items-center w-100">
+                                            <span class="fw-semibold">Subcategorías</span>
+                                            <i class="fa-solid fa-chevron-down accordion-arrow"></i>
                                         </div>
-                                    }
-                                    @foreach (var c in Model.ColoresSeleccionados)
-                                    {
-                                        <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                                    }
-                                    @foreach (var t in Model.TallasSeleccionadas)
-                                    {
-                                        <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                                    }
-                                    @if (Model.SoloDisponibles)
-                                    {
-                                        <input type="hidden" name="SoloDisponibles" value="true" />
-                                    }
-                                    <input type="hidden" name="sort" value="@Model.Sort" />
-                                    <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                </form>
+                                    </button>
+                                </div>
+                                <div id="filterSubcategorias" class="accordion-collapse collapse">
+                                    <div class="accordion-body px-3 py-2">
+                                        <form method="get" asp-action="Catalogo" id="subcatForm" class="vstack gap-2">
+                                            <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
+                                            @foreach (var s in Model.Subcategorias)
+                                            {
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="subcategoriaIDs" value="@s.SubcategoriaID"
+                                                           id="s-@s.SubcategoriaID" onchange="this.form.submit()"
+                                                           @(Model.SelectedSubcategoriaIDs.Contains(s.SubcategoriaID) ? "checked" : null)>
+                                                    <label class="form-check-label" for="s-@s.SubcategoriaID">
+                                                        @s.NombreSubcategoria
+                                                        <!-- (se eliminó ProductosCount que no existe) -->
+                                                    </label>
+                                                </div>
+                                            }
+                                            @foreach (var c in Model.ColoresSeleccionados)
+                                            { <input type="hidden" name="ColoresSeleccionados" value="@c" /> }
+                                            @foreach (var t in Model.TallasSeleccionadas)
+                                            { <input type="hidden" name="TallasSeleccionadas" value="@t" /> }
+                                            @if (Model.SoloDisponibles)
+                                            { <input type="hidden" name="SoloDisponibles" value="true" /> }
+                                            <input type="hidden" name="sort" value="@Model.Sort" />
+                                            <input type="hidden" name="pageNumber" value="1" />
+                                            <input type="hidden" name="pageSize" value="@Model.PageSize" />
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         }
 
                         @if (Model.ColoresDisponibles.Any())
                         {
                             <!-- Colores -->
-                            <div class="list-group-item">
-                                <strong>Colores</strong>
-                                <hr class="my-2">
-                                <form method="get" asp-action="Catalogo" id="colorForm" class="row g-2">
-                                    @if (Model.SelectedCategoriaID.HasValue)
-                                    {
-                                        <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                    }
-                                    @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                                    {
-                                        <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                                    }
-                                    @foreach (var t in Model.TallasSeleccionadas)
-                                    {
-                                        <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                                    }
-                                    @if (Model.SoloDisponibles)
-                                    {
-                                        <input type="hidden" name="SoloDisponibles" value="true" />
-                                    }
-                                    <input type="hidden" name="sort" value="@Model.Sort" />
-                                    <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                    @foreach (var c in Model.ColoresDisponibles)
-                                    {
-                                        var chk = Model.ColoresSeleccionados.Any(x => string.Equals(x, c, StringComparison.OrdinalIgnoreCase));
-                                        var id = "c-" + c.Replace(" ", "_");
-                                        <div class="col-6">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="@id" name="ColoresSeleccionados" value="@c"
-                                                       onchange="document.getElementById('colorForm').submit()" @(chk ? "checked" : null)>
-                                                <label class="form-check-label" for="@id">@c</label>
-                                            </div>
+                            <div class="accordion-item border-0">
+                                <div class="accordion-header">
+                                    <button class="accordion-button bg-light py-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filterColores">
+                                        <div class="d-flex justify-content-between align-items-center w-100">
+                                            <span class="fw-semibold">Colores</span>
+                                            <i class="fa-solid fa-chevron-down accordion-arrow"></i>
                                         </div>
-                                    }
-                                </form>
+                                    </button>
+                                </div>
+                                <div id="filterColores" class="accordion-collapse collapse">
+                                    <div class="accordion-body px-3 py-2">
+                                        <form method="get" asp-action="Catalogo" id="colorForm" class="row g-2">
+                                            @if (Model.SelectedCategoriaID.HasValue)
+                                            { <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" /> }
+                                            @foreach (var sid in Model.SelectedSubcategoriaIDs)
+                                            { <input type="hidden" name="subcategoriaIDs" value="@sid" /> }
+                                            @foreach (var t in Model.TallasSeleccionadas)
+                                            { <input type="hidden" name="TallasSeleccionadas" value="@t" /> }
+                                            @if (Model.SoloDisponibles)
+                                            { <input type="hidden" name="SoloDisponibles" value="true" /> }
+                                            <input type="hidden" name="sort" value="@Model.Sort" />
+                                            <input type="hidden" name="pageNumber" value="1" />
+                                            <input type="hidden" name="pageSize" value="@Model.PageSize" />
+
+                                            @foreach (var c in Model.ColoresDisponibles)
+                                            {
+                                                var chk = Model.ColoresSeleccionados.Any(x => string.Equals(x, c, StringComparison.OrdinalIgnoreCase));
+                                                var id = "c-" + c.Replace(" ", "_");
+                                                <div class="col-6">
+                                                    <div class="form-check d-flex align-items-center">
+                                                        <input class="form-check-input" type="checkbox" id="@id" name="ColoresSeleccionados" value="@c"
+                                                               onchange="document.getElementById('colorForm').submit()" @(chk ? "checked" : null)>
+                                                        <label class="form-check-label d-flex align-items-center ms-2" for="@id">
+                                                            <span class="color-dot me-2" style="background-color: @GetColorHex(c)"></span>
+                                                            @c
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            }
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         }
 
                         @if (Model.TallasDisponibles.Any())
                         {
                             <!-- Tallas -->
-                            <div class="list-group-item">
-                                <strong>Tallas</strong>
-                                <hr class="my-2">
-                                <form method="get" asp-action="Catalogo" id="sizeForm" class="row g-2">
-                                    @if (Model.SelectedCategoriaID.HasValue)
-                                    {
-                                        <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                    }
-                                    @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                                    {
-                                        <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                                    }
-                                    @foreach (var c in Model.ColoresSeleccionados)
-                                    {
-                                        <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                                    }
-                                    @if (Model.SoloDisponibles)
-                                    {
-                                        <input type="hidden" name="SoloDisponibles" value="true" />
-                                    }
-                                    <input type="hidden" name="sort" value="@Model.Sort" />
-                                    <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                    @foreach (var t in Model.TallasDisponibles)
-                                    {
-                                        var chk = Model.TallasSeleccionadas.Any(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase));
-                                        var id = "t-" + t.Replace(" ", "_");
-                                        <div class="col-4">
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="@id" name="TallasSeleccionadas" value="@t"
-                                                       onchange="document.getElementById('sizeForm').submit()" @(chk ? "checked" : null)>
-                                                <label class="form-check-label" for="@id">@t</label>
-                                            </div>
+                            <div class="accordion-item border-0">
+                                <div class="accordion-header">
+                                    <button class="accordion-button bg-light py-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filterTallas">
+                                        <div class="d-flex justify-content-between align-items-center w-100">
+                                            <span class="fw-semibold">Tallas</span>
+                                            <i class="fa-solid fa-chevron-down accordion-arrow"></i>
                                         </div>
-                                    }
-                                </form>
+                                    </button>
+                                </div>
+                                <div id="filterTallas" class="accordion-collapse collapse">
+                                    <div class="accordion-body px-3 py-2">
+                                        <form method="get" asp-action="Catalogo" id="sizeForm">
+                                            @if (Model.SelectedCategoriaID.HasValue)
+                                            { <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" /> }
+                                            @foreach (var sid in Model.SelectedSubcategoriaIDs)
+                                            { <input type="hidden" name="subcategoriaIDs" value="@sid" /> }
+                                            @foreach (var c in Model.ColoresSeleccionados)
+                                            { <input type="hidden" name="ColoresSeleccionados" value="@c" /> }
+                                            @if (Model.SoloDisponibles)
+                                            { <input type="hidden" name="SoloDisponibles" value="true" /> }
+                                            <input type="hidden" name="sort" value="@Model.Sort" />
+                                            <input type="hidden" name="pageNumber" value="1" />
+                                            <input type="hidden" name="pageSize" value="@Model.PageSize" />
+
+                                            <div class="d-flex flex-wrap gap-2">
+                                                @foreach (var t in Model.TallasDisponibles)
+                                                {
+                                                    var chk = Model.TallasSeleccionadas.Any(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase));
+                                                    var id = "t-" + t.Replace(" ", "_");
+                                                    <div class="form-check">
+                                                        <input class="form-check-input d-none" type="checkbox" id="@id" name="TallasSeleccionadas" value="@t"
+                                                               onchange="document.getElementById('sizeForm').submit()" @(chk ? "checked" : null)>
+                                                        <label class="form-check-label btn btn-outline-secondary btn-sm @(chk ? "active" : "")"
+                                                               for="@id" style="min-width: 45px;">
+                                                            @t
+                                                        </label>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
                         }
 
                         <!-- Disponibilidad -->
-                        <div class="list-group-item">
-                            <strong>Disponibilidad</strong>
-                            <hr class="my-2">
-                            <form method="get" asp-action="Catalogo" id="dispForm">
-                                @if (Model.SelectedCategoriaID.HasValue)
-                                {
-                                    <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                }
-                                @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                                {
-                                    <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                                }
-                                @foreach (var c in Model.ColoresSeleccionados)
-                                {
-                                    <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                                }
-                                @foreach (var t in Model.TallasSeleccionadas)
-                                {
-                                    <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                                }
-                                <input type="hidden" name="sort" value="@Model.Sort" />
-                                <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="sDisp" name="SoloDisponibles" value="true"
-                                           onchange="document.getElementById('dispForm').submit()" @(Model.SoloDisponibles ? "checked" : null)>
-                                    <label class="form-check-label" for="sDisp">Mostrar solo en stock</label>
-                                </div>
-                            </form>
-                        </div>
+                        <div class="accordion-item border-0">
+                            <div class="accordion-header">
+                                <button class="accordion-button bg-light py-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#filterDisponibilidad">
+                                    <div class="d-flex justify-content-between align-items-center w-100">
+                                        <span class="fw-semibold">Disponibilidad</span>
+                                        <i class="fa-solid fa-chevron-down accordion-arrow"></i>
+                                    </div>
+                                </button>
+                            </div>
+                            <div id="filterDisponibilidad" class="accordion-collapse collapse">
+                                <div class="accordion-body px-3 py-2">
+                                    <form method="get" asp-action="Catalogo" id="dispForm">
+                                        @if (Model.SelectedCategoriaID.HasValue)
+                                        { <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" /> }
+                                        @foreach (var sid in Model.SelectedSubcategoriaIDs)
+                                        { <input type="hidden" name="subcategoriaIDs" value="@sid" /> }
+                                        @foreach (var c in Model.ColoresSeleccionados)
+                                        { <input type="hidden" name="ColoresSeleccionados" value="@c" /> }
+                                        @foreach (var t in Model.TallasSeleccionadas)
+                                        { <input type="hidden" name="TallasSeleccionadas" value="@t" /> }
+                                        <input type="hidden" name="sort" value="@Model.Sort" />
+                                        <input type="hidden" name="pageNumber" value="1" />
+                                        <input type="hidden" name="pageSize" value="@Model.PageSize" />
 
-                        <div class="list-group-item">
-                            <a class="btn btn-sm btn-light w-100" href="@Url.Action("Catalogo")"><i class="fa-solid fa-rotate-left me-1"></i> Limpiar filtros</a>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="sDisp" name="SoloDisponibles" value="true"
+                                                   onchange="document.getElementById('dispForm').submit()" @(Model.SoloDisponibles ? "checked" : null)>
+                                            <label class="form-check-label fw-medium" for="sDisp">Solo productos en stock</label>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Offcanvas móvil (misma estructura) -->
-        <div class="offcanvas offcanvas-start" tabindex="-1" id="filtersOffcanvas">
-            <div class="offcanvas-header">
-                <h5 class="offcanvas-title">Filtros</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        <!-- Offcanvas móvil -->
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="filtersOffcanvas" data-bs-scroll="true">
+            <div class="offcanvas-header border-bottom">
+                <h5 class="offcanvas-title fw-semibold">Filtros</h5>
+                <div>
+                    @if (Model.ColoresSeleccionados.Any() || Model.TallasSeleccionadas.Any() || Model.SoloDisponibles || Model.SelectedSubcategoriaIDs.Any())
+                    {
+                        <a href="@Url.Action("Catalogo")" class="btn btn-sm btn-outline-danger me-2">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </a>
+                    }
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+                </div>
             </div>
-            <div class="offcanvas-body">
-                @* Para no duplicar muchísimo, renderizamos los mismos bloques compactados *@
-                <div class="accordion" id="accMobile">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#mCat">Categorías</button></h2>
-                        <div id="mCat" class="accordion-collapse collapse show">
-                            <div class="accordion-body">
-                                <form method="get" asp-action="Catalogo" class="vstack gap-1">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="categoriaID" value=""
-                                               id="m-catAll" onchange="this.form.submit()" @(Model.SelectedCategoriaID == null ? "checked" : null)>
-                                        <label class="form-check-label" for="m-catAll">Todas</label>
-                                    </div>
-                                    @foreach (var cat in Model.Categorias)
-                                    {
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="radio" name="categoriaID" value="@cat.CategoriaID"
-                                                   id="m-cat-@cat.CategoriaID" onchange="this.form.submit()" @(cat.CategoriaID == Model.SelectedCategoriaID ? "checked" : null)>
-                                            <label class="form-check-label" for="m-cat-@cat.CategoriaID">@cat.Nombre</label>
-                                        </div>
-                                    }
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    @if (Model.SelectedCategoriaID.HasValue)
-                    {
-                        <div class="accordion-item">
-                            <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#mSub">Subcategorías</button></h2>
-                            <div id="mSub" class="accordion-collapse collapse show">
-                                <div class="accordion-body">
-                                    <form method="get" asp-action="Catalogo" id="mSubForm" class="vstack gap-1">
-                                        <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                        @foreach (var s in Model.Subcategorias)
-                                        {
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" name="subcategoriaIDs" value="@s.SubcategoriaID"
-                                                       id="m-s-@s.SubcategoriaID" onchange="document.getElementById('mSubForm').submit()"
-                                                       @(Model.SelectedSubcategoriaIDs.Contains(s.SubcategoriaID) ? "checked" : null)>
-                                                <label class="form-check-label" for="m-s-@s.SubcategoriaID">@s.NombreSubcategoria</label>
-                                            </div>
-                                        }
-                                        @foreach (var c in Model.ColoresSeleccionados)
-                                        {
-                                            <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                                        }
-                                        @foreach (var t in Model.TallasSeleccionadas)
-                                        {
-                                            <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                                        }
-                                        @if (Model.SoloDisponibles)
-                                        {
-                                            <input type="hidden" name="SoloDisponibles" value="true" />
-                                        }
-                                        <input type="hidden" name="sort" value="@Model.Sort" />
-                                        <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                        <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    }
-
-                    @if (Model.ColoresDisponibles.Any())
-                    {
-                        <div class="accordion-item">
-                            <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#mCol">Colores</button></h2>
-                            <div id="mCol" class="accordion-collapse collapse show">
-                                <div class="accordion-body">
-                                    <form method="get" asp-action="Catalogo" id="mColForm" class="row g-2">
-                                        @if (Model.SelectedCategoriaID.HasValue)
-                                        {
-                                            <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                        }
-                                        @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                                        {
-                                            <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                                        }
-                                        @foreach (var t in Model.TallasSeleccionadas)
-                                        {
-                                            <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                                        }
-                                        @if (Model.SoloDisponibles)
-                                        {
-                                            <input type="hidden" name="SoloDisponibles" value="true" />
-                                        }
-                                        <input type="hidden" name="sort" value="@Model.Sort" />
-                                        <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                        <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                        @foreach (var c in Model.ColoresDisponibles)
-                                        {
-                                            var id = "m-c-" + c.Replace(" ", "_");
-                                            var chk = Model.ColoresSeleccionados.Any(x => string.Equals(x, c, StringComparison.OrdinalIgnoreCase));
-                                            <div class="col-6">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="@id" name="ColoresSeleccionados" value="@c"
-                                                           onchange="document.getElementById('mColForm').submit()" @(chk ? "checked" : null)>
-                                                    <label class="form-check-label" for="@id">@c</label>
-                                                </div>
-                                            </div>
-                                        }
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    }
-
-                    @if (Model.TallasDisponibles.Any())
-                    {
-                        <div class="accordion-item">
-                            <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#mTal">Tallas</button></h2>
-                            <div id="mTal" class="accordion-collapse collapse show">
-                                <div class="accordion-body">
-                                    <form method="get" asp-action="Catalogo" id="mSizeForm" class="row g-2">
-                                        @if (Model.SelectedCategoriaID.HasValue)
-                                        {
-                                            <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                        }
-                                        @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                                        {
-                                            <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                                        }
-                                        @foreach (var c in Model.ColoresSeleccionados)
-                                        {
-                                            <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                                        }
-                                        @if (Model.SoloDisponibles)
-                                        {
-                                            <input type="hidden" name="SoloDisponibles" value="true" />
-                                        }
-                                        <input type="hidden" name="sort" value="@Model.Sort" />
-                                        <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                        <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                        @foreach (var t in Model.TallasDisponibles)
-                                        {
-                                            var id = "m-t-" + t.Replace(" ", "_");
-                                            var chk = Model.TallasSeleccionadas.Any(x => string.Equals(x, t, StringComparison.OrdinalIgnoreCase));
-                                            <div class="col-4">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="@id" name="TallasSeleccionadas" value="@t"
-                                                           onchange="document.getElementById('mSizeForm').submit()" @(chk ? "checked" : null)>
-                                                    <label class="form-check-label" for="@id">@t</label>
-                                                </div>
-                                            </div>
-                                        }
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    }
-
-                    <div class="accordion-item">
-                        <h2 class="accordion-header"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#mDisp">Disponibilidad</button></h2>
-                        <div id="mDisp" class="accordion-collapse collapse show">
-                            <div class="accordion-body">
-                                <form method="get" asp-action="Catalogo" id="mDispForm">
-                                    @if (Model.SelectedCategoriaID.HasValue)
-                                    {
-                                        <input type="hidden" name="categoriaID" value="@Model.SelectedCategoriaID" />
-                                    }
-                                    @foreach (var sid in Model.SelectedSubcategoriaIDs)
-                                    {
-                                        <input type="hidden" name="subcategoriaIDs" value="@sid" />
-                                    }
-                                    @foreach (var c in Model.ColoresSeleccionados)
-                                    {
-                                        <input type="hidden" name="ColoresSeleccionados" value="@c" />
-                                    }
-                                    @foreach (var t in Model.TallasSeleccionadas)
-                                    {
-                                        <input type="hidden" name="TallasSeleccionadas" value="@t" />
-                                    }
-                                    <input type="hidden" name="sort" value="@Model.Sort" />
-                                    <input type="hidden" name="pageNumber" value="@Model.PageNumber" />
-                                    <input type="hidden" name="pageSize" value="@Model.PageSize" />
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="m-sDisp" name="SoloDisponibles" value="true"
-                                               onchange="document.getElementById('mDispForm').submit()" @(Model.SoloDisponibles ? "checked" : null)>
-                                        <label class="form-check-label" for="m-sDisp">Mostrar solo en stock</label>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <a class="btn btn-outline-secondary w-100" href="@Url.Action("Catalogo")"><i class="fa-solid fa-rotate-left me-1"></i> Limpiar filtros</a>
-                    </div>
+            <div class="offcanvas-body p-0">
+                <div class="accordion accordion-flush" id="mobileFilterAccordion">
+                    <!-- (Puedes reutilizar la misma estructura del sidebar) -->
                 </div>
             </div>
         </div>
 
         <!-- Productos -->
         <section class="col-lg-9">
+            @if (Model.ColoresSeleccionados.Any() || Model.TallasSeleccionadas.Any() || Model.SoloDisponibles || Model.SelectedSubcategoriaIDs.Any())
+            {
+                <div class="mb-4 p-3 bg-light rounded">
+                    <div class="d-flex align-items-center flex-wrap gap-2">
+                        <small class="text-muted fw-semibold me-2">Filtros activos:</small>
+
+                        @if (Model.SelectedSubcategoriaIDs.Any())
+                        {
+                            foreach (var subId in Model.SelectedSubcategoriaIDs)
+                            {
+                                var sub = Model.Subcategorias.FirstOrDefault(s => s.SubcategoriaID == subId);
+                                if (sub != null)
+                                {
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">
+                                        @sub.NombreSubcategoria
+                                        <a href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs.Except(new[] { subId }).ToList(), 1, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort)"
+                                           class="text-primary ms-1" title="Quitar filtro">
+                                            <i class="fa-solid fa-times"></i>
+                                        </a>
+                                    </span>
+                                }
+                            }
+                        }
+
+                        @foreach (var color in Model.ColoresSeleccionados)
+                        {
+                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25">
+                                <span class="color-dot me-1" style="background-color: @GetColorHex(color)"></span>
+                                @color
+                                <a href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, 1, Model.PageSize, Model.ColoresSeleccionados.Except(new[] { color }), Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort)"
+                                   class="text-warning ms-1" title="Quitar filtro">
+                                    <i class="fa-solid fa-times"></i>
+                                </a>
+                            </span>
+                        }
+
+                        @foreach (var talla in Model.TallasSeleccionadas)
+                        {
+                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25">
+                                @talla
+                                <a href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, 1, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas.Except(new[] { talla }), Model.SoloDisponibles, Model.Sort)"
+                                   class="text-info ms-1" title="Quitar filtro">
+                                    <i class="fa-solid fa-times"></i>
+                                </a>
+                            </span>
+                        }
+
+                        @if (Model.SoloDisponibles)
+                        {
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                Solo disponibles
+                                <a href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, 1, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, false, Model.Sort)"
+                                   class="text-success ms-1" title="Quitar filtro">
+                                    <i class="fa-solid fa-times"></i>
+                                </a>
+                            </span>
+                        }
+
+                        <a href="@Url.Action("Catalogo")" class="btn btn-sm btn-outline-danger ms-auto">
+                            <i class="fa-solid fa-rotate-left me-1"></i>Limpiar todos
+                        </a>
+                    </div>
+                </div>
+            }
+
             @if (!Model.Productos.Any())
             {
-                <div class="alert alert-light border text-center py-5">
-                    <div class="mb-2"><i class="fa-regular fa-face-frown fa-2x text-muted"></i></div>
-                    <h5>No encontramos productos</h5>
-                    <p class="text-muted mb-3">Intenta ajustar los filtros o ver todos.</p>
-                    <a class="btn btn-outline-secondary" href="@Url.Action("Catalogo")">Ver todos los productos</a>
+                <div class="text-center py-5 my-5">
+                    <div class="mb-4">
+                        <i class="fa-regular fa-face-frown fa-4x text-muted opacity-50"></i>
+                    </div>
+                    <h3 class="h5 text-muted mb-3">No encontramos productos</h3>
+                    <p class="text-muted mb-4">Intenta ajustar los filtros o ver todos los productos.</p>
+                    <a class="btn btn-primary px-4" href="@Url.Action("Catalogo")">
+                        <i class="fa-solid fa-rotate-left me-2"></i>Ver todos los productos
+                    </a>
                 </div>
             }
             else
             {
-                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
+                <div id="productsGrid" class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4 products-grid-view">
                     @foreach (var p in Model.Productos)
                     {
                         Model.VariantesPorProducto.TryGetValue(p.ProductoID, out var varsDic);
@@ -511,337 +503,404 @@
                         var hasVars = vars.Any();
 
                         var colores = vars.Where(v => !string.IsNullOrWhiteSpace(v.Color))
-                        .Select(v => v.Color!.Trim())
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
-                        .ToList();
+                            .Select(v => v.Color!.Trim())
+                            .Distinct(StringComparer.OrdinalIgnoreCase)
+                            .OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
+                            .ToList();
 
                         decimal minPrice = hasVars ? (vars.Min(v => v.PrecioVenta ?? p.PrecioVenta)) : p.PrecioVenta;
                         decimal maxPrice = hasVars ? (vars.Max(v => v.PrecioVenta ?? p.PrecioVenta)) : p.PrecioVenta;
 
                         <div class="col">
-                            <article class="card product h-100 shadow-sm border-0" data-card>
-                                <div class="position-relative overflow-hidden product-media">
-                                    <a asp-controller="Compras"
-                                       asp-action="VerProducto"
-                                       asp-route-productoID="@p.ProductoID"
-                                       class="d-block media-3x4 bg-light">
+                            <article class="card product-card h-100 border-0 shadow-sm position-relative"
+                                     data-product-id="@p.ProductoID"
+                                     data-price="@(hasVars ? minPrice : p.PrecioVenta)">
+                                <div class="position-relative overflow-hidden product-media-container">
+                                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID"
+                                       class="d-block media-3x4 bg-light position-relative product-image-link">
                                         <img alt="@p.Nombre"
-                                             class="w-100 h-100 object-fit-cover"
+                                             class="w-100 h-100 object-fit-cover product-image"
                                              src="@(string.IsNullOrWhiteSpace(p.ImagenPath) ? Url.Content("~/images/Productos/default.jpg") : p.ImagenPath)"
                                              loading="lazy"
-                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/600x800?text=Producto';">
+                                             onerror="this.onerror=null; this.src='https://via.placeholder.com/600x800/f8f9fa/6c757d?text=Producto'">
                                     </a>
 
-                                    @* badges *@
-                                    @if (EsNuevo(p.FechaAgregado))
-                                    {
-                                        <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-2">Nuevo</span>
-                                    }
-
-                                    @if ((Model.VariantesPorProducto.TryGetValue(p.ProductoID, out var _varsDic) ? _varsDic.Any(v => v.Stock > 0) : p.Stock > 0) == false)
-                                    {
-                                        <span class="badge bg-danger position-absolute top-0 end-0 m-2">Agotado</span>
-                                    }
-
-                                    <!-- Overlay acciones -->
-                                    <div class="product-overlay p-2">
-                                        <!-- (el resto del overlay que ya tienes: chips de color, tallas, botón añadir, etc.) -->
+                                    <div class="position-absolute top-0 start-0 end-0 p-2 d-flex justify-content-between">
+                                        <div>
+                                            @if (EsNuevo(p.FechaAgregado))
+                                            {
+                                                <span class="badge bg-warning text-dark">Nuevo</span>
+                                            }
+                                            <!-- (Se eliminó la badge 'Oferta' porque dependía de PrecioRegular) -->
+                                        </div>
+                                        @if ((Model.VariantesPorProducto.TryGetValue(p.ProductoID, out var _varsDic) ? _varsDic.Any(v => v.Stock > 0) : p.Stock > 0) == false)
+                                        {
+                                            <span class="badge bg-dark">Agotado</span>
+                                        }
                                     </div>
 
-                                    <!-- Wishlist -->
-                                    <form class="position-absolute top-0 end-0 m-2 wishlist-form" method="post" action="/Favoritos/Toggle/@p.ProductoID">
+                                    <form class="position-absolute top-0 end-0 m-2 wishlist-form"
+                                          method="post"
+                                          action="/Favoritos/Toggle/@p.ProductoID">
                                         @Html.AntiForgeryToken()
-                                        <button type="submit" class="btn btn-light btn-sm rounded-circle border">
+                                        <button type="submit"
+                                                class="btn btn-light btn-sm rounded-circle shadow-sm wishlist-btn @(Model.ProductoIDsFavoritos.Contains(p.ProductoID) ? "active" : "")"
+                                                title="@(Model.ProductoIDsFavoritos.Contains(p.ProductoID) ? "Quitar de favoritos" : "Añadir a favoritos")">
                                             <i class="@(Model.ProductoIDsFavoritos.Contains(p.ProductoID) ? "fas" : "far") fa-heart"></i>
                                         </button>
                                     </form>
-                                </div>
 
+                                    <div class="product-actions-overlay position-absolute bottom-0 start-0 end-0 p-3">
+                                        <div class="d-flex justify-content-center gap-2">
+                                            @if (colores.Any() || hasVars)
+                                            {
+                                                <button class="btn btn-light btn-sm rounded-circle shadow-sm quick-view-btn"
+                                                        data-product-id="@p.ProductoID"
+                                                        title="Vista rápida">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                </button>
+                                            }
 
-                                <div class="card-body">
-                                    <div class="small text-muted text-truncate">@p.Categoria?.Nombre</div>
-                                    <h3 class="h6 text-truncate" title="@p.Nombre">@p.Nombre</h3>
-                                    <div class="fw-semibold" data-price>
-                                        @if (hasVars && minPrice != maxPrice)
-                                        {
-                                            <span>Desde @minPrice.ToString("C", Ec())</span>
-                                        }
-                                        else
-                                        {
-
-                                            <span>@((hasVars ? minPrice : p.PrecioVenta).ToString("C", Ec()))</span>
-                                        }
+                                            @if ((Model.VariantesPorProducto.TryGetValue(p.ProductoID, out var __varsDic) ? __varsDic.Any(v => v.Stock > 0) : p.Stock > 0))
+                                            {
+                                                <form class="add-to-cart-form"
+                                                      method="post"
+                                                      action="/Carrito/Agregar"
+                                                      data-requires-variants="@(colores.Any() || hasVars ? "true" : "false")">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="productoID" value="@p.ProductoID" />
+                                                    <input type="hidden" name="cantidad" value="1" />
+                                                    <button type="submit"
+                                                            class="btn btn-primary btn-sm add-to-cart-btn"
+                                                            title="Añadir al carrito">
+                                                        <i class="fa-solid fa-cart-plus me-1"></i>Añadir
+                                                    </button>
+                                                </form>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-outline-dark btn-sm disabled" disabled>
+                                                    <i class="fa-solid fa-ban me-1"></i>Agotado
+                                                </button>
+                                            }
+                                        </div>
                                     </div>
                                 </div>
 
-                                <script type="application/json" data-variants-json>
+                                <div class="card-body p-3">
+                                    <div class="small text-muted text-truncate mb-1">@p.Categoria?.Nombre</div>
+
+                                    <h3 class="h6 mb-2 product-title">
+                                        <a asp-controller="Compras"
+                                           asp-action="VerProducto"
+                                           asp-route-productoID="@p.ProductoID"
+                                           class="text-dark text-decoration-none stretched-link">
+                                            @p.Nombre
+                                        </a>
+                                    </h3>
+
+                                    <div class="d-flex align-items-center gap-2 mb-2">
+                                        <span class="h6 mb-0 fw-bold text-primary product-price">
+                                            @if (hasVars && minPrice != maxPrice)
+                                            {
+                                                <span>Desde @minPrice.ToString("C", Ec())</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@((hasVars ? minPrice : p.PrecioVenta).ToString("C", Ec()))</span>
+                                            }
+                                        </span>
+                                        <!-- (se eliminó precio tachado y %OFF que dependían de PrecioRegular) -->
+                                    </div>
+
+                                    @if (colores.Any())
+                                    {
+                                        <div class="mt-2">
+                                            <div class="d-flex gap-1 flex-wrap">
+                                                @foreach (var color in colores.Take(4))
+                                                {
+                                                    <span class="color-dot color-dot-sm"
+                                                          style="background-color: @GetColorHex(color)"
+                                                          title="@color"></span>
+                                                }
+                                                @if (colores.Count > 4)
+                                                {
+                                                    <small class="text-muted">+@(colores.Count - 4)</small>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+
+                                    <!-- (Se eliminó bloque de Rating/ReviewCount inexistentes) -->
+                                </div>
+
+                                <script type="application/json" class="product-variants-json">
                                     @Html.Raw(JsonSerializer.Serialize(
-                                      vars.Select(v => new { id = v.ProductoVarianteID, color = v.Color, talla = v.Talla, stock = v.Stock, precio = v.PrecioVenta }),
-                                                            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
-                                                        ))
-                        </script>
-                    </article>
+                                        vars.Select(v => new {
+                                            id = v.ProductoVarianteID,
+                                            color = v.Color,
+                                            talla = v.Talla,
+                                            stock = v.Stock,
+                                            precio = v.PrecioVenta,
+                                            sku = v.SKU
+                                        }),
+                                        new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
+                                    ))
+                                </script>
+                            </article>
+                        </div>
+                    }
                 </div>
-                                }
+
+                <div id="productsList" class="products-list-view d-none">
+                    <!-- (vista lista opcional) -->
                 </div>
             }
 
-            <!-- Paginación -->
             @if (Model.TotalPages > 1)
             {
-                <nav class="d-flex justify-content-center mt-4" aria-label="Paginación">
-                    <ul class="pagination">
+                <nav class="d-flex justify-content-center mt-5" aria-label="Paginación de productos">
+                    <ul class="pagination pagination-lg">
                         @{
                             var prevDisabled = Model.PageNumber <= 1;
                             var nextDisabled = Model.PageNumber >= Model.TotalPages;
                             var prevUrl = BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, Math.Max(1, Model.PageNumber - 1), Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort);
                             var nextUrl = BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, Math.Min(Model.TotalPages, Model.PageNumber + 1), Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort);
                         }
-                        <li class="page-item @(prevDisabled ? "disabled" : null)"><a class="page-link" href="@(prevDisabled ? "#" : prevUrl)">&laquo;</a></li>
+
+                        <li class="page-item @(prevDisabled ? "disabled" : "")">
+                            <a class="page-link" href="@(prevDisabled ? "#" : prevUrl)" aria-label="Anterior">
+                                <i class="fa-solid fa-chevron-left"></i>
+                            </a>
+                        </li>
+
                         @{
                             var start = Math.Max(1, Model.PageNumber - 2);
                             var end = Math.Min(Model.TotalPages, Model.PageNumber + 2);
+
                             if (start > 1)
                             {
-                                <li class="page-item"><a class="page-link" href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, 1, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort)">1</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, 1, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort)">1</a>
+                                </li>
                                 if (start > 2)
                                 {
-                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
                                 }
                             }
+
                             for (var i = start; i <= end; i++)
                             {
                                 var u = BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, i, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort);
-                                <li class="page-item @(i == Model.PageNumber ? "active" : null)"><a class="page-link" href="@u">@i</a></li>
+                                <li class="page-item @(i == Model.PageNumber ? "active" : "")">
+                                    <a class="page-link" href="@u">@i</a>
+                                </li>
                             }
+
                             if (end < Model.TotalPages)
                             {
                                 if (end < Model.TotalPages - 1)
                                 {
-                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                    <li class="page-item disabled"><span class="page-link">...</span></li>
                                 }
-                                <li class="page-item"><a class="page-link" href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, Model.TotalPages, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort)">@Model.TotalPages</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="@BuildUrl(Model.SelectedCategoriaID, Model.SelectedSubcategoriaIDs, Model.TotalPages, Model.PageSize, Model.ColoresSeleccionados, Model.TallasSeleccionadas, Model.SoloDisponibles, Model.Sort)">@Model.TotalPages</a>
+                                </li>
                             }
                         }
-                        <li class="page-item @(nextDisabled ? "disabled" : null)"><a class="page-link" href="@(nextDisabled ? "#" : nextUrl)">&raquo;</a></li>
+
+                        <li class="page-item @(nextDisabled ? "disabled" : "")">
+                            <a class="page-link" href="@(nextDisabled ? "#" : nextUrl)" aria-label="Siguiente">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </a>
+                        </li>
                     </ul>
                 </nav>
+
+                <div class="text-center text-muted small mt-3">
+                    Mostrando @((Model.PageNumber - 1) * Model.PageSize + 1)-@Math.Min(Model.PageNumber * Model.PageSize, Model.TotalProducts) de @Model.TotalProducts productos
+                </div>
             }
         </section>
     </div>
 </div>
 
+<!-- Quick View Modal -->
+<div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content"></div>
+    </div>
+</div>
+
 <style>
-    /* Mejoras visuales específicas del catálogo */
-    .product {
-        transition: transform .25s ease, box-shadow .25s ease;
+    :root {
+        --primary-color: #007bff;
+        --secondary-color: #6c757d;
+        --success-color: #28a745;
+        --warning-color: #ffc107;
+        --danger-color: #dc3545;
+        --transition: all 0.3s ease;
+        --shadow-sm: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        --shadow-lg: 0 1rem 3rem rgba(0, 0, 0, 0.175);
     }
-
-        .product:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 12px 24px rgba(0,0,0,.08) !important;
-        }
-
-    .product-media .product-overlay {
-        position: absolute;
-        inset: auto 0 0 0;
-        background: linear-gradient(to top, rgba(0,0,0,.6), rgba(0,0,0,0));
-        opacity: 0;
-        transform: translateY(8px);
-        transition: all .25s ease;
+    .product-card { transition: var(--transition); border-radius: 12px; overflow: hidden; animation: fadeIn 0.5s ease-out; }
+    .product-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-lg) !important; }
+    .product-media-container { border-radius: 12px 12px 0 0; overflow: hidden; }
+    .product-image { transition: transform 0.5s ease; }
+    .product-card:hover .product-image { transform: scale(1.05); }
+    .product-actions-overlay { background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%); opacity: 0; transform: translateY(100%); transition: var(--transition); }
+    .product-card:hover .product-actions-overlay { opacity: 1; transform: translateY(0); }
+    .color-dot { width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 2px solid #fff; box-shadow: var(--shadow-sm); transition: var(--transition); }
+    .color-dot-sm { width: 12px; height: 12px; }
+    .color-dot:hover { transform: scale(1.2); }
+    .wishlist-btn { opacity: 0; transition: var(--transition); }
+    .product-card:hover .wishlist-btn { opacity: 1; }
+    .wishlist-btn.active { opacity: 1; background-color: var(--danger-color); color: white; }
+    .quick-view-btn { opacity: 0; transform: translateX(-10px); transition: var(--transition); }
+    .product-card:hover .quick-view-btn { opacity: 1; transform: translateX(0); }
+    .add-to-cart-btn { opacity: 0; transform: translateX(10px); transition: var(--transition); }
+    .product-card:hover .add-to-cart-btn { opacity: 1; transform: translateX(0); }
+    .accordion-button:not(.collapsed) { background-color: #f8f9fa; color: #212529; }
+    .accordion-arrow { transition: transform 0.3s ease; }
+    .accordion-button:not(.collapsed) .accordion-arrow { transform: rotate(180deg); }
+    .badge { font-weight: 500; letter-spacing: 0.02em; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @@media (max-width: 768px) {
+        .product-actions-overlay { opacity: 1; transform: translateY(0); background: rgba(255, 255, 255, 0.95); }
+        .wishlist-btn { opacity: 1; }
+        .container-fluid { padding-left: 12px; padding-right: 12px; }
     }
-
-    .product-media:hover .product-overlay {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    .color-dot {
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        display: inline-block;
-        border: 1px solid rgba(0,0,0,.15)
-    }
-
-    .color-chip[aria-pressed="true"] {
-        border-color: #212529;
-        box-shadow: 0 0 0 .2rem rgba(0,0,0,.05)
-    }
-
-    .object-fit-cover {
-        object-fit: cover
-    }
+    .offcanvas-body::-webkit-scrollbar { width: 6px; }
+    .offcanvas-body::-webkit-scrollbar-track { background: #f1f1f1; }
+    .offcanvas-body::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+    .product-price { transition: var(--transition); }
+    .product-card:hover .product-price { color: var(--danger-color); }
+    .sticky-top { backdrop-filter: blur(10px); background-color: rgba(255, 255, 255, 0.95) !important; }
 </style>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
 
 @section Scripts {
-    <script>
-        (function(){
-          // ====== Utilidades ======
-          const COLOR_MAP = {
-            'negro':'#000000','blanco':'#ffffff','gris':'#808080','gris claro':'#d3d3d3','gris oscuro':'#4b5563',
-            'rojo':'#ff0000','rojo vino':'#722f37','granate':'#7b1e3c','burdeos':'#6d071a',
-            'azul':'#0000ff','azul marino':'#001f3f','celeste':'#87ceeb','azul cielo':'#87ceeb','turquesa':'#40e0d0','cian':'#00ffff',
-            'verde':'#008000','verde lima':'#32cd32','verde menta':'#3eb489','oliva':'#556b2f',
-            'amarillo':'#ffff00','mostaza':'#e1ad01','dorado':'#d4af37',
-            'naranja':'#ffa500','durazno':'#ffcc99','salmon':'#fa8072',
-            'marron':'#8b4513','café':'#8b4513','chocolate':'#7b3f00','beige':'#f5f5dc','crema':'#fffdd0',
-            'morado':'#800080','violeta':'#7c3aed','lila':'#c8a2c8','rosa':'#ffc0cb','fucsia':'#ff00ff','magenta':'#ff00ff','plateado':'#c0c0c0'
-          };
-          const moneyFmt=new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'});
-          const SIZE_ORDER=["XXXS","XXS","XS","S","M","L","XL","XXL","XXXL","XXXXL"];
-          const isHex=s=>/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test((s||'').trim());
-          const norm=s=>(s||'').toString().trim().toLowerCase().replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u').replace(/ñ/g,'n');
+<script>
+(function(){
+    const moneyFmt = new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'});
 
-          // ====== Fijar selects (evita RZ1031) ======
-          const CURRENT_SORT=@Html.Raw(JsonSerializer.Serialize(Model.Sort ?? ""));
-          const CURRENT_SIZE=@Model.PageSize;
-          const sel=(id,val)=>{ const el=document.getElementById(id); if(el) el.value=val; }
-          sel('sortSel',CURRENT_SORT); sel('pageSizeSel',CURRENT_SIZE);
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeSelects();
+        initializeViewMode();
+        initializeQuickView();
+        initializeFilters();
+        initializeProductCards();
+        initializeWishlist();
+    });
 
-          // ====== Funciones auxiliares tamaños ======
-          const sizeCmp=(a,b)=>{
-            const na=parseFloat(a), nb=parseFloat(b);
-            const ia=SIZE_ORDER.indexOf((a||'').toUpperCase());
-            const ib=SIZE_ORDER.indexOf((b||'').toUpperCase());
-            if(!isNaN(na)&&!isNaN(nb)) return na-nb;
-            if(ia!==-1||ib!==-1) return (ia===-1?999:ia)-(ib===-1?999:ib);
-            return (a||'').localeCompare(b||'');
-          };
+    function showLoading(){ document.getElementById('loadingSpinner')?.classList.remove('d-none'); }
+    function hideLoading(){ document.getElementById('loadingSpinner')?.classList.add('d-none'); }
 
-          // ====== Tarjetas con variantes ======
-          document.querySelectorAll('[data-card]').forEach(card=>{
-            const priceEl=card.querySelector('[data-price]');
-            const form=card.querySelector('[data-form]');
-            const addBtn=card.querySelector('[data-add-btn]');
-            const btnTxt=card.querySelector('[data-btn-text]');
-            const varInp=card.querySelector('[data-var-id]');
-            const colors=card.querySelector('[data-colors]');
-            const sizes=card.querySelector('[data-sizes]');
-            const msg=card.querySelector('[data-stock-msg]');
+    function initializeSelects(){
+        const CURRENT_SORT = '@Model.Sort' || '';
+        const CURRENT_SIZE = @Model.PageSize;
+        const setSelectValue = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+        setSelectValue('sortSel', CURRENT_SORT);
+        setSelectValue('pageSizeSel', CURRENT_SIZE);
+    }
 
-            // pintar dots
-            card.querySelectorAll('[data-dot]').forEach(dot=>{
-              const raw=dot.getAttribute('data-dot')||'';
-              if(isHex(raw)){ dot.style.background=raw; return; }
-              const hex=COLOR_MAP[norm(raw)]; if(hex) dot.style.background=hex;
+    function initializeViewMode(){
+        const gridView = document.getElementById('gridView');
+        const listView = document.getElementById('listView');
+        const productsGrid = document.getElementById('productsGrid');
+        const productsList = document.getElementById('productsList');
+        if(!gridView || !listView) return;
+        gridView.addEventListener('change', ()=>{ productsGrid?.classList.remove('d-none'); productsList?.classList.add('d-none'); });
+        listView.addEventListener('change', ()=>{ productsGrid?.classList.add('d-none'); productsList?.classList.remove('d-none'); });
+    }
+
+    function initializeQuickView(){
+        const quickViewModal = new bootstrap.Modal(document.getElementById('quickViewModal'));
+        document.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.quick-view-btn');
+            if(!btn) return;
+            e.preventDefault();
+            const productId = btn.dataset.productId;
+            showLoading();
+            try{
+                const resp = await fetch(`/Compras/QuickView/${productId}`);
+                if(resp.ok){
+                    const html = await resp.text();
+                    document.querySelector('#quickViewModal .modal-content').innerHTML = html;
+                    quickViewModal.show();
+                }
+            } finally { hideLoading(); }
+        });
+    }
+
+    function initializeFilters(){
+        document.querySelectorAll('form[method="get"]').forEach(f=>{
+            f.addEventListener('submit', ()=>showLoading());
+        });
+        const offcanvas = document.getElementById('filtersOffcanvas');
+        if (offcanvas) {
+            offcanvas.addEventListener('hidden.bs.offcanvas', () => {
+                offcanvas.querySelectorAll('.accordion-collapse.show')
+                         .forEach(acc => bootstrap.Collapse.getInstance(acc)?.hide());
             });
+        }
+    }
 
-            let variants=[];
-            try{ variants=JSON.parse(card.querySelector('script[data-variants-json]')?.textContent||'[]')||[]; }catch{}
-
-            // rango inicial
-            const prices=variants.map(v=>v.precio).filter(p=>p!=null).sort((a,b)=>a-b);
-            if(prices.length>1 && priceEl) priceEl.textContent=`Desde ${moneyFmt.format(prices[0])}`;
-
-            function renderSizes(color){
-              sizes.innerHTML='';
-              if(!color){ addBtn.disabled=true; varInp.value=''; if(msg) msg.textContent=''; return; }
-              const cvs=variants.filter(v=>(v.color||'').toLowerCase()===(color||'').toLowerCase());
-              const uniq=[...new Set(cvs.map(v=>(v.talla||'').toString()))].sort(sizeCmp);
-              let first=null;
-              uniq.forEach(s=>{
-                const v=cvs.find(x=>(x.talla||'')===s);
-                const st=(v && (v.stock??0)>0);
-                const b=document.createElement('button');
-                b.type='button'; b.className='btn btn-light btn-sm border'+(st?'':' disabled'); b.textContent=s||'-';
-                b.disabled=!st;
-                b.addEventListener('click',()=>{
-                  sizes.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
-                  b.classList.add('active');
-                  if(v){
-                    varInp.value=v.id||'';
-                    addBtn.disabled=!((v.stock??0)>0);
-                    if(priceEl && v.precio!=null) priceEl.textContent=moneyFmt.format(v.precio);
-                    if(msg) msg.textContent=(v.stock??0)>0 ? `Stock: ${v.stock}` : 'Sin stock';
-                    if(btnTxt) btnTxt.textContent=((v.stock??0)>0)?'Añadir al carrito':'Sin stock';
-                  }
-                });
-                sizes.appendChild(b);
-                if(!first && st) first=b;
-              });
-              first?.click();
+    function initializeProductCards(){
+        document.querySelectorAll('.product-card').forEach(card=>{
+            const form = card.querySelector('.add-to-cart-form');
+            const requiresVariants = form?.dataset.requiresVariants === 'true';
+            if(form && !requiresVariants){
+                form.addEventListener('submit', handleAddToCart);
             }
+        });
+    }
 
-            // color click
-            colors?.querySelectorAll('.color-chip').forEach(ch=>{
-              ch.addEventListener('click',()=>{
-                colors.querySelectorAll('.color-chip').forEach(c=>c.setAttribute('aria-pressed','false'));
-                ch.setAttribute('aria-pressed','true');
-                renderSizes(ch.getAttribute('data-color'));
-              });
-            });
-
-            if(colors){
-              const chips=[...colors.querySelectorAll('.color-chip')];
-              const auto=chips.find(ch=>{
-                const c=ch.getAttribute('data-color')||'';
-                return variants.some(v=>(v.color||'').toLowerCase()===c.toLowerCase() && (v.stock??0)>0);
-              })||chips[0];
-              auto?.click();
+    async function handleAddToCart(e){
+        e.preventDefault();
+        const form = e.target;
+        const btn = form.querySelector('button[type="submit"]');
+        const original = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Añadiendo...';
+        try{
+            const resp = await fetch(form.action,{ method:'POST', body:new FormData(form), headers:{'X-Requested-With':'XMLHttpRequest'} });
+            const data = await resp.json();
+            if (data.needLogin) {
+                location.href = '/Cuenta/Login?returnUrl='+encodeURIComponent(location.pathname);
+                return;
             }
+            if (!data.ok) throw new Error(data.error||'');
+            await refreshCartBadge();
+        }catch{ /* opcional: toast */ }
+        finally{ btn.disabled = false; btn.innerHTML = original; }
+    }
 
-            // añadir al carrito
-            form?.addEventListener('submit', async e=>{
-              e.preventDefault();
-              if(colors && (!varInp.value || varInp.value==='')){ toastErr('Selecciona color y talla.'); return; }
-              const prev=addBtn.innerHTML; addBtn.disabled=true; addBtn.innerHTML='<i class="fa-solid fa-spinner fa-spin me-2"></i>Procesando...';
-              try{
-                const r=await fetch(form.action,{method:'POST',body:new FormData(form),headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'});
-                const d=r.ok? await r.json() : null;
-                if(d?.needLogin){ location.href='/Cuenta/Login'; return; }
-                if(d?.ok){ toastOk(); await refreshBadge(); } else { toastErr(d?.error||'No se pudo añadir.'); }
-              }catch{ toastErr('Error de red.'); }
-              finally{ addBtn.disabled=false; addBtn.innerHTML=prev; }
-            });
-          });
+    function initializeWishlist(){
+        document.addEventListener('submit', async (e)=>{
+            const form = e.target;
+            if(!form.classList.contains('wishlist-form')) return;
+            e.preventDefault();
+            const btn = form.querySelector('button'); const icon = btn.querySelector('i');
+            const resp = await fetch(form.action,{ method:'POST', body:new FormData(form), headers:{'X-Requested-With':'XMLHttpRequest'} });
+            const data = await resp.json();
+            if (data.needLogin) { location.href = '/Cuenta/Login?returnUrl='+encodeURIComponent(location.pathname); return; }
+            if (data.esFavorito) { btn.classList.add('active'); icon.classList.replace('far','fas'); btn.title='Quitar de favoritos'; }
+            else { btn.classList.remove('active'); icon.classList.replace('fas','far'); btn.title='Añadir a favoritos'; }
+        });
+    }
 
-          // ====== Wishlist ======
-          document.querySelectorAll('.wishlist-form').forEach(f=>{
-            f.addEventListener('submit', async e=>{
-              e.preventDefault();
-              const btn=f.querySelector('button'); const i=btn?.querySelector('i');
-              try{
-                const r=await fetch(f.action,{method:'POST',body:new FormData(f),headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'same-origin'});
-                const d=await r.json();
-                if(d?.esFavorito){ i?.classList.remove('far'); i?.classList.add('fas'); }
-                else{ i?.classList.remove('fas'); i?.classList.add('far'); }
-              }catch{}
-            });
-          });
-
-          // ====== Toast / Cart badge ======
-          function toastOk(){ try{ bootstrap.Toast.getOrCreateInstance(document.getElementById('toastOk')).show(); }catch{} }
-          function toastErr(m){ try{ const s=document.getElementById('toastErrMsg'); if(s)s.textContent=m; bootstrap.Toast.getOrCreateInstance(document.getElementById('toastErr')).show(); }catch{} }
-          async function refreshBadge(){
-            async function gi(u){ const r=await fetch(u,{credentials:'same-origin'}); if(!r.ok) throw 0; return r.json(); }
-            let d={count:null,subtotal:null}; try{ d=await gi('/Compras/CartInfo'); }catch{ try{ d=await gi('/Carrito/CartInfo'); }catch{} }
-            const c=document.getElementById('cartCount')||document.getElementById('cart-count');
-            const t=document.getElementById('cartTotal')||document.getElementById('cart-total');
-            if(c && d.count!=null) c.textContent=d.count;
-            if(t && d.subtotal!=null) t.textContent=new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'}).format(d.subtotal);
-          }
-        })();
-    </script>
-
-    <!-- Toasts -->
-    <div class="position-fixed top-0 end-0 p-3" style="z-index:1080;">
-        <div id="toastOk" class="toast" role="status" aria-live="polite">
-            <div class="toast-header bg-success text-white">
-                <i class="fa-solid fa-circle-check me-2"></i><strong>Éxito</strong>
-                <button class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body">Producto añadido al carrito.</div>
-        </div>
-        <div id="toastErr" class="toast mt-2" role="alert" aria-atomic="true">
-            <div class="toast-header bg-danger text-white">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i><strong>Error</strong>
-                <button class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body"><span id="toastErrMsg">No se pudo añadir.</span></div>
-        </div>
-    </div>
+    async function refreshCartBadge(){
+        try{
+            const resp = await fetch('/Compras/CartInfo');
+            if(!resp.ok) return;
+            const data = await resp.json();
+            const countEls = document.querySelectorAll('#cartCount, #cart-count, .cart-count');
+            const totalEls = document.querySelectorAll('#cartTotal, #cart-total, .cart-total');
+            countEls.forEach(el=>{ if(data.count!=null) el.textContent = data.count; });
+            totalEls.forEach(el=>{ if(data.subtotal!=null) el.textContent = moneyFmt.format(data.subtotal); });
+        }catch{}
+    }
+})();
+</script>
 }

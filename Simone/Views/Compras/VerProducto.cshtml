@@ -1012,10 +1012,38 @@
 
 @section Scripts {
     <script>
+
+        async function refreshMiniCartHTML() {
+            // Busca el contenedor del panel (usa cualquiera de estos selectores)
+            const panel = document.querySelector('#offcanvasCart, #miniCart, [data-mini-cart]');
+            if (!panel) return;
+
+            // Necesitamos una URL que devuelva SOLO el parcial del carrito
+            const url = panel.getAttribute('data-refresh-url');
+            if (!url) return;
+
+            try {
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                if (!res.ok) return;
+
+                const html = await res.text();
+                panel.innerHTML = html;
+
+                // Por si otros scripts necesitan saber que se re-renderizó
+                window.dispatchEvent(new CustomEvent('miniCart:refreshed'));
+            } catch { /* silencioso */ }
+        }
+
         const HAS_VARIANTS = @((hasVar ? "true" : "false").ToLower());
         const VARIANTES = HAS_VARIANTS ? @Html.Raw(variantesJson) : [];
 
         document.addEventListener('DOMContentLoaded', function() {
+            // =========================
+            // Selectores unificados
+            // =========================
+            const CART_COUNT_SELECTORS = '#cartCount, #cart-count, [data-cart-count], .cart-count';
+            const CART_TOTAL_SELECTORS = '#cartTotal, #cart-total, [data-cart-total], .cart-total';
+
             // Elementos principales
             const mainImg = document.getElementById('mainImg');
             const stockBadge = document.getElementById('stockBadge');
@@ -1032,22 +1060,21 @@
             let selectedColor = null;
             let selectedTalla = null;
 
-            // Galería de imágenes
+            // =========================
+            // Galería
+            // =========================
             document.querySelectorAll('.thumb-item').forEach(thumb => {
                 thumb.addEventListener('click', function() {
-                    // Remover clase active de todos los thumbs
                     document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
-                    // Agregar clase active al thumb clickeado
                     this.classList.add('active');
-                    // Cambiar imagen principal
                     const newSrc = this.getAttribute('data-src');
-                    if (newSrc && mainImg) {
-                        mainImg.src = newSrc;
-                    }
+                    if (newSrc && mainImg) mainImg.src = newSrc;
                 });
             });
 
-            // Control de cantidad
+            // =========================
+            // Cantidad
+            // =========================
             const quantityInput = document.getElementById('Cantidad');
             const quantityHidden = document.getElementById('CantidadHidden');
             const btnMinus = document.getElementById('btnMinus');
@@ -1056,52 +1083,40 @@
             function updateQuantity() {
                 let current = parseInt(quantityInput.value) || 1;
                 const max = parseInt(quantityInput.getAttribute('max')) || 1;
-
-                // Validar límites
                 if (current < 1) current = 1;
                 if (current > max) current = max;
-
                 quantityInput.value = current;
                 quantityHidden.value = current;
-
-                // Actualizar estado de botones
                 btnMinus.disabled = current <= 1;
                 btnPlus.disabled = current >= max;
             }
 
-            btnMinus?.addEventListener('click', () => {
-                quantityInput.value = Math.max(1, parseInt(quantityInput.value) - 1);
-                updateQuantity();
-            });
-
-            btnPlus?.addEventListener('click', () => {
+            btnMinus?.addEventListener('click', () => { quantityInput.value = Math.max(1, (parseInt(quantityInput.value) || 1) - 1); updateQuantity(); });
+            btnPlus?.addEventListener('click',  () => {
                 const max = parseInt(quantityInput.getAttribute('max')) || 1;
-                quantityInput.value = Math.min(max, parseInt(quantityInput.value) + 1);
+                quantityInput.value = Math.min(max, (parseInt(quantityInput.value) || 1) + 1);
                 updateQuantity();
             });
-
             quantityInput?.addEventListener('change', updateQuantity);
             updateQuantity();
 
-            // Sistema de variantes
+            // =========================
+            // Variantes
+            // =========================
             function getUniqueColors() {
                 return [...new Set(VARIANTES.map(v => v.color).filter(Boolean))];
             }
-
             function getTallasByColor(color) {
-                return VARIANTES
-                    .filter(v => v.color === color && v.talla)
-                    .map(v => v.talla)
-                    .filter((talla, index, array) => array.indexOf(talla) === index);
+                return VARIANTES.filter(v => v.color === color && v.talla)
+                                .map(v => v.talla)
+                                .filter((t, i, a) => a.indexOf(t) === i);
             }
-
             function getVariantByColorAndTalla(color, talla) {
                 return VARIANTES.find(v => v.color === color && v.talla === talla);
             }
 
             function renderColorOptions() {
                 if (!HAS_VARIANTS || !colorOptions) return;
-
                 colorOptions.innerHTML = '';
                 const colors = getUniqueColors();
 
@@ -1114,12 +1129,10 @@
                         <label for="${optionId}" class="variant-label">
                             <span class="color-swatch" style="background-color: ${getColorValue(color)}"></span>
                             ${color}
-                        </label>
-                    `;
+                        </label>`;
                     colorOptions.appendChild(div);
                 });
 
-                // Event listeners para colores
                 colorOptions.querySelectorAll('.variant-input').forEach(input => {
                     input.addEventListener('change', function() {
                         selectedColor = this.value;
@@ -1129,7 +1142,6 @@
                     });
                 });
 
-                // Seleccionar primer color por defecto
                 const firstColor = colorOptions.querySelector('.variant-input');
                 if (firstColor) {
                     firstColor.checked = true;
@@ -1141,29 +1153,25 @@
 
             function renderTallaOptions() {
                 if (!HAS_VARIANTS || !tallaOptions || !selectedColor) return;
-
                 tallaOptions.innerHTML = '';
                 const tallas = getTallasByColor(selectedColor);
 
                 tallas.forEach(talla => {
                     const variant = getVariantByColorAndTalla(selectedColor, talla);
                     const optionId = `talla_${talla.replace(/\s+/g, '_').toLowerCase()}`;
-                    const disabled = !variant || variant.stock <= 0;
+                    const disabled = !variant || (parseInt(variant.stock) || 0) <= 0;
 
                     const div = document.createElement('div');
                     div.className = 'variant-option';
                     div.innerHTML = `
-                        <input type="radio" name="talla" id="${optionId}" value="${talla}"
-                               ${disabled ? 'disabled' : ''} class="variant-input">
+                        <input type="radio" name="talla" id="${optionId}" value="${talla}" ${disabled ? 'disabled' : ''} class="variant-input">
                         <label for="${optionId}" class="variant-label ${disabled ? 'text-muted' : ''}">
                             ${talla}
                             ${disabled ? '<br><small class="text-danger">Agotado</small>' : ''}
-                        </label>
-                    `;
+                        </label>`;
                     tallaOptions.appendChild(div);
                 });
 
-                // Event listeners para tallas
                 tallaOptions.querySelectorAll('.variant-input:not(:disabled)').forEach(input => {
                     input.addEventListener('change', function() {
                         selectedTalla = this.value;
@@ -1172,7 +1180,6 @@
                     });
                 });
 
-                // Seleccionar primera talla disponible
                 const firstAvailable = tallaOptions.querySelector('.variant-input:not(:disabled)');
                 if (firstAvailable) {
                     firstAvailable.checked = true;
@@ -1182,17 +1189,14 @@
                     selectedTalla = null;
                     selectedTallaText.textContent = 'Selecciona una talla';
                 }
-
                 updateVariantSelection();
             }
 
             function updateVariantSelection() {
                 if (!HAS_VARIANTS) return;
-
                 const variant = getVariantByColorAndTalla(selectedColor, selectedTalla);
 
                 if (!variant) {
-                    // No hay variante seleccionada o no válida
                     stockBadge.innerHTML = '<span class="badge text-bg-secondary">Selecciona una combinación</span>';
                     stockInfo.innerHTML = '<i class="fa-solid fa-info-circle"></i><span>Selecciona color y talla para ver disponibilidad</span>';
                     stockInfo.className = 'stock-info';
@@ -1202,11 +1206,9 @@
                     return;
                 }
 
-                // Actualizar información según la variante
                 const stock = parseInt(variant.stock) || 0;
                 const price = variant.precio != null ? parseFloat(variant.precio) : parseFloat('@Model.PrecioVenta');
 
-                // Badge de stock
                 if (stock <= 0) {
                     stockBadge.innerHTML = '<span class="badge text-bg-danger">Agotado</span>';
                     stockInfo.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Producto agotado temporalmente</span>';
@@ -1221,17 +1223,9 @@
                     stockInfo.className = 'stock-info stock-available';
                 }
 
-                // Precio
-                if (priceEl) {
-                    priceEl.textContent = price.toFixed(2);
-                }
+                if (priceEl) priceEl.textContent = price.toFixed(2);
+                if (variant.img && mainImg) mainImg.src = variant.img;
 
-                // Imagen de la variante
-                if (variant.img && mainImg) {
-                    mainImg.src = variant.img;
-                }
-
-                // Botón de añadir y cantidad máxima
                 quantityInput.setAttribute('max', stock > 0 ? stock : 1);
                 updateQuantity();
 
@@ -1240,32 +1234,23 @@
                 varHidden.value = stock > 0 ? variant.id : '';
             }
 
-            // Helper para convertir nombre de color a valor CSS
             function getColorValue(colorName) {
                 const colorMap = {
-                    'rojo': '#dc2626',
-                    'azul': '#2563eb',
-                    'verde': '#16a34a',
-                    'amarillo': '#eab308',
-                    'negro': '#000000',
-                    'blanco': '#ffffff',
-                    'rosa': '#ec4899',
-                    'morado': '#9333ea',
-                    'gris': '#6b7280',
-                    'naranja': '#ea580c',
-                    'marron': '#92400e',
-                    'beige': '#fef3c7'
+                    'rojo': '#dc2626','azul': '#2563eb','verde': '#16a34a','amarillo': '#eab308','negro': '#000000',
+                    'blanco': '#ffffff','rosa': '#ec4899','morado': '#9333ea','gris': '#6b7280','naranja': '#ea580c',
+                    'marron': '#92400e','beige': '#fef3c7'
                 };
-                return colorMap[colorName.toLowerCase()] || '#6b7280';
+                return colorMap[colorName?.toLowerCase?.()] || '#6b7280';
             }
 
-            // Favoritos con AJAX
+            // =========================
+            // Favoritos (AJAX)
+            // =========================
             const favForm = document.getElementById('favForm');
             const btnFav = document.getElementById('btnFav');
 
             favForm?.addEventListener('submit', async function(e) {
                 e.preventDefault();
-
                 const icon = btnFav.querySelector('i');
                 const wasFavorite = icon.classList.contains('fa-solid');
 
@@ -1273,34 +1258,24 @@
                     const response = await fetch(favForm.action, {
                         method: 'POST',
                         body: new FormData(favForm),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
-
                     if (response.ok) {
-                        // Cambiar icono y estilo
                         if (wasFavorite) {
-                            icon.classList.remove('fa-solid');
-                            icon.classList.add('fa-regular');
-                            btnFav.classList.remove('btn-primary-custom');
-                            btnFav.classList.add('btn-secondary-custom');
+                            icon.classList.remove('fa-solid'); icon.classList.add('fa-regular');
+                            btnFav.classList.remove('btn-primary-custom'); btnFav.classList.add('btn-secondary-custom');
                         } else {
-                            icon.classList.remove('fa-regular');
-                            icon.classList.add('fa-solid');
-                            btnFav.classList.remove('btn-secondary-custom');
-                            btnFav.classList.add('btn-primary-custom');
+                            icon.classList.remove('fa-regular'); icon.classList.add('fa-solid');
+                            btnFav.classList.remove('btn-secondary-custom'); btnFav.classList.add('btn-primary-custom');
                         }
-
-                        // Mostrar toast de éxito
                         showToast('success', wasFavorite ? 'Eliminado de favoritos' : 'Agregado a favoritos');
                     }
-                } catch (error) {
-                    showToast('error', 'Error al actualizar favoritos');
-                }
+                } catch { showToast('error', 'Error al actualizar favoritos'); }
             });
 
-            // Compartir en redes sociales
+            // =========================
+            // Compartir
+            // =========================
             document.querySelectorAll('.share-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -1308,14 +1283,10 @@
                     const title = document.title;
 
                     if (this.querySelector('.fa-link')) {
-                        // Copiar enlace
-                        navigator.clipboard.writeText(url).then(() => {
-                            showToast('success', 'Enlace copiado al portapapeles');
-                        });
+                        navigator.clipboard.writeText(url).then(() => showToast('success', 'Enlace copiado al portapapeles'));
                     } else if (this.querySelector('.fa-facebook-f')) {
                         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
                     } else if (this.querySelector('.fa-instagram')) {
-                        // Instagram no tiene API directa, redirigir a la app
                         window.open(`https://www.instagram.com/`, '_blank');
                     } else if (this.querySelector('.fa-whatsapp')) {
                         window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');
@@ -1323,7 +1294,9 @@
                 });
             });
 
-            // Añadir al carrito con AJAX
+            // =========================
+            // Carrito (AJAX)
+            // =========================
             const formAdd = document.getElementById('formAdd');
 
             formAdd?.addEventListener('submit', async function(e) {
@@ -1337,7 +1310,6 @@
                 const originalText = btnAddText.textContent;
                 const originalHtml = btnAdd.innerHTML;
 
-                // Mostrar loading
                 btnAdd.disabled = true;
                 btnAddText.textContent = 'Añadiendo...';
                 btnAdd.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Añadiendo...';
@@ -1346,71 +1318,82 @@
                     const response = await fetch(formAdd.action, {
                         method: 'POST',
                         body: new FormData(formAdd),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
 
                     const data = await response.json();
 
                     if (data.ok) {
                         showToast('success', 'Producto añadido al carrito');
-                        updateCartBadge();
+                        // Si el backend ya devuelve count/subtotal, úsalo; si no, refresca desde el endpoint
+                        await updateCartBadge(data);
                     } else if (data.needLogin) {
                         window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
                     } else {
                         showToast('error', data.error || 'Error al añadir el producto');
                     }
-                } catch (error) {
+                } catch {
                     showToast('error', 'Error de conexión');
                 } finally {
-                    // Restaurar estado del botón
                     btnAdd.disabled = HAS_VARIANTS ? !varHidden.value : false;
                     btnAddText.textContent = originalText;
                     btnAdd.innerHTML = originalHtml;
                 }
             });
 
-            // Funciones auxiliares
             function showToast(type, message) {
                 const toastEl = type === 'success' ? document.getElementById('toastSuccess') : document.getElementById('toastError');
                 const toastMsg = toastEl.querySelector('.toast-body span');
-
                 toastMsg.textContent = message;
-                const toast = new bootstrap.Toast(toastEl);
-                toast.show();
+                new bootstrap.Toast(toastEl).show();
             }
 
-            async function updateCartBadge() {
-                try {
-                    const response = await fetch('/Compras/CartInfo');
-                    if (response.ok) {
-                        const data = await response.json();
-                        const cartCount = document.getElementById('cartCount') || document.querySelector('[data-cart-count]');
-                        const cartTotal = document.getElementById('cartTotal') || document.querySelector('[data-cart-total]');
+            // --- NUEVO: función para pintar todos los badges de carrito ---
+            function renderCartBadges(count, subtotal) {
+                document.querySelectorAll(CART_COUNT_SELECTORS).forEach(el => { if (el) el.textContent = Number(count || 0); });
+                const formatted = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' })
+                                     .format(Number(subtotal || 0));
+                document.querySelectorAll(CART_TOTAL_SELECTORS).forEach(el => { if (el) el.textContent = formatted; });
+            }
 
-                        if (cartCount) {
-                            cartCount.textContent = data.count || 0;
-                        }
-                        if (cartTotal) {
-                            cartTotal.textContent = new Intl.NumberFormat('es-EC', {
-                                style: 'currency',
-                                currency: 'USD'
-                            }).format(data.subtotal || 0);
-                        }
+            // --- NUEVO: pedir info del carrito con fallback de endpoint ---
+            async function fetchCartInfo() {
+                try {
+                    let res = await fetch('/Compras/CartInfo');
+                    if (!res.ok) { // fallback si usas CarritoController
+                        res = await fetch('/Carrito/CartInfo');
                     }
-                } catch (error) {
-                    // Silently fail
-                }
+                    if (res.ok) return await res.json();
+                } catch { /* ignore */ }
+                return null;
+            }
+
+            // --- NUEVO: actualizar UI (acepta datos precalculados del add-to-cart) ---
+                async function updateCartBadge(preData) {
+        // Pintar contadores rápidamente si ya tenemos datos del POST
+        const countQuick = Number(preData?.count ?? 0);
+        const subtotalQuick = Number(preData?.subtotal ?? preData?.total ?? NaN);
+        if (!Number.isNaN(subtotalQuick) || countQuick > 0) {
+            renderCartBadges(countQuick, subtotalQuick);
+            window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: countQuick, subtotal: subtotalQuick } }));
+            // Refresca el mini-carrito en segundo plano
+            refreshMiniCartHTML();
+            return;
+        }
+
+                    const data = await fetchCartInfo();
+        if (data) {
+            const c = Number(data.count ?? 0);
+            const s = Number(data.subtotal ?? data.total ?? 0);
+            renderCartBadges(c, s);
+            window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: c, subtotal: s } }));
+            refreshMiniCartHTML();
+        }
             }
 
             // Inicialización
-            if (HAS_VARIANTS) {
-                renderColorOptions();
-            }
-
-            // Cargar información del carrito al inicio
-            updateCartBadge();
+            if (HAS_VARIANTS) { renderColorOptions(); }
+            updateCartBadge(); // cargar estado del carrito al inicio
         });
     </script>
 }
