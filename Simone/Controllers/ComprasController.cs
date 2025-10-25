@@ -927,12 +927,7 @@ namespace Simone.Controllers
         // SUBIR COMPROBANTE / PANTALLAS
         // =========================
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> SubirComprobante(
-            int id,
-            IFormFile? archivo,
-            string? depositante,
-            string? banco,
-            CancellationToken ct = default)
+        public async Task<IActionResult> SubirComprobante(int id, IFormFile? archivo, string? depositante, string? banco, CancellationToken ct = default)
         {
             var uid = _userManager.GetUserId(User);
             if (uid == null) return Unauthorized();
@@ -943,13 +938,6 @@ namespace Simone.Controllers
 
             if (venta == null)
                 return EsAjax() ? Json(new { ok = false, error = "Venta no encontrada." }) : NotFound();
-
-            // Fallback: algunos formularios envían "BancoSeleccionado" en vez de "banco"
-            if (string.IsNullOrWhiteSpace(banco))
-            {
-                var alt = Request?.Form?["BancoSeleccionado"].ToString();
-                if (!string.IsNullOrWhiteSpace(alt)) banco = alt;
-            }
 
             string? relUrl = null;
 
@@ -962,12 +950,11 @@ namespace Simone.Controllers
                     TempData["MensajeError"] = res.error;
                     return RedirectToAction(nameof(CompraExito), new { id });
                 }
-                relUrl = res.relUrl; // ya viene con ?v= (cache-buster)
+                relUrl = res.relUrl;
             }
 
-            // Persistir/merge de metadatos (no pisar si viene null)
             if (!string.IsNullOrWhiteSpace(depositante) || !string.IsNullOrWhiteSpace(banco))
-                await GuardarMetaDepositoAsync(id, depositante, banco, ct);
+                GuardarMetaDeposito(id, depositante, banco);
 
             if (EsAjax()) return Json(new { ok = true, url = relUrl });
 
@@ -986,21 +973,6 @@ namespace Simone.Controllers
             if (venta == null) return RedirectToAction("Index", "Home");
             return View(venta);
         }
-
-
-        [HttpGet]
-        [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult ComprobanteUrl(int id)
-        {
-            var folder = UploadsFolderAbs();
-            var file = Directory.EnumerateFiles(folder, $"venta-{id}.*", SearchOption.TopDirectoryOnly).FirstOrDefault();
-            if (string.IsNullOrEmpty(file)) return Json(new { ok = false });
-
-            var rel = Path.GetRelativePath(_env.WebRootPath, file).Replace("\\", "/");
-            var ticks = System.IO.File.GetLastWriteTimeUtc(file).Ticks;
-            return Json(new { ok = true, url = "/" + rel.TrimStart('/') + "?v=" + ticks });
-        }
-
 
         [HttpGet] public IActionResult CompraError() => View();
 
@@ -1065,10 +1037,7 @@ namespace Simone.Controllers
             return okMime && _extPermitidas.Contains(ext);
         }
 
-        private async Task<(bool ok, string? relUrl, string? error)> GuardarComprobanteAsync(
-    int ventaId,
-    IFormFile archivo,
-    CancellationToken ct)
+        private async Task<(bool ok, string? relUrl, string? error)> GuardarComprobanteAsync(int ventaId, IFormFile archivo, CancellationToken ct)
         {
             if (archivo == null || archivo.Length == 0)
                 return (false, null, "No se recibió archivo.");
@@ -1080,7 +1049,6 @@ namespace Simone.Controllers
             var folder = UploadsFolderAbs();
             Directory.CreateDirectory(folder);
 
-            // Borrar anteriores (cualquier extensión)
             foreach (var old in Directory.EnumerateFiles(folder, $"venta-{ventaId}.*", SearchOption.TopDirectoryOnly))
             {
                 try { System.IO.File.Delete(old); } catch { /* ignore */ }
@@ -1088,89 +1056,27 @@ namespace Simone.Controllers
 
             var ext = Path.GetExtension(archivo.FileName);
             var fileAbs = Path.Combine(folder, $"venta-{ventaId}{ext}");
+            await using var fs = new FileStream(fileAbs, FileMode.Create, FileAccess.Write, FileShare.None);
+            await archivo.CopyToAsync(fs, ct);
 
-            await using (var fs = new FileStream(fileAbs, FileMode.Create, FileAccess.Write, FileShare.None))
-                await archivo.CopyToAsync(fs, ct);
-
-            // Cache-buster
-            var ticks = System.IO.File.GetLastWriteTimeUtc(fileAbs).Ticks;
             var rel = Path.GetRelativePath(_env.WebRootPath, fileAbs).Replace("\\", "/");
-            var url = "/" + rel.TrimStart('/') + "?v=" + ticks;
-
-            return (true, url, null);
+            return (true, "/" + rel.TrimStart('/'), null);
         }
 
-
-        private async Task GuardarMetaDepositoAsync(int ventaId, string? depositante, string? bancoRaw, CancellationToken ct)
+        private void GuardarMetaDeposito(int ventaId, string? depositante, string? banco)
         {
             var folder = UploadsFolderAbs();
             Directory.CreateDirectory(folder);
+
+            var metaObj = new
+            {
+                depositante = string.IsNullOrWhiteSpace(depositante) ? null : depositante.Trim(),
+                banco = string.IsNullOrWhiteSpace(banco) ? null : banco.Trim(),
+                ts = DateTime.UtcNow
+            };
             var metaPath = Path.Combine(folder, $"venta-{ventaId}.meta.json");
-
-            // 1) Cargar meta existente (si lo hay)
-            Dictionary<string, object?> meta;
-            try
-            {
-                if (System.IO.File.Exists(metaPath))
-                {
-                    var json = await System.IO.File.ReadAllTextAsync(metaPath, ct);
-                    meta = JsonSerializer.Deserialize<Dictionary<string, object?>>(json)
-                           ?? new Dictionary<string, object?>();
-                }
-                else meta = new Dictionary<string, object?>();
-            }
-            catch
-            {
-                meta = new Dictionary<string, object?>();
-            }
-
-            // 2) Resolver banco si viene algo (admin:xxx | tienda:<uid>:xxx o nombre simple)
-            string? bancoPretty = null;
-            object? bancoSeleccionObj = null;
-
-            if (!string.IsNullOrWhiteSpace(bancoRaw))
-            {
-                var (okBanco, metaBancoObj, destinoPago, _) = await ResolverBancoSeleccionadoAsync(bancoRaw!, ct);
-                if (okBanco)
-                {
-                    // metaBancoObj = { destino, banco = { codigo, nombre, ... } }
-                    try
-                    {
-                        var bancoJson = JsonSerializer.Serialize(metaBancoObj);
-                        using var doc = JsonDocument.Parse(bancoJson);
-                        if (doc.RootElement.TryGetProperty("banco", out var bank))
-                        {
-                            if (bank.TryGetProperty("nombre", out var nombre) && nombre.ValueKind == JsonValueKind.String)
-                                bancoPretty = nombre.GetString();
-                        }
-                    }
-                    catch { /* ignore parse */ }
-
-                    bancoSeleccionObj = metaBancoObj; // full object (para vistas detalladas)
-                }
-                else
-                {
-                    // Guarda el raw si no se pudo resolver
-                    bancoPretty = bancoRaw?.Trim();
-                }
-            }
-
-            // 3) Merge no destructivo
-            if (!string.IsNullOrWhiteSpace(depositante))
-                meta["depositante"] = depositante.Trim();
-
-            if (!string.IsNullOrWhiteSpace(bancoPretty))
-                meta["banco"] = bancoPretty; // string “humano”
-
-            if (bancoSeleccionObj != null)   // objeto rico si pudimos resolver
-                meta["bancoSeleccion"] = bancoSeleccionObj;
-
-            meta["ts"] = DateTime.UtcNow;
-
-            // 4) Guardar
-            await System.IO.File.WriteAllTextAsync(metaPath, JsonSerializer.Serialize(meta), ct);
+            System.IO.File.WriteAllText(metaPath, JsonSerializer.Serialize(metaObj));
         }
-
 
         // >>> GALERÍA — helpers para cargar imágenes del producto <<<
         private string ProductFolderAbs(int productId) =>

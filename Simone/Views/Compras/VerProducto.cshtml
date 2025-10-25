@@ -105,7 +105,8 @@
         aspect-ratio: 1;
     }
 
-        .thumb-item:hover, .thumb-item.active {
+        .thumb-item:hover,
+        .thumb-item.active {
             border-color: var(--primary-color);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(232, 180, 184, 0.3);
@@ -156,7 +157,12 @@
         color: #ffc107;
     }
 
-    .rating-count, .product-sku {
+    .rating-count {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    .product-sku {
         color: #6c757d;
         font-size: 0.875rem;
     }
@@ -544,24 +550,50 @@
         border: 1px solid #f5c6cb;
     }
 
-    /* Se removió social-share para limpiar estilos no usados */
+    .social-share {
+        display: flex;
+        gap: 0.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .share-btn {
+        width: 48px;
+        height: 48px;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        transition: var(--transition);
+        text-decoration: none;
+    }
+
+        .share-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
 
     @@media (max-width: 768px) {
-        .action-buttons {
-            grid-template-columns: 1fr;
-        }
+        .action-buttons
 
-        .gallery-image {
-            height: 300px;
-        }
+    {
+        grid-template-columns: 1fr;
+    }
 
-        .current-price {
-            font-size: 2rem;
-        }
+    .gallery-image {
+        height: 300px;
+    }
 
-        .features-grid {
-            grid-template-columns: 1fr;
-        }
+    .current-price {
+        font-size: 2rem;
+    }
+
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+
     }
 </style>
 
@@ -575,7 +607,7 @@
     </div>
 }
 
-<!-- Breadcrumb -->
+<!-- Breadcrumb Mejorado -->
 <nav class="container mt-4" aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Inicio</a></li>
@@ -590,7 +622,7 @@
 
 <div class="product-container">
     <div class="row g-5">
-        <!-- Galería -->
+        <!-- Galería Mejorada -->
         <div class="col-lg-7">
             <div class="product-gallery">
                 <div class="gallery-main">
@@ -642,7 +674,7 @@
             </div>
         </div>
 
-        <!-- Información -->
+        <!-- Información del Producto Mejorada -->
         <div class="col-lg-5">
             <div class="product-info shadow-lg">
                 <div class="p-4">
@@ -679,7 +711,7 @@
                         </div>
                     </div>
 
-                    <!-- Stock -->
+                    <!-- Información de Stock -->
                     <div class="stock-info @(!hasVar ? (Model.Stock > 5 ? "stock-available" : Model.Stock > 0 ? "stock-low" : "stock-out") : "")" id="stockInfo">
                         @if (!hasVar)
                         {
@@ -751,7 +783,7 @@
                         </div>
                     </div>
 
-                    <!-- Botones -->
+                    <!-- Botones de Acción -->
                     <div class="action-buttons">
                         <form id="formAdd" asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" novalidate>
                             @Html.AntiForgeryToken()
@@ -784,8 +816,42 @@
                         </form>
                     </div>
 
-                    <!-- Características (solo Pago Seguro y Soporte por WhatsApp) -->
+                    <!-- Compartir -->
+                    <div class="social-share">
+                        <a href="#" class="share-btn" title="Compartir en Facebook">
+                            <i class="fa-brands fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="share-btn" title="Compartir en Instagram">
+                            <i class="fa-brands fa-instagram"></i>
+                        </a>
+                        <a href="#" class="share-btn" title="Compartir en WhatsApp">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </a>
+                        <a href="#" class="share-btn" title="Copiar enlace">
+                            <i class="fa-solid fa-link"></i>
+                        </a>
+                    </div>
+
+                    <!-- Características -->
                     <div class="features-grid">
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-truck-fast"></i>
+                            </div>
+                            <div>
+                                <div class="feature-text">Envío Rápido</div>
+                                <div class="feature-desc">24-48 horas hábiles</div>
+                            </div>
+                        </div>
+                        <div class="feature-item">
+                            <div class="feature-icon">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </div>
+                            <div>
+                                <div class="feature-text">Devoluciones</div>
+                                <div class="feature-desc">7 días para cambios</div>
+                            </div>
+                        </div>
                         <div class="feature-item">
                             <div class="feature-icon">
                                 <i class="fa-solid fa-shield-halved"></i>
@@ -797,15 +863,14 @@
                         </div>
                         <div class="feature-item">
                             <div class="feature-icon">
-                                <i class="fa-brands fa-whatsapp"></i>
+                                <i class="fa-solid fa-headset"></i>
                             </div>
                             <div>
-                                <div class="feature-text">Soporte por WhatsApp</div>
-                                <div class="feature-desc">Resolvemos tus dudas</div>
+                                <div class="feature-text">Soporte</div>
+                                <div class="feature-desc">24/7 por WhatsApp</div>
                             </div>
                         </div>
                     </div>
-                    <!-- Fin características -->
                 </div>
             </div>
         </div>
@@ -831,8 +896,10 @@
                                 <div class="col-md-6">
                                     <h6 class="fw-bold mb-3">Características principales:</h6>
                                     <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Material de alta calidad</li>
                                         <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Diseño exclusivo Neo Ágora</li>
                                         <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Comodidad garantizada</li>
+                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Lavable a máquina</li>
                                     </ul>
                                 </div>
                                 <div class="col-md-6">
@@ -840,7 +907,8 @@
                                     <ul class="list-unstyled">
                                         <li class="mb-2"><strong>Marca:</strong> @(string.IsNullOrWhiteSpace(Model.Marca) ? "Neo Ágora" : Model.Marca)</li>
                                         <li class="mb-2"><strong>Categoría:</strong> @Model.Categoria?.Nombre</li>
-                                        @* Eliminados: Material y Cuidados *@
+                                        <li class="mb-2"><strong>Material:</strong> Algodón 100%</li>
+                                        <li class="mb-2"><strong>Cuidados:</strong> Lavar a máquina en agua fría</li>
                                     </ul>
                                 </div>
                             </div>
@@ -848,7 +916,37 @@
                     </div>
                 </div>
 
-                @* Se eliminó COMPLETAMENTE "Envío y Devoluciones" *@
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingShipping">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseShipping" aria-expanded="false" aria-controls="collapseShipping">
+                            <i class="fa-solid fa-truck me-2"></i> Envío y Devoluciones
+                        </button>
+                    </h2>
+                    <div id="collapseShipping" class="accordion-collapse collapse" aria-labelledby="headingShipping" data-bs-parent="#productAccordion">
+                        <div class="accordion-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold mb-3">Política de Envío:</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fa-solid fa-shipping-fast text-primary me-2"></i> Envío gratuito en pedidos superiores a $50</li>
+                                        <li class="mb-2"><i class="fa-solid fa-clock text-primary me-2"></i> Tiempo de entrega: 24-48 horas hábiles</li>
+                                        <li class="mb-2"><i class="fa-solid fa-map-marker-alt text-primary me-2"></i> Envíos a todo Ecuador</li>
+                                        <li class="mb-2"><i class="fa-solid fa-box text-primary me-2"></i> Empaquetado seguro y discreto</li>
+                                    </ul>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="fw-bold mb-3">Política de Devoluciones:</h6>
+                                    <ul class="list-unstyled">
+                                        <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> 7 días para cambios por talla</li>
+                                        <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> Devoluciones por defectos de fábrica</li>
+                                        <li class="mb-2"><i class="fa-solid fa-tag text-success me-2"></i> Producto debe estar en perfecto estado</li>
+                                        <li class="mb-2"><i class="fa-solid fa-receipt text-success me-2"></i> Conservar factura de compra</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -889,7 +987,7 @@
     }
 </div>
 
-<!-- Toasts -->
+<!-- Toasts Mejorados -->
 <div class="position-fixed bottom-0 end-0 p-4" style="z-index:1080;">
     <div id="toastSuccess" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
         <div class="d-flex">
@@ -914,27 +1012,11 @@
 
 @section Scripts {
     <script>
-        async function refreshMiniCartHTML() {
-            const panel = document.querySelector('#offcanvasCart, #miniCart, [data-mini-cart]');
-            if (!panel) return;
-            const url = panel.getAttribute('data-refresh-url');
-            if (!url) return;
-            try {
-                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                if (!res.ok) return;
-                const html = await res.text();
-                panel.innerHTML = html;
-                window.dispatchEvent(new CustomEvent('miniCart:refreshed'));
-            } catch {}
-        }
-
         const HAS_VARIANTS = @((hasVar ? "true" : "false").ToLower());
         const VARIANTES = HAS_VARIANTS ? @Html.Raw(variantesJson) : [];
 
-        document.addEventListener('DOMContentLoaded', function () {
-            const CART_COUNT_SELECTORS = '#cartCount, #cart-count, [data-cart-count], .cart-count';
-            const CART_TOTAL_SELECTORS = '#cartTotal, #cart-total, [data-cart-total], .cart-total';
-
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos principales
             const mainImg = document.getElementById('mainImg');
             const stockBadge = document.getElementById('stockBadge');
             const stockInfo = document.getElementById('stockInfo');
@@ -950,17 +1032,22 @@
             let selectedColor = null;
             let selectedTalla = null;
 
-            // Galería
+            // Galería de imágenes
             document.querySelectorAll('.thumb-item').forEach(thumb => {
-                thumb.addEventListener('click', function () {
+                thumb.addEventListener('click', function() {
+                    // Remover clase active de todos los thumbs
                     document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
+                    // Agregar clase active al thumb clickeado
                     this.classList.add('active');
+                    // Cambiar imagen principal
                     const newSrc = this.getAttribute('data-src');
-                    if (newSrc && mainImg) mainImg.src = newSrc;
+                    if (newSrc && mainImg) {
+                        mainImg.src = newSrc;
+                    }
                 });
             });
 
-            // Cantidad
+            // Control de cantidad
             const quantityInput = document.getElementById('Cantidad');
             const quantityHidden = document.getElementById('CantidadHidden');
             const btnMinus = document.getElementById('btnMinus');
@@ -969,38 +1056,52 @@
             function updateQuantity() {
                 let current = parseInt(quantityInput.value) || 1;
                 const max = parseInt(quantityInput.getAttribute('max')) || 1;
+
+                // Validar límites
                 if (current < 1) current = 1;
                 if (current > max) current = max;
+
                 quantityInput.value = current;
                 quantityHidden.value = current;
+
+                // Actualizar estado de botones
                 btnMinus.disabled = current <= 1;
                 btnPlus.disabled = current >= max;
             }
 
-            btnMinus?.addEventListener('click', () => { quantityInput.value = Math.max(1, (parseInt(quantityInput.value) || 1) - 1); updateQuantity(); });
-            btnPlus?.addEventListener('click', () => {
-                const max = parseInt(quantityInput.getAttribute('max')) || 1;
-                quantityInput.value = Math.min(max, (parseInt(quantityInput.value) || 1) + 1);
+            btnMinus?.addEventListener('click', () => {
+                quantityInput.value = Math.max(1, parseInt(quantityInput.value) - 1);
                 updateQuantity();
             });
+
+            btnPlus?.addEventListener('click', () => {
+                const max = parseInt(quantityInput.getAttribute('max')) || 1;
+                quantityInput.value = Math.min(max, parseInt(quantityInput.value) + 1);
+                updateQuantity();
+            });
+
             quantityInput?.addEventListener('change', updateQuantity);
             updateQuantity();
 
-            // Variantes
+            // Sistema de variantes
             function getUniqueColors() {
                 return [...new Set(VARIANTES.map(v => v.color).filter(Boolean))];
             }
+
             function getTallasByColor(color) {
-                return VARIANTES.filter(v => v.color === color && v.talla)
+                return VARIANTES
+                    .filter(v => v.color === color && v.talla)
                     .map(v => v.talla)
-                    .filter((t, i, a) => a.indexOf(t) === i);
+                    .filter((talla, index, array) => array.indexOf(talla) === index);
             }
+
             function getVariantByColorAndTalla(color, talla) {
                 return VARIANTES.find(v => v.color === color && v.talla === talla);
             }
 
             function renderColorOptions() {
                 if (!HAS_VARIANTS || !colorOptions) return;
+
                 colorOptions.innerHTML = '';
                 const colors = getUniqueColors();
 
@@ -1013,12 +1114,14 @@
                         <label for="${optionId}" class="variant-label">
                             <span class="color-swatch" style="background-color: ${getColorValue(color)}"></span>
                             ${color}
-                        </label>`;
+                        </label>
+                    `;
                     colorOptions.appendChild(div);
                 });
 
+                // Event listeners para colores
                 colorOptions.querySelectorAll('.variant-input').forEach(input => {
-                    input.addEventListener('change', function () {
+                    input.addEventListener('change', function() {
                         selectedColor = this.value;
                         selectedColorText.textContent = selectedColor;
                         renderTallaOptions();
@@ -1026,6 +1129,7 @@
                     });
                 });
 
+                // Seleccionar primer color por defecto
                 const firstColor = colorOptions.querySelector('.variant-input');
                 if (firstColor) {
                     firstColor.checked = true;
@@ -1037,33 +1141,38 @@
 
             function renderTallaOptions() {
                 if (!HAS_VARIANTS || !tallaOptions || !selectedColor) return;
+
                 tallaOptions.innerHTML = '';
                 const tallas = getTallasByColor(selectedColor);
 
                 tallas.forEach(talla => {
                     const variant = getVariantByColorAndTalla(selectedColor, talla);
                     const optionId = `talla_${talla.replace(/\s+/g, '_').toLowerCase()}`;
-                    const disabled = !variant || (parseInt(variant.stock) || 0) <= 0;
+                    const disabled = !variant || variant.stock <= 0;
 
                     const div = document.createElement('div');
                     div.className = 'variant-option';
                     div.innerHTML = `
-                        <input type="radio" name="talla" id="${optionId}" value="${talla}" ${disabled ? 'disabled' : ''} class="variant-input">
+                        <input type="radio" name="talla" id="${optionId}" value="${talla}"
+                               ${disabled ? 'disabled' : ''} class="variant-input">
                         <label for="${optionId}" class="variant-label ${disabled ? 'text-muted' : ''}">
                             ${talla}
                             ${disabled ? '<br><small class="text-danger">Agotado</small>' : ''}
-                        </label>`;
+                        </label>
+                    `;
                     tallaOptions.appendChild(div);
                 });
 
+                // Event listeners para tallas
                 tallaOptions.querySelectorAll('.variant-input:not(:disabled)').forEach(input => {
-                    input.addEventListener('change', function () {
+                    input.addEventListener('change', function() {
                         selectedTalla = this.value;
                         selectedTallaText.textContent = selectedTalla;
                         updateVariantSelection();
                     });
                 });
 
+                // Seleccionar primera talla disponible
                 const firstAvailable = tallaOptions.querySelector('.variant-input:not(:disabled)');
                 if (firstAvailable) {
                     firstAvailable.checked = true;
@@ -1073,14 +1182,17 @@
                     selectedTalla = null;
                     selectedTallaText.textContent = 'Selecciona una talla';
                 }
+
                 updateVariantSelection();
             }
 
             function updateVariantSelection() {
                 if (!HAS_VARIANTS) return;
+
                 const variant = getVariantByColorAndTalla(selectedColor, selectedTalla);
 
                 if (!variant) {
+                    // No hay variante seleccionada o no válida
                     stockBadge.innerHTML = '<span class="badge text-bg-secondary">Selecciona una combinación</span>';
                     stockInfo.innerHTML = '<i class="fa-solid fa-info-circle"></i><span>Selecciona color y talla para ver disponibilidad</span>';
                     stockInfo.className = 'stock-info';
@@ -1090,9 +1202,11 @@
                     return;
                 }
 
+                // Actualizar información según la variante
                 const stock = parseInt(variant.stock) || 0;
                 const price = variant.precio != null ? parseFloat(variant.precio) : parseFloat('@Model.PrecioVenta');
 
+                // Badge de stock
                 if (stock <= 0) {
                     stockBadge.innerHTML = '<span class="badge text-bg-danger">Agotado</span>';
                     stockInfo.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Producto agotado temporalmente</span>';
@@ -1107,9 +1221,17 @@
                     stockInfo.className = 'stock-info stock-available';
                 }
 
-                if (priceEl) priceEl.textContent = price.toFixed(2);
-                if (variant.img && mainImg) mainImg.src = variant.img;
+                // Precio
+                if (priceEl) {
+                    priceEl.textContent = price.toFixed(2);
+                }
 
+                // Imagen de la variante
+                if (variant.img && mainImg) {
+                    mainImg.src = variant.img;
+                }
+
+                // Botón de añadir y cantidad máxima
                 quantityInput.setAttribute('max', stock > 0 ? stock : 1);
                 updateQuantity();
 
@@ -1118,21 +1240,32 @@
                 varHidden.value = stock > 0 ? variant.id : '';
             }
 
+            // Helper para convertir nombre de color a valor CSS
             function getColorValue(colorName) {
                 const colorMap = {
-                    'rojo': '#dc2626','azul': '#2563eb','verde': '#16a34a','amarillo': '#eab308','negro': '#000000',
-                    'blanco': '#ffffff','rosa': '#ec4899','morado': '#9333ea','gris': '#6b7280','naranja': '#ea580c',
-                    'marron': '#92400e','beige': '#fef3c7'
+                    'rojo': '#dc2626',
+                    'azul': '#2563eb',
+                    'verde': '#16a34a',
+                    'amarillo': '#eab308',
+                    'negro': '#000000',
+                    'blanco': '#ffffff',
+                    'rosa': '#ec4899',
+                    'morado': '#9333ea',
+                    'gris': '#6b7280',
+                    'naranja': '#ea580c',
+                    'marron': '#92400e',
+                    'beige': '#fef3c7'
                 };
-                return colorMap[colorName?.toLowerCase?.()] || '#6b7280';
+                return colorMap[colorName.toLowerCase()] || '#6b7280';
             }
 
-            // Favoritos (AJAX)
+            // Favoritos con AJAX
             const favForm = document.getElementById('favForm');
             const btnFav = document.getElementById('btnFav');
 
-            favForm?.addEventListener('submit', async function (e) {
+            favForm?.addEventListener('submit', async function(e) {
                 e.preventDefault();
+
                 const icon = btnFav.querySelector('i');
                 const wasFavorite = icon.classList.contains('fa-solid');
 
@@ -1140,25 +1273,60 @@
                     const response = await fetch(favForm.action, {
                         method: 'POST',
                         body: new FormData(favForm),
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    if (response.ok) {
-                        if (wasFavorite) {
-                            icon.classList.remove('fa-solid'); icon.classList.add('fa-regular');
-                            btnFav.classList.remove('btn-primary-custom'); btnFav.classList.add('btn-secondary-custom');
-                        } else {
-                            icon.classList.remove('fa-regular'); icon.classList.add('fa-solid');
-                            btnFav.classList.remove('btn-secondary-custom'); btnFav.classList.add('btn-primary-custom');
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
+                    });
+
+                    if (response.ok) {
+                        // Cambiar icono y estilo
+                        if (wasFavorite) {
+                            icon.classList.remove('fa-solid');
+                            icon.classList.add('fa-regular');
+                            btnFav.classList.remove('btn-primary-custom');
+                            btnFav.classList.add('btn-secondary-custom');
+                        } else {
+                            icon.classList.remove('fa-regular');
+                            icon.classList.add('fa-solid');
+                            btnFav.classList.remove('btn-secondary-custom');
+                            btnFav.classList.add('btn-primary-custom');
+                        }
+
+                        // Mostrar toast de éxito
                         showToast('success', wasFavorite ? 'Eliminado de favoritos' : 'Agregado a favoritos');
                     }
-                } catch { showToast('error', 'Error al actualizar favoritos'); }
+                } catch (error) {
+                    showToast('error', 'Error al actualizar favoritos');
+                }
             });
 
-            // Carrito (AJAX)
+            // Compartir en redes sociales
+            document.querySelectorAll('.share-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const url = window.location.href;
+                    const title = document.title;
+
+                    if (this.querySelector('.fa-link')) {
+                        // Copiar enlace
+                        navigator.clipboard.writeText(url).then(() => {
+                            showToast('success', 'Enlace copiado al portapapeles');
+                        });
+                    } else if (this.querySelector('.fa-facebook-f')) {
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+                    } else if (this.querySelector('.fa-instagram')) {
+                        // Instagram no tiene API directa, redirigir a la app
+                        window.open(`https://www.instagram.com/`, '_blank');
+                    } else if (this.querySelector('.fa-whatsapp')) {
+                        window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');
+                    }
+                });
+            });
+
+            // Añadir al carrito con AJAX
             const formAdd = document.getElementById('formAdd');
 
-            formAdd?.addEventListener('submit', async function (e) {
+            formAdd?.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
                 if (HAS_VARIANTS && !varHidden.value) {
@@ -1169,6 +1337,7 @@
                 const originalText = btnAddText.textContent;
                 const originalHtml = btnAdd.innerHTML;
 
+                // Mostrar loading
                 btnAdd.disabled = true;
                 btnAddText.textContent = 'Añadiendo...';
                 btnAdd.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Añadiendo...';
@@ -1177,72 +1346,70 @@
                     const response = await fetch(formAdd.action, {
                         method: 'POST',
                         body: new FormData(formAdd),
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
                     });
 
                     const data = await response.json();
 
                     if (data.ok) {
                         showToast('success', 'Producto añadido al carrito');
-                        await updateCartBadge(data);
+                        updateCartBadge();
                     } else if (data.needLogin) {
                         window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
                     } else {
                         showToast('error', data.error || 'Error al añadir el producto');
                     }
-                } catch {
+                } catch (error) {
                     showToast('error', 'Error de conexión');
                 } finally {
+                    // Restaurar estado del botón
                     btnAdd.disabled = HAS_VARIANTS ? !varHidden.value : false;
                     btnAddText.textContent = originalText;
                     btnAdd.innerHTML = originalHtml;
                 }
             });
 
+            // Funciones auxiliares
             function showToast(type, message) {
                 const toastEl = type === 'success' ? document.getElementById('toastSuccess') : document.getElementById('toastError');
                 const toastMsg = toastEl.querySelector('.toast-body span');
+
                 toastMsg.textContent = message;
-                new bootstrap.Toast(toastEl).show();
+                const toast = new bootstrap.Toast(toastEl);
+                toast.show();
             }
 
-            function renderCartBadges(count, subtotal) {
-                document.querySelectorAll(CART_COUNT_SELECTORS).forEach(el => { if (el) el.textContent = Number(count || 0); });
-                const formatted = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' })
-                    .format(Number(subtotal || 0));
-                document.querySelectorAll(CART_TOTAL_SELECTORS).forEach(el => { if (el) el.textContent = formatted; });
-            }
-
-            async function fetchCartInfo() {
+            async function updateCartBadge() {
                 try {
-                    let res = await fetch('/Compras/CartInfo');
-                    if (!res.ok) { res = await fetch('/Carrito/CartInfo'); }
-                    if (res.ok) return await res.json();
-                } catch {}
-                return null;
-            }
+                    const response = await fetch('/Compras/CartInfo');
+                    if (response.ok) {
+                        const data = await response.json();
+                        const cartCount = document.getElementById('cartCount') || document.querySelector('[data-cart-count]');
+                        const cartTotal = document.getElementById('cartTotal') || document.querySelector('[data-cart-total]');
 
-            async function updateCartBadge(preData) {
-                const countQuick = Number(preData?.count ?? 0);
-                const subtotalQuick = Number(preData?.subtotal ?? preData?.total ?? NaN);
-                if (!Number.isNaN(subtotalQuick) || countQuick > 0) {
-                    renderCartBadges(countQuick, subtotalQuick);
-                    window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: countQuick, subtotal: subtotalQuick } }));
-                    refreshMiniCartHTML();
-                    return;
-                }
-                const data = await fetchCartInfo();
-                if (data) {
-                    const c = Number(data.count ?? 0);
-                    const s = Number(data.subtotal ?? data.total ?? 0);
-                    renderCartBadges(c, s);
-                    window.dispatchEvent(new CustomEvent('cart:updated', { detail: { count: c, subtotal: s } }));
-                    refreshMiniCartHTML();
+                        if (cartCount) {
+                            cartCount.textContent = data.count || 0;
+                        }
+                        if (cartTotal) {
+                            cartTotal.textContent = new Intl.NumberFormat('es-EC', {
+                                style: 'currency',
+                                currency: 'USD'
+                            }).format(data.subtotal || 0);
+                        }
+                    }
+                } catch (error) {
+                    // Silently fail
                 }
             }
 
             // Inicialización
-            if (HAS_VARIANTS) { renderColorOptions(); }
+            if (HAS_VARIANTS) {
+                renderColorOptions();
+            }
+
+            // Cargar información del carrito al inicio
             updateCartBadge();
         });
     </script>

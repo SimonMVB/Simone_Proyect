@@ -4,50 +4,45 @@
     ViewData["Title"] = $"Detalle de venta #{Model.VentaID}";
     var culture = new CultureInfo("es-EC");
 
-    // -------------------- Helpers --------------------
+    // Helpers
     string Safe(string? v) => string.IsNullOrWhiteSpace(v) ? "—" : v;
     string JoinNonEmpty(params string?[] xs) => string.Join(", ", xs.Where(s => !string.IsNullOrWhiteSpace(s)));
 
-    // Normaliza clave de banco (último segmento si viene con prefijos "admin:" o "tienda:vid:")
-    string BankKey(string? raw)
+    // Banco: pretty name + icono
+    string BankPretty(string? b)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "";
-        var s = raw.Trim();
-        var last = s.Contains(':') ? s.Split(':').Last() : s;
-        return last.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(b)) return "";
+        var k = b.Trim().ToLowerInvariant();
+        return k switch
+        {
+            "pichincha" => "Banco Pichincha",
+            "guayaquil" => "Banco Guayaquil",
+            "pacifico" => "Banco del Pacífico",
+            "jep" => "Banco JEP",
+            "produbanco" => "Produbanco",
+            "bolivariano" => "Banco Bolivariano",
+            "austro" => "Banco del Austro",
+            "machala" => "Banco de Machala",
+            _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(b)
+        };
     }
-
-    string BankPrettyFromKey(string key) => key switch
+    string BankIcon(string? b)
     {
-        "pichincha" => "Banco Pichincha",
-        "guayaquil" => "Banco Guayaquil",
-        "pacifico" => "Banco del Pacífico",
-        "jep" => "Banco JEP",
-        "produbanco" => "Produbanco",
-        "bolivariano" => "Banco Bolivariano",
-        "austro" => "Banco del Austro",
-        "machala" => "Banco de Machala",
-        _ when !string.IsNullOrWhiteSpace(key)
-                       => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(key),
-        _ => ""
-    };
-
-    string BankIconFromKey(string key) => key switch
-    {
-        "pichincha" => "fa-landmark",
-        "guayaquil" => "fa-piggy-bank",
-        "pacifico" => "fa-water",
-        "jep" => "fa-hand-holding-dollar",
-        "produbanco" => "fa-seedling",
-        "bolivariano" => "fa-building-columns",
-        "austro" => "fa-city",
-        "machala" => "fa-building-columns",
-        _ => "fa-building-columns"
-    };
-
-    string bankKey = BankKey(Model.Banco);
-    string bancoNice = BankPrettyFromKey(bankKey);
-    string bancoIcon = BankIconFromKey(bankKey);
+        if (string.IsNullOrWhiteSpace(b)) return "fa-building-columns";
+        var k = b.Trim().ToLowerInvariant();
+        return k switch
+        {
+            "pichincha" => "fa-landmark",
+            "guayaquil" => "fa-piggy-bank",
+            "pacifico" => "fa-water",
+            "jep" => "fa-hand-holding-dollar",
+            "produbanco" => "fa-seedling",
+            "bolivariano" => "fa-university",
+            "austro" => "fa-city",
+            "machala" => "fa-bank",
+            _ => "fa-building-columns"
+        };
+    }
 
     // Perfil (fallback)
     var dirPerfil = string.IsNullOrWhiteSpace(Model.Direccion) ? null : Model.Direccion;
@@ -56,7 +51,7 @@
     var provPerf = string.IsNullOrWhiteSpace(Model.PerfilProvincia) ? null : Model.PerfilProvincia;
     var refPerf = string.IsNullOrWhiteSpace(Model.PerfilReferencia) ? null : Model.PerfilReferencia;
 
-    // Dirección usada (más cercana a la fecha de la venta; si no hay, la última)
+    // Dirección usada (la más cercana a la fecha de la venta; si no hay, la última)
     var dirUsada = (Model.Direcciones ?? Enumerable.Empty<Simone.ViewModels.Reportes.DireccionVM>())
                     .Where(d => d.FechaRegistro <= Model.Fecha)
                     .OrderByDescending(d => d.FechaRegistro)
@@ -96,13 +91,16 @@
                         : estadoNorm.Equals("enviado") ? "Enviado"
                         : "Pendiente";
 
+    var bancoNice = BankPretty(Model.Banco);
+    var bancoIcon = BankIcon(Model.Banco);
+
     // Mostrar sección Pago si hay pista
     var showPago = !string.IsNullOrWhiteSpace(Model.Depositante)
                 || !string.IsNullOrWhiteSpace(Model.ComprobanteUrl)
                 || !string.IsNullOrWhiteSpace(Model.Banco)
                 || (!string.IsNullOrWhiteSpace(Model.MetodoPago) && Model.MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase));
 
-    // Comprobante: prioriza /uploads/comprobantes/venta-{id}.* (el controlador ya lo envía así; esto normaliza por si llega relativo)
+    // Normaliza URL del comprobante
     string? compUrl = null;
     if (!string.IsNullOrWhiteSpace(Model.ComprobanteUrl))
     {
@@ -146,12 +144,13 @@
                 <a class="btn-action btn-success" href="@whatsUrl" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> WhatsApp</a>
             }
             @{
-                var backHref = Url.Content("~/Panel/Reportes"); // listado admin por defecto
-                if (!User.IsInRole("Administrador"))
-                {
-                    // si quieres soportar vendedor, cambia aquí
-                    backHref = Url.Content("~/Panel/Reportes");
-                }
+                // destino por defecto (cliente)
+                var backHref = Url.Action("Index", "MisCompras");
+
+                if (User.IsInRole("Administrador"))
+                    backHref = Url.Content("~/Panel/Reportes");          // listado admin
+                else if (User.IsInRole("Vendedor"))
+                    backHref = Url.Content("~/Vendedor/Reportes");       // listado vendedor
             }
 
             <a class="btn btn-primary-modern" href="@backHref">
@@ -209,7 +208,7 @@
                     </div>
 
                     <div class="mt-4 no-print">
-                        <form id="markShippedForm" method="post" action="@Url.Content("~/Panel/MarcarEnviada")" class="d-inline">
+                        <form id="markShippedForm" method="post" asp-controller="Panel" asp-action="MarcarEnviada" class="d-inline">
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="id" value="@Model.VentaID" />
                             <button id="btnMarkShipped" type="submit" class="btn-action btn-success" @(estadoClase == "status-shipped" ? "disabled" : null)>
@@ -245,7 +244,7 @@
                                 <span class="info-label">Banco</span>
                                 <span class="info-value d-flex align-items-center gap-2">
                                     <i class="fas @bancoIcon" aria-hidden="true"></i>
-                                    <span id="bankText">@Safe(bancoNice)</span>
+                                    <span>@Safe(bancoNice)</span>
                                     @if (!string.IsNullOrWhiteSpace(bancoNice))
                                     {
                                         <button class="btn-chip no-print" data-copy="@bancoNice" title="Copiar banco"><i class="fas fa-copy"></i></button>
@@ -256,7 +255,7 @@
 
                         @if (!string.IsNullOrWhiteSpace(compUrl))
                         {
-                            <div class="mt-3 text-center" id="compBlock">
+                            <div class="mt-3 text-center">
                                 @if (isPdf)
                                 {
                                     <a class="file-pill" href="@compUrl" target="_blank" rel="noopener">
@@ -271,11 +270,11 @@
                                 else
                                 {
                                     <a href="#" data-bs-toggle="modal" data-bs-target="#modalComprobante">
-                                        <img src="@compUrl" alt="Comprobante de depósito" class="deposit-proof" loading="lazy" id="compImg" />
+                                        <img src="@compUrl" alt="Comprobante de depósito" class="deposit-proof" loading="lazy" />
                                     </a>
                                     <div class="text-muted mt-2"><small>Clic para ver en grande</small></div>
                                     <div class="deposit-actions mt-2 no-print">
-                                        <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download id="compDownload">
+                                        <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
                                             <i class="fas fa-download"></i> Descargar imagen
                                         </a>
                                     </div>
@@ -284,11 +283,10 @@
                         }
                         else
                         {
-                            <div class="alert-warning mt-2" id="noCompAlert">
+                            <div class="alert-warning mt-2">
                                 <i class="fas fa-exclamation-circle"></i>
                                 No se adjuntó comprobante de depósito.
                             </div>
-                            <div class="mt-3 text-center d-none" id="compBlock"></div>
                         }
                     </div>
                 </div>
@@ -455,6 +453,26 @@
         flex-wrap: wrap;
         gap: 8px
     }
+
+    .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        background: #fff;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        text-decoration: none;
+        color: var(--dark);
+        font-weight: 500;
+        transition: var(--transition)
+    }
+
+        .back-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            transform: translateY(-2px)
+        }
 
     .page-title {
         font-size: 24px;
@@ -719,55 +737,48 @@
         display: flex;
         justify-content: center
     }
+
     @@media (max-width:992px) {
-        .info-grid
-
-    {
-        grid-template-columns: 1fr 1fr
+        .info-grid {
+            grid-template-columns: 1fr 1fr
+        }
     }
 
-    }
     @@media (max-width:768px) {
-        .info-grid
+        .info-grid {
+            grid-template-columns: 1fr
+        }
 
-    {
-        grid-template-columns: 1fr
-    }
-
-    .header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px
-    }
-
+        .header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px
+        }
     }
     /* Impresión */
     @@media print {
-        .no-print, .no-print *
+        .no-print, .no-print * {
+            display: none !important;
+        }
 
-    {
-        display: none !important
-    }
+        body {
+            background: #fff;
+        }
 
-    body {
-        background: #fff
-    }
+        .main-container {
+            max-width: 100%;
+            padding: 0;
+        }
 
-    .main-container {
-        max-width: 100%;
-        padding: 0
-    }
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #e5e7eb;
+            page-break-inside: avoid;
+        }
 
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #e5e7eb;
-        page-break-inside: avoid
-    }
-
-    .page-title, .page-subtitle {
-        margin-left: 10px
-    }
-
+        .page-title, .page-subtitle {
+            margin-left: 10px;
+        }
     }
 </style>
 
@@ -803,7 +814,7 @@
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Copiar genérico (data-copy)
+            // genérico: copiar cualquier botón con data-copy
             document.querySelectorAll('[data-copy]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const text = btn.getAttribute('data-copy') || '';
@@ -816,7 +827,7 @@
                 });
             });
 
-            // Copiar etiqueta
+            // Copiar etiqueta envío
             const btnCopy = document.getElementById('btnCopy');
             if (btnCopy) {
                 btnCopy.addEventListener('click', () => {
@@ -829,24 +840,27 @@
                 });
             }
 
-            // Descargar etiqueta .txt
-            const btnDownload = document.getElementById('btnDownloadEtiqueta');
-            if (btnDownload) {
-                btnDownload.addEventListener('click', () => {
-                    const text = document.getElementById('copyContent').innerText;
-                    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-                    const url  = URL.createObjectURL(blob);
-                    const a    = document.createElement('a');
-                    a.href     = url;
-                            const ventaId = @Model.VentaID;
-        a.download = `etiqueta-venta-${ventaId}.txt`;
+                    // Descargar etiqueta como .txt
+        const btnDownload = document.getElementById('btnDownloadEtiqueta');
+        if (btnDownload) {
+          btnDownload.addEventListener('click', () => {
+            const text = document.getElementById('copyContent').innerText;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
 
-                    document.body.appendChild(a); a.click(); a.remove();
-                    URL.revokeObjectURL(url);
-                });
-            }
+            // ✅ usa backticks para interpolar
+            const ventaId = @Model.VentaID;
+            a.download = `etiqueta-venta-${ventaId}.txt`;
 
-            // Copiar depositante
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+          });
+        }
+
+
+            // Copiar depositante (botón dedicado)
             const btnDep = document.getElementById('copyDepositante');
             if (btnDep) {
                 btnDep.addEventListener('click', () => {
@@ -860,7 +874,7 @@
                 });
             }
 
-            // Copiar #pedido
+            // Copiar número de pedido
             const btnOrder = document.getElementById('copyOrder');
             if (btnOrder) {
                 btnOrder.addEventListener('click', () => {
@@ -895,95 +909,6 @@
                         btn.disabled = false; btn.innerHTML = prev; alert('Error de red al marcar como enviado.');
                     }
                 });
-            }
-
-            // ------- Relleno de emergencia desde /uploads/comprobantes si faltan datos -------
-            const bankSpan = document.getElementById('bankText');
-            const depSpan  = document.getElementById('depositanteText');
-            const compBlock = document.getElementById('compBlock');
-            const noCompAlert = document.getElementById('noCompAlert');
-
-            const needsBank = bankSpan && (!bankSpan.textContent || bankSpan.textContent.trim() === '—' || bankSpan.textContent.trim() === '');
-            const needsDep  = depSpan && depSpan.textContent && depSpan.textContent.trim() === '—';
-            const hasComp   = !!document.getElementById('compImg') || document.querySelector('.file-pill');
-
-            // Si falta alguno, intentamos leer venta-{id}.meta.json y archivos
-            if (needsBank || needsDep || !hasComp) {
-                const base = '@Url.Content("~/uploads/comprobantes")/venta-@Model.VentaID';
-                const tryExts = ['.jpg','.jpeg','.png','.webp','.pdf'];
-
-                // Meta
-                fetch(`${base}.meta.json`, { cache:'no-store' })
-                    .then(r => r.ok ? r.json() : null)
-                    .then(meta => {
-                        if (!meta) return;
-                        // bancoSeleccion puede ser string, objeto, o banco.nombre/codigo
-                        const bs = meta.bancoSeleccion ?? meta.BancoSeleccion ?? meta.banco ?? meta.Banco;
-                        function bankKeyFrom(any){
-                            if (!any) return '';
-                            if (typeof any === 'string'){
-                                const s = any.trim();
-                                return s.includes(':') ? s.split(':').pop().toLowerCase() : s.toLowerCase();
-                            }
-                            const obj = any.banco ?? any;
-                            const val = (obj.codigo || obj.nombre || obj.valor || '').toString();
-                            return val.toLowerCase();
-                        }
-                        if (needsBank){
-                            const k = bankKeyFrom(bs);
-                            if (k){
-                                const pretty = {
-                                    'pichincha':'Banco Pichincha','guayaquil':'Banco Guayaquil','pacifico':'Banco del Pacífico',
-                                    'jep':'Banco JEP','produbanco':'Produbanco','bolivariano':'Banco Bolivariano',
-                                    'austro':'Banco del Austro','machala':'Banco de Machala'
-                                }[k] || (k.charAt(0).toUpperCase() + k.slice(1));
-                                bankSpan.textContent = pretty;
-                            }
-                        }
-                        if (needsDep){
-                            const dep = (meta.depositante ?? meta.Depositante ?? '').toString().trim();
-                            if (dep) depSpan.textContent = dep;
-                        }
-                    }).catch(()=>{});
-
-                // Comprobante (si el servidor no lo puso)
-                if (!hasComp && compBlock && noCompAlert){
-                    (async() => {
-                        for (const ext of tryExts){
-                            try{
-                                const url = `${base}${ext}`;
-                                const r = await fetch(url, { method:'HEAD', cache:'no-store' });
-                                if (r.ok){
-                                    noCompAlert.classList.add('d-none');
-                                    compBlock.classList.remove('d-none');
-                                    if (ext === '.pdf'){
-                                        compBlock.innerHTML = `
-                                            <a class="file-pill" href="${url}" target="_blank" rel="noopener">
-                                                <i class="fas fa-file-pdf"></i> Ver comprobante (PDF)
-                                            </a>
-                                            <div class="deposit-actions mt-2 no-print">
-                                                <a class="btn-action btn-outline" href="${url}" target="_blank" rel="noopener" download>
-                                                    <i class="fas fa-download"></i> Descargar
-                                                </a>
-                                            </div>`;
-                                    }else{
-                                        compBlock.innerHTML = `
-                                            <a href="${url}" target="_blank" rel="noopener" title="Ver comprobante">
-                                                <img src="${url}" alt="Comprobante" class="deposit-proof" />
-                                            </a>
-                                            <div class="text-muted mt-2"><small>Clic para ver en grande</small></div>
-                                            <div class="deposit-actions mt-2 no-print">
-                                                <a class="btn-action btn-outline" href="${url}" target="_blank" rel="noopener" download>
-                                                    <i class="fas fa-download"></i> Descargar imagen
-                                                </a>
-                                            </div>`;
-                                    }
-                                    break;
-                                }
-                            }catch{}
-                        }
-                    })();
-                }
             }
         });
     </script>

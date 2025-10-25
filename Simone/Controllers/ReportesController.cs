@@ -195,61 +195,19 @@ namespace Simone.Controllers
         {
             var folder = UploadsFolderAbs();
             Directory.CreateDirectory(folder);
+
+            var meta = new
+            {
+                depositante = string.IsNullOrWhiteSpace(depositante) ? null : depositante.Trim(),
+                banco = string.IsNullOrWhiteSpace(banco) ? null : banco.Trim(),
+                ts = DateTime.UtcNow
+            };
+
             var metaPath = Path.Combine(folder, $"venta-{ventaId}.meta.json");
-
-            // Cargar meta previo (si existe)
-            string? oldJson = System.IO.File.Exists(metaPath) ? System.IO.File.ReadAllText(metaPath) : null;
-            JsonDocument? oldDoc = null;
-            try { if (!string.IsNullOrWhiteSpace(oldJson)) oldDoc = JsonDocument.Parse(oldJson); } catch { }
-
-            string? oldDepositante = null;
-            string? oldBancoString = null;
-            JsonElement? oldBancoSeleccionObj = null;
-
-            if (oldDoc != null)
-            {
-                var root = oldDoc.RootElement;
-
-                if (root.TryGetProperty("depositante", out var d) && d.ValueKind == JsonValueKind.String)
-                    oldDepositante = d.GetString();
-
-                if (root.TryGetProperty("bancoSeleccion", out var bsel))
-                {
-                    if (bsel.ValueKind == JsonValueKind.Object) oldBancoSeleccionObj = bsel;
-                    else if (bsel.ValueKind == JsonValueKind.String) oldBancoString = bsel.GetString();
-                }
-                if (string.IsNullOrWhiteSpace(oldBancoString) &&
-                    root.TryGetProperty("banco", out var b) && b.ValueKind == JsonValueKind.String)
-                    oldBancoString = b.GetString();
-            }
-
-            var dict = new Dictionary<string, object?>();
-
-            dict["depositante"] = !string.IsNullOrWhiteSpace(depositante)
-                ? depositante.Trim()
-                : (oldDepositante ?? null);
-
-            if (!string.IsNullOrWhiteSpace(banco))
-            {
-                // Si te pasan banco simple (p.ej. "admin:pichincha" o "pichincha")
-                dict["banco"] = banco.Trim();
-            }
-            else
-            {
-                // Conserva estructura anterior (prefiere objeto bancoSeleccion)
-                if (oldBancoSeleccionObj.HasValue)
-                    dict["bancoSeleccion"] = JsonSerializer.Deserialize<object>(oldBancoSeleccionObj.Value.GetRawText());
-                else if (!string.IsNullOrWhiteSpace(oldBancoString))
-                    dict["banco"] = oldBancoString;
-            }
-
-            dict["ts"] = DateTime.UtcNow;
-
-            var json = JsonSerializer.Serialize(dict, new JsonSerializerOptions { WriteIndented = false });
+            var json = JsonSerializer.Serialize(meta, new JsonSerializerOptions { WriteIndented = false });
             System.IO.File.WriteAllText(metaPath, json);
-            _logger.LogInformation("Meta de depósito guardado/actualizado para venta {VentaID} en {Path}", ventaId, metaPath);
+            _logger.LogInformation("Meta de depósito guardado para venta {VentaID} en {Path}", ventaId, metaPath);
         }
-
 
         // ------------------------------- Reportes (listado y detalle) -------------------------------
 
@@ -310,9 +268,8 @@ namespace Simone.Controllers
 
             // Comprobante: primero ruta guardada en Usuario, luego /uploads/comprobantes
             var compUrl =
-    BuscarComprobanteUrl(v.VentaID) ??
-    NormalizarCompUrl(v.Usuario?.FotoComprobanteDeposito);
-
+                NormalizarCompUrl(v.Usuario?.FotoComprobanteDeposito) ??
+                BuscarComprobanteUrl(v.VentaID);
 
             // Meta por venta (preferido). Si no hay, usa Usuario.NombreDepositante (si existe).
             var (depMeta, bancoMeta) = BuscarMetaDeposito(v.VentaID);

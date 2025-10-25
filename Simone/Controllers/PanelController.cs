@@ -15,7 +15,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Simone.Controllers
@@ -77,29 +76,6 @@ namespace Simone.Controllers
         private const int _maxFiles = 8;
         private const long _maxImgBytes = 8 * 1024 * 1024;
         private const long _maxFormBytes = 64L * 1024 * 1024;
-
-        // Parser robusto de decimales para es-EC y variantes (ej. "2.000,50")
-        private decimal ParseDecimalFlexible(string? raw, decimal fallback)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(raw)) return fallback;
-                var es = CultureInfo.GetCultureInfo("es-EC");
-                if (decimal.TryParse(raw, NumberStyles.Any, es, out var v))
-                    return Math.Round(v, 2);
-
-                var norm = raw.Replace(',', '.');
-                if (decimal.TryParse(norm, NumberStyles.Any, CultureInfo.InvariantCulture, out v))
-                    return Math.Round(v, 2);
-
-                var norm2 = raw.Replace(".", string.Empty).Replace(',', '.');
-                if (decimal.TryParse(norm2, NumberStyles.Any, CultureInfo.InvariantCulture, out v))
-                    return Math.Round(v, 2);
-
-                return fallback;
-            }
-            catch { return fallback; }
-        }
 
         // ====================== INICIO ======================
         [HttpGet]
@@ -354,31 +330,6 @@ namespace Simone.Controllers
             return View();
         }
 
-        // === AJAX: llenar <select> subcategorías por categoría ===
-        [HttpGet]
-        public async Task<IActionResult> GetSubcategoriasByCategoria(int categoriaID)
-        {
-            if (categoriaID <= 0)
-                return Json(Array.Empty<object>());
-
-            IQueryable<Subcategorias> q = _context.Subcategorias
-                .AsNoTracking()
-                .Where(s => s.CategoriaID == categoriaID);
-
-            if (!IsAdmin())
-            {
-                var uid = CurrentUserId();
-                q = q.Where(s => s.VendedorID == uid);
-            }
-
-            var data = await q
-                .OrderBy(s => s.NombreSubcategoria)
-                .Select(s => new { value = s.SubcategoriaID, text = s.NombreSubcategoria })
-                .ToListAsync();
-
-            return Json(data);
-        }
-
         [HttpGet]
         public async Task<IActionResult> AnadirSubcategoria()
         {
@@ -602,7 +553,7 @@ namespace Simone.Controllers
             return View("ProductoForm");
         }
 
-        [HttpPost, ValidateAntiForgeryToken, Consumes("multipart/form-data"), RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
+        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
         public async Task<IActionResult> AnadirProducto(
             string nombreProducto,
             string descripcion,
@@ -622,19 +573,18 @@ namespace Simone.Controllers
             [FromForm] string[]? VarColor,
             [FromForm] string[]? VarTalla,
             [FromForm] string[]? VarPrecio,
-            [FromForm(Name = "VarPrecioVenta")] string[]? VarPrecioVenta,
             [FromForm] int[]? VarStock)
         {
             try
             {
-                // Validar subcategoría-categoría
+                // Validación de subcategoría
                 var sub = await _context.Subcategorias
                     .Include(s => s.Categoria)
                     .FirstOrDefaultAsync(s => s.SubcategoriaID == subcategoriaID && s.CategoriaID == categoriaID);
 
                 if (sub == null)
                 {
-                    TempData["Err"] = "Subcategoría no encontrada o no pertenece a la categoría seleccionada.";
+                    TempData["Err"] = "Subcategoría no encontrada.";
                     await FillProductoFormBags();
                     return View("ProductoForm");
                 }
@@ -646,43 +596,16 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
-                // Validar proveedor (existe)
-                var provExiste = await _context.Proveedores.AsNoTracking().AnyAsync(p => p.ProveedorID == proveedorID);
-                if (!provExiste)
-                {
-                    TempData["Err"] = "Proveedor no válido.";
-                    await FillProductoFormBags();
-                    return View("ProductoForm");
-                }
-
-                // Alias de vistas antiguas: usar VarPrecioVenta si VarPrecio viene vacío
-                if ((VarPrecio == null || VarPrecio.Length == 0) && VarPrecioVenta != null && VarPrecioVenta.Length > 0)
-                    VarPrecio = VarPrecioVenta;
-
-                // Fallback: si no llegaron Var* pero sí Variantes[i].*, leer del form
-                if (VarColor == null || VarTalla == null || VarPrecio == null || VarStock == null)
-                {
-                    var v = ReadVariantesFromForm();
-                    VarColor ??= v.Colores;
-                    VarTalla ??= v.Tallas;
-                    VarPrecio ??= v.Precios;
-                    VarStock ??= v.Stocks;
-                }
-
-                // Parse robusto de precios base (sobrescribe binder si vino "2.000,50")
-                var precioCompraEff = ParseDecimalFlexible(Request?.Form["precioCompra"], precioCompra);
-                var precioVentaEff = ParseDecimalFlexible(Request?.Form["precioVenta"], precioVenta);
-
                 // Variantes
                 var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(
-                    VarColor, VarTalla, VarPrecio, VarStock, precioCompraEff);
+                    VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
 
                 if (!string.IsNullOrEmpty(variantError))
                 {
                     TempData["Err"] = variantError;
                     await FillProductoFormBags();
                     ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
-                        precioCompraEff, precioVentaEff, stock, proveedorID, categoriaID, subcategoriaID);
+                        precioCompra, precioVenta, stock, proveedorID, categoriaID, subcategoriaID);
                     return View("ProductoForm");
                 }
 
@@ -693,7 +616,7 @@ namespace Simone.Controllers
                     FechaAgregado = DateTime.UtcNow,
                     Descripcion = descripcion?.Trim(),
                     Marca = marca?.Trim(),
-                    PrecioCompra = Math.Round(precioCompraEff, 2),
+                    PrecioCompra = Math.Round(precioCompra, 2),
                     ProveedorID = proveedorID,
                     CategoriaID = categoriaID,
                     SubcategoriaID = subcategoriaID,
@@ -705,7 +628,7 @@ namespace Simone.Controllers
                     producto.Talla = null;
                     producto.Color = null;
                     producto.Stock = normVariants.Sum(v => v.Stock);
-                    producto.PrecioVenta = Math.Round(normVariants.Min(v => v.Precio), 2);
+                    producto.PrecioVenta = normVariants.Min(v => v.Precio);
                 }
                 else
                 {
@@ -713,13 +636,13 @@ namespace Simone.Controllers
                     producto.Color = color?.Trim();
                     producto.Stock = Math.Max(0, stock);
 
-                    var pvFinal = Math.Round(precioVentaEff, 2);
-                    if (pvFinal <= precioCompraEff)
+                    var pvFinal = Math.Round(precioVenta, 2);
+                    if (pvFinal <= precioCompra)
                     {
-                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompraEff}).";
+                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompra}).";
                         await FillProductoFormBags();
                         ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
-                            precioCompraEff, precioVentaEff, stock, proveedorID, categoriaID, subcategoriaID);
+                            precioCompra, precioVenta, stock, proveedorID, categoriaID, subcategoriaID);
                         return View("ProductoForm");
                     }
                     producto.PrecioVenta = pvFinal;
@@ -817,6 +740,9 @@ namespace Simone.Controllers
             var variantes = producto.Variantes.OrderBy(v => v.Color).ThenBy(v => v.Talla).ToList();
             ViewBag.Variantes = variantes;
 
+            // ❌ Antes: ajustar precio dividiendo entre 1.15m. Ya no se hace.
+            // Si no hay variantes, mostramos el precio tal cual está guardado.
+
             await LoadGalleryData(producto);
 
             await FillProductoFormBags();
@@ -824,7 +750,7 @@ namespace Simone.Controllers
             return View("ProductoForm");
         }
 
-        [HttpPost, ValidateAntiForgeryToken, Consumes("multipart/form-data"), RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
+        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
         public async Task<IActionResult> EditarProducto(
             int productoID,
             string nombreProducto,
@@ -846,7 +772,6 @@ namespace Simone.Controllers
             [FromForm] string[]? VarColor,
             [FromForm] string[]? VarTalla,
             [FromForm] string[]? VarPrecio,
-            [FromForm(Name = "VarPrecioVenta")] string[]? VarPrecioVenta,
             [FromForm] int[]? VarStock)
         {
             try
@@ -878,36 +803,8 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
-                // Validar proveedor
-                var provExiste = await _context.Proveedores.AsNoTracking().AnyAsync(p => p.ProveedorID == proveedorID);
-                if (!provExiste)
-                {
-                    TempData["Err"] = "Proveedor no válido.";
-                    await FillProductoFormBags();
-                    ViewBag.Producto = producto;
-                    return View("ProductoForm");
-                }
-
-                // Alias: usar VarPrecioVenta si VarPrecio viene vacío
-                if ((VarPrecio == null || VarPrecio.Length == 0) && VarPrecioVenta != null && VarPrecioVenta.Length > 0)
-                    VarPrecio = VarPrecioVenta;
-
-                // Fallback: si no llegaron Var* pero sí Variantes[i].*, leer del form
-                if (VarColor == null || VarTalla == null || VarPrecio == null || VarStock == null)
-                {
-                    var v = ReadVariantesFromForm();
-                    VarColor ??= v.Colores;
-                    VarTalla ??= v.Tallas;
-                    VarPrecio ??= v.Precios;
-                    VarStock ??= v.Stocks;
-                }
-
-                // Parse robusto de precios base
-                var precioCompraEff = ParseDecimalFlexible(Request?.Form["precioCompra"], precioCompra);
-                var precioVentaEff = ParseDecimalFlexible(Request?.Form["precioVenta"], precioVenta);
-
                 var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(
-                    VarColor, VarTalla, VarPrecio, VarStock, precioCompraEff);
+                    VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
 
                 if (!string.IsNullOrEmpty(variantError))
                 {
@@ -920,7 +817,7 @@ namespace Simone.Controllers
                 producto.Nombre = (nombreProducto ?? string.Empty).Trim();
                 producto.Descripcion = descripcion?.Trim();
                 producto.Marca = marca?.Trim();
-                producto.PrecioCompra = Math.Round(precioCompraEff, 2);
+                producto.PrecioCompra = Math.Round(precioCompra, 2);
                 producto.ProveedorID = proveedorID;
                 producto.CategoriaID = categoriaID;
                 producto.SubcategoriaID = subcategoriaID;
@@ -930,7 +827,7 @@ namespace Simone.Controllers
                     producto.Talla = null;
                     producto.Color = null;
                     producto.Stock = normVariants.Sum(v => v.Stock);
-                    producto.PrecioVenta = Math.Round(normVariants.Min(v => v.Precio), 2);
+                    producto.PrecioVenta = normVariants.Min(v => v.Precio);
                 }
                 else
                 {
@@ -938,10 +835,10 @@ namespace Simone.Controllers
                     producto.Color = color?.Trim();
                     producto.Stock = Math.Max(0, stock);
 
-                    var pvFinal = Math.Round(precioVentaEff, 2);
-                    if (pvFinal <= precioCompraEff)
+                    var pvFinal = Math.Round(precioVenta, 2);
+                    if (pvFinal <= precioCompra)
                     {
-                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompraEff}).";
+                        TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompra}).";
                         await FillProductoFormBags();
                         ViewBag.Producto = producto;
                         return View("ProductoForm");
@@ -1110,11 +1007,7 @@ namespace Simone.Controllers
             var len = new[] { VarColor.Length, VarTalla.Length, VarPrecio.Length, VarStock.Length }.Min();
             if (len <= 0) return (false, new(), "");
 
-            // Parse robusto de cada precio de variante
-            var prices = new decimal[len];
-            for (int i = 0; i < len; i++)
-                prices[i] = ParseDecimalFlexible(VarPrecio[i], 0m);
-
+            var prices = ParseDecimalArray(VarPrecio.Take(len).ToArray());
             var variants = new List<(string Color, string Talla, decimal Precio, int Stock)>();
             var errors = new List<string>();
 
@@ -1122,7 +1015,7 @@ namespace Simone.Controllers
             {
                 var color = (VarColor[i] ?? "").Trim();
                 var talla = (VarTalla[i] ?? "").Trim();
-                var precio = Math.Round(prices[i], 2);
+                var precio = prices[i];
                 var stock = Math.Max(0, VarStock[i]);
 
                 if (string.IsNullOrWhiteSpace(color))
@@ -1161,86 +1054,31 @@ namespace Simone.Controllers
             if (errors.Any())
                 return (false, new(), string.Join(" ", errors));
 
-            // Detectar duplicados (NO fusionar ni promediar)
-            var dup = variants
+            // Unificar duplicados (case-insensitive)
+            var grouped = variants
                 .GroupBy(v => (v.Color.Trim().ToLowerInvariant(), v.Talla.Trim().ToLowerInvariant()))
-                .FirstOrDefault(g => g.Count() > 1);
-
-            if (dup != null)
-            {
-                var (c, t) = dup.Key;
-                return (false, new(), $"Hay combinaciones repetidas (Color/Talla): {c} - {t}. Elimina o corrige las repetidas.");
-            }
-
-            var cleaned = variants
-                .Select(v => (v.Color, v.Talla, Precio: Math.Round(v.Precio, 2), v.Stock))
+                .Select(g => (
+                    g.First().Color,
+                    g.First().Talla,
+                    Precio: Math.Round(g.Average(v => v.Precio), 2),
+                    Stock: g.Sum(v => v.Stock)
+                ))
                 .ToList();
 
-            return (cleaned.Count > 0, cleaned, "");
+            return (grouped.Count > 0, grouped, "");
         }
 
-        // Acepta "4,00", "4.00" y "2.000,50"
         private decimal[] ParseDecimalArray(string[] raw)
         {
             var list = new List<decimal>(raw.Length);
             foreach (var s in raw)
             {
-                var val = ParseDecimalFlexible(s, 0m);
+                var txt = (s ?? "").Trim().Replace(',', '.');
+                if (!decimal.TryParse(txt, NumberStyles.Any, CultureInfo.InvariantCulture, out var val))
+                    val = 0m;
                 list.Add(Math.Round(val, 2));
             }
             return list.ToArray();
-        }
-
-        // Lee variantes cuando llegan como Variantes[i].* (robusto ante huecos y nombres de campo distintos)
-        private (string[]? Colores, string[]? Tallas, string[]? Precios, int[]? Stocks) ReadVariantesFromForm()
-        {
-            var form = Request?.Form;
-            if (form == null) return (null, null, null, null);
-
-            // Captura solo los índices realmente presentes en el POST
-            var indices = new SortedSet<int>();
-            foreach (var key in form.Keys)
-            {
-                var m = Regex.Match(key, @"^Variantes\[(\d+)\]\.(Color|Talla|Precio|PrecioVenta|Stock)$");
-                if (m.Success && int.TryParse(m.Groups[1].Value, out var i))
-                    indices.Add(i);
-            }
-            if (indices.Count == 0) return (null, null, null, null);
-
-            var col = new List<string>(indices.Count);
-            var tal = new List<string>(indices.Count);
-            var pre = new List<string>(indices.Count);
-            var stk = new List<int>(indices.Count);
-
-            foreach (var i in indices)
-            {
-                var c = form[$"Variantes[{i}].Color"].ToString();
-                var t = form[$"Variantes[{i}].Talla"].ToString();
-
-                // admitir Precio o PrecioVenta
-                var p = form.ContainsKey($"Variantes[{i}].Precio")
-                            ? form[$"Variantes[{i}].Precio"].ToString()
-                            : form[$"Variantes[{i}].PrecioVenta"].ToString();
-
-                int.TryParse(form[$"Variantes[{i}].Stock"], out var s);
-
-                // Ignora filas totalmente vacías que pueden quedar al borrar en el DOM
-                if (string.IsNullOrWhiteSpace(c) &&
-                    string.IsNullOrWhiteSpace(t) &&
-                    string.IsNullOrWhiteSpace(p) &&
-                    s == 0)
-                {
-                    continue;
-                }
-
-                col.Add(c);
-                tal.Add(t);
-                pre.Add(p);
-                stk.Add(s);
-            }
-
-            if (col.Count == 0) return (null, null, null, null);
-            return (col.ToArray(), tal.ToArray(), pre.ToArray(), stk.ToArray());
         }
 
         private string GenerateSKU(Producto producto, string color, string talla)
@@ -1279,21 +1117,8 @@ namespace Simone.Controllers
                     }
 
                     if (doc.RootElement.TryGetProperty("portada", out var p) && p.ValueKind == JsonValueKind.String)
-                        portada = p.GetString();
-                }
-                else
-                {
-                    // Fallback: escanear carpeta (por si se perdió el JSON)
-                    if (Directory.Exists(folder))
                     {
-                        var files = Directory.GetFiles(folder)
-                            .Where(f => _allowedImgExt.Contains(Path.GetExtension(f)))
-                            .OrderBy(f => f)
-                            .Select(f => $"/images/Productos/{producto.ProductoID}/{Path.GetFileName(f)}".Replace("\\", "/"))
-                            .ToList();
-
-                        gallery = files;
-                        portada ??= files.FirstOrDefault();
+                        portada = p.GetString();
                     }
                 }
             }
@@ -1319,23 +1144,15 @@ namespace Simone.Controllers
                 var folder = ProductFolderAbs(producto.ProductoID);
                 Directory.CreateDirectory(folder);
 
-                // Seguridad de path (evita path traversal)
+                // RUTA segura
                 if (!Path.GetFullPath(folder).StartsWith(Path.GetFullPath(GalleryRootAbs()), StringComparison.OrdinalIgnoreCase))
                     return (false, "Ruta de galería inválida.");
 
-                // Cargar existentes desde JSON (o escanear si no hay metadata)
+                // Cargar existentes
                 var metaPath = Path.Combine(folder, $"product-{producto.ProductoID}.gallery.json");
                 var imagenesExistentes = await LoadExistingImages(metaPath);
-                if (imagenesExistentes.Count == 0 && Directory.Exists(folder))
-                {
-                    imagenesExistentes = Directory.GetFiles(folder)
-                        .Where(f => _allowedImgExt.Contains(Path.GetExtension(f)))
-                        .OrderBy(f => f)
-                        .Select(f => $"/images/Productos/{producto.ProductoID}/{Path.GetFileName(f)}".Replace("\\", "/"))
-                        .ToList();
-                }
 
-                // --- Procesar "ignore" (URLs existentes y, opcionalmente, índices de nuevas) ---
+                // --- Procesar "ignore" ---
                 var indicesNuevasAIgnorar = new HashSet<int>();
                 var urlsExistentesAEliminar = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1367,9 +1184,10 @@ namespace Simone.Controllers
                     }
                 }
 
+                // Quitar existentes marcadas para eliminar (por URL)
                 if (urlsExistentesAEliminar.Count > 0 && imagenesExistentes.Count > 0)
                 {
-                    var toKeep = new List<string>(imagenesExistentes.Count);
+                    var toKeep = new List<string>();
                     foreach (var url in imagenesExistentes)
                     {
                         if (!urlsExistentesAEliminar.Contains(url))
@@ -1378,9 +1196,10 @@ namespace Simone.Controllers
                         }
                         else
                         {
+                            // borrar archivo físico
                             try
                             {
-                                var nombre = url.Split('/', '\\').Last();
+                                var nombre = Path.GetFileName(new Uri("http://dummy" + url).AbsolutePath);
                                 var ruta = Path.Combine(folder, nombre);
                                 if (System.IO.File.Exists(ruta)) System.IO.File.Delete(ruta);
                             }
@@ -1393,7 +1212,7 @@ namespace Simone.Controllers
                     imagenesExistentes = toKeep;
                 }
 
-                // Recopilar nuevas imágenes (filtrando ignoradas por índice)
+                // Recopilar nuevas imágenes
                 var archivos = new List<IFormFile>();
                 if (nuevasImagenes != null && nuevasImagenes.Length > 0)
                 {
@@ -1408,7 +1227,7 @@ namespace Simone.Controllers
                     archivos.Add(imagenLegacy);
                 }
 
-                // Validar/guardar nuevas respetando el máximo global
+                // Validar/guardar nuevas
                 var nuevasUrls = new List<string>();
                 foreach (var archivo in archivos)
                 {
@@ -1421,48 +1240,31 @@ namespace Simone.Controllers
                     nuevasUrls.Add(resultado.Url!);
                 }
 
-                // Combinar y deduplicar (máx _maxFiles)
-                var todasLasImagenes = imagenesExistentes
-                    .Concat(nuevasUrls)
-                    .Where(s => !string.IsNullOrWhiteSpace(s))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Take(_maxFiles)
-                    .ToList();
+                // Combinar (máx 8)
+                var todasLasImagenes = imagenesExistentes.Concat(nuevasUrls).Take(_maxFiles).ToList();
 
-                // **Enforce servidor**: al menos una imagen
-                if (todasLasImagenes.Count == 0)
-                    return (false, "Debe agregar al menos una imagen.");
-
-                // Determinar portada
+                // Portada
                 string? imagenPrincipal = null;
 
-                // Si se marcó una nueva como portada, el índice es relativo a la colección de nuevas válidas
                 if (imagenPrincipalIndex.HasValue && imagenPrincipalIndex.Value >= 0
                     && imagenPrincipalIndex.Value < nuevasUrls.Count)
                 {
                     imagenPrincipal = nuevasUrls[imagenPrincipalIndex.Value];
                 }
-                // Si se marcó una existente como portada
                 else if (!string.IsNullOrWhiteSpace(existingImagenPath)
                          && todasLasImagenes.Contains(existingImagenPath!))
                 {
                     imagenPrincipal = existingImagenPath!;
                 }
-                // Preservar portada previa si aún existe
-                else if (!string.IsNullOrWhiteSpace(producto.ImagenPath)
-                         && todasLasImagenes.Contains(producto.ImagenPath))
-                {
-                    imagenPrincipal = producto.ImagenPath;
-                }
-                // Fallback: primera
-                else
+                else if (todasLasImagenes.Any())
                 {
                     imagenPrincipal = todasLasImagenes[0];
                 }
 
-                // Guardar metadata y limpiar archivos huérfanos
                 await GuardarMetadata(metaPath, todasLasImagenes, imagenPrincipal);
+
                 producto.ImagenPath = imagenPrincipal;
+
                 await LimpiarImagenesNoUsadas(folder, todasLasImagenes);
 
                 return (true, "");
@@ -1519,8 +1321,7 @@ namespace Simone.Controllers
                 await using var fileStream = new FileStream(rutaCompleta, FileMode.Create);
                 await archivo.CopyToAsync(fileStream);
 
-                var productId = Path.GetFileName(folder);
-                var url = $"/images/Productos/{productId}/{nombreArchivo}".Replace("\\", "/");
+                var url = $"/images/Productos/{Path.GetFileName(folder)}/{nombreArchivo}".Replace("\\", "/");
                 return (true, url, "");
             }
             catch (Exception ex)

@@ -871,13 +871,9 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-            <div id="cart-content"
-                 class="flex-grow-1 overflow-auto"
-                 data-mini-cart
-                 data-refresh-url="@Url.Action("Mini", "Compras")">
+            <div id="cart-content" class="flex-grow-1 overflow-auto">
                 @await Html.PartialAsync("_CartPartial", carrito)
             </div>
-
         </div>
     </aside>
 
@@ -1366,7 +1362,6 @@
             }
         }
     </script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
 
     <!-- Botón flotante Back to Top -->
     <button class="back-to-top" onclick="scrollToTop()" aria-label="Volver arriba" title="Volver arriba" style="opacity: 0; visibility: hidden;">
