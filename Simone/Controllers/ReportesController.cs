@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace Simone.Controllers
 {
-    [Authorize(Roles = "Administrador, Vendedor")]
+    [Authorize(Roles = "Administrador")]
     [Route("Panel")]
     [AutoValidateAntiforgeryToken]
     public class ReportesController : Controller

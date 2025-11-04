@@ -559,9 +559,8 @@
                         decimal minVarPrice = 0m, maxVarPrice = 0m;
                         if (hasVariants && producto.Variantes.Any())
                         {
-                            // Solución: Convierte explícitamente el decimal? a decimal usando .Value, pero verifica que no sea null.
-                            minVarPrice = producto.Variantes.Min(v => v.PrecioVenta ?? 0m);
-                            maxVarPrice = producto.Variantes.Max(v => v.PrecioVenta ?? 0m);
+                            minVarPrice = producto.Variantes.Min(v => (v.PrecioVenta));
+                            maxVarPrice = producto.Variantes.Max(v => (v.PrecioVenta));
                         }
 
                         var variantJson = hasVariants
