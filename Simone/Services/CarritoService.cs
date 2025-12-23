@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Data; // IsolationLevel
+using System.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -19,25 +19,14 @@ namespace Simone.Services
         Task<bool> UpdateAsync(Carrito carrito);
         Task<bool> DeleteAsync(int id);
 
-        // Correcto (UsuarioId)
         Task<Carrito> GetByUsuarioIdAsync(string usuarioId);
-
-        // Compatibilidad (legacy)
         Task<Carrito> GetByClienteIdAsync(string clienteID);
-
         Task<List<CarritoDetalle>> LoadCartDetails(int carritoID);
 
-        // === Legacy (sin variante) ===
         Task<bool> AnadirProducto(Producto producto, Usuario usuario, int cantidad);
-
-        // === Nuevo: con variante (Color+Talla) ===
         Task<bool> AnadirProducto(Producto producto, Usuario usuario, int cantidad, int? productoVarianteId);
-
         Task<bool> BorrarProductoCarrito(int detalleId);
-
-        // Para AJAX en la vista
         Task<(bool ok, decimal lineSubtotal, string? error)> ActualizarCantidadAsync(int carritoDetalleId, int cantidad);
-
         Task<bool> ProcessCartDetails(int carritoID, Usuario user);
     }
 
@@ -62,7 +51,7 @@ namespace Simone.Services
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
         }
 
-        /* ===================== Helpers internos ===================== */
+        #region Helpers Internos
 
         private async Task<Carrito> GetOrCreateOpenCartAsync(Usuario usuario)
         {
@@ -94,6 +83,8 @@ namespace Simone.Services
                 await _context.Carrito.AddAsync(nuevo);
                 await _context.SaveChangesAsync();
                 await trx.CommitAsync();
+
+                _logger.LogInformation("Carrito {CarritoId} creado para usuario {UsuarioId}", nuevo.CarritoID, usuario.Id);
                 return nuevo;
             }
             catch (Exception ex)
@@ -114,19 +105,23 @@ namespace Simone.Services
         private async Task<Producto> ReloadProductoConVariantesAsync(int productoId)
         {
             var p = await _context.Productos
-                .Include(x => x.Variantes) // requiere ICollection<ProductoVariante> Variantes
+                .Include(x => x.Variantes)
                 .FirstOrDefaultAsync(x => x.ProductoID == productoId);
             if (p == null) throw new InvalidOperationException($"Producto {productoId} inexistente.");
             return p;
         }
 
-        /* ===================== CRUD básico ===================== */
+        #endregion
+
+        #region CRUD Básico
 
         public async Task<bool> AddAsync(Usuario usuario)
         {
             if (usuario == null) throw new ArgumentNullException(nameof(usuario));
             try
             {
+                _logger.LogInformation("Creando carrito para usuario {UsuarioId}", usuario.Id);
+
                 var carrito = new Carrito
                 {
                     UsuarioId = usuario.Id,
@@ -134,7 +129,10 @@ namespace Simone.Services
                     EstadoCarrito = EstadoVacio
                 };
                 await _context.Carrito.AddAsync(carrito);
-                return (await _context.SaveChangesAsync()) > 0;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Carrito {CarritoId} creado exitosamente", carrito.CarritoID);
+                return true;
             }
             catch (Exception ex)
             {
@@ -154,8 +152,13 @@ namespace Simone.Services
             if (carrito == null) throw new ArgumentNullException(nameof(carrito));
             try
             {
+                _logger.LogInformation("Actualizando carrito {CarritoId}", carrito.CarritoID);
+
                 _context.Carrito.Update(carrito);
-                return (await _context.SaveChangesAsync()) > 0;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Carrito {CarritoId} actualizado exitosamente", carrito.CarritoID);
+                return true;
             }
             catch (Exception ex)
             {
@@ -166,28 +169,48 @@ namespace Simone.Services
 
         public async Task<bool> DeleteAsync(int id)
         {
+            // ✅ MEJORA: Ahora usa transacción
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
+                _logger.LogInformation("Eliminando carrito {CarritoId}", id);
+
                 var carrito = await _context.Carrito
                     .Include(c => c.CarritoDetalles)
                     .FirstOrDefaultAsync(c => c.CarritoID == id);
 
-                if (carrito == null) return false;
+                if (carrito == null)
+                {
+                    _logger.LogWarning("Carrito {CarritoId} no encontrado", id);
+                    return false;
+                }
 
                 if (carrito.CarritoDetalles?.Count > 0)
+                {
+                    _logger.LogDebug("Eliminando {Count} detalles del carrito {CarritoId}",
+                        carrito.CarritoDetalles.Count, id);
                     _context.CarritoDetalle.RemoveRange(carrito.CarritoDetalles);
+                }
 
                 _context.Carrito.Remove(carrito);
-                return (await _context.SaveChangesAsync()) > 0;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Carrito {CarritoId} eliminado exitosamente", id);
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar carrito {CarritoId}", id);
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error al eliminar carrito {CarritoId}. Transacción revertida", id);
                 return false;
             }
         }
 
-        /* ===================== Lecturas de carrito ===================== */
+        #endregion
+
+        #region Lecturas
 
         public Task<Carrito> GetByUsuarioIdAsync(string usuarioId)
         {
@@ -207,17 +230,17 @@ namespace Simone.Services
                 .AsNoTracking()
                 .Where(c => c.CarritoID == carritoID)
                 .Include(cd => cd.Producto)
-                .Include(cd => cd.Variante) // Color/Talla
+                .Include(cd => cd.Variante)
                 .OrderByDescending(cd => cd.CarritoDetalleID)
                 .ToListAsync();
 
-        /* ===================== Mutaciones ===================== */
+        #endregion
 
-        // LEGACY
+        #region Mutaciones - Agregar Productos
+
         public Task<bool> AnadirProducto(Producto producto, Usuario usuario, int cantidad) =>
             AnadirProducto(producto, usuario, cantidad, null);
 
-        // NUEVO: con variante
         public async Task<bool> AnadirProducto(Producto producto, Usuario usuario, int cantidad, int? productoVarianteId)
         {
             if (producto == null) throw new ArgumentNullException(nameof(producto));
@@ -227,6 +250,9 @@ namespace Simone.Services
             await using var trx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
+                _logger.LogInformation("Añadiendo producto {ProductoId} (variante: {VarianteId}) al carrito del usuario {UsuarioId}",
+                    producto.ProductoID, productoVarianteId, usuario.Id);
+
                 var carrito = await GetOrCreateOpenCartAsync(usuario);
                 var prod = await ReloadProductoConVariantesAsync(producto.ProductoID);
 
@@ -253,7 +279,6 @@ namespace Simone.Services
 
                 var nuevoTotal = (existente?.Cantidad ?? 0) + cantidad;
 
-                // Stock por variante o general
                 if (variante != null)
                 {
                     if (variante.Stock < nuevoTotal)
@@ -267,7 +292,6 @@ namespace Simone.Services
                             $"No hay stock suficiente de '{prod.Nombre}'. Disponible: {prod.Stock}, solicitado: {nuevoTotal}.");
                 }
 
-                // ✔ variante.PrecioVenta es decimal? y prod.PrecioVenta es decimal → usar coalesce solo contra el nullable
                 var precioUnit = variante?.PrecioVenta ?? prod.PrecioVenta;
 
                 if (existente == null)
@@ -276,17 +300,19 @@ namespace Simone.Services
                     {
                         CarritoID = carrito.CarritoID,
                         ProductoID = prod.ProductoID,
-                        ProductoVarianteID = productoVarianteId, // puede ser null
+                        ProductoVarianteID = productoVarianteId,
                         Cantidad = cantidad,
                         Precio = precioUnit
                     };
                     await _context.CarritoDetalle.AddAsync(detalle);
+                    _logger.LogDebug("Nuevo detalle agregado al carrito {CarritoId}", carrito.CarritoID);
                 }
                 else
                 {
                     existente.Cantidad = nuevoTotal;
-                    existente.Precio = precioUnit; // refrescar precio
+                    existente.Precio = precioUnit;
                     _context.CarritoDetalle.Update(existente);
+                    _logger.LogDebug("Detalle actualizado en carrito {CarritoId}", carrito.CarritoID);
                 }
 
                 if (carrito.EstadoCarrito == EstadoVacio)
@@ -297,37 +323,51 @@ namespace Simone.Services
 
                 await _context.SaveChangesAsync();
                 await trx.CommitAsync();
+
+                _logger.LogInformation("Producto {ProductoId} añadido exitosamente al carrito", producto.ProductoID);
                 return true;
             }
             catch (DbUpdateException ex)
             {
                 await trx.RollbackAsync();
-                _logger.LogError(ex, "DbUpdateException al añadir {ProductoId} (var:{VarianteId}) al carrito de {UsuarioId}",
-                    producto.ProductoID, productoVarianteId, usuario.Id);
+                _logger.LogError(ex, "DbUpdateException al añadir producto {ProductoId} al carrito", producto.ProductoID);
                 return false;
             }
             catch (Exception ex)
             {
                 await trx.RollbackAsync();
-                _logger.LogWarning(ex, "Error al añadir producto {ProductoId} (var:{VarianteId}) al carrito de {UsuarioId}",
-                    producto.ProductoID, productoVarianteId, usuario.Id);
+                _logger.LogWarning(ex, "Error al añadir producto {ProductoId} al carrito", producto.ProductoID);
                 throw;
             }
         }
 
+        #endregion
+
+        #region Mutaciones - Eliminar/Actualizar
+
         public async Task<bool> BorrarProductoCarrito(int detalleId)
         {
+            // ✅ MEJORA: Ahora usa transacción para garantizar atomicidad
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+
             try
             {
+                _logger.LogInformation("Eliminando detalle {DetalleId} del carrito", detalleId);
+
                 var detalle = await _context.CarritoDetalle.FirstOrDefaultAsync(d => d.CarritoDetalleID == detalleId);
-                if (detalle == null) return false;
+                if (detalle == null)
+                {
+                    _logger.LogWarning("Detalle {DetalleId} no encontrado", detalleId);
+                    return false;
+                }
 
                 var carritoId = detalle.CarritoID;
 
                 _context.CarritoDetalle.Remove(detalle);
-                var ok = (await _context.SaveChangesAsync()) > 0;
 
-                var restantes = await _context.CarritoDetalle.AnyAsync(d => d.CarritoID == carritoId);
+                var restantes = await _context.CarritoDetalle
+                    .AnyAsync(d => d.CarritoID == carritoId && d.CarritoDetalleID != detalleId);
+
                 if (!restantes)
                 {
                     var carrito = await _context.Carrito.FirstOrDefaultAsync(c => c.CarritoID == carritoId);
@@ -335,20 +375,24 @@ namespace Simone.Services
                     {
                         carrito.EstadoCarrito = EstadoVacio;
                         _context.Carrito.Update(carrito);
-                        await _context.SaveChangesAsync();
+                        _logger.LogDebug("Carrito {CarritoId} marcado como vacío", carritoId);
                     }
                 }
 
-                return ok;
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Detalle {DetalleId} eliminado exitosamente", detalleId);
+                return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al borrar detalle {DetalleId} del carrito", detalleId);
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error al borrar detalle {DetalleId}. Transacción revertida", detalleId);
                 return false;
             }
         }
 
-        // ===== Actualizar cantidad por CarritoDetalleID =====
         public async Task<(bool ok, decimal lineSubtotal, string? error)> ActualizarCantidadAsync(int carritoDetalleId, int cantidad)
         {
             if (cantidad <= 0) return (false, 0m, "La cantidad debe ser mayor que cero.");
@@ -356,6 +400,9 @@ namespace Simone.Services
             await using var trx = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
             {
+                _logger.LogInformation("Actualizando cantidad del detalle {DetalleId} a {Cantidad}",
+                    carritoDetalleId, cantidad);
+
                 var detalle = await _context.CarritoDetalle
                     .Include(d => d.Producto)
                     .Include(d => d.Variante)
@@ -367,18 +414,15 @@ namespace Simone.Services
                 if (detalle.Producto == null)
                     return (false, 0m, "Producto inexistente.");
 
-                // Validar stock según corresponda
                 if (detalle.Variante != null)
                 {
                     if (detalle.Variante.Stock < cantidad)
                         return (false, 0m, $"Stock insuficiente para la combinación seleccionada. Disponible: {detalle.Variante.Stock}.");
 
-                    // variante.PrecioVenta es decimal? → coalesce contra prod.PrecioVenta (decimal)
                     detalle.Precio = detalle.Variante.PrecioVenta ?? detalle.Producto.PrecioVenta;
                 }
                 else
                 {
-                    // Si el producto tiene variantes, no permitir ítem sin variante
                     var tieneVariantes = await _context.ProductoVariantes.AnyAsync(v => v.ProductoID == detalle.ProductoID);
                     if (tieneVariantes)
                         return (false, 0m, $"El producto '{detalle.Producto.Nombre}' requiere Color/Talla. Elimina y vuelve a agregar con variante.");
@@ -386,7 +430,6 @@ namespace Simone.Services
                     if (detalle.Producto.Stock < cantidad)
                         return (false, 0m, $"Stock insuficiente. Disponible: {detalle.Producto.Stock}.");
 
-                    // Producto.PrecioVenta es decimal (no-nullable) → asignación directa (sin ??)
                     detalle.Precio = detalle.Producto.PrecioVenta;
                 }
 
@@ -397,15 +440,22 @@ namespace Simone.Services
                 await trx.CommitAsync();
 
                 var lineSub = detalle.Cantidad * detalle.Precio;
+
+                _logger.LogInformation("Cantidad del detalle {DetalleId} actualizada exitosamente", carritoDetalleId);
                 return (true, lineSub, null);
             }
             catch (Exception ex)
             {
                 await trx.RollbackAsync();
-                _logger.LogError(ex, "Error al actualizar cantidad del detalle {DetalleId}", carritoDetalleId);
+                _logger.LogError(ex, "Error al actualizar cantidad del detalle {DetalleId}. Transacción revertida",
+                    carritoDetalleId);
                 return (false, 0m, "No se pudo actualizar la cantidad.");
             }
         }
+
+        #endregion
+
+        #region Procesamiento
 
         public async Task<bool> ProcessCartDetails(int carritoID, Usuario user)
         {
@@ -416,6 +466,8 @@ namespace Simone.Services
 
             try
             {
+                _logger.LogInformation("Procesando carrito {CarritoId} para usuario {UsuarioId}", carritoID, user.Id);
+
                 var carritoDetalles = await _context.CarritoDetalle
                     .Where(cd => cd.CarritoID == carritoID)
                     .Include(cd => cd.Producto)
@@ -458,7 +510,7 @@ namespace Simone.Services
                     }
                 }
 
-                // Descuento de stock + movimientos (guardando ProductoVarianteID cuando aplique)
+                // Descuento de stock + movimientos
                 foreach (var d in carritoDetalles)
                 {
                     if (d.Variante != null)
@@ -508,7 +560,6 @@ namespace Simone.Services
                 };
                 await _context.Ventas.AddAsync(venta);
 
-                // Detalle de venta: guardar ProductoVarianteID si existe
                 var dv = carritoDetalles.Select(d => new DetalleVentas
                 {
                     Venta = venta,
@@ -533,6 +584,8 @@ namespace Simone.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+
+                _logger.LogInformation("Carrito {CarritoId} procesado exitosamente. Venta creada", carritoID);
                 return true;
             }
             catch (InvalidOperationException ex)
@@ -544,9 +597,11 @@ namespace Simone.Services
             catch (Exception ex)
             {
                 await transaction.RollbackAsync();
-                _logger.LogError(ex, "Error inesperado al procesar el carrito {CarritoId}", carritoID);
+                _logger.LogError(ex, "Error inesperado al procesar el carrito {CarritoId}. Transacción revertida", carritoID);
                 return false;
             }
         }
+
+        #endregion
     }
 }

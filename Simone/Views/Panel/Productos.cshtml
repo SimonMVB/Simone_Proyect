@@ -555,12 +555,12 @@
 
                         var topColors = colors.Take(3).ToList();
 
-                        // Rango de precios si hay variantes
-                        decimal minVarPrice = 0m, maxVarPrice = 0m;
+                        // Rango de precios si hay variantes (CORREGIDO)
+                        decimal? minVarPrice = 0m, maxVarPrice = 0m;
                         if (hasVariants && producto.Variantes.Any())
                         {
-                            minVarPrice = producto.Variantes.Min(v => (v.PrecioVenta));
-                            maxVarPrice = producto.Variantes.Max(v => (v.PrecioVenta));
+                            minVarPrice = producto.Variantes.Min(v => v.PrecioVenta);
+                            maxVarPrice = producto.Variantes.Max(v => v.PrecioVenta);
                         }
 
                         var variantJson = hasVariants
@@ -661,10 +661,10 @@
                                 @if (hasVariants && minVarPrice > 0 && maxVarPrice > 0)
                                 {
                                     <div class="price-tag" title="Rango de precios por variante">
-                                        @minVarPrice.ToString("C2", culture)
+                                        @minVarPrice.Value.ToString("C2", culture)
                                         @if (minVarPrice != maxVarPrice)
                                         {
-                                            <text> - @maxVarPrice.ToString("C2", culture)</text>
+                                            <text> - @maxVarPrice.Value.ToString("C2", culture)</text>
                                         }
                                     </div>
                                     <div style="font-size:.75rem;color:var(--text-light)">Compra: @producto.PrecioCompra.ToString("C2", culture)</div>

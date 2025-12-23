@@ -119,6 +119,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// ✅ PROBLEMA #2 CORREGIDO: Mejor manejo de errores en el proceso de inicialización
 // 7) Seed inicial (roles, admin, datos base) + asegurar carpetas
 using (var scope = app.Services.CreateScope())
 {
@@ -127,27 +128,69 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
+        logger.LogInformation("=== INICIANDO PROCESO DE INICIALIZACIÓN ===");
+
         // Asegurar carpetas de trabajo (necesarias para bancos y comprobantes)
         var env = services.GetRequiredService<IWebHostEnvironment>();
-        Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "App_Data"));
-        Directory.CreateDirectory(Path.Combine(env.WebRootPath, "uploads", "comprobantes"));
+        var appDataPath = Path.Combine(env.ContentRootPath, "App_Data");
+        var comprobantesPath = Path.Combine(env.WebRootPath, "uploads", "comprobantes");
+
+        Directory.CreateDirectory(appDataPath);
+        Directory.CreateDirectory(comprobantesPath);
+        logger.LogInformation("✅ Carpetas de trabajo verificadas");
 
         // 1) Migrar primero
+        logger.LogInformation("🔄 Aplicando migraciones de base de datos...");
         var db = services.GetRequiredService<TiendaDbContext>();
         await db.Database.MigrateAsync();
+        logger.LogInformation("✅ Migraciones aplicadas correctamente");
 
         // 2) Seed de Identity (roles + admin)
+        logger.LogInformation("👥 Creando roles y usuario administrador...");
         await CrearRolesYAdmin(services, logger);
+        logger.LogInformation("✅ Roles y administrador verificados");
 
-        // 3) Seed de dominio
+        // 3) Seed de dominio (CON TRANSACCIONES - Problema #2 resuelto)
+        logger.LogInformation("📦 Inicializando datos del dominio...");
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
+        logger.LogInformation("✅ Datos del dominio inicializados correctamente");
 
-        logger.LogInformation("Iniciado correctamente.");
+        logger.LogInformation("=== INICIALIZACIÓN COMPLETADA EXITOSAMENTE ===");
+    }
+    catch (DbUpdateException dbEx)
+    {
+        // Error específico de base de datos
+        logger.LogError(dbEx, "❌ ERROR DE BASE DE DATOS durante la inicialización");
+        logger.LogError("Detalles: {Message}", dbEx.InnerException?.Message ?? dbEx.Message);
+
+        // En desarrollo, mostrar el error completo
+        if (app.Environment.IsDevelopment())
+        {
+            logger.LogError("Stack trace: {StackTrace}", dbEx.StackTrace);
+        }
+    }
+    catch (InvalidOperationException opEx)
+    {
+        // Error de operación inválida (generalmente configuración)
+        logger.LogError(opEx, "❌ ERROR DE CONFIGURACIÓN durante la inicialización");
+        logger.LogError("Verifica tu cadena de conexión y configuración de servicios");
     }
     catch (Exception ex)
     {
-        logger.LogError(ex, "Error al inicializar datos.");
+        // Cualquier otro error
+        logger.LogError(ex, "❌ ERROR INESPERADO durante la inicialización");
+
+        // En desarrollo, mostrar el error completo
+        if (app.Environment.IsDevelopment())
+        {
+            logger.LogError("Tipo de error: {Type}", ex.GetType().Name);
+            logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+        }
+
+        // ⚠️ IMPORTANTE: En producción, podrías querer que la app NO inicie si falla el seed
+        // Descomenta la siguiente línea si quieres que la aplicación se detenga al fallar:
+        // throw;
     }
 }
 
@@ -170,8 +213,19 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
             if (!create.Succeeded)
             {
                 var errores = string.Join(", ", create.Errors.Select(e => e.Description));
-                logger.LogError("Error al crear el rol {Rol}: {Err}", roles[i], errores);
+                logger.LogError("❌ Error al crear el rol {Rol}: {Err}", roles[i], errores);
+
+                // Lanzar excepción si no se pueden crear los roles (son críticos)
+                throw new InvalidOperationException($"No se pudo crear el rol {roles[i]}: {errores}");
             }
+            else
+            {
+                logger.LogInformation("✅ Rol '{Rol}' creado exitosamente", roles[i]);
+            }
+        }
+        else
+        {
+            logger.LogDebug("ℹ️ Rol '{Rol}' ya existe", roles[i]);
         }
     }
 
@@ -199,20 +253,26 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Administrador");
-            logger.LogInformation("Administrador creado con éxito.");
+            logger.LogInformation("✅ Usuario administrador '{Email}' creado con éxito", adminEmail);
         }
         else
         {
             var errores = string.Join(", ", result.Errors.Select(e => e.Description));
-            logger.LogError("Error al crear el admin: {Err}", errores);
+            logger.LogError("❌ Error al crear el admin: {Err}", errores);
+
+            // Lanzar excepción si no se puede crear el admin (es crítico)
+            throw new InvalidOperationException($"No se pudo crear el usuario administrador: {errores}");
         }
     }
     else
     {
+        logger.LogDebug("ℹ️ Usuario administrador '{Email}' ya existe", adminEmail);
+
         // Garantizar que el admin tenga el rol, por si ya existía
         if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
         {
             await userManager.AddToRoleAsync(existingAdmin, "Administrador");
+            logger.LogInformation("✅ Rol 'Administrador' asignado al usuario existente");
         }
     }
 }

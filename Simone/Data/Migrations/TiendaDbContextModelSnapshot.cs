@@ -8,7 +8,7 @@ using Simone.Data;
 
 #nullable disable
 
-namespace Simone.Data.Migrations
+namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
     partial class TiendaDbContextModelSnapshot : ModelSnapshot
@@ -988,23 +988,28 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Color")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("Descripcion")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<DateTime>("FechaAgregado")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ImagenPath")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("Marca")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<decimal>("PrecioCompra")
                         .HasColumnType("decimal(18,2)");
@@ -1022,10 +1027,12 @@ namespace Simone.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Talla")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("VendedorID")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("ProductoID");
