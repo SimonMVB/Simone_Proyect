@@ -171,14 +171,12 @@
 
                             <!-- Proveedor -->
                             <div class="form-group">
-                                <label class="form-label required" for="Proveedor">Proveedor</label>
+                                <label class="form-label" for="Proveedor">Proveedor <span class="optional-label">(Opcional)</span></label>
                                 <select class="form-select"
                                         id="Proveedor"
                                         name="proveedorID"
-                                        required
-                                        aria-required="true"
-                                        aria-describedby="ProveedorError">
-                                    <option value="">Seleccione un proveedor</option>
+                                        aria-describedby="ProveedorHelp">
+                                    <option value="">Sin proveedor / N/A</option>
                                     @foreach (var p in proveedores)
                                     {
                                         <option value="@p.ProveedorID"
@@ -187,7 +185,9 @@
                                         </option>
                                     }
                                 </select>
-                                <div class="form-error" id="ProveedorError" role="alert"></div>
+                                <small id="ProveedorHelp" class="form-text text-muted">
+                                    Selecciona un proveedor solo si este producto viene de un proveedor externo.
+                                </small>
                             </div>
 
                             <!-- Precio Compra -->
@@ -728,9 +728,9 @@
 <script id="formData" type="application/json">
     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
         hasVariants = hasVariantesInit,
-                subcategorias = subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID }),
-                imageCount = imgCountInit
-        }))
+                                subcategorias = subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID }),
+                                imageCount = imgCountInit
+                }))
 </script>
 
 @section Scripts {

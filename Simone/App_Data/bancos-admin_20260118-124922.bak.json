@@ -1,0 +1,22 @@
+[
+  {
+    "codigo": "pichincha",
+    "nombre": "Banco Pichincha",
+    "numero": "0987654321",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "Simon Vanegas",
+    "ruc": "0957828429",
+    "logoPath": "/images/Bancos/pichincha.webp",
+    "activo": true
+  },
+  {
+    "codigo": "guayaquil",
+    "nombre": "Banco Guayaquil",
+    "numero": "220328124421",
+    "tipo": "Cuenta de Ahorros",
+    "titular": "asas",
+    "ruc": "0957828429",
+    "logoPath": "/images/Bancos/Guayaquil.png",
+    "activo": true
+  }
+]

@@ -3,18 +3,19 @@
 
 @{
     ViewData["Title"] = "Mis Compras";
+    ViewData["Description"] = "Historial completo de tus compras en Neo Ágora. Revisa el estado de tus pedidos.";
 
-    // === helpers ===
+    // Helpers
     Func<string?, string> EstadoBadge = estado =>
     {
-        if (string.IsNullOrWhiteSpace(estado)) return "st-secondary";
+        if (string.IsNullOrWhiteSpace(estado)) return "badge-secondary";
         var e = estado.Trim().ToLowerInvariant();
-        if (e.Contains("pend")) return "st-secondary";                // pendiente
-        if (e.Contains("proc") || e.Contains("pago")) return "st-warn"; // procesando/pago
-        if (e.Contains("desp") || e.Contains("env")) return "st-info";  // despachando/enviado
-        if (e.Contains("entr") || e.Contains("compl")) return "st-ok";  // entregado/completada
-        if (e.Contains("canc")) return "st-danger";                    // cancelado
-        return "st-secondary";
+        if (e.Contains("pend")) return "badge-pending";
+        if (e.Contains("proc") || e.Contains("pago")) return "badge-processing";
+        if (e.Contains("desp") || e.Contains("env")) return "badge-shipping";
+        if (e.Contains("entr") || e.Contains("compl")) return "badge-delivered";
+        if (e.Contains("canc")) return "badge-cancelled";
+        return "badge-secondary";
     };
 
     var culture = new CultureInfo("es-EC");
@@ -23,13 +24,7 @@
     var totalGastado = compras.Sum(v => v.Total);
     var ticketPromedio = totalCompras > 0 ? totalGastado / totalCompras : 0m;
     var ultimaCompra = compras.OrderByDescending(v => v.FechaVenta).FirstOrDefault()?.FechaVenta;
-    var metodoMasUsado = compras
-        .Where(v => !string.IsNullOrWhiteSpace(v.MetodoPago))
-        .GroupBy(v => v.MetodoPago!.Trim())
-        .OrderByDescending(g => g.Count())
-        .FirstOrDefault()?.Key ?? "—";
 
-    // Estados únicos para filtro
     var estados = compras
         .Select(v => v.Estado)
         .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -39,360 +34,969 @@
         .ToList();
 }
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+@section Styles {
+    <style>
+        :root {
+            --orders-primary: #e91e63;
+            --orders-primary-light: #f48fb1;
+            --orders-primary-dark: #c2185b;
+            --orders-secondary: #9c27b0;
+            --orders-accent: #ff4081;
+            --orders-success: #4caf50;
+            --orders-warning: #ff9800;
+            --orders-danger: #f44336;
+            --orders-info: #2196f3;
+            --orders-dark: #212121;
+            --orders-text: #424242;
+            --orders-light: #fafafa;
+            --orders-white: #ffffff;
+            --orders-border: #e0e0e0;
+            --orders-shadow: 0 8px 32px rgba(233, 30, 99, 0.15);
+            --orders-shadow-lg: 0 16px 48px rgba(233, 30, 99, 0.2);
+        }
 
-<style>
-    /* ======= Paleta y tipografía (misma del catálogo) ======= */
-    :root {
-        --primary-dark: #2C2C2C;
-        --primary-light: #FFFFFF;
-        --accent-pink: #E8B4B8;
-        --accent-pink-dark: #D49A9F;
-        --accent-purple: #8A6B8F;
-        --accent-gold: #D4AF37;
-        --light-beige: #F8F4F0;
-        --medium-gray: #E8E8E8;
-        --dark-gray: #5A5A5A;
-        --text: #5A5A5A;
-        --text-light: #8A8A8A;
-        --shadow: 0 6px 18px rgba(0,0,0,.06);
-        --shadow-lg: 0 12px 32px rgba(0,0,0,.10);
-    }
+        /* Page Layout */
+        .orders-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%);
+            padding: 2rem 0;
+            animation: fadeIn 0.6s ease;
+        }
 
-    * {
-        font-family: 'Montserrat',system-ui,-apple-system,Segoe UI,Roboto,sans-serif
-    }
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
 
-    body {
-        background: var(--light-beige);
-        color: var(--text)
-    }
+            to {
+                opacity: 1;
+            }
+        }
 
-    .page-title {
-        font-weight: 800;
-        letter-spacing: .2px
-    }
+        .orders-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
 
-    .subtle {
-        color: var(--text-light)
-    }
+        /* Breadcrumb */
+        .orders-breadcrumb {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            animation: slideDown 0.4s ease;
+        }
 
-    /* ======= Métricas ======= */
-    .stats {
-        display: grid;
-        grid-template-columns: repeat(5,minmax(0,1fr));
-        gap: 14px;
-        margin-bottom: 16px
-    }
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
 
-    .card-stat {
-        background: #fff;
-        border: 1px solid var(--medium-gray);
-        border-radius: 14px;
-        box-shadow: var(--shadow);
-        padding: 14px 16px
-    }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-        .card-stat .label {
-            font-size: .8rem;
-            color: var(--text-light);
+        .breadcrumb {
             display: flex;
             align-items: center;
-            gap: 8px
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
         }
 
-        .card-stat .value {
-            font-size: 1.25rem;
-            font-weight: 800
+            .breadcrumb li + li::before {
+                content: "›";
+                margin: 0 0.5rem;
+                color: #9e9e9e;
+                font-weight: bold;
+            }
+
+            .breadcrumb a {
+                color: var(--orders-primary);
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.3s;
+            }
+
+                .breadcrumb a:hover {
+                    color: var(--orders-primary-dark);
+                }
+
+            .breadcrumb .active {
+                color: var(--orders-text);
+                font-weight: 600;
+            }
+
+        /* Page Header */
+        .page-header {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: var(--orders-shadow-lg);
+            margin-bottom: 2rem;
+            animation: zoomIn 0.5s ease;
         }
 
-        .card-stat i {
-            color: var(--accent-purple)
+        @@keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
-    /* ======= Toolbar ======= */
-    .toolbar {
-        position: sticky;
-        top: 64px;
-        z-index: 3;
-        background: #fff;
-        border: 1px solid var(--medium-gray);
-        border-radius: 14px;
-        box-shadow: var(--shadow);
-        padding: 14px 16px;
-        margin-bottom: 16px;
-        backdrop-filter: blur(6px)
-    }
+        .page-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 2rem;
+        }
 
-    .input-icon {
-        position: relative
-    }
+        .page-title-section h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--orders-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
 
-        .input-icon > i {
+            .page-title-section h1 i {
+                color: var(--orders-primary);
+            }
+
+        .page-subtitle {
+            color: #757575;
+            font-size: 1rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-export {
+            padding: 0.75rem 1.25rem;
+            background: white;
+            color: var(--orders-primary);
+            border: 2px solid var(--orders-primary);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .btn-export:hover {
+                background: var(--orders-primary);
+                color: white;
+            }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--orders-primary) 0%, var(--orders-secondary) 100%);
+            padding: 1.75rem;
+            border-radius: 16px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .stat-card::before {
+                content: '';
+                position: absolute;
+                top: -50%;
+                right: -50%;
+                width: 200%;
+                height: 200%;
+                background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        /* Filters Card */
+        .filters-card {
+            background: white;
+            padding: 1.75rem;
+            border-radius: 20px;
+            box-shadow: var(--orders-shadow);
+            margin-bottom: 2rem;
+            animation: slideDown 0.6s ease;
+        }
+
+        .filters-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--orders-dark);
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .filters-title i {
+                color: var(--orders-primary);
+            }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--orders-dark);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .filter-input,
+        .filter-select {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--orders-border);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            transition: all 0.3s;
+            background: var(--orders-light);
+        }
+
+            .filter-input:focus,
+            .filter-select:focus {
+                outline: none;
+                border-color: var(--orders-primary);
+                background: white;
+                box-shadow: 0 0 0 4px rgba(233, 30, 99, 0.1);
+            }
+
+        .filter-input-wrapper {
+            position: relative;
+        }
+
+        .filter-input-icon {
             position: absolute;
-            left: .85rem;
+            left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #9aa1a7
+            color: #9e9e9e;
         }
 
-        .input-icon > input {
-            padding-left: 2.2rem
+        .filter-input-wrapper .filter-input {
+            padding-left: 3rem;
         }
 
-    /* ======= Tabla ======= */
-    .table-wrap {
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: var(--shadow-lg)
-    }
-
-    .thead-brand th {
-        background: linear-gradient(90deg,var(--accent-pink) 0%, var(--accent-purple) 100%);
-        color: #fff;
-        border: none;
-        font-weight: 700
-    }
-
-    .table-hover tbody tr:hover {
-        background: rgba(232,180,184,.07)
-    }
-
-    .table-nowrap td, .table-nowrap th {
-        white-space: nowrap
-    }
-
-    /* ======= Pills de estado ======= */
-    .status-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        border-radius: 999px;
-        padding: .35rem .6rem;
-        font-weight: 700;
-        font-size: .80rem
-    }
-
-    .st-secondary {
-        background: #f1f3f5;
-        color: #495057
-    }
-
-    .st-warn {
-        background: #fff4e6;
-        color: #ad6800
-    }
-
-    .st-info {
-        background: #e7f5ff;
-        color: #0b7285
-    }
-
-    .st-ok {
-        background: #e6fcf5;
-        color: #087f5b
-    }
-
-    .st-danger {
-        background: #ffe3e3;
-        color: #c92a2a
-    }
-
-    /* ======= Botón marca ======= */
-    .btn-brand {
-        background: var(--accent-pink);
-        border: none;
-        color: #fff
-    }
-
-        .btn-brand:hover {
-            background: var(--accent-pink-dark);
-            color: #fff
+        .btn-clear {
+            padding: 0.875rem 1.5rem;
+            background: white;
+            color: #757575;
+            border: 2px solid var(--orders-border);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-    .empty-state {
-        border: 1px dashed var(--medium-gray);
-        border-radius: 12px;
-        background: #fff;
-        padding: 22px
-    }
+            .btn-clear:hover {
+                background: var(--orders-light);
+                color: var(--orders-dark);
+            }
 
-    /* Responsive */
-    @@media(max - width:1200px) {
-        .stats
+        .filter-results {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 2px solid var(--orders-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #757575;
+        }
 
-    {
-        grid-template-columns: repeat(3,1fr)
-    }
+            .filter-results strong {
+                color: var(--orders-primary);
+                font-weight: 700;
+            }
 
-    }
+        /* Orders Table */
+        .orders-table-card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: var(--orders-shadow-lg);
+            overflow: hidden;
+            animation: slideDown 0.7s ease;
+        }
 
-    @@media(max - width:768px) {
-        .stats
+        .table-wrapper {
+            overflow-x: auto;
+        }
 
-    {
-        grid-template-columns: repeat(2,1fr)
-    }
+        .orders-table {
+            width: 100%;
+            margin: 0;
+        }
 
-    }
+            .orders-table thead {
+                background: linear-gradient(90deg, var(--orders-primary) 0%, var(--orders-secondary) 100%);
+            }
 
-    @@media(max - width:480px) {
-        .stats
+                .orders-table thead th {
+                    padding: 1.25rem 1.5rem;
+                    color: white;
+                    font-weight: 700;
+                    font-size: 0.875rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    border: none;
+                    white-space: nowrap;
+                }
 
-    {
-        grid-template-columns: 1fr
-    }
+            .orders-table tbody tr {
+                border-bottom: 1px solid var(--orders-border);
+                transition: all 0.3s;
+            }
 
-    }
-</style>
+                .orders-table tbody tr:hover {
+                    background: rgba(233, 30, 99, 0.05);
+                }
 
-<div class="container py-4" style="max-width: 1100px;">
-    <div class="d-flex align-items-center gap-2 mb-1">
-        <h2 class="page-title mb-0">Mis Compras</h2>
-        <span class="status-pill st-info">Historial</span>
-    </div>
-    <p class="subtle mb-3">Pedidos y compras realizadas con tu cuenta.</p>
+            .orders-table tbody td {
+                padding: 1.25rem 1.5rem;
+                vertical-align: middle;
+            }
 
-    @if (TempData["MensajeError"] is string msg && !string.IsNullOrWhiteSpace(msg))
-    {
-        <div class="alert alert-danger d-flex align-items-center" role="alert">
-            <i class="fa-solid fa-triangle-exclamation me-2"></i> @msg
-        </div>
-    }
+        .order-id {
+            font-weight: 700;
+            color: var(--orders-primary);
+            font-size: 0.95rem;
+        }
 
-    <!-- Toolbar filtros -->
-    <div class="toolbar">
-        <div class="row g-2 align-items-center">
-            <div class="col-12 col-md-6">
-                <div class="input-icon">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input id="txtFiltro" class="form-control" type="text"
-                           placeholder="Buscar por #venta, fecha, método de pago, estado o total..." />
+        .order-date {
+            color: #757575;
+            font-size: 0.9rem;
+        }
+
+        .order-total {
+            font-weight: 700;
+            color: var(--orders-dark);
+            font-size: 1.05rem;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.813rem;
+        }
+
+        .badge-pending {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-processing {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .badge-shipping {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+
+        .badge-delivered {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .badge-secondary {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        .badge-new {
+            background: linear-gradient(135deg, var(--orders-accent), #ff6090);
+            color: white;
+            margin-left: 0.5rem;
+        }
+
+        /* Action Buttons */
+        .btn-view {
+            padding: 0.625rem 1.25rem;
+            background: linear-gradient(135deg, var(--orders-primary), var(--orders-accent));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+            .btn-view:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(233, 30, 99, 0.35);
+                color: white;
+            }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: white;
+            border-radius: 24px;
+            box-shadow: var(--orders-shadow);
+        }
+
+        .empty-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--orders-primary-light), var(--orders-accent));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 3.5rem;
+            color: white;
+        }
+
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--orders-dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-text {
+            color: #757575;
+            margin-bottom: 2rem;
+            font-size: 1rem;
+        }
+
+        .btn-shop {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--orders-primary), var(--orders-accent));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+            .btn-shop:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 28px rgba(233, 30, 99, 0.35);
+                color: white;
+            }
+
+        /* Back Button */
+        .btn-back {
+            padding: 0.875rem 1.5rem;
+            background: white;
+            color: #757575;
+            border: 2px solid var(--orders-border);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+            .btn-back:hover {
+                background: var(--orders-light);
+                color: var(--orders-dark);
+            }
+
+        /* Responsive */
+        @@media (max-width: 991px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .filters-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header-top {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .header-actions {
+                width: 100%;
+            }
+
+                .header-actions button,
+                .header-actions a {
+                    flex: 1;
+                }
+        }
+
+        @@media (max-width: 575px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .page-header {
+                padding: 1.5rem;
+            }
+
+            .orders-table thead th,
+            .orders-table tbody td {
+                padding: 1rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        /* Animations */
+        @@keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        /* Focus Visible */
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        a:focus-visible {
+            outline: 3px solid var(--orders-primary);
+            outline-offset: 2px;
+        }
+
+        /* Reduced Motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Alert */
+        .alert {
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+            border: none;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            animation: slideDown 0.4s ease;
+        }
+
+        .alert-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .alert i {
+            font-size: 1.25rem;
+            margin-top: 0.125rem;
+        }
+    </style>
+}
+
+<div class="orders-page">
+    <div class="orders-container">
+        <!-- Breadcrumb -->
+        <nav class="orders-breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li>
+                    <a href="@Url.Action("Index", "Home")">
+                        <i class="fa-solid fa-house"></i>
+                        Inicio
+                    </a>
+                </li>
+                
+                <li class="active" aria-current="page">Mis Compras</li>
+            </ol>
+        </nav>
+
+        <!-- Alert -->
+        @if (TempData["MensajeError"] is string msg && !string.IsNullOrWhiteSpace(msg))
+        {
+            <div class="alert alert-danger" role="alert">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>@msg</div>
+            </div>
+        }
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-top">
+                <div class="page-title-section">
+                    <h1>
+                        <i class="fa-solid fa-shopping-bag"></i>
+                        Mis Compras
+                    </h1>
+                    <p class="page-subtitle">Historial completo de tus pedidos y compras</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-export" id="btnExport" title="Exportar datos">
+                        <i class="fa-solid fa-download"></i>
+                        <span>Exportar</span>
+                    </button>
                 </div>
             </div>
-            <div class="col-8 col-md-3">
-                <select id="selEstado" class="form-select">
-                    <option value="">Todos los estados</option>
-                    @foreach (var e in estados)
-                    {
-                        <option value="@e">@e</option>
-                    }
-                </select>
+
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-shopping-cart"></i>
+                    </div>
+                    <div class="stat-label">Total Compras</div>
+                    <div class="stat-value">@totalCompras</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-label">Total Gastado</div>
+                    <div class="stat-value">@totalGastado.ToString("C0", culture)</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div class="stat-label">Ticket Promedio</div>
+                    <div class="stat-value">@ticketPromedio.ToString("C0", culture)</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <div class="stat-label">Última Compra</div>
+                    <div class="stat-value">@(ultimaCompra?.ToString("dd/MM") ?? "—")</div>
+                </div>
             </div>
-            <div class="col-4 col-md-3 d-flex gap-2 justify-content-end">
-                <button id="btnLimpiar" class="btn btn-outline-secondary">
-                    <i class="fa-solid fa-eraser"></i> Limpiar
-                </button>
+        </div>
+
+        @if (!compras.Any())
+        {
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fa-solid fa-shopping-basket"></i>
+                </div>
+                <h3 class="empty-title">Aún no tienes compras</h3>
+                <p class="empty-text">
+                    Cuando realices tu primer pedido, aparecerá aquí con todos los detalles
+                </p>
+                <a href="@Url.Action("Catalogo", "Compras")" class="btn-shop">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Ir al Catálogo</span>
+                </a>
             </div>
-        </div>
-        <div class="d-flex align-items-center gap-3 mt-2 small">
-            <span class="subtle">Resultados: <strong id="badgeResultados">@totalCompras</strong></span>
-        </div>
-    </div>
+        }
+        else
+        {
+            <!-- Filters -->
+            <div class="filters-card">
+                <div class="filters-title">
+                    <i class="fa-solid fa-filter"></i>
+                    Filtrar pedidos
+                </div>
 
-    @if (!compras.Any())
-    {
-        <div class="empty-state d-flex align-items-center gap-2">
-            <i class="fa-regular fa-circle-question"></i>
-            Aún no tienes compras. Cuando realices tu primer pedido, aparecerá aquí.
-        </div>
-    }
-    else
-    {
-        <div class="table-wrap">
-            <table id="tablaCompras" class="table table-hover align-middle table-nowrap mb-0">
-                <thead class="thead-brand">
-                    <tr>
-                        <th style="width:110px;"># VENTA</th>
-                        <th style="width:140px;">FECHA</th>
-                        <th style="width:140px;">TOTAL</th>
-                        <th style="width:200px;">ESTADO</th>
-                        <th>MÉTODO DE PAGO</th>
-                        <th class="text-center" style="width:110px;">DETALLE</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var v in compras.OrderByDescending(x => x.FechaVenta))
-                    {
-                        var st = EstadoBadge(v.Estado);
-                        var esReciente = (DateTime.UtcNow - v.FechaVenta.ToUniversalTime()).TotalHours <= 48;
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="txtFiltro">Buscar</label>
+                        <div class="filter-input-wrapper">
+                            <i class="fa-solid fa-magnifying-glass filter-input-icon"></i>
+                            <input type="text"
+                                   id="txtFiltro"
+                                   class="filter-input"
+                                   placeholder="Buscar por #pedido, fecha, método de pago..." />
+                        </div>
+                    </div>
 
-                        <tr>
-                            <td>#@v.VentaID</td>
-                            <td>@v.FechaVenta.ToString("dd/MM/yyyy")</td>
-                            <td class="fw-bold" data-total="@v.Total">@v.Total.ToString("C", culture)</td>
-                            <td>
-                                <span class="status-pill @st estado-texto">@(!string.IsNullOrWhiteSpace(v.Estado) ? v.Estado : "—")</span>
-                                @if (esReciente)
-                                {
-                                    <span class="status-pill st-info ms-1"><i class="fa-regular fa-star"></i> Nuevo</span>
-                                }
-                            </td>
-                            <td class="pago-texto">@(!string.IsNullOrWhiteSpace(v.MetodoPago) ? v.MetodoPago : "—")</td>
-                            <td class="text-center">
-                                <a class="btn btn-sm btn-brand" title="Ver detalles"
-                                   href="@Url.Action("Detalle", "MisCompras", new { id = v.VentaID })">
-                                    <i class="fa-regular fa-eye"></i> Ver
-                                </a>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    }
+                    <div class="filter-group">
+                        <label for="selEstado">Estado</label>
+                        <select id="selEstado" class="filter-select">
+                            <option value="">Todos los estados</option>
+                            @foreach (var e in estados)
+                            {
+                                <option value="@e">@e</option>
+                            }
+                        </select>
+                    </div>
 
-    <div class="mt-4">
-        <a class="btn btn-outline-secondary" href="@Url.Action("Index", "Home")">
-            <i class="fa-solid fa-house"></i> Volver al inicio
-        </a>
+                    <div class="filter-group">
+                        <label>&nbsp;</label>
+                        <button class="btn-clear" id="btnLimpiar">
+                            <i class="fa-solid fa-eraser"></i>
+                            <span>Limpiar</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filter-results">
+                    <div>
+                        Mostrando <strong id="badgeResultados">@totalCompras</strong> de @totalCompras pedidos
+                    </div>
+                    <div>
+                        Total filtrado: <strong id="badgeTotal">@totalGastado.ToString("C", culture)</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="orders-table-card">
+                <div class="table-wrapper">
+                    <table class="orders-table" id="tablaCompras">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Fecha</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Método de Pago</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in compras.OrderByDescending(x => x.FechaVenta))
+                            {
+                                var badge = EstadoBadge(v.Estado);
+                                var esReciente = (DateTime.UtcNow - v.FechaVenta.ToUniversalTime()).TotalHours <= 48;
+
+                                <tr>
+                                    <td>
+                                        <span class="order-id">#@v.VentaID</span>
+                                    </td>
+                                    <td>
+                                        <span class="order-date">@v.FechaVenta.ToString("dd/MM/yyyy")</span>
+                                    </td>
+                                    <td>
+                                        <span class="order-total" data-total="@v.Total">
+                                            @v.Total.ToString("C", culture)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge @badge estado-texto">
+                                            @(!string.IsNullOrWhiteSpace(v.Estado) ? v.Estado : "Pendiente")
+                                        </span>
+                                        @if (esReciente)
+                                        {
+                                            <span class="status-badge badge-new">
+                                                <i class="fa-solid fa-star"></i>
+                                                Nuevo
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="pago-texto">
+                                        @(!string.IsNullOrWhiteSpace(v.MetodoPago) ? v.MetodoPago : "—")
+                                    </td>
+                                    <td>
+                                        <a href="@Url.Action("Detalle", "MisCompras", new { id = v.VentaID })"
+                                           class="btn-view"
+                                           title="Ver detalles del pedido">
+                                            <i class="fa-regular fa-eye"></i>
+                                            <span>Ver</span>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+
+        <!-- Back Button -->
+        <div style="margin-top: 2rem;">
+            <a href="@Url.Action("Index", "Home")" class="btn-back">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Volver al inicio</span>
+            </a>
+        </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        (() => {
-            const $ = s => document.querySelector(s);
-            const tbody = $('#tablaCompras')?.querySelector('tbody');
-            const txt = $('#txtFiltro');
-            const sel = $('#selEstado');
-            const btn = $('#btnLimpiar');
-            const badgeResultados = $('#badgeResultados');
-            const badgeTotal = $('#badgeTotalFiltrado');
-            const nf = new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' });
+        (function() {
+            'use strict';
 
-            function norm(s){ return (s||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+            // ===== ELEMENTS =====
+            const tbody = document.querySelector('#tablaCompras tbody');
+            const txtFiltro = document.getElementById('txtFiltro');
+            const selEstado = document.getElementById('selEstado');
+            const btnLimpiar = document.getElementById('btnLimpiar');
+            const badgeResultados = document.getElementById('badgeResultados');
+            const badgeTotal = document.getElementById('badgeTotal');
+            const btnExport = document.getElementById('btnExport');
 
-            function aplicar(){
-                if(!tbody) return;
-                const q = norm(txt?.value || '');
-                const estado = norm(sel?.value || '');
-                let visibles = 0, total = 0;
+            const nf = new Intl.NumberFormat('es-EC', {
+                style: 'currency',
+                currency: 'USD'
+            });
 
-                for (const tr of tbody.rows){
-                    const texto = norm(tr.innerText);
-                    const estCell = tr.querySelector('.estado-texto')?.textContent || '';
-                    const pasaTexto = q === '' || texto.includes(q);
-                    const pasaEstado = estado === '' || norm(estCell) === estado;
-
-                    const show = pasaTexto && pasaEstado;
-                    tr.style.display = show ? '' : 'none';
-                    if (show){
-                        visibles++;
-                        const t = parseFloat(tr.querySelector('[data-total]')?.getAttribute('data-total') || '0');
-                        total += isNaN(t) ? 0 : t;
-                    }
-                }
-                if (badgeResultados) badgeResultados.textContent = visibles.toString();
-                if (badgeTotal) badgeTotal.textContent = nf.format(total);
+            // ===== HELPERS =====
+            function normalize(text) {
+                return (text || '')
+                    .toString()
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim();
             }
 
-            txt?.addEventListener('input', aplicar);
-            sel?.addEventListener('change', aplicar);
-            btn?.addEventListener('click', (e)=>{ e.preventDefault(); if(txt) txt.value=''; if(sel) sel.value=''; aplicar(); });
+            // ===== FILTER =====
+            function aplicarFiltros() {
+                if (!tbody) return;
 
-            aplicar(); // inicial
+                const query = normalize(txtFiltro?.value || '');
+                const estadoFiltro = normalize(selEstado?.value || '');
+
+                let visibles = 0;
+                let totalFiltrado = 0;
+
+                Array.from(tbody.rows).forEach(row => {
+                    const texto = normalize(row.textContent);
+                    const estadoCell = row.querySelector('.estado-texto')?.textContent || '';
+
+                    const pasaTexto = query === '' || texto.includes(query);
+                    const pasaEstado = estadoFiltro === '' || normalize(estadoCell) === estadoFiltro;
+
+                    const mostrar = pasaTexto && pasaEstado;
+                    row.style.display = mostrar ? '' : 'none';
+
+                    if (mostrar) {
+                        visibles++;
+                        const total = parseFloat(row.querySelector('[data-total]')?.dataset.total || 0);
+                        totalFiltrado += total;
+                    }
+                });
+
+                if (badgeResultados) {
+                    badgeResultados.textContent = visibles;
+                }
+
+                if (badgeTotal) {
+                    badgeTotal.textContent = nf.format(totalFiltrado);
+                }
+            }
+
+            // ===== EXPORT =====
+            function exportarDatos() {
+                if (!tbody) return;
+
+                const data = [];
+                Array.from(tbody.rows).forEach(row => {
+                    if (row.style.display !== 'none') {
+                        const cells = row.cells;
+                        data.push({
+                            Pedido: cells[0]?.textContent.trim(),
+                            Fecha: cells[1]?.textContent.trim(),
+                            Total: cells[2]?.textContent.trim(),
+                            Estado: cells[3]?.textContent.replace(/Nuevo/g, '').trim(),
+                            MetodoPago: cells[4]?.textContent.trim()
+                        });
+                    }
+                });
+
+                const json = JSON.stringify(data, null, 2);
+                const blob = new Blob([json], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `mis-compras-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            }
+
+            // ===== EVENT LISTENERS =====
+            txtFiltro?.addEventListener('input', aplicarFiltros);
+            selEstado?.addEventListener('change', aplicarFiltros);
+
+            btnLimpiar?.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (txtFiltro) txtFiltro.value = '';
+                if (selEstado) selEstado.value = '';
+                aplicarFiltros();
+            });
+
+            btnExport?.addEventListener('click', exportarDatos);
+
+            // ===== INIT =====
+            aplicarFiltros();
+            console.log('✓ Orders page initialized');
         })();
     </script>
 }

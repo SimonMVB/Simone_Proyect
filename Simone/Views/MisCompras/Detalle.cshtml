@@ -1,35 +1,33 @@
 ﻿@model Simone.Models.Ventas
 @using System.Globalization
 @using Simone.Models
-@using System.Collections.Generic
-@using System.Linq
 
 @{
     ViewData["Title"] = $"Detalle de Venta #{Model.VentaID}";
+    ViewData["Description"] = "Información completa de tu pedido en Neo Ágora.";
+
     var culture = new CultureInfo("es-EC");
 
     Func<string, (string badge, string icon, string color)> EstadoInfo = e =>
     {
-        if (string.IsNullOrWhiteSpace(e)) return ("text-bg-secondary", "fas fa-question-circle", "#6c757d");
+        if (string.IsNullOrWhiteSpace(e)) return ("badge-secondary", "fa-clock", "#6c757d");
         var s = e.Trim().ToLowerInvariant();
-        if (s.Contains("pend")) return ("text-bg-secondary", "fas fa-clock", "#6c757d");
-        if (s.Contains("proc") || s.Contains("pago")) return ("text-bg-warning", "fas fa-sync-alt", "#ffc107");
-        if (s.Contains("desp") || s.Contains("env")) return ("text-bg-primary", "fas fa-shipping-fast", "#007bff");
-        if (s.Contains("entr") || s.Contains("compl")) return ("text-bg-success", "fas fa-check-circle", "#28a745");
-        if (s.Contains("canc")) return ("text-bg-danger", "fas fa-times-circle", "#dc3545");
-        return ("text-bg-secondary", "fas fa-question-circle", "#6c757d");
+        if (s.Contains("pend")) return ("badge-pending", "fa-clock", "#2196f3");
+        if (s.Contains("proc") || s.Contains("pago")) return ("badge-processing", "fa-sync-alt", "#ff9800");
+        if (s.Contains("desp") || s.Contains("env")) return ("badge-shipping", "fa-shipping-fast", "#00bcd4");
+        if (s.Contains("entr") || s.Contains("compl")) return ("badge-delivered", "fa-check-circle", "#4caf50");
+        if (s.Contains("canc")) return ("badge-cancelled", "fa-times-circle", "#f44336");
+        return ("badge-secondary", "fa-question-circle", "#6c757d");
     };
+
     var estadoInfo = EstadoInfo(Model.Estado ?? "");
 
     string BankPretty(string? b)
     {
         if (string.IsNullOrWhiteSpace(b)) return "—";
         var raw = b.Trim();
-
-        // Si viene con prefijo "admin:xxx" o "tienda:vid:xxx" me quedo con el último segmento
         var last = raw.Contains(':') ? raw.Split(':').Last() : raw;
         var k = last.ToLowerInvariant();
-
         return k switch
         {
             "pichincha" => "Banco Pichincha",
@@ -40,320 +38,562 @@
         };
     }
 
-    // Datos opcionales desde el controlador
     var depositante = (ViewBag.Depositante as string);
     var bancoRaw = (ViewBag.Banco as string);
     var urlComprobante = (ViewBag.ComprobanteUrl as string);
 
-    // Fallback antiguos (si alguien populó dinámicos en el modelo)
-    depositante ??= Model?.GetType().GetProperty("DepositanteNombre")?.GetValue(Model, null)?.ToString()
-                 ?? Model?.GetType().GetProperty("NombreDepositante")?.GetValue(Model, null)?.ToString();
-    urlComprobante ??= Model?.GetType().GetProperty("ComprobanteImagenUrl")?.GetValue(Model, null)?.ToString()
-                  ?? Model?.GetType().GetProperty("ComprobanteUrl")?.GetValue(Model, null)?.ToString();
+    depositante ??= Model?.GetType().GetProperty("DepositanteNombre")?.GetValue(Model, null)?.ToString();
+    urlComprobante ??= Model?.GetType().GetProperty("ComprobanteImagenUrl")?.GetValue(Model, null)?.ToString();
 
-    var detalle = Model?.DetalleVentas != null ? Model.DetalleVentas.ToList() : new List<DetalleVentas>();
+    var detalle = Model?.DetalleVentas?.ToList() ?? new List<DetalleVentas>();
     var subtotal = detalle.Sum(d => d.PrecioUnitario * d.Cantidad);
     var descuentos = detalle.Sum(d => d.Descuento ?? 0m);
 }
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@ViewData["Title"] - Simone Store</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;500;600&display=swap" rel="stylesheet">
+@section Styles {
     <style>
         :root {
-            --primary: #6f42c1;
-            --primary-light: #8c68d3;
-            --primary-dark: #5a2d9c;
-            --secondary: #6c757d;
-            --success: #198754;
-            --warning: #ffc107;
-            --danger: #dc3545;
-            --light: #f8f9fa;
-            --dark: #212529;
-            --gray-100: #f8f9fa;
-            --gray-200: #e9ecef;
-            --gray-300: #dee2e6;
-            --gray-400: #ced4da;
-            --gray-500: #adb5bd;
-            --gray-600: #6c757d;
-            --gray-700: #495057;
-            --gray-800: #343a40;
-            --gray-900: #212529;
-            --border-radius: 0.75rem;
-            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --transition: all 0.3s ease;
+            --order-primary: #e91e63;
+            --order-primary-light: #f48fb1;
+            --order-primary-dark: #c2185b;
+            --order-secondary: #9c27b0;
+            --order-accent: #ff4081;
+            --order-success: #4caf50;
+            --order-warning: #ff9800;
+            --order-danger: #f44336;
+            --order-info: #2196f3;
+            --order-dark: #212121;
+            --order-text: #424242;
+            --order-light: #fafafa;
+            --order-white: #ffffff;
+            --order-border: #e0e0e0;
+            --order-shadow: 0 8px 32px rgba(233, 30, 99, 0.15);
+            --order-shadow-lg: 0 16px 48px rgba(233, 30, 99, 0.2);
         }
 
-        body {
-            font-family: 'Montserrat', sans-serif;
-            background-color: #f9fafb;
-            color: var(--gray-800);
-            line-height: 1.6;
-        }
-
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Playfair Display', serif;
-            font-weight: 600;
-        }
-
-        .header-gradient {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: white;
+        /* Page Layout */
+        .order-detail-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%);
             padding: 2rem 0;
-            margin-bottom: 2rem;
-            box-shadow: var(--box-shadow);
+            animation: fadeIn 0.6s ease;
         }
 
-        .page-title {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
-        .page-subtitle {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            margin-bottom: 0;
+        .order-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
 
-        .card-modern {
+        /* Breadcrumb */
+        .order-breadcrumb {
             background: white;
-            border-radius: var(--border-radius);
-            box-shadow: var(--box-shadow);
-            border: none;
-            overflow: hidden;
-            transition: var(--transition);
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            animation: slideDown 0.4s ease;
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+            .breadcrumb li + li::before {
+                content: "›";
+                margin: 0 0.5rem;
+                color: #9e9e9e;
+                font-weight: bold;
+            }
+
+            .breadcrumb a {
+                color: var(--order-primary);
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.3s;
+            }
+
+                .breadcrumb a:hover {
+                    color: var(--order-primary-dark);
+                }
+
+            .breadcrumb .active {
+                color: var(--order-text);
+                font-weight: 600;
+            }
+
+        /* Page Header */
+        .page-header {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: var(--order-shadow-lg);
+            margin-bottom: 2rem;
+            animation: zoomIn 0.5s ease;
+        }
+
+        @@keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .page-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
             margin-bottom: 1.5rem;
         }
 
-            .card-modern:hover {
-                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-                transform: translateY(-2px);
-            }
-
-        .card-header-modern {
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
-            color: white;
-            padding: 1.25rem 1.5rem;
-            font-weight: 600;
-            font-size: 1.2rem;
-            border-bottom: none;
+        .page-title-section h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--order-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
-            .card-header-modern i {
-                margin-right: 0.75rem;
-                font-size: 1.1rem;
+            .page-title-section h1 i {
+                color: var(--order-primary);
+            }
+
+        .page-subtitle {
+            color: #757575;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .btn-print,
+        .btn-back {
+            padding: 0.75rem 1.25rem;
+            background: white;
+            color: var(--order-primary);
+            border: 2px solid var(--order-primary);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+            .btn-print:hover,
+            .btn-back:hover {
+                background: var(--order-primary);
+                color: white;
+            }
+
+        /* Status Badge */
+        .status-badge-large {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .badge-pending {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge-processing {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .badge-shipping {
+            background: #e0f2f1;
+            color: #00695c;
+        }
+
+        .badge-delivered {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .badge-cancelled {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .badge-secondary {
+            background: #f5f5f5;
+            color: #616161;
+        }
+
+        /* Info Card */
+        .info-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--order-shadow);
+            margin-bottom: 2rem;
+            animation: slideDown 0.6s ease;
+        }
+
+        .info-card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--order-dark);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+            .info-card-title i {
+                color: var(--order-primary);
             }
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 1.5rem;
-            padding: 1.5rem;
         }
 
         .info-item {
-            display: flex;
-            flex-direction: column;
             padding-bottom: 1rem;
-            border-bottom: 1px solid var(--gray-200);
+            border-bottom: 2px solid var(--order-border);
         }
 
-            .info-item:last-child {
-                border-bottom: none;
-            }
-
         .info-label {
-            font-size: 0.85rem;
-            color: var(--gray-600);
-            font-weight: 500;
+            font-size: 0.875rem;
+            color: #757575;
+            font-weight: 600;
             margin-bottom: 0.5rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .info-value {
-            font-size: 1.1rem;
+            font-size: 1.05rem;
             font-weight: 600;
-            color: var(--gray-800);
-        }
-
-        .status-badge {
-            display: inline-flex;
+            color: var(--order-dark);
+            display: flex;
             align-items: center;
             gap: 0.5rem;
-            padding: 0.5rem 1rem;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            border-left: 4px solid;
         }
 
-        .btn-primary-modern {
-            background: linear-gradient(to right, var(--primary), var(--primary-light));
+            .info-value i {
+                color: var(--order-primary);
+            }
+
+        /* Receipt Card */
+        .receipt-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--order-shadow);
+            margin-bottom: 2rem;
+            animation: slideDown 0.7s ease;
+        }
+
+        .receipt-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .receipt-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--order-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+            .receipt-title i {
+                color: var(--order-primary);
+            }
+
+        .receipt-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--order-primary);
+            border-radius: 10px;
+            color: var(--order-primary);
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+            .btn-icon:hover {
+                background: var(--order-primary);
+                color: white;
+            }
+
+        .receipt-container {
+            text-align: center;
+        }
+
+        .receipt-img {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+
+            .receipt-img:hover {
+                transform: scale(1.02);
+                box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+            }
+
+        .receipt-pdf {
+            width: 100%;
+            height: 500px;
             border: none;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .empty-receipt {
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+
+        .empty-icon {
+            width: 100px;
+            height: 100px;
+            background: var(--order-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 3rem;
+            color: #bdbdbd;
+        }
+
+        /* Products Table */
+        .products-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--order-shadow);
+            overflow: hidden;
+            margin-bottom: 2rem;
+            animation: slideDown 0.8s ease;
+        }
+
+        .products-header {
+            background: linear-gradient(90deg, var(--order-primary) 0%, var(--order-secondary) 100%);
+            padding: 1.5rem 2rem;
             color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: var(--transition);
-            box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
         }
 
-            .btn-primary-modern:hover {
-                background: linear-gradient(to right, var(--primary-dark), var(--primary));
-                color: white;
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(111, 66, 193, 0.4);
-            }
-
-        .btn-outline-modern {
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            background: transparent;
-            padding: 0.75rem 1.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            transition: var(--transition);
+        .products-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
 
-            .btn-outline-modern:hover {
-                background: var(--primary);
-                color: white;
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(111, 66, 193, 0.3);
-            }
-
-        .table-modern {
-            margin-bottom: 0;
+        .products-table {
+            width: 100%;
         }
 
-            .table-modern thead th {
-                background-color: var(--gray-100);
-                color: var(--gray-700);
-                font-weight: 600;
-                text-transform: uppercase;
-                font-size: 0.85rem;
-                letter-spacing: 0.5px;
-                border-bottom: 2px solid var(--gray-300);
-                padding: 1rem 1.5rem;
-            }
-
-            .table-modern tbody td {
+            .products-table thead th {
+                background: var(--order-light);
                 padding: 1.25rem 1.5rem;
+                font-weight: 700;
+                font-size: 0.875rem;
+                text-transform: uppercase;
+                color: var(--order-dark);
+                border-bottom: 2px solid var(--order-border);
+            }
+
+            .products-table tbody td {
+                padding: 1.5rem;
+                border-bottom: 1px solid var(--order-border);
                 vertical-align: middle;
-                border-bottom: 1px solid var(--gray-200);
             }
 
-            .table-modern tbody tr:last-child td {
-                border-bottom: none;
-            }
-
-            .table-modern tbody tr:hover {
-                background-color: rgba(111, 66, 193, 0.03);
+            .products-table tbody tr:hover {
+                background: rgba(233, 30, 99, 0.05);
             }
 
         .product-info {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 1.25rem;
         }
 
         .product-img {
-            width: 60px;
-            height: 60px;
+            width: 80px;
+            height: 80px;
             object-fit: cover;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .product-details {
+            flex: 1;
         }
 
         .product-name {
-            font-weight: 600;
+            font-weight: 700;
+            color: var(--order-dark);
             margin-bottom: 0.25rem;
         }
 
         .product-desc {
-            font-size: 0.9rem;
-            color: var(--gray-600);
-            line-height: 1.4;
+            font-size: 0.875rem;
+            color: #757575;
         }
 
-        .comprobante-container {
-            padding: 1.5rem;
-            text-align: center;
+        .quantity-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 40px;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--order-primary), var(--order-accent));
+            color: white;
+            border-radius: 50px;
+            font-weight: 700;
         }
 
-        .comprobante-img {
-            max-width: 100%;
-            max-height: 300px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            transition: var(--transition);
+        /* Summary Card */
+        .summary-card {
+            background: linear-gradient(135deg, var(--order-light) 0%, #e8e8e8 100%);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--order-shadow);
         }
 
-            .comprobante-img:hover {
-                transform: scale(1.02);
-                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            font-size: 1rem;
+        }
+
+            .summary-row.total {
+                padding-top: 1.5rem;
+                margin-top: 1.5rem;
+                border-top: 3px solid var(--order-border);
+                font-size: 1.5rem;
+                font-weight: 800;
             }
 
-        .comprobante-pdf {
-            width: 100%;
-            height: 400px;
-            border: none;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        .summary-label {
+            font-weight: 600;
         }
 
-        .empty-state {
-            padding: 3rem 1rem;
-            text-align: center;
-            color: var(--gray-500);
+        .summary-value {
+            font-weight: 700;
         }
 
-            .empty-state i {
-                font-size: 3rem;
-                margin-bottom: 1rem;
-                opacity: 0.5;
+            .summary-value.total {
+                color: var(--order-primary);
             }
 
-        .total-display {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        /* Timeline */
+        .timeline-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: var(--order-shadow);
+            margin-bottom: 2rem;
+            animation: slideDown 0.9s ease;
         }
 
-        .timeline-container {
-            padding: 1.5rem;
+        .timeline-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--order-dark);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
+
+            .timeline-title i {
+                color: var(--order-primary);
+            }
 
         .timeline {
             position: relative;
-            max-width: 800px;
-            margin: 0 auto;
+            padding-left: 3rem;
         }
 
             .timeline::before {
                 content: '';
                 position: absolute;
+                left: 20px;
                 top: 0;
                 bottom: 0;
-                left: 20px;
                 width: 4px;
-                background: var(--gray-300);
-                border-radius: 2px;
+                background: var(--order-border);
+                border-radius: 4px;
             }
 
         .timeline-step {
             position: relative;
-            margin-bottom: 2rem;
-            padding-left: 60px;
+            margin-bottom: 2.5rem;
         }
 
             .timeline-step:last-child {
@@ -363,507 +603,567 @@
             .timeline-step::before {
                 content: '';
                 position: absolute;
-                left: 12px;
+                left: -2.85rem;
                 top: 0;
-                width: 20px;
-                height: 20px;
+                width: 24px;
+                height: 24px;
                 border-radius: 50%;
                 background: white;
-                border: 4px solid var(--gray-400);
+                border: 4px solid var(--order-border);
                 z-index: 1;
             }
 
             .timeline-step.completed::before {
-                border-color: var(--success);
-                background: var(--success);
+                border-color: var(--order-success);
+                background: var(--order-success);
             }
 
             .timeline-step.active::before {
-                border-color: var(--primary);
-                background: var(--primary);
-                box-shadow: 0 0 0 6px rgba(111, 66, 193, 0.2);
+                border-color: var(--order-primary);
+                background: var(--order-primary);
+                box-shadow: 0 0 0 6px rgba(233, 30, 99, 0.2);
+                animation: pulse 2s infinite;
             }
 
-        .step-title {
-            font-weight: 600;
-            font-size: 1.1rem;
+        @@keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
             margin-bottom: 0.5rem;
-            color: var(--gray-800);
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--order-dark);
         }
 
         .step-status {
-            font-size: 0.9rem;
-            color: var(--gray-600);
+            font-size: 0.875rem;
+            color: #757575;
         }
 
-        .action-buttons {
-            display: flex;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
+            .step-status i {
+                margin-right: 0.25rem;
+            }
 
-        .badge-rounded {
-            border-radius: 50px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-        }
+        /* Responsive */
+        @@media (max-width: 991px) {
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
 
-        @@media (max-width: 768px) {
-            .page-title
+            .page-header-top {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
 
-        {
-            font-size: 2rem;
-        }
-
-        .info-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .action-buttons {
-            flex-direction: column;
-        }
-
-            .action-buttons .btn {
+            .header-actions {
                 width: 100%;
             }
 
-        .timeline::before {
-            left: 15px;
+                .header-actions button,
+                .header-actions a {
+                    flex: 1;
+                }
         }
 
-        .timeline-step {
-            padding-left: 50px;
-        }
-
-            .timeline-step::before {
-                left: 7px;
+        @@media (max-width: 575px) {
+            .page-header {
+                padding: 1.5rem;
             }
 
+            .info-card,
+            .receipt-card,
+            .timeline-card {
+                padding: 1.5rem;
+            }
+
+            .products-table thead th,
+            .products-table tbody td {
+                padding: 1rem;
+                font-size: 0.875rem;
+            }
+
+            .product-info {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .timeline {
+                padding-left: 2.5rem;
+            }
+
+            .timeline-step::before {
+                left: -2.35rem;
+            }
         }
 
+        /* Print Styles */
         @@media print {
-            .no-print
+            .no-print {
+                display: none !important;
+            }
 
-        {
-            display: none !important;
+            .order-detail-page {
+                background: white;
+            }
+
+            .order-breadcrumb,
+            .page-header,
+            .info-card,
+            .receipt-card,
+            .products-card,
+            .timeline-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
         }
 
-        .header-gradient {
-            background: none;
-            color: black;
-            box-shadow: none;
+        /* Alert */
+        .alert {
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 2rem;
+            border: none;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
         }
 
-        .card-modern {
-            box-shadow: none;
-            border: 1px solid #ddd;
+        .alert-info {
+            background: #e3f2fd;
+            color: #1565c0;
         }
 
-        .btn {
-            display: none;
+        /* Focus Visible */
+        button:focus-visible,
+        a:focus-visible {
+            outline: 3px solid var(--order-primary);
+            outline-offset: 2px;
         }
 
+        /* Reduced Motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
-</head>
-<body>
-    <!-- Header -->
-    <div class="header-gradient">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h1 class="page-title">Detalle de Venta #@Model.VentaID</h1>
+}
+
+<div class="order-detail-page">
+    <div class="order-container">
+        <!-- Breadcrumb -->
+        <nav class="order-breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li>
+                    <a href="@Url.Action("Index", "Home")">
+                        <i class="fa-solid fa-house"></i>
+                        Inicio
+                    </a>
+                </li>
+                
+                <li>
+                    <a href="@Url.Action("Index", "MisCompras")">Mis Compras</a>
+                </li>
+                <li class="active" aria-current="page">Pedido #@Model.VentaID</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-top">
+                <div class="page-title-section">
+                    <h1>
+                        <i class="fa-solid fa-receipt"></i>
+                        Pedido #@Model.VentaID
+                    </h1>
                     <p class="page-subtitle">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        Fecha: @Model.FechaVenta.ToString("dd/MM/yyyy") • Hora: @Model.FechaVenta.ToString("HH:mm")
+                        <i class="fa-solid fa-calendar-alt"></i>
+                        @Model.FechaVenta.ToString("dd/MM/yyyy") • @Model.FechaVenta.ToString("HH:mm")
                     </p>
                 </div>
-                <div class="col-md-4 text-md-end">
-                    <div class="action-buttons justify-content-md-end">
-                        <button class="btn btn-outline-modern no-print" onclick="window.print()">
-                            <i class="fas fa-print"></i> Imprimir
-                        </button>
-                        <a class="btn btn-primary-modern no-print" href="@Url.Action("Index", "MisCompras")">
-                            <i class="fas fa-arrow-left"></i> Volver
-                        </a>
-                    </div>
+                <div class="header-actions no-print">
+                    <button class="btn-print" onclick="window.print()">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Imprimir</span>
+                    </button>
+                    <a class="btn-back" href="@Url.Action("Index", "MisCompras")">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Volver</span>
+                    </a>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div class="container pb-5" data-venta-id="@Model.VentaID">
-        <div class="row g-4 mb-4">
-            <!-- Información -->
-            <div class="col-12 col-lg-8">
-                <div class="card-modern h-100">
-                    <div class="card-header-modern">
-                        <i class="fas fa-info-circle"></i>Información de la Venta
-                    </div>
+            <!-- Status Badge -->
+            <div>
+                <span class="status-badge-large @estadoInfo.badge">
+                    <i class="fa-solid @estadoInfo.icon"></i>
+                    <span>@(Model.Estado ?? "Pendiente")</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Order Info -->
+                <div class="info-card">
+                    <h2 class="info-card-title">
+                        <i class="fa-solid fa-circle-info"></i>
+                        Información del Pedido
+                    </h2>
+
                     <div class="info-grid">
                         <div class="info-item">
                             <div class="info-label">Método de Pago</div>
-                            <div class="info-value d-flex align-items-center gap-2">
-                                @if (!string.IsNullOrWhiteSpace(Model.MetodoPago))
-                                {
-                                    var mp = Model.MetodoPago.ToLowerInvariant();
+                            <div class="info-value">
+                                @{
+                                    var mp = (Model.MetodoPago ?? "").ToLowerInvariant();
                                     var icon = mp.Contains("tarjeta") ? "fa-credit-card"
                                     : mp.Contains("efectivo") ? "fa-money-bill"
                                     : (mp.Contains("transfer") || mp.Contains("dep")) ? "fa-university"
                                     : "fa-wallet";
-                                    <i class="fas @icon text-primary"></i>
-                                    @Model.MetodoPago
                                 }
-                                else
-                                {
-                                    <i class="fas fa-question-circle text-muted"></i>
-                                    <span>—</span>
-                                }
-                            </div>
-                        </div>
-
-                        <div class="info-item">
-                            <div class="info-label">Estado</div>
-                            <div>
-                                <span class="status-badge @estadoInfo.badge" style="border-left-color: @estadoInfo.color">
-                                    <i class="@estadoInfo.icon"></i>@(Model.Estado ?? "—")
-                                </span>
+                                <i class="fa-solid @icon"></i>
+                                <span>@(!string.IsNullOrWhiteSpace(Model.MetodoPago) ? Model.MetodoPago : "—")</span>
                             </div>
                         </div>
 
                         <div class="info-item">
                             <div class="info-label">Depositante</div>
-                            <div class="info-value"><span id="depositanteVal">@(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")</span></div>
+                            <div class="info-value" id="depositanteVal">
+                                @(!string.IsNullOrWhiteSpace(depositante) ? depositante : "—")
+                            </div>
                         </div>
 
                         <div class="info-item">
                             <div class="info-label">Banco</div>
-                            <div class="info-value"><span id="bancoVal">@BankPretty(bancoRaw)</span></div>
+                            <div class="info-value" id="bancoVal">
+                                @BankPretty(bancoRaw)
+                            </div>
                         </div>
 
                         <div class="info-item">
-                            <div class="info-label">Subtotal</div>
-                            <div class="info-value">@subtotal.ToString("C", culture)</div>
-                        </div>
-
-                        <div class="info-item">
-                            <div class="info-label">Descuentos</div>
-                            <div class="info-value text-danger">-@descuentos.ToString("C", culture)</div>
-                        </div>
-
-                        <div class="info-item" style="grid-column: span 2;">
                             <div class="info-label">Total</div>
-                            <div class="info-value" style="font-size: 1.5rem; color: var(--primary);">@Model.Total.ToString("C", culture)</div>
+                            <div class="info-value">
+                                <span style="color: var(--order-primary); font-size: 1.25rem;">
+                                    @Model.Total.ToString("C", culture)
+                                </span>
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Products -->
+                <div class="products-card">
+                    <div class="products-header">
+                        <h2 class="products-title">
+                            <i class="fa-solid fa-shopping-bag"></i>
+                            Productos (@detalle.Count)
+                        </h2>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="products-table">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-end">Precio</th>
+                                    <th class="text-end">Descuento</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var det in detalle)
+                                {
+                                    var sub = det.Subtotal ?? ((det.PrecioUnitario * det.Cantidad) - (det.Descuento ?? 0m));
+                                    var productImage = det.Producto?.ImagenPath ?? "/images/product-placeholder.png";
+                                    <tr>
+                                        <td>
+                                            <div class="product-info">
+                                                <img src="@productImage" alt="@det.Producto?.Nombre" class="product-img" />
+                                                <div class="product-details">
+                                                    <div class="product-name">@det.Producto?.Nombre</div>
+                                                    @if (!string.IsNullOrEmpty(det.Producto?.Descripcion))
+                                                    {
+                                                        <div class="product-desc">@det.Producto.Descripcion</div>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="quantity-badge">@det.Cantidad</span>
+                                        </td>
+                                        <td class="text-end">@det.PrecioUnitario.ToString("C", culture)</td>
+                                        <td class="text-end" style="color: var(--order-danger);">
+                                            @((det.Descuento ?? 0m).ToString("C", culture))
+                                        </td>
+                                        <td class="text-end" style="font-weight: 700;">
+                                            @sub.ToString("C", culture)
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="timeline-card">
+                    <h2 class="timeline-title">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        Estado del Pedido
+                    </h2>
+
+                    <div class="timeline">
+                        @{
+                            var estados = new[] {
+                                                ("Pendiente", "fa-clock", "Esperando confirmación de pago"),
+                                                ("Procesando", "fa-cog", "Verificando información y pago"),
+                                                ("Despachando", "fa-shipping-fast", "Preparando tu pedido para envío"),
+                                                ("Entregado", "fa-check-circle", "Pedido completado exitosamente")
+                                                };
+                            var estadoActual = (Model.Estado ?? "").ToLowerInvariant();
+                            var estadoIndex = estadoActual.Contains("pend") ? 0
+                            : (estadoActual.Contains("proc") || estadoActual.Contains("pago")) ? 1
+                            : (estadoActual.Contains("desp") || estadoActual.Contains("env")) ? 2
+                            : (estadoActual.Contains("entr") || estadoActual.Contains("compl")) ? 3
+                            : -1;
+                        }
+                        @for (int i = 0; i < estados.Length; i++)
+                        {
+                            var stepClass = i < estadoIndex ? "completed" : (i == estadoIndex ? "active" : "future");
+                            <div class="timeline-step @stepClass">
+                                <div class="step-header">
+                                    <i class="fa-solid @estados[i].Item2" style="font-size: 1.25rem; color: var(--order-primary);"></i>
+                                    <div class="step-title">@estados[i].Item1</div>
+                                </div>
+                                <div class="step-status">
+                                    @if (i < estadoIndex)
+                                    {
+                                        <i class="fa-solid fa-check-circle" style="color: var(--order-success);"></i>
+                                        <span>Completado</span>
+                                    }
+                                    else if (i == estadoIndex)
+                                    {
+                                        <i class="fa-solid fa-spinner fa-spin" style="color: var(--order-primary);"></i>
+                                        <span>En progreso - @estados[i].Item3</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa-solid fa-clock" style="color: #bdbdbd;"></i>
+                                        <span>Pendiente</span>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
 
-            <!-- Comprobante -->
-            <div class="col-12 col-lg-4">
-                <div class="card-modern h-100">
-                    <div class="card-header-modern d-flex justify-content-between align-items-center">
-                        <div><i class="fas fa-receipt"></i>Comprobante</div>
-                        <div id="compBtns" class="btn-group @(string.IsNullOrWhiteSpace(urlComprobante) ? "d-none" : "") no-print">
-                            <a id="compLink" href="@urlComprobante" target="_blank" class="btn btn-sm btn-outline-modern" title="Ver comprobante">
-                                <i class="fas fa-external-link-alt"></i>
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Receipt -->
+                <div class="receipt-card" data-venta-id="@Model.VentaID">
+                    <div class="receipt-header">
+                        <h2 class="receipt-title">
+                            <i class="fa-solid fa-file-invoice"></i>
+                            Comprobante
+                        </h2>
+                        <div class="receipt-actions" id="receiptActions" style="@(string.IsNullOrWhiteSpace(urlComprobante) ? "display: none;" : "")">
+                            <a href="@urlComprobante" target="_blank" class="btn-icon" id="receiptLink" title="Ver comprobante">
+                                <i class="fa-solid fa-external-link-alt"></i>
                             </a>
-                            <a id="compDownload" href="@urlComprobante" download="comprobante-venta-@Model.VentaID" class="btn btn-sm btn-outline-modern" title="Descargar comprobante">
-                                <i class="fas fa-download"></i>
+                            <a href="@urlComprobante" download class="btn-icon" id="receiptDownload" title="Descargar">
+                                <i class="fa-solid fa-download"></i>
                             </a>
                         </div>
                     </div>
 
-                    <div class="comprobante-container">
+                    <div class="receipt-container" id="receiptContainer">
                         @if (!string.IsNullOrWhiteSpace(urlComprobante))
                         {
                             if (urlComprobante.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
                             {
-                                <iframe class="comprobante-pdf" src="@urlComprobante#toolbar=0" title="Comprobante PDF"></iframe>
-                                <div class="mt-3">
-                                    <a href="@urlComprobante" target="_blank" class="btn btn-outline-modern btn-sm">
-                                        <i class="fas fa-external-link-alt me-2"></i>Abrir PDF
-                                    </a>
-                                </div>
+                                <iframe class="receipt-pdf" src="@urlComprobante#toolbar=0" title="Comprobante PDF"></iframe>
                             }
                             else
                             {
-                                <a href="@urlComprobante" target="_blank" title="Ver comprobante en tamaño completo">
-                                    <img class="comprobante-img" src="@urlComprobante" alt="Comprobante de la venta @Model.VentaID" />
+                                <a href="@urlComprobante" target="_blank">
+                                    <img class="receipt-img" src="@urlComprobante" alt="Comprobante" />
                                 </a>
-                                <div class="mt-3 text-muted">
-                                    <i class="fas fa-search-plus me-2"></i>Haga clic en la imagen para ampliar
-                                </div>
                             }
                         }
                         else
                         {
-                            <div class="empty-state">
-                                <i class="fas fa-image"></i>
-                                <h5>No hay comprobante adjunto</h5>
-                                <p class="text-muted mt-2">Si lo subiste recientemente, espera unos segundos o recarga la página.</p>
+                            <div class="empty-receipt">
+                                <div class="empty-icon">
+                                    <i class="fa-solid fa-file-image"></i>
+                                </div>
+                                <h5 style="font-weight: 700; margin-bottom: 0.5rem;">Sin comprobante</h5>
+                                <p style="color: #757575; font-size: 0.875rem; margin: 0;">
+                                    No hay comprobante adjunto
+                                </p>
                             </div>
                         }
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Productos -->
-        <div class="card-modern mb-4">
-            <div class="card-header-modern">
-                <i class="fas fa-shopping-bag"></i>Productos (@detalle.Count)
-            </div>
-            <div class="table-responsive">
-                <table class="table table-modern">
-                    <thead>
-                        <tr>
-                            <th>Producto</th>
-                            <th class="text-center">Cantidad</th>
-                            <th class="text-end">Precio Unit.</th>
-                            <th class="text-end">Descuento</th>
-                            <th class="text-end">Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var det in detalle)
-                        {
-                            var sub = det.Subtotal ?? ((det.PrecioUnitario * det.Cantidad) - (det.Descuento ?? 0m));
-                            var productImage = det.Producto?.ImagenPath ?? "/images/product-placeholder.png";
-                            <tr>
-                                <td>
-                                    <div class="product-info">
-                                        <img src="@productImage" alt="@det.Producto?.Nombre" class="product-img" loading="lazy">
-                                        <div>
-                                            <div class="product-name">@det.Producto?.Nombre</div>
-                                            @if (!string.IsNullOrEmpty(det.Producto?.Descripcion))
-                                            {
-                                                <div class="product-desc">@det.Producto.Descripcion</div>
-                                            }
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="text-center"><span class="badge bg-primary rounded-pill">@det.Cantidad</span></td>
-                                <td class="text-end">@det.PrecioUnitario.ToString("C", culture)</td>
-                                <td class="text-end text-danger">@((det.Descuento ?? 0m).ToString("C", culture))</td>
-                                <td class="text-end fw-bold">@sub.ToString("C", culture)</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Totales -->
-        <div class="row justify-content-end">
-            <div class="col-12 col-md-6 col-lg-5">
-                <div class="total-display">
-                    <div class="row g-2">
-                        <div class="col-8 fw-semibold">Subtotal:</div>
-                        <div class="col-4 text-end">@subtotal.ToString("C", culture)</div>
-
-                        <div class="col-8 fw-semibold">Descuentos:</div>
-                        <div class="col-4 text-end text-danger">-@descuentos.ToString("C", culture)</div>
-
-                        <hr class="my-3" />
-                        <div class="col-8 fw-bold fs-5">Total:</div>
-                        <div class="col-4 text-end fw-bold fs-5 text-primary">@Model.Total.ToString("C", culture)</div>
+                <!-- Summary -->
+                <div class="summary-card">
+                    <div class="summary-row">
+                        <span class="summary-label">Subtotal:</span>
+                        <span class="summary-value">@subtotal.ToString("C", culture)</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Descuentos:</span>
+                        <span class="summary-value" style="color: var(--order-danger);">
+                            -@descuentos.ToString("C", culture)
+                        </span>
+                    </div>
+                    <div class="summary-row total">
+                        <span class="summary-label">Total:</span>
+                        <span class="summary-value total">@Model.Total.ToString("C", culture)</span>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Timeline -->
-        <div class="card-modern mt-4">
-            <div class="card-header-modern"><i class="fas fa-clock"></i>Progreso de la Venta</div>
-            <div class="timeline-container">
-                <div class="timeline">
-                    @{
-                        var estados = new[] {
-                                        ("Pendiente","fas fa-clock","Esperando confirmación de pago"),
-                                        ("Procesando","fas fa-cog","Verificando información"),
-                                        ("Despachando","fas fa-shipping-fast","Preparando envío"),
-                                        ("Entregado","fas fa-check-circle","Pedido completado")
-                                        };
-                        var estadoActual = Model.Estado?.ToLowerInvariant() ?? "";
-                        var estadoIndex = estadoActual.Contains("pend") ? 0
-                        : (estadoActual.Contains("proc") || estadoActual.Contains("pago")) ? 1
-                        : (estadoActual.Contains("desp") || estadoActual.Contains("env")) ? 2
-                        : (estadoActual.Contains("entr") || estadoActual.Contains("compl")) ? 3
-                        : -1;
-                    }
-                    @for (int i = 0; i < estados.Length; i++)
-                    {
-                        var stepClass = i < estadoIndex ? "completed" : (i == estadoIndex ? "active" : "future");
-                        <div class="timeline-step @stepClass">
-                            <div class="step-title"><i class="@estados[i].Item2 me-2"></i>@estados[i].Item1</div>
-                            <div class="step-status">
-                                @if (i < estadoIndex)
-                                {
-                                    <i class="fas fa-check-circle text-success me-1"></i>
-                                    <span>Completado</span>
-                                }
-                                else if (i == estadoIndex)
-                                {
-                                    <i class="fas fa-spinner text-primary me-1"></i>
-                                    <span>En progreso - @estados[i].Item3</span>
-                                }
-                                else
-                                {
-                                    <i class="fas fa-clock text-muted me-1"></i>
-                                    <span>Pendiente - @estados[i].Item3</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- Acciones -->
-        <div class="action-buttons mt-4 no-print">
-            <a class="btn btn-outline-modern" href="@Url.Action("Index", "MisCompras")">
-                <i class="fas fa-arrow-left me-2"></i>Volver a mis compras
-            </a>
-            <a id="btnDescargar" class="btn btn-primary-modern @(string.IsNullOrWhiteSpace(urlComprobante) ? "d-none" : "")"
-               href="@urlComprobante" download="comprobante-venta-@Model.VentaID">
-                <i class="fas fa-download me-2"></i>Descargar comprobante
-            </a>
-            <button class="btn btn-outline-modern ms-auto" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Imprimir
-            </button>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+@section Scripts {
     <script>
-        (function(){
-            const ventaId = document.querySelector('.container[data-venta-id]')?.getAttribute('data-venta-id');
+        (function() {
+            'use strict';
+
+            const ventaId = '@Model.VentaID';
             const baseFolder = '@Url.Content("~/uploads/comprobantes")';
             const baseUrl = `${baseFolder}/venta-${ventaId}`;
-            const tryExts = ['.jpg','.png','.jpeg','.webp','.pdf'];
+            const tryExts = ['.jpg', '.png', '.jpeg', '.webp', '.pdf'];
 
-            const compContainer = document.querySelector('.comprobante-container');
-            const compBtns      = document.getElementById('compBtns');
-            const compLink      = document.getElementById('compLink');
-            const compDownload  = document.getElementById('compDownload');
-            const btnDescargar  = document.getElementById('btnDescargar');
-
-            const depSpan  = document.getElementById('depositanteVal');
-            const bankSpan = document.getElementById('bancoVal');
+            const receiptContainer = document.getElementById('receiptContainer');
+            const receiptActions = document.getElementById('receiptActions');
+            const receiptLink = document.getElementById('receiptLink');
+            const receiptDownload = document.getElementById('receiptDownload');
+            const depositanteVal = document.getElementById('depositanteVal');
+            const bancoVal = document.getElementById('bancoVal');
 
             const hasServerUrl = !!('@(urlComprobante ?? "")');
 
-            async function headOk(url){
-                try{
-                    const r = await fetch(url, { method:'HEAD', cache:'no-store' });
+            async function headOk(url) {
+                try {
+                    const r = await fetch(url, { method: 'HEAD', cache: 'no-store' });
                     return r.ok;
-                }catch{ return false; }
+                } catch {
+                    return false;
+                }
             }
 
-            function bankPretty(s){
-                if(!s) return '';
+            function bankPretty(s) {
+                if (!s) return '';
                 const raw = String(s).trim();
                 const last = raw.includes(':') ? raw.split(':').pop() : raw;
                 const k = last.toLowerCase();
-                const map = { pichincha:'Banco Pichincha', guayaquil:'Banco Guayaquil', pacifico:'Banco del Pacífico', jep:'Banco JEP' };
+                const map = {
+                    pichincha: 'Banco Pichincha',
+                    guayaquil: 'Banco Guayaquil',
+                    pacifico: 'Banco del Pacífico',
+                    jep: 'Banco JEP'
+                };
                 return map[k] || last.charAt(0).toUpperCase() + last.slice(1);
             }
 
-            function bankFromMeta(meta){
-                if (!meta) return '';
-                // Puede venir:
-                //  - meta.banco: "pichincha"
-                //  - meta.bancoSeleccion: "admin:pichincha"
-                //  - meta.bancoSeleccion: { banco:{ nombre,codigo,... } }  (ConfirmarCompra)
-                const bs = meta.bancoSeleccion ?? meta.BancoSeleccion ?? meta.banco ?? meta.Banco;
-                if (!bs) return '';
+            function renderReceipt(url) {
+                if (!receiptContainer) return;
 
-                if (typeof bs === 'string'){
-                    return bankPretty(bs);
-                }
-                // objeto
-                const bobj = bs.banco ?? bs;
-                return bankPretty(bobj.nombre || bobj.codigo || bobj.valor || '');
-            }
+                receiptContainer.innerHTML = '';
 
-            function renderComprobante(url){
-                if (!compContainer) return;
-                compContainer.innerHTML = '';
-                if (url.toLowerCase().endsWith('.pdf')){
-                    const ifr = document.createElement('iframe');
-                    ifr.className = 'comprobante-pdf';
-                    ifr.title = 'Comprobante PDF';
-                    ifr.src = `${url}#toolbar=0`;
-                    compContainer.appendChild(ifr);
-
-                    const linkDiv = document.createElement('div');
-                    linkDiv.className = 'mt-3';
-                    const link = document.createElement('a');
-                    link.href = url; link.target = '_blank';
-                    link.className = 'btn btn-outline-modern btn-sm';
-                    link.innerHTML = '<i class="fas fa-external-link-alt me-2"></i>Abrir PDF';
-                    linkDiv.appendChild(link);
-                    compContainer.appendChild(linkDiv);
-                }else{
+                if (url.toLowerCase().endsWith('.pdf')) {
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'receipt-pdf';
+                    iframe.title = 'Comprobante PDF';
+                    iframe.src = `${url}#toolbar=0`;
+                    receiptContainer.appendChild(iframe);
+                } else {
                     const a = document.createElement('a');
-                    a.href = url; a.target = '_blank';
-                    a.title = 'Ver comprobante en tamaño completo';
+                    a.href = url;
+                    a.target = '_blank';
+
                     const img = document.createElement('img');
-                    img.className = 'comprobante-img';
-                    img.alt = `Comprobante de la venta ${ventaId}`;
+                    img.className = 'receipt-img';
+                    img.alt = 'Comprobante';
                     img.src = url;
+
                     a.appendChild(img);
-                    compContainer.appendChild(a);
-                    const tip = document.createElement('div');
-                    tip.className = 'mt-3 text-muted';
-                    tip.innerHTML = '<i class="fas fa-search-plus me-2"></i>Haga clic en la imagen para ampliar';
-                    compContainer.appendChild(tip);
+                    receiptContainer.appendChild(a);
                 }
-                if (compBtns){
-                    compBtns.classList.remove('d-none');
-                    if (compLink) compLink.href = url;
-                    if (compDownload) compDownload.href = url;
-                }
-                if (btnDescargar){
-                    btnDescargar.classList.remove('d-none');
-                    btnDescargar.href = url;
-                }
+
+                if (receiptActions) receiptActions.style.display = 'flex';
+                if (receiptLink) receiptLink.href = url;
+                if (receiptDownload) receiptDownload.href = url;
             }
 
-            async function tryDetectEverything(){
-                // 1) Comprobante (si el servidor no lo puso)
-                if (!hasServerUrl){
-                    for (const ext of tryExts){
+            async function detectEverything() {
+                // Detect receipt if not provided by server
+                if (!hasServerUrl) {
+                    for (const ext of tryExts) {
                         const url = `${baseUrl}${ext}`;
-                        if (await headOk(url)){ renderComprobante(url); break; }
+                        if (await headOk(url)) {
+                            renderReceipt(url);
+                            break;
+                        }
                     }
                 }
 
-                // 2) Metadatos (si faltan en la vista)
-                const needDep  = !depSpan || depSpan.textContent.trim() === '—' || depSpan.textContent.trim() === '';
-                const needBank = !bankSpan || bankSpan.textContent.trim() === '—' || bankSpan.textContent.trim() === '';
+                // Detect metadata
+                const needDep = !depositanteVal || depositanteVal.textContent.trim() === '—';
+                const needBank = !bancoVal || bancoVal.textContent.trim() === '—';
 
-                if (needDep || needBank){
-                    try{
-                        const r = await fetch(`${baseUrl}.meta.json`, { cache:'no-store' });
-                        if (r.ok){
+                if (needDep || needBank) {
+                    try {
+                        const r = await fetch(`${baseUrl}.meta.json`, { cache: 'no-store' });
+                        if (r.ok) {
                             const meta = await r.json();
-                            if (needDep){
-                                const dep = (meta.depositante ?? meta.Depositante ?? meta.nombreDepositante ?? '').toString().trim();
-                                if (dep && depSpan) depSpan.textContent = dep;
+
+                            if (needDep) {
+                                const dep = (meta.depositante || meta.Depositante || meta.nombreDepositante || '').toString().trim();
+                                if (dep && depositanteVal) depositanteVal.textContent = dep;
                             }
-                            if (needBank){
-                                const pretty = bankFromMeta(meta);
-                                if (pretty && bankSpan) bankSpan.textContent = pretty;
+
+                            if (needBank) {
+                                const bs = meta.bancoSeleccion || meta.BancoSeleccion || meta.banco || meta.Banco;
+                                if (bs) {
+                                    let pretty = '';
+                                    if (typeof bs === 'string') {
+                                        pretty = bankPretty(bs);
+                                    } else {
+                                        const bobj = bs.banco || bs;
+                                        pretty = bankPretty(bobj.nombre || bobj.codigo || bobj.valor || '');
+                                    }
+                                    if (pretty && bancoVal) bancoVal.textContent = pretty;
+                                }
                             }
                         }
-                    }catch{}
+                    } catch {}
                 }
             }
 
-            tryDetectEverything();
+            detectEverything();
+            console.log('✓ Order detail initialized');
         })();
     </script>
-</body>
-</html>
+}

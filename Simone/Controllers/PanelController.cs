@@ -1,3 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -5,23 +13,24 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace Simone.Controllers
 {
+    /// <summary>
+    /// Panel de administración y gestión de vendedor
+    /// Gestiona usuarios, categorías, subcategorías, proveedores y productos
+    /// Versión optimizada con mejores prácticas empresariales
+    /// </summary>
     [Authorize(Roles = "Administrador,Vendedor")]
     public class PanelController : Controller
     {
+        #region Dependencias
+
         private readonly ILogger<PanelController> _logger;
         private readonly TiendaDbContext _context;
         private readonly UserManager<Usuario> _userManager;
@@ -31,6 +40,71 @@ namespace Simone.Controllers
         private readonly ProductosService _productosManager;
         private readonly ProveedorService _proveedoresManager;
         private readonly IWebHostEnvironment _env;
+        private readonly IMemoryCache _cache;
+
+        #endregion
+
+        #region Constantes
+
+        // Roles
+        private const string ROL_ADMINISTRADOR = "Administrador";
+        private const string ROL_VENDEDOR = "Vendedor";
+
+        // Rutas
+        private const string FOLDER_IMAGES = "images";
+        private const string FOLDER_PRODUCTOS = "Productos";
+
+        // Límites de archivos
+        private const int MAX_IMAGENES_GALERIA = 8;
+        private const long MAX_IMAGEN_BYTES = 8 * 1024 * 1024;
+        private const long MAX_FORM_BYTES = 64L * 1024 * 1024;
+
+        // Extensiones permitidas
+        private static readonly HashSet<string> EXTENSIONES_PERMITIDAS_IMAGEN = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".png", ".webp", ".gif"
+        };
+
+        private static readonly HashSet<string> MIME_TYPES_PERMITIDOS = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "image/jpeg", "image/png", "image/webp", "image/gif"
+        };
+
+        // Patrones de archivos
+        private const string PATTERN_GALLERY_JSON = "product-{0}.gallery.json";
+        private const string PATTERN_GALLERY_EXTENSION = ".gallery.json";
+
+        // JSON Properties
+        private const string JSON_PROP_PORTADA = "portada";
+        private const string JSON_PROP_IMAGES = "images";
+
+        // SKU
+        private const string SKU_DEFAULT_MARCA = "PRD";
+        private const string SKU_DEFAULT_COLOR = "NA";
+        private const string SKU_DEFAULT_TALLA = "UNQ";
+        private const int SKU_LENGTH_CODIGO = 3;
+
+        // Cache
+        private const string CACHE_KEY_CATEGORIAS = "Categorias_All";
+        private const string CACHE_KEY_PROVEEDORES = "Proveedores_All";
+        private const string CACHE_KEY_SUBCATEGORIAS_PREFIX = "Subcategorias_Vendor_";
+        private const string CACHE_KEY_TIENDAS = "Tiendas_All";
+
+        private static readonly TimeSpan CACHE_DURATION_CATEGORIAS = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan CACHE_DURATION_PROVEEDORES = TimeSpan.FromMinutes(30);
+        private static readonly TimeSpan CACHE_DURATION_SUBCATEGORIAS = TimeSpan.FromMinutes(15);
+        private static readonly TimeSpan CACHE_DURATION_TIENDAS = TimeSpan.FromMinutes(30);
+
+        // JSON Serializer
+        private static readonly JsonSerializerOptions JSON_OPTIONS = new() { WriteIndented = true };
+
+        // Headers AJAX
+        private const string HEADER_AJAX = "X-Requested-With";
+        private const string HEADER_AJAX_VALUE = "XMLHttpRequest";
+
+        #endregion
+
+        #region Constructor
 
         public PanelController(
             ILogger<PanelController> logger,
@@ -41,7 +115,8 @@ namespace Simone.Controllers
             SubcategoriasService subcategorias,
             ProductosService productos,
             ProveedorService proveedores,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IMemoryCache cache)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -52,57 +127,135 @@ namespace Simone.Controllers
             _productosManager = productos ?? throw new ArgumentNullException(nameof(productos));
             _proveedoresManager = proveedores ?? throw new ArgumentNullException(nameof(proveedores));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+            _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
 
-        // ===== Helpers =====
+        #endregion
+
+        #region Helpers - General
 
         private string CurrentUserId() => _userManager.GetUserId(User)!;
-        private bool IsAdmin() => User.IsInRole("Administrador");
+        private bool IsAdmin() => User.IsInRole(ROL_ADMINISTRADOR);
+        private string GalleryRootAbs() => Path.Combine(_env.WebRootPath, FOLDER_IMAGES, FOLDER_PRODUCTOS);
+        private string ProductFolderAbs(int productId) => Path.Combine(GalleryRootAbs(), productId.ToString());
 
-        private string GalleryRootAbs() =>
-            Path.Combine(_env.WebRootPath, "images", "Productos");
+        #endregion
 
-        private string ProductFolderAbs(int productId) =>
-            Path.Combine(GalleryRootAbs(), productId.ToString());
+        #region Helpers - Cache
 
-        private static readonly JsonSerializerOptions _jsonOpts = new() { WriteIndented = true };
+        private async Task<List<SelectListItem>> ObtenerTiendasConCacheAsync(CancellationToken ct = default)
+        {
+            return await _cache.GetOrCreateAsync(CACHE_KEY_TIENDAS, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CACHE_DURATION_TIENDAS;
+                _logger.LogDebug("Cargando tiendas desde BD (cache miss)");
+                return await _context.Vendedores.AsNoTracking().OrderBy(v => v.Nombre)
+                    .Select(v => new SelectListItem { Value = v.VendedorId.ToString(), Text = v.Nombre })
+                    .ToListAsync(ct);
+            }) ?? new List<SelectListItem>();
+        }
 
-        private static readonly HashSet<string> _allowedImgExt = new(StringComparer.OrdinalIgnoreCase)
-        { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
+        private async Task<List<Categorias>> ObtenerCategoriasConCacheAsync()
+        {
+            return await _cache.GetOrCreateAsync(CACHE_KEY_CATEGORIAS, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CACHE_DURATION_CATEGORIAS;
+                _logger.LogDebug("Cargando categorías desde BD (cache miss)");
+                return await _categoriasManager.GetAllAsync();
+            }) ?? new List<Categorias>();
+        }
 
-        private static readonly HashSet<string> _allowedMime = new(StringComparer.OrdinalIgnoreCase)
-        { "image/jpeg", "image/png", "image/webp", "image/gif" };
+        private async Task<List<Proveedores>> ObtenerProveedoresConCacheAsync()
+        {
+            return await _cache.GetOrCreateAsync(CACHE_KEY_PROVEEDORES, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CACHE_DURATION_PROVEEDORES;
+                _logger.LogDebug("Cargando proveedores desde BD (cache miss)");
+                return await _proveedoresManager.GetAllAsync();
+            }) ?? new List<Proveedores>();
+        }
 
-        private const int _maxFiles = 8;
-        private const long _maxImgBytes = 8 * 1024 * 1024;
-        private const long _maxFormBytes = 64L * 1024 * 1024;
+        private async Task<List<Subcategorias>> ObtenerSubcategoriasVendedorConCacheAsync(string vendedorId)
+        {
+            var cacheKey = $"{CACHE_KEY_SUBCATEGORIAS_PREFIX}{vendedorId}";
+            return await _cache.GetOrCreateAsync(cacheKey, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CACHE_DURATION_SUBCATEGORIAS;
+                _logger.LogDebug("Cargando subcategorías de vendedor desde BD (cache miss). VendedorId: {VendedorId}", vendedorId);
+                return await _subcategoriasManager.GetAllByVendedorAsync(vendedorId);
+            }) ?? new List<Subcategorias>();
+        }
 
-        // ====================== INICIO ======================
+        private void InvalidarCacheTiendas()
+        {
+            _cache.Remove(CACHE_KEY_TIENDAS);
+            _logger.LogDebug("Cache de tiendas invalidado");
+        }
+
+        private void InvalidarCacheCategorias()
+        {
+            _cache.Remove(CACHE_KEY_CATEGORIAS);
+            _logger.LogDebug("Cache de categorías invalidado");
+        }
+
+        private void InvalidarCacheProveedores()
+        {
+            _cache.Remove(CACHE_KEY_PROVEEDORES);
+            _logger.LogDebug("Cache de proveedores invalidado");
+        }
+
+        private void InvalidarCacheSubcategoriasVendedor(string vendedorId)
+        {
+            var cacheKey = $"{CACHE_KEY_SUBCATEGORIAS_PREFIX}{vendedorId}";
+            _cache.Remove(cacheKey);
+            _logger.LogDebug("Cache de subcategorías invalidado. VendedorId: {VendedorId}", vendedorId);
+        }
+
+        #endregion
+
+        #region Index
+
         [HttpGet]
-        public IActionResult Index() => View();
+        public IActionResult Index()
+        {
+            try
+            {
+                _logger.LogInformation("Panel accedido. Usuario: {User}, Rol: {Role}",
+                    User?.Identity?.Name, IsAdmin() ? ROL_ADMINISTRADOR : ROL_VENDEDOR);
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar panel");
+                return View();
+            }
+        }
 
-        // ====================== USUARIOS (ADMIN) ======================
+        #endregion
+
+        #region Usuarios (Admin)
+
         [Authorize(Roles = "Administrador")]
         [HttpGet]
-        public async Task<IActionResult> Usuarios(string? tiendaId = null)
+        public async Task<IActionResult> Usuarios(string? tiendaId = null, CancellationToken ct = default)
         {
-            var tiendasList = await _context.Vendedores
-                .AsNoTracking()
-                .OrderBy(v => v.Nombre)
-                .Select(v => new SelectListItem { Value = v.VendedorId.ToString(), Text = v.Nombre })
-                .ToListAsync();
+            try
+            {
+                _logger.LogInformation("Listado de usuarios solicitado. Filtro TiendaId: {TiendaId}", tiendaId ?? "Ninguno");
 
-            var usuariosConRol =
-                from u in _userManager.Users.AsNoTracking()
-                join ur in _context.UserRoles.AsNoTracking() on u.Id equals ur.UserId
-                join r in _context.Roles.AsNoTracking() on ur.RoleId equals r.Id
-                select new { u, rolId = r.Id, rolName = r.Name };
+                var tiendasList = await ObtenerTiendasConCacheAsync(ct);
+                var usuariosConRol = from u in _userManager.Users.AsNoTracking()
+                                     join ur in _context.UserRoles.AsNoTracking() on u.Id equals ur.UserId
+                                     join r in _context.Roles.AsNoTracking() on ur.RoleId equals r.Id
+                                     select new { u, rolId = r.Id, rolName = r.Name };
 
-            if (!string.IsNullOrWhiteSpace(tiendaId) && int.TryParse(tiendaId, out var vid))
-                usuariosConRol = usuariosConRol.Where(x => x.u.VendedorId == vid);
+                if (!string.IsNullOrWhiteSpace(tiendaId) && int.TryParse(tiendaId, out var vid))
+                {
+                    usuariosConRol = usuariosConRol.Where(x => x.u.VendedorId == vid);
+                    _logger.LogDebug("Filtrando usuarios por TiendaId: {TiendaId}", vid);
+                }
 
-            var lista = await usuariosConRol
-                .Select(x => new Usuario
+                var lista = await usuariosConRol.Select(x => new Usuario
                 {
                     Id = x.u.Id,
                     Email = x.u.Email,
@@ -112,249 +265,433 @@ namespace Simone.Controllers
                     Activo = x.u.Activo,
                     RolID = x.rolId,
                     VendedorId = x.u.VendedorId
-                })
-                .ToListAsync();
+                }).ToListAsync(ct);
 
-            ViewBag.Usuarios = lista;
-            ViewBag.Roles = _roleManager.Roles
-                .AsNoTracking()
-                .Select(r => new SelectListItem { Value = r.Id, Text = r.Name })
-                .ToList();
+                _logger.LogDebug("Usuarios cargados: {Count}", lista.Count);
 
-            ViewBag.Tiendas = tiendasList;
-            ViewBag.FiltroTiendaId = tiendaId ?? "";
-
-            return View();
+                ViewBag.Usuarios = lista;
+                ViewBag.Roles = _roleManager.Roles.AsNoTracking()
+                    .Select(r => new SelectListItem { Value = r.Id, Text = r.Name }).ToList();
+                ViewBag.Tiendas = tiendasList;
+                ViewBag.FiltroTiendaId = tiendaId ?? "";
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar usuarios");
+                TempData["MensajeError"] = "Error al cargar la lista de usuarios.";
+                return View();
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> AsignarTiendaUsuario(string usuarioID, int tiendaID, string? returnTiendaId = null)
+        public async Task<IActionResult> AsignarTiendaUsuario(string usuarioID, int tiendaID, string? returnTiendaId = null, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(usuarioID))
+            try
             {
-                TempData["MensajeError"] = "Usuario inválido.";
-                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
-            }
+                if (string.IsNullOrWhiteSpace(usuarioID))
+                {
+                    _logger.LogWarning("Intento de asignar tienda con usuario inválido");
+                    TempData["MensajeError"] = "Usuario inválido.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
 
-            var user = await _userManager.FindByIdAsync(usuarioID);
-            if (user == null)
+                var user = await _userManager.FindByIdAsync(usuarioID);
+                if (user == null)
+                {
+                    _logger.LogWarning("Intento de asignar tienda a usuario inexistente. UsuarioId: {UsuarioId}", usuarioID);
+                    TempData["MensajeError"] = "Usuario no encontrado.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                var vendedor = await _context.Vendedores.FindAsync(new object[] { tiendaID }, ct);
+                if (vendedor == null)
+                {
+                    _logger.LogWarning("Intento de asignar tienda inexistente. TiendaId: {TiendaId}", tiendaID);
+                    TempData["MensajeError"] = "Tienda no válida.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                user.VendedorId = tiendaID;
+                var res = await _userManager.UpdateAsync(user);
+
+                if (res.Succeeded)
+                {
+                    _logger.LogInformation("Tienda asignada. UsuarioId: {UsuarioId}, Email: {Email}, TiendaId: {TiendaId}, Tienda: {TiendaNombre}",
+                        user.Id, user.Email, tiendaID, vendedor.Nombre);
+                    TempData["MensajeExito"] = "Tienda asignada correctamente.";
+                }
+                else
+                {
+                    _logger.LogWarning("Error al asignar tienda. UsuarioId: {UsuarioId}, Errores: {Errores}",
+                        user.Id, string.Join(", ", res.Errors.Select(e => e.Description)));
+                    TempData["MensajeError"] = "No se pudo asignar la tienda.";
+                }
+
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+            }
+            catch (Exception ex)
             {
-                TempData["MensajeError"] = "Usuario no encontrado.";
-                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+                _logger.LogError(ex, "Error al asignar tienda. UsuarioId: {UsuarioId}", usuarioID);
+                TempData["MensajeError"] = "Error inesperado al asignar la tienda.";
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
             }
-
-            var vendedor = await _context.Vendedores.FindAsync(tiendaID);
-            if (vendedor == null)
-            {
-                TempData["MensajeError"] = "Tienda no válida.";
-                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
-            }
-
-            user.VendedorId = tiendaID;
-            var res = await _userManager.UpdateAsync(user);
-            TempData[res.Succeeded ? "MensajeExito" : "MensajeError"] =
-                res.Succeeded ? "Tienda asignada correctamente." : "No se pudo asignar la tienda.";
-
-            return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> QuitarTiendaUsuario(string usuarioID, string? returnTiendaId = null)
         {
-            if (string.IsNullOrWhiteSpace(usuarioID))
+            try
             {
-                TempData["MensajeError"] = "Usuario inválido.";
-                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
-            }
+                if (string.IsNullOrWhiteSpace(usuarioID))
+                {
+                    _logger.LogWarning("Intento de quitar tienda con usuario inválido");
+                    TempData["MensajeError"] = "Usuario inválido.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
 
-            var user = await _userManager.FindByIdAsync(usuarioID);
-            if (user == null)
+                var user = await _userManager.FindByIdAsync(usuarioID);
+                if (user == null)
+                {
+                    _logger.LogWarning("Intento de quitar tienda a usuario inexistente. UsuarioId: {UsuarioId}", usuarioID);
+                    TempData["MensajeError"] = "Usuario no encontrado.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                var tiendaAnterior = user.VendedorId;
+                user.VendedorId = null;
+                var res = await _userManager.UpdateAsync(user);
+
+                if (res.Succeeded)
+                {
+                    _logger.LogInformation("Tienda quitada. UsuarioId: {UsuarioId}, Email: {Email}, TiendaAnterior: {TiendaId}",
+                        user.Id, user.Email, tiendaAnterior);
+                    TempData["MensajeExito"] = "Tienda quitada correctamente.";
+                }
+                else
+                {
+                    _logger.LogWarning("Error al quitar tienda. UsuarioId: {UsuarioId}", user.Id);
+                    TempData["MensajeError"] = "No se pudo quitar la tienda.";
+                }
+
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+            }
+            catch (Exception ex)
             {
-                TempData["MensajeError"] = "Usuario no encontrado.";
-                return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
+                _logger.LogError(ex, "Error al quitar tienda. UsuarioId: {UsuarioId}", usuarioID);
+                TempData["MensajeError"] = "Error inesperado al quitar la tienda.";
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
             }
-
-            user.VendedorId = null;
-            var res = await _userManager.UpdateAsync(user);
-            TempData[res.Succeeded ? "MensajeExito" : "MensajeError"] =
-                res.Succeeded ? "Tienda quitada correctamente." : "No se pudo quitar la tienda.";
-
-            return RedirectToAction("Usuarios", new { tiendaId = returnTiendaId });
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> CrearTiendaSimple(string nombre)
+        public async Task<IActionResult> CrearTiendaSimple(string nombre, CancellationToken ct = default)
         {
-            if (string.IsNullOrWhiteSpace(nombre))
-                return Json(new { ok = false, msg = "Nombre requerido." });
+            // SEGURIDAD: Este endpoint solo debe ser llamado por AJAX
+            if (!EsAjax())
+            {
+                _logger.LogWarning("Intento de acceder a CrearTiendaSimple sin AJAX");
+                TempData["MensajeError"] = "Este endpoint solo acepta solicitudes AJAX";
+                return RedirectToAction(nameof(Usuarios));
+            }
 
-            var v = new Vendedor { Nombre = nombre.Trim() };
-            _context.Vendedores.Add(v);
-            await _context.SaveChangesAsync();
+            try
+            {
+                if (string.IsNullOrWhiteSpace(nombre))
+                {
+                    _logger.LogWarning("Intento de crear tienda sin nombre");
+                    return Json(new { ok = false, msg = "Nombre requerido." });
+                }
 
-            var tiendas = await _context.Vendedores
-                .AsNoTracking()
-                .OrderBy(x => x.Nombre)
-                .Select(x => new { value = x.VendedorId.ToString(), text = x.Nombre })
-                .ToListAsync();
+                var vendedor = new Vendedor { Nombre = nombre.Trim() };
+                _context.Vendedores.Add(vendedor);
+                await _context.SaveChangesAsync(ct);
 
-            return Json(new { ok = true, newId = v.VendedorId.ToString(), newText = v.Nombre, tiendas });
+                _logger.LogInformation("Tienda creada. TiendaId: {TiendaId}, Nombre: {Nombre}", vendedor.VendedorId, vendedor.Nombre);
+
+                InvalidarCacheTiendas();
+
+                var tiendas = await ObtenerTiendasConCacheAsync(ct);
+                return Json(new
+                {
+                    ok = true,
+                    newId = vendedor.VendedorId.ToString(),
+                    newText = vendedor.Nombre,
+                    tiendas = tiendas.Select(t => new { value = t.Value, text = t.Text })
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear tienda. Nombre: {Nombre}", nombre);
+                return Json(new { ok = false, msg = "Error al crear la tienda." });
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarUsuario(string id)
         {
-            var usuario = await _userManager.FindByIdAsync(id);
-            if (usuario == null)
+            try
             {
-                TempData["MensajeError"] = "Usuario no encontrado.";
-                return RedirectToAction("Usuarios");
-            }
+                var usuario = await _userManager.FindByIdAsync(id);
+                if (usuario == null)
+                {
+                    _logger.LogWarning("Intento de eliminar usuario inexistente. UsuarioId: {UsuarioId}", id);
+                    TempData["MensajeError"] = "Usuario no encontrado.";
+                    return RedirectToAction(nameof(Usuarios));
+                }
 
-            var resultado = await _userManager.DeleteAsync(usuario);
-            if (resultado.Succeeded)
+                var resultado = await _userManager.DeleteAsync(usuario);
+                if (resultado.Succeeded)
+                {
+                    _logger.LogWarning("Usuario eliminado. UsuarioId: {UsuarioId}, Email: {Email}", usuario.Id, usuario.Email);
+                    TempData["MensajeExito"] = "Usuario eliminado correctamente.";
+                }
+                else
+                {
+                    _logger.LogError("Error al eliminar usuario. UsuarioId: {UsuarioId}, Errores: {Errores}",
+                        usuario.Id, string.Join(", ", resultado.Errors.Select(e => e.Description)));
+                    TempData["MensajeError"] = "Error al eliminar usuario.";
+                }
+
+                return RedirectToAction(nameof(Usuarios));
+            }
+            catch (Exception ex)
             {
-                _logger.LogInformation("Administrador eliminó al usuario {Email}.", usuario.Email);
-                TempData["MensajeExito"] = "Usuario eliminado correctamente.";
-                return RedirectToAction("Usuarios");
+                _logger.LogError(ex, "Error al eliminar usuario. UsuarioId: {UsuarioId}", id);
+                TempData["MensajeError"] = "Error inesperado al eliminar el usuario.";
+                return RedirectToAction(nameof(Usuarios));
             }
-
-            TempData["MensajeError"] = "Error al eliminar usuario.";
-            return RedirectToAction("Usuarios");
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarRol(string usuarioID, string nuevoRolID)
         {
-            if (string.IsNullOrEmpty(nuevoRolID) || string.IsNullOrEmpty(usuarioID))
+            try
             {
-                TempData["MensajeError"] = "El rol seleccionado no es válido.";
-                return RedirectToAction("Usuarios");
-            }
+                if (string.IsNullOrEmpty(nuevoRolID) || string.IsNullOrEmpty(usuarioID))
+                {
+                    _logger.LogWarning("Intento de cambiar rol con datos inválidos");
+                    TempData["MensajeError"] = "El rol seleccionado no es válido.";
+                    return RedirectToAction(nameof(Usuarios));
+                }
 
-            var usuario = await _userManager.FindByIdAsync(usuarioID);
-            if (usuario == null)
+                var usuario = await _userManager.FindByIdAsync(usuarioID);
+                if (usuario == null)
+                {
+                    _logger.LogWarning("Intento de cambiar rol a usuario inexistente. UsuarioId: {UsuarioId}", usuarioID);
+                    TempData["MensajeError"] = "Usuario no encontrado.";
+                    return RedirectToAction(nameof(Usuarios));
+                }
+
+                var nuevoRol = await _roleManager.FindByIdAsync(nuevoRolID);
+                if (nuevoRol == null)
+                {
+                    _logger.LogWarning("Intento de asignar rol inexistente. RolId: {RolId}", nuevoRolID);
+                    TempData["MensajeError"] = "El rol seleccionado no existe.";
+                    return RedirectToAction(nameof(Usuarios));
+                }
+
+                var rolesActuales = await _userManager.GetRolesAsync(usuario);
+                var resultadoEliminar = await _userManager.RemoveFromRolesAsync(usuario, rolesActuales);
+
+                if (!resultadoEliminar.Succeeded)
+                {
+                    _logger.LogWarning("Error al eliminar roles anteriores. UsuarioId: {UsuarioId}", usuarioID);
+                    TempData["MensajeError"] = "No se pudieron eliminar los roles anteriores.";
+                    return RedirectToAction(nameof(Usuarios));
+                }
+
+                var resultadoAsignar = await _userManager.AddToRoleAsync(usuario, nuevoRol.Name!);
+                if (!resultadoAsignar.Succeeded)
+                {
+                    _logger.LogWarning("Error al asignar nuevo rol. UsuarioId: {UsuarioId}, Rol: {Rol}", usuarioID, nuevoRol.Name);
+                    TempData["MensajeError"] = "No se pudo asignar el nuevo rol.";
+                    return RedirectToAction(nameof(Usuarios));
+                }
+
+                _logger.LogInformation("Rol cambiado. UsuarioId: {UsuarioId}, Email: {Email}, NuevoRol: {Rol}",
+                    usuario.Id, usuario.Email, nuevoRol.Name);
+                TempData["MensajeExito"] = $"El rol del usuario {usuario.Email} fue actualizado a {nuevoRol.Name}.";
+                return RedirectToAction(nameof(Usuarios));
+            }
+            catch (Exception ex)
             {
-                TempData["MensajeError"] = "Usuario no encontrado.";
-                return RedirectToAction("Usuarios");
+                _logger.LogError(ex, "Error al cambiar rol. UsuarioId: {UsuarioId}", usuarioID);
+                TempData["MensajeError"] = "Error inesperado al cambiar el rol.";
+                return RedirectToAction(nameof(Usuarios));
             }
-
-            var nuevoRol = await _roleManager.FindByIdAsync(nuevoRolID);
-            if (nuevoRol == null)
-            {
-                TempData["MensajeError"] = "El rol seleccionado no existe.";
-                return RedirectToAction("Usuarios");
-            }
-
-            var rolesActuales = await _userManager.GetRolesAsync(usuario);
-            var resultadoEliminar = await _userManager.RemoveFromRolesAsync(usuario, rolesActuales);
-            if (!resultadoEliminar.Succeeded)
-            {
-                TempData["MensajeError"] = "No se pudieron eliminar los roles anteriores.";
-                return RedirectToAction("Usuarios");
-            }
-
-            var resultadoAsignar = await _userManager.AddToRoleAsync(usuario, nuevoRol.Name);
-            if (!resultadoAsignar.Succeeded)
-            {
-                TempData["MensajeError"] = "No se pudo asignar el nuevo rol.";
-                return RedirectToAction("Usuarios");
-            }
-
-            _logger.LogInformation("Administrador cambió el rol del usuario {Email} a {Rol}.", usuario.Email, nuevoRol.Name);
-            TempData["MensajeExito"] = $"El rol del usuario {usuario.Email} fue actualizado a {nuevoRol.Name}.";
-            return RedirectToAction("Usuarios");
         }
 
-        // ====================== CATEGORÍAS ======================
+        #endregion
+
+        #region Categorías (Admin)
+
         [Authorize(Roles = "Administrador")]
         [HttpGet]
         public async Task<IActionResult> Categorias()
         {
-            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
-            return View();
+            try
+            {
+                _logger.LogInformation("Listado de categorías solicitado");
+                var categorias = await ObtenerCategoriasConCacheAsync();
+                _logger.LogDebug("Categorías cargadas: {Count}", categorias.Count);
+                ViewBag.Categorias = categorias;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar categorías");
+                TempData["MensajeError"] = "Error al cargar las categorías.";
+                return View();
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirCategoria(string nombreCategoria)
         {
-            var categoria = new Categorias { Nombre = (nombreCategoria ?? string.Empty).Trim() };
-            await _categoriasManager.AddAsync(categoria);
-            return RedirectToAction("Categorias");
+            try
+            {
+                var categoria = new Categorias { Nombre = (nombreCategoria ?? string.Empty).Trim() };
+                await _categoriasManager.AddAsync(categoria);
+                _logger.LogInformation("Categoría creada. CategoriaId: {CategoriaId}, Nombre: {Nombre}",
+                    categoria.CategoriaID, categoria.Nombre);
+                InvalidarCacheCategorias();
+                return RedirectToAction(nameof(Categorias));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear categoría. Nombre: {Nombre}", nombreCategoria);
+                TempData["MensajeError"] = "Error al crear la categoría.";
+                return RedirectToAction(nameof(Categorias));
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarCategoria(int categoriaID, string nombreCategoria)
         {
-            if (!ModelState.IsValid) return RedirectToAction("Categorias");
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState inválido al editar categoría");
+                    return RedirectToAction(nameof(Categorias));
+                }
 
-            var categoria = await _categoriasManager.GetByIdAsync(categoriaID);
-            if (categoria == null) return NotFound();
+                var categoria = await _categoriasManager.GetByIdAsync(categoriaID);
+                if (categoria == null)
+                {
+                    _logger.LogWarning("Intento de editar categoría inexistente. CategoriaId: {CategoriaId}", categoriaID);
+                    return NotFound();
+                }
 
-            categoria.Nombre = (nombreCategoria ?? string.Empty).Trim();
-            await _categoriasManager.UpdateAsync(categoria);
-            return RedirectToAction("Categorias");
+                categoria.Nombre = (nombreCategoria ?? string.Empty).Trim();
+                await _categoriasManager.UpdateAsync(categoria);
+                _logger.LogInformation("Categoría actualizada. CategoriaId: {CategoriaId}, Nombre: {Nombre}",
+                    categoria.CategoriaID, categoria.Nombre);
+                InvalidarCacheCategorias();
+                return RedirectToAction(nameof(Categorias));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar categoría. CategoriaId: {CategoriaId}", categoriaID);
+                TempData["MensajeError"] = "Error al actualizar la categoría.";
+                return RedirectToAction(nameof(Categorias));
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarCategoria(int categoriaID)
         {
-            await _categoriasManager.DeleteAsync(categoriaID);
-            return RedirectToAction("Categorias");
+            try
+            {
+                await _categoriasManager.DeleteAsync(categoriaID);
+                _logger.LogInformation("Categoría eliminada. CategoriaId: {CategoriaId}", categoriaID);
+                InvalidarCacheCategorias();
+                return RedirectToAction(nameof(Categorias));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar categoría. CategoriaId: {CategoriaId}", categoriaID);
+                TempData["MensajeError"] = "Error al eliminar la categoría.";
+                return RedirectToAction(nameof(Categorias));
+            }
         }
 
-        // ====================== SUBCATEGORÍAS ======================
+        #endregion
+
+        #region Subcategorías
+
         [HttpGet]
-        public async Task<IActionResult> Subcategorias(string? vendorId)
+        public async Task<IActionResult> Subcategorias(string? vendorId, CancellationToken ct = default)
         {
-            var vid = (IsAdmin() && !string.IsNullOrWhiteSpace(vendorId)) ? vendorId! : CurrentUserId();
+            try
+            {
+                var vid = (IsAdmin() && !string.IsNullOrWhiteSpace(vendorId)) ? vendorId! : CurrentUserId();
+                _logger.LogInformation("Listado de subcategorías solicitado. VendorId: {VendorId}", vid);
 
-            var subcategorias = await _context.Subcategorias
-                                              .AsNoTracking()
-                                              .Include(s => s.Categoria)
-                                              .Where(s => s.VendedorID == vid)
-                                              .OrderBy(s => s.CategoriaID)
-                                              .ThenBy(s => s.NombreSubcategoria)
-                                              .ToListAsync();
+                var subcategorias = await _context.Subcategorias.AsNoTracking().Include(s => s.Categoria)
+                    .Where(s => s.VendedorID == vid).OrderBy(s => s.CategoriaID).ThenBy(s => s.NombreSubcategoria)
+                    .ToListAsync(ct);
 
-            ViewBag.Subcategorias = subcategorias;
-            ViewBag.TargetVendorId = (IsAdmin() && !string.IsNullOrWhiteSpace(vendorId)) ? vendorId : null;
-            return View();
+                _logger.LogDebug("Subcategorías cargadas: {Count}", subcategorias.Count);
+                ViewBag.Subcategorias = subcategorias;
+                ViewBag.TargetVendorId = (IsAdmin() && !string.IsNullOrWhiteSpace(vendorId)) ? vendorId : null;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar subcategorías");
+                TempData["MensajeError"] = "Error al cargar las subcategorías.";
+                return View();
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> AnadirSubcategoria()
         {
-            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
-            return View("SubcategoriaForm");
+            try
+            {
+                ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
+                return View("SubcategoriaForm");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar formulario de subcategoría");
+                return RedirectToAction(nameof(Subcategorias));
+            }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> AnadirSubcategoria(int categoriaID, string nombresubCategoria)
         {
-            var subcategoria = new Subcategorias
-            {
-                CategoriaID = categoriaID,
-                NombreSubcategoria = (nombresubCategoria ?? string.Empty).Trim(),
-                VendedorID = CurrentUserId()
-            };
-
             try
             {
+                var subcategoria = new Subcategorias
+                {
+                    CategoriaID = categoriaID,
+                    NombreSubcategoria = (nombresubCategoria ?? string.Empty).Trim(),
+                    VendedorID = CurrentUserId()
+                };
+
                 var ok = await _subcategoriasManager.AddAsync(subcategoria);
                 if (ok)
                 {
+                    _logger.LogInformation("Subcategoría creada. SubcategoriaId: {SubcategoriaId}, Nombre: {Nombre}, VendedorId: {VendedorId}",
+                        subcategoria.SubcategoriaID, subcategoria.NombreSubcategoria, subcategoria.VendedorID);
+                    InvalidarCacheSubcategoriasVendedor(CurrentUserId());
                     TempData["Ok"] = "Subcategoría creada.";
-                    return RedirectToAction("Subcategorias");
+                    return RedirectToAction(nameof(Subcategorias));
                 }
+
+                _logger.LogWarning("No se pudo crear la subcategoría");
                 TempData["Err"] = "No se pudo crear la subcategoría.";
             }
             catch (DbUpdateException ex) when (
@@ -362,104 +699,174 @@ namespace Simone.Controllers
                 || ex.InnerException?.Message.Contains("2601") == true
                 || ex.InnerException?.Message.Contains("2627") == true)
             {
+                _logger.LogWarning(ex, "Subcategoría duplicada. CategoriaId: {CategoriaId}, Nombre: {Nombre}",
+                    categoriaID, nombresubCategoria);
                 TempData["Err"] = "Ya existe una subcategoría con ese nombre en esa categoría.";
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error al crear subcategoría");
                 TempData["Err"] = "Error al guardar la subcategoría.";
             }
 
-            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+            ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
             return View("SubcategoriaForm");
         }
 
         [HttpGet]
         public async Task<IActionResult> EditarSubcategoria(int subcategoriaID)
         {
-            var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
-            if (subcategoria == null) return NotFound();
+            try
+            {
+                var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+                if (subcategoria == null)
+                {
+                    _logger.LogWarning("Subcategoría no encontrada. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+                    return NotFound();
+                }
 
-            if (!IsAdmin() && subcategoria.VendedorID != CurrentUserId())
-                return Forbid();
+                if (!IsAdmin() && subcategoria.VendedorID != CurrentUserId())
+                {
+                    _logger.LogWarning("Acceso denegado a subcategoría. SubcategoriaId: {SubcategoriaId}, VendedorId: {VendedorId}",
+                        subcategoriaID, CurrentUserId());
+                    return Forbid();
+                }
 
-            ViewBag.Subcategoria = subcategoria;
-            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
-            return View("SubcategoriaForm");
+                ViewBag.Subcategoria = subcategoria;
+                ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
+                return View("SubcategoriaForm");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar subcategoría. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+                return RedirectToAction(nameof(Subcategorias));
+            }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EditarSubcategoria(int subcategoriaID, int categoriaID, string nombresubCategoria)
         {
-            if (!ModelState.IsValid) return RedirectToAction("Subcategorias");
-
-            var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
-            if (subcategoria == null) return NotFound();
-
-            if (!IsAdmin() && subcategoria.VendedorID != CurrentUserId())
-                return Forbid();
-
-            subcategoria.NombreSubcategoria = (nombresubCategoria ?? string.Empty).Trim();
-            subcategoria.CategoriaID = categoriaID;
-
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState inválido al editar subcategoría");
+                    return RedirectToAction(nameof(Subcategorias));
+                }
+
+                var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+                if (subcategoria == null)
+                {
+                    _logger.LogWarning("Subcategoría no encontrada al editar. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+                    return NotFound();
+                }
+
+                if (!IsAdmin() && subcategoria.VendedorID != CurrentUserId())
+                {
+                    _logger.LogWarning("Acceso denegado al editar subcategoría. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+                    return Forbid();
+                }
+
+                var vendedorId = subcategoria.VendedorID;
+                subcategoria.NombreSubcategoria = (nombresubCategoria ?? string.Empty).Trim();
+                subcategoria.CategoriaID = categoriaID;
+
                 await _subcategoriasManager.UpdateAsync(subcategoria);
+                _logger.LogInformation("Subcategoría actualizada. SubcategoriaId: {SubcategoriaId}, Nombre: {Nombre}",
+                    subcategoria.SubcategoriaID, subcategoria.NombreSubcategoria);
+
+                if (!string.IsNullOrEmpty(vendedorId))
+                    InvalidarCacheSubcategoriasVendedor(vendedorId);
+
                 TempData["Ok"] = "Subcategoría actualizada.";
+                return RedirectToAction(nameof(Subcategorias));
             }
             catch (DbUpdateException ex) when (
                    ex.InnerException?.Message.Contains("IX_Subcategorias_VendedorID_CategoriaID_NombreSubcategoria") == true
                 || ex.InnerException?.Message.Contains("2601") == true
                 || ex.InnerException?.Message.Contains("2627") == true)
             {
+                _logger.LogWarning(ex, "Subcategoría duplicada al editar. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
                 TempData["Err"] = "Ya existe una subcategoría con ese nombre en esa categoría.";
+                var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
                 ViewBag.Subcategoria = subcategoria;
-                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
                 return View("SubcategoriaForm");
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error al editar subcategoría. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
                 TempData["Err"] = "Error al actualizar la subcategoría.";
+                var subcategoria = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
                 ViewBag.Subcategoria = subcategoria;
-                ViewBag.Categorias = await _categoriasManager.GetAllAsync();
+                ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
                 return View("SubcategoriaForm");
             }
-
-            return RedirectToAction("Subcategorias");
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarSubcategoria(int subcategoriaID)
         {
-            var sub = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
-            if (sub == null) return NotFound();
-
-            if (!IsAdmin() && sub.VendedorID != CurrentUserId())
-                return Forbid();
-
             try
             {
+                var sub = await _subcategoriasManager.GetByIdAsync(subcategoriaID);
+                if (sub == null)
+                {
+                    _logger.LogWarning("Subcategoría no encontrada al eliminar. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+                    return NotFound();
+                }
+
+                if (!IsAdmin() && sub.VendedorID != CurrentUserId())
+                {
+                    _logger.LogWarning("Acceso denegado al eliminar subcategoría. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+                    return Forbid();
+                }
+
+                var vendedorId = sub.VendedorID;
                 await _subcategoriasManager.DeleteAsync(subcategoriaID);
+                _logger.LogInformation("Subcategoría eliminada. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
+
+                if (!string.IsNullOrEmpty(vendedorId))
+                    InvalidarCacheSubcategoriasVendedor(vendedorId);
+
                 TempData["Ok"] = "Subcategoría eliminada.";
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex)
             {
+                _logger.LogWarning(ex, "No se puede eliminar subcategoría con productos. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
                 TempData["Err"] = "No se puede eliminar: hay productos asociados a esta subcategoría.";
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error al eliminar subcategoría. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
                 TempData["Err"] = "Error al eliminar la subcategoría.";
             }
 
-            return RedirectToAction("Subcategorias");
+            return RedirectToAction(nameof(Subcategorias));
         }
 
-        // ====================== PROVEEDORES (ADMIN) ======================
+        #endregion
+
+        #region Proveedores (Admin)
+
         [Authorize(Roles = "Administrador")]
         [HttpGet]
         public async Task<IActionResult> Proveedores()
         {
-            ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
-            return View();
+            try
+            {
+                _logger.LogInformation("Listado de proveedores solicitado");
+                var proveedores = await ObtenerProveedoresConCacheAsync();
+                _logger.LogDebug("Proveedores cargados: {Count}", proveedores.Count);
+                ViewBag.Proveedores = proveedores;
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar proveedores");
+                TempData["MensajeError"] = "Error al cargar los proveedores.";
+                return View();
+            }
         }
 
         [Authorize(Roles = "Administrador")]
@@ -468,122 +875,179 @@ namespace Simone.Controllers
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> AnadirProveedor(
-            string nombreProveedor,
-            string contacto,
-            string telefono,
-            string email,
-            string direccion)
+        public async Task<IActionResult> AnadirProveedor(string nombreProveedor, string contacto, string telefono, string email, string direccion)
         {
-            var proveedor = new Proveedores
+            try
             {
-                NombreProveedor = (nombreProveedor ?? string.Empty).Trim(),
-                Contacto = contacto,
-                Telefono = telefono,
-                Email = email,
-                Direccion = direccion,
-            };
-            await _proveedoresManager.AddAsync(proveedor);
-            return RedirectToAction("Proveedores");
+                var proveedor = new Proveedores
+                {
+                    NombreProveedor = (nombreProveedor ?? string.Empty).Trim(),
+                    Contacto = contacto,
+                    Telefono = telefono,
+                    Email = email,
+                    Direccion = direccion,
+                };
+
+                await _proveedoresManager.AddAsync(proveedor);
+                _logger.LogInformation("Proveedor creado. ProveedorId: {ProveedorId}, Nombre: {Nombre}",
+                    proveedor.ProveedorID, proveedor.NombreProveedor);
+                InvalidarCacheProveedores();
+                return RedirectToAction(nameof(Proveedores));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear proveedor. Nombre: {Nombre}", nombreProveedor);
+                TempData["MensajeError"] = "Error al crear el proveedor.";
+                return View("ProveedorForm");
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpGet]
         public async Task<IActionResult> EditarProveedor(int proveedorID)
         {
-            ViewBag.Proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
-            return View("ProveedorForm");
+            try
+            {
+                var proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
+                if (proveedor == null)
+                {
+                    _logger.LogWarning("Proveedor no encontrado. ProveedorId: {ProveedorId}", proveedorID);
+                    return NotFound();
+                }
+
+                ViewBag.Proveedor = proveedor;
+                return View("ProveedorForm");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar proveedor. ProveedorId: {ProveedorId}", proveedorID);
+                return RedirectToAction(nameof(Proveedores));
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditarProveedor(
-            int proveedorID,
-            string nombreProveedor,
-            string contacto,
-            string telefono,
-            string email,
-            string direccion)
+        public async Task<IActionResult> EditarProveedor(int proveedorID, string nombreProveedor, string contacto, string telefono, string email, string direccion)
         {
-            if (!ModelState.IsValid) return RedirectToAction("Proveedores");
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("ModelState inválido al editar proveedor");
+                    return RedirectToAction(nameof(Proveedores));
+                }
 
-            var proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
-            if (proveedor == null) return NotFound();
+                var proveedor = await _proveedoresManager.GetByIdAsync(proveedorID);
+                if (proveedor == null)
+                {
+                    _logger.LogWarning("Proveedor no encontrado al editar. ProveedorId: {ProveedorId}", proveedorID);
+                    return NotFound();
+                }
 
-            proveedor.NombreProveedor = (nombreProveedor ?? string.Empty).Trim();
-            proveedor.Contacto = contacto;
-            proveedor.Telefono = telefono;
-            proveedor.Email = email;
-            proveedor.Direccion = direccion;
+                proveedor.NombreProveedor = (nombreProveedor ?? string.Empty).Trim();
+                proveedor.Contacto = contacto;
+                proveedor.Telefono = telefono;
+                proveedor.Email = email;
+                proveedor.Direccion = direccion;
 
-            await _proveedoresManager.UpdateAsync(proveedor);
-            return RedirectToAction("Proveedores");
+                await _proveedoresManager.UpdateAsync(proveedor);
+                _logger.LogInformation("Proveedor actualizado. ProveedorId: {ProveedorId}, Nombre: {Nombre}",
+                    proveedor.ProveedorID, proveedor.NombreProveedor);
+                InvalidarCacheProveedores();
+                return RedirectToAction(nameof(Proveedores));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar proveedor. ProveedorId: {ProveedorId}", proveedorID);
+                TempData["MensajeError"] = "Error al actualizar el proveedor.";
+                return RedirectToAction(nameof(Proveedores));
+            }
         }
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarProveedor(int proveedorID)
         {
-            await _proveedoresManager.DeleteAsync(proveedorID);
-            return RedirectToAction("Proveedores");
+            try
+            {
+                await _proveedoresManager.DeleteAsync(proveedorID);
+                _logger.LogInformation("Proveedor eliminado. ProveedorId: {ProveedorId}", proveedorID);
+                InvalidarCacheProveedores();
+                return RedirectToAction(nameof(Proveedores));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar proveedor. ProveedorId: {ProveedorId}", proveedorID);
+                TempData["MensajeError"] = "Error al eliminar el proveedor.";
+                return RedirectToAction(nameof(Proveedores));
+            }
         }
 
-        // ====================== PRODUCTOS ======================
+        #endregion
+
+        #region Productos
+
         [HttpGet]
-        public async Task<IActionResult> Productos()
+        public async Task<IActionResult> Productos(CancellationToken ct = default)
         {
-            IQueryable<Producto> query = _context.Productos
-                .AsNoTracking()
-                .Include(p => p.Categoria)
-                .Include(p => p.Variantes);
+            try
+            {
+                _logger.LogInformation("Listado de productos solicitado. Usuario: {UserId}, EsAdmin: {EsAdmin}",
+                    CurrentUserId(), IsAdmin());
 
-            if (!IsAdmin())
-                query = query.Where(p => p.VendedorID == CurrentUserId());
+                IQueryable<Producto> query = _context.Productos.AsNoTracking()
+                    .Include(p => p.Categoria).Include(p => p.Variantes);
 
-            var productos = await query.OrderBy(p => p.Nombre).ToListAsync();
+                if (!IsAdmin())
+                    query = query.Where(p => p.VendedorID == CurrentUserId());
 
-            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
-            return View(productos);
+                var productos = await query.OrderBy(p => p.Nombre).ToListAsync(ct);
+                _logger.LogDebug("Productos cargados: {Count}", productos.Count);
+
+                ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
+                return View(productos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar productos");
+                TempData["MensajeError"] = "Error al cargar los productos.";
+                return View(new List<Producto>());
+            }
         }
 
         [HttpGet]
         public async Task<IActionResult> AnadirProducto()
         {
-            await FillProductoFormBags();
-            return View("ProductoForm");
+            try
+            {
+                await FillProductoFormBags();
+                return View("ProductoForm");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar formulario de producto");
+                return RedirectToAction(nameof(Productos));
+            }
         }
 
-        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
+        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = 64L * 1024 * 1024)]
         public async Task<IActionResult> AnadirProducto(
-            string nombreProducto,
-            string descripcion,
-            string talla,
-            string color,
-            string marca,
-            decimal precioCompra,
-            decimal precioVenta,
-            int proveedorID,
-            int categoriaID,
-            int subcategoriaID,
-            int stock,
-            IFormFile? imagen,
-            IFormFile[]? Imagenes,
-            int? ImagenPrincipalIndex,
-            string? ImagenesIgnore,
-            [FromForm] string[]? VarColor,
-            [FromForm] string[]? VarTalla,
-            [FromForm] string[]? VarPrecio,
-            [FromForm] int[]? VarStock)
+            string nombreProducto, string descripcion, string talla, string color, string marca,
+            decimal precioCompra, decimal precioVenta, int? proveedorID, int categoriaID, int subcategoriaID, int stock,
+            IFormFile? imagen, IFormFile[]? Imagenes, int? ImagenPrincipalIndex, string? ImagenesIgnore,
+            [FromForm] string[]? VarColor, [FromForm] string[]? VarTalla, [FromForm] string[]? VarPrecio, [FromForm] int[]? VarStock)
         {
             try
             {
-                // Validación de subcategoría
-                var sub = await _context.Subcategorias
-                    .Include(s => s.Categoria)
+                _logger.LogInformation("Creando producto. Nombre: {Nombre}, VendedorId: {VendedorId}",
+                    nombreProducto, CurrentUserId());
+
+                var sub = await _context.Subcategorias.Include(s => s.Categoria)
                     .FirstOrDefaultAsync(s => s.SubcategoriaID == subcategoriaID && s.CategoriaID == categoriaID);
 
                 if (sub == null)
                 {
+                    _logger.LogWarning("Subcategoría no encontrada. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
                     TempData["Err"] = "Subcategoría no encontrada.";
                     await FillProductoFormBags();
                     return View("ProductoForm");
@@ -591,17 +1055,18 @@ namespace Simone.Controllers
 
                 if (!IsAdmin() && sub.VendedorID != CurrentUserId())
                 {
+                    _logger.LogWarning("Acceso denegado a subcategoría. SubcategoriaId: {SubcategoriaId}, VendedorId: {VendedorId}",
+                        subcategoriaID, CurrentUserId());
                     TempData["Err"] = "No tienes permisos para usar esta subcategoría.";
                     await FillProductoFormBags();
                     return View("ProductoForm");
                 }
 
-                // Variantes
-                var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(
-                    VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
+                var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
 
                 if (!string.IsNullOrEmpty(variantError))
                 {
+                    _logger.LogWarning("Error en variantes. Error: {Error}", variantError);
                     TempData["Err"] = variantError;
                     await FillProductoFormBags();
                     ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
@@ -609,7 +1074,6 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
-                // Crear producto base
                 var producto = new Producto
                 {
                     Nombre = (nombreProducto ?? string.Empty).Trim(),
@@ -617,7 +1081,7 @@ namespace Simone.Controllers
                     Descripcion = descripcion?.Trim(),
                     Marca = marca?.Trim(),
                     PrecioCompra = Math.Round(precioCompra, 2),
-                    ProveedorID = proveedorID,
+                    ProveedorID = proveedorID > 0 ? proveedorID : null,  // ✅ Nullable: solo asigna si > 0
                     CategoriaID = categoriaID,
                     SubcategoriaID = subcategoriaID,
                     VendedorID = CurrentUserId()
@@ -639,6 +1103,7 @@ namespace Simone.Controllers
                     var pvFinal = Math.Round(precioVenta, 2);
                     if (pvFinal <= precioCompra)
                     {
+                        _logger.LogWarning("Precio de venta menor o igual al de compra. PV: {PV}, PC: {PC}", pvFinal, precioCompra);
                         TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompra}).";
                         await FillProductoFormBags();
                         ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
@@ -670,17 +1135,13 @@ namespace Simone.Controllers
                         await _context.SaveChangesAsync();
                     }
 
-                    var saveResult = await SaveGalleryAsync(
-                        producto,
-                        Imagenes,
-                        imagen,
-                        ImagenPrincipalIndex,
-                        existingImagenPath: null,
-                        imagenesIgnore: ImagenesIgnore);
+                    var saveResult = await SaveGalleryAsync(producto, Imagenes, imagen, ImagenPrincipalIndex, null, ImagenesIgnore);
 
                     if (!saveResult.Success)
                     {
                         await trx.RollbackAsync();
+                        _logger.LogWarning("Error al guardar galería. ProductoId: {ProductoId}, Error: {Error}",
+                            producto.ProductoID, saveResult.ErrorMessage);
                         TempData["Err"] = saveResult.ErrorMessage;
                         await FillProductoFormBags();
                         ViewBag.Producto = producto;
@@ -689,14 +1150,14 @@ namespace Simone.Controllers
 
                     await trx.CommitAsync();
 
-                    _logger.LogInformation("Producto {ProductoID} creado con {VarianteCount} variantes",
+                    _logger.LogInformation("Producto creado. ProductoId: {ProductoId}, Variantes: {VarianteCount}",
                         producto.ProductoID, hasVariants ? normVariants.Count : 0);
 
                     TempData["Ok"] = hasVariants
                         ? $"Producto con {normVariants.Count} variantes añadido correctamente."
                         : "Producto añadido correctamente.";
 
-                    return RedirectToAction("Productos");
+                    return RedirectToAction(nameof(Productos));
                 }
                 catch (Exception ex)
                 {
@@ -718,96 +1179,87 @@ namespace Simone.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> EditarProducto(int productoID)
-        {
-            var producto = await _context.Productos
-                .Include(p => p.Variantes)
-                .Include(p => p.Subcategoria)
-                .FirstOrDefaultAsync(p => p.ProductoID == productoID);
-
-            if (producto == null)
-            {
-                TempData["Err"] = "Producto no encontrado.";
-                return RedirectToAction("Productos");
-            }
-
-            if (!IsAdmin() && producto.VendedorID != CurrentUserId())
-            {
-                TempData["Err"] = "No tienes permisos para editar este producto.";
-                return RedirectToAction("Productos");
-            }
-
-            var variantes = producto.Variantes.OrderBy(v => v.Color).ThenBy(v => v.Talla).ToList();
-            ViewBag.Variantes = variantes;
-
-            // ❌ Antes: ajustar precio dividiendo entre 1.15m. Ya no se hace.
-            // Si no hay variantes, mostramos el precio tal cual está guardado.
-
-            await LoadGalleryData(producto);
-
-            await FillProductoFormBags();
-            ViewBag.Producto = producto;
-            return View("ProductoForm");
-        }
-
-        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = _maxFormBytes)]
-        public async Task<IActionResult> EditarProducto(
-            int productoID,
-            string nombreProducto,
-            string descripcion,
-            string talla,
-            string color,
-            string marca,
-            string existingImagenPath,
-            decimal precioCompra,
-            decimal precioVenta,
-            int proveedorID,
-            int categoriaID,
-            int subcategoriaID,
-            int stock,
-            IFormFile? imagen,
-            IFormFile[]? Imagenes,
-            int? ImagenPrincipalIndex,
-            string? ImagenesIgnore,
-            [FromForm] string[]? VarColor,
-            [FromForm] string[]? VarTalla,
-            [FromForm] string[]? VarPrecio,
-            [FromForm] int[]? VarStock)
+        public async Task<IActionResult> EditarProducto(int productoID, CancellationToken ct = default)
         {
             try
             {
-                var producto = await _context.Productos
-                    .Include(p => p.Variantes)
-                    .FirstOrDefaultAsync(p => p.ProductoID == productoID);
+                var producto = await _context.Productos.Include(p => p.Variantes).Include(p => p.Subcategoria)
+                    .FirstOrDefaultAsync(p => p.ProductoID == productoID, ct);
 
                 if (producto == null)
                 {
+                    _logger.LogWarning("Producto no encontrado. ProductoId: {ProductoId}", productoID);
                     TempData["Err"] = "Producto no encontrado.";
-                    return RedirectToAction("Productos");
+                    return RedirectToAction(nameof(Productos));
                 }
 
                 if (!IsAdmin() && producto.VendedorID != CurrentUserId())
                 {
+                    _logger.LogWarning("Acceso denegado a producto. ProductoId: {ProductoId}, VendedorId: {VendedorId}",
+                        productoID, CurrentUserId());
                     TempData["Err"] = "No tienes permisos para editar este producto.";
-                    return RedirectToAction("Productos");
+                    return RedirectToAction(nameof(Productos));
                 }
 
-                var sub = await _context.Subcategorias
-                    .FirstOrDefaultAsync(s => s.SubcategoriaID == subcategoriaID && s.CategoriaID == categoriaID);
+                var variantes = producto.Variantes.OrderBy(v => v.Color).ThenBy(v => v.Talla).ToList();
+                ViewBag.Variantes = variantes;
+
+                await LoadGalleryData(producto);
+                await FillProductoFormBags();
+                ViewBag.Producto = producto;
+                return View("ProductoForm");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar producto. ProductoId: {ProductoId}", productoID);
+                TempData["Err"] = "Error al cargar el producto.";
+                return RedirectToAction(nameof(Productos));
+            }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = 64L * 1024 * 1024)]
+        public async Task<IActionResult> EditarProducto(
+            int productoID, string nombreProducto, string descripcion, string talla, string color, string marca,
+            string existingImagenPath, decimal precioCompra, decimal precioVenta, int? proveedorID, int categoriaID,
+            int subcategoriaID, int stock, IFormFile? imagen, IFormFile[]? Imagenes, int? ImagenPrincipalIndex,
+            string? ImagenesIgnore, [FromForm] string[]? VarColor, [FromForm] string[]? VarTalla,
+            [FromForm] string[]? VarPrecio, [FromForm] int[]? VarStock, CancellationToken ct = default)
+        {
+            try
+            {
+                var producto = await _context.Productos.Include(p => p.Variantes)
+                    .FirstOrDefaultAsync(p => p.ProductoID == productoID, ct);
+
+                if (producto == null)
+                {
+                    _logger.LogWarning("Producto no encontrado al editar. ProductoId: {ProductoId}", productoID);
+                    TempData["Err"] = "Producto no encontrado.";
+                    return RedirectToAction(nameof(Productos));
+                }
+
+                if (!IsAdmin() && producto.VendedorID != CurrentUserId())
+                {
+                    _logger.LogWarning("Acceso denegado al editar producto. ProductoId: {ProductoId}", productoID);
+                    TempData["Err"] = "No tienes permisos para editar este producto.";
+                    return RedirectToAction(nameof(Productos));
+                }
+
+                var sub = await _context.Subcategorias.FirstOrDefaultAsync(s => s.SubcategoriaID == subcategoriaID && s.CategoriaID == categoriaID, ct);
 
                 if (sub == null || (!IsAdmin() && sub.VendedorID != CurrentUserId()))
                 {
+                    _logger.LogWarning("Subcategoría inválida. SubcategoriaId: {SubcategoriaId}", subcategoriaID);
                     TempData["Err"] = "Subcategoría inválida o no pertenece a tu tienda.";
                     await FillProductoFormBags();
                     ViewBag.Producto = producto;
                     return View("ProductoForm");
                 }
 
-                var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(
-                    VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
+                var (hasVariants, normVariants, variantError) = await NormalizeAndValidateVariants(VarColor, VarTalla, VarPrecio, VarStock, precioCompra);
 
                 if (!string.IsNullOrEmpty(variantError))
                 {
+                    _logger.LogWarning("Error en variantes al editar. Error: {Error}", variantError);
                     TempData["Err"] = variantError;
                     await FillProductoFormBags();
                     ViewBag.Producto = producto;
@@ -818,7 +1270,7 @@ namespace Simone.Controllers
                 producto.Descripcion = descripcion?.Trim();
                 producto.Marca = marca?.Trim();
                 producto.PrecioCompra = Math.Round(precioCompra, 2);
-                producto.ProveedorID = proveedorID;
+                producto.ProveedorID = proveedorID > 0 ? proveedorID : null;  // ✅ Nullable: solo asigna si > 0
                 producto.CategoriaID = categoriaID;
                 producto.SubcategoriaID = subcategoriaID;
 
@@ -838,6 +1290,7 @@ namespace Simone.Controllers
                     var pvFinal = Math.Round(precioVenta, 2);
                     if (pvFinal <= precioCompra)
                     {
+                        _logger.LogWarning("Precio de venta menor o igual al de compra al editar. PV: {PV}, PC: {PC}", pvFinal, precioCompra);
                         TempData["Err"] = $"El precio de venta (${pvFinal}) debe ser mayor al precio de compra (${precioCompra}).";
                         await FillProductoFormBags();
                         ViewBag.Producto = producto;
@@ -846,11 +1299,10 @@ namespace Simone.Controllers
                     producto.PrecioVenta = pvFinal;
                 }
 
-                await using var trx = await _context.Database.BeginTransactionAsync();
+                await using var trx = await _context.Database.BeginTransactionAsync(ct);
                 try
                 {
-                    var currentVariants = await _context.ProductoVariantes
-                        .Where(v => v.ProductoID == producto.ProductoID).ToListAsync();
+                    var currentVariants = await _context.ProductoVariantes.Where(v => v.ProductoID == producto.ProductoID).ToListAsync(ct);
 
                     if (currentVariants.Any())
                         _context.ProductoVariantes.RemoveRange(currentVariants);
@@ -867,41 +1319,37 @@ namespace Simone.Controllers
                             SKU = GenerateSKU(producto, v.Color, v.Talla)
                         }).ToList();
 
-                        await _context.ProductoVariantes.AddRangeAsync(variants);
+                        await _context.ProductoVariantes.AddRangeAsync(variants, ct);
                     }
 
-                    var saveResult = await SaveGalleryAsync(
-                        producto,
-                        Imagenes,
-                        imagen,
-                        ImagenPrincipalIndex,
-                        existingImagenPath,
-                        ImagenesIgnore);
+                    var saveResult = await SaveGalleryAsync(producto, Imagenes, imagen, ImagenPrincipalIndex, existingImagenPath, ImagenesIgnore);
 
                     if (!saveResult.Success)
                     {
-                        await trx.RollbackAsync();
+                        await trx.RollbackAsync(ct);
+                        _logger.LogWarning("Error al guardar galería al editar. ProductoId: {ProductoId}, Error: {Error}",
+                            producto.ProductoID, saveResult.ErrorMessage);
                         TempData["Err"] = saveResult.ErrorMessage;
                         await FillProductoFormBags();
                         ViewBag.Producto = producto;
                         return View("ProductoForm");
                     }
 
-                    await _context.SaveChangesAsync();
-                    await trx.CommitAsync();
+                    await _context.SaveChangesAsync(ct);
+                    await trx.CommitAsync(ct);
 
-                    _logger.LogInformation("Producto {ProductoID} actualizado con {VarianteCount} variantes",
+                    _logger.LogInformation("Producto actualizado. ProductoId: {ProductoId}, Variantes: {VarianteCount}",
                         producto.ProductoID, hasVariants ? normVariants.Count : 0);
 
                     TempData["Ok"] = hasVariants
                         ? $"Producto actualizado con {normVariants.Count} variantes."
                         : "Producto actualizado correctamente.";
 
-                    return RedirectToAction("Productos");
+                    return RedirectToAction(nameof(Productos));
                 }
                 catch (Exception ex)
                 {
-                    await trx.RollbackAsync();
+                    await trx.RollbackAsync(ct);
                     _logger.LogError(ex, "Error al editar producto {ProductoID}", productoID);
                     TempData["Err"] = "Ocurrió un error al actualizar el producto.";
                     await FillProductoFormBags();
@@ -913,76 +1361,100 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error general en EditarProducto");
                 TempData["Err"] = "Ocurrió un error inesperado al procesar el producto.";
-                return RedirectToAction("Productos");
+                return RedirectToAction(nameof(Productos));
             }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarProducto(int productoID)
         {
-            var producto = await _productosManager.GetByIdAsync(productoID);
-            if (producto == null) return NotFound();
-            if (!IsAdmin() && producto.VendedorID != CurrentUserId())
-                return Forbid();
-
             try
             {
-                var folder = ProductFolderAbs(productoID);
-                if (Directory.Exists(folder))
-                    Directory.Delete(folder, true);
+                var producto = await _productosManager.GetByIdAsync(productoID);
+                if (producto == null)
+                {
+                    _logger.LogWarning("Producto no encontrado al eliminar. ProductoId: {ProductoId}", productoID);
+                    return NotFound();
+                }
+
+                if (!IsAdmin() && producto.VendedorID != CurrentUserId())
+                {
+                    _logger.LogWarning("Acceso denegado al eliminar producto. ProductoId: {ProductoId}", productoID);
+                    return Forbid();
+                }
+
+                try
+                {
+                    var folder = ProductFolderAbs(productoID);
+                    if (Directory.Exists(folder))
+                        Directory.Delete(folder, true);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "No se pudo eliminar la carpeta de galería del producto {pid}", productoID);
+                }
+
+                await _productosManager.DeleteAsync(productoID);
+                _logger.LogInformation("Producto eliminado. ProductoId: {ProductoId}", productoID);
+                return RedirectToAction(nameof(Productos));
             }
             catch (Exception ex)
             {
-                _logger.LogWarning(ex, "No se pudo eliminar la carpeta de galería del producto {pid}", productoID);
+                _logger.LogError(ex, "Error al eliminar producto. ProductoId: {ProductoId}", productoID);
+                TempData["MensajeError"] = "Error al eliminar el producto.";
+                return RedirectToAction(nameof(Productos));
             }
-
-            await _productosManager.DeleteAsync(productoID);
-            return RedirectToAction("Productos");
         }
 
-        // ======= Variantes JSON (opcional) =======
         [HttpGet]
-        public async Task<IActionResult> VariantesJson(int productoId)
+        public async Task<IActionResult> VariantesJson(int productoId, CancellationToken ct = default)
         {
-            var producto = await _context.Productos
-                .AsNoTracking()
-                .FirstOrDefaultAsync(p => p.ProductoID == productoId);
+            try
+            {
+                var producto = await _context.Productos.AsNoTracking().FirstOrDefaultAsync(p => p.ProductoID == productoId, ct);
 
-            if (producto == null) return NotFound();
-
-            if (!IsAdmin() && producto.VendedorID != CurrentUserId())
-                return Forbid();
-
-            var data = await _context.ProductoVariantes
-                .AsNoTracking()
-                .Where(v => v.ProductoID == productoId)
-                .OrderBy(v => v.Color).ThenBy(v => v.Talla)
-                .Select(v => new
+                if (producto == null)
                 {
-                    v.Color,
-                    v.Talla,
-                    v.PrecioVenta,
-                    v.Stock,
-                    v.SKU
-                })
-                .ToListAsync();
+                    _logger.LogWarning("Producto no encontrado para variantes JSON. ProductoId: {ProductoId}", productoId);
+                    return NotFound();
+                }
 
-            return Json(data);
+                if (!IsAdmin() && producto.VendedorID != CurrentUserId())
+                {
+                    _logger.LogWarning("Acceso denegado a variantes. ProductoId: {ProductoId}", productoId);
+                    return Forbid();
+                }
+
+                var data = await _context.ProductoVariantes.AsNoTracking().Where(v => v.ProductoID == productoId)
+                    .OrderBy(v => v.Color).ThenBy(v => v.Talla)
+                    .Select(v => new { v.Color, v.Talla, v.PrecioVenta, v.Stock, v.SKU })
+                    .ToListAsync(ct);
+
+                _logger.LogDebug("Variantes JSON solicitadas. ProductoId: {ProductoId}, Count: {Count}", productoId, data.Count);
+                return Json(data);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener variantes JSON. ProductoId: {ProductoId}", productoId);
+                return StatusCode(500);
+            }
         }
 
-        // ====================== MÉTODOS AUXILIARES ======================
+        #endregion
+
+        #region Helpers - Productos
 
         private async Task FillProductoFormBags()
         {
-            ViewBag.Categorias = await _categoriasManager.GetAllAsync();
-            ViewBag.Proveedores = await _proveedoresManager.GetAllAsync();
+            ViewBag.Categorias = await ObtenerCategoriasConCacheAsync();
+            ViewBag.Proveedores = await ObtenerProveedoresConCacheAsync();
             ViewBag.Subcategorias = IsAdmin()
                 ? await _subcategoriasManager.GetAllAsync()
-                : await _subcategoriasManager.GetAllByVendedorAsync(CurrentUserId());
+                : await ObtenerSubcategoriasVendedorConCacheAsync(CurrentUserId());
         }
 
         private Producto PresetProducto(string nombre, string desc, string talla, string color, string marca,
-                                        decimal pc, decimal pv, int stock, int provId, int catId, int subId)
+                                        decimal pc, decimal pv, int stock, int? provId, int catId, int subId)
             => new()
             {
                 Nombre = nombre,
@@ -1054,7 +1526,6 @@ namespace Simone.Controllers
             if (errors.Any())
                 return (false, new(), string.Join(" ", errors));
 
-            // Unificar duplicados (case-insensitive)
             var grouped = variants
                 .GroupBy(v => (v.Color.Trim().ToLowerInvariant(), v.Talla.Trim().ToLowerInvariant()))
                 .Select(g => (
@@ -1083,21 +1554,25 @@ namespace Simone.Controllers
 
         private string GenerateSKU(Producto producto, string color, string talla)
         {
-            string marca = (producto.Marca ?? "PRD").Trim();
-            string base3 = (marca.Length >= 3 ? marca.Substring(0, 3) : marca).ToUpperInvariant();
+            string marca = (producto.Marca ?? SKU_DEFAULT_MARCA).Trim();
+            string base3 = (marca.Length >= SKU_LENGTH_CODIGO ? marca.Substring(0, SKU_LENGTH_CODIGO) : marca).ToUpperInvariant();
 
-            string c = (color ?? "NA").Trim();
-            string color3 = (c.Length >= 3 ? c.Substring(0, 3) : c).ToUpperInvariant();
+            string c = (color ?? SKU_DEFAULT_COLOR).Trim();
+            string color3 = (c.Length >= SKU_LENGTH_CODIGO ? c.Substring(0, SKU_LENGTH_CODIGO) : c).ToUpperInvariant();
 
-            string t = (talla ?? "UNQ").Replace(" ", "").ToUpperInvariant();
+            string t = (talla ?? SKU_DEFAULT_TALLA).Replace(" ", "").ToUpperInvariant();
 
             return $"{base3}-{producto.ProductoID}-{color3}-{t}";
         }
 
+        #endregion
+
+        #region Helpers - Galería
+
         private async Task LoadGalleryData(Producto producto)
         {
             var folder = ProductFolderAbs(producto.ProductoID);
-            var metaPath = Path.Combine(folder, $"product-{producto.ProductoID}.gallery.json");
+            var metaPath = Path.Combine(folder, string.Format(PATTERN_GALLERY_JSON, producto.ProductoID));
             var gallery = new List<string>();
             string? portada = producto.ImagenPath;
 
@@ -1108,7 +1583,7 @@ namespace Simone.Controllers
                     var json = await System.IO.File.ReadAllTextAsync(metaPath);
                     using var doc = JsonDocument.Parse(json);
 
-                    if (doc.RootElement.TryGetProperty("images", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                    if (doc.RootElement.TryGetProperty(JSON_PROP_IMAGES, out var arr) && arr.ValueKind == JsonValueKind.Array)
                     {
                         gallery = arr.EnumerateArray()
                             .Select(e => e.GetString()!)
@@ -1116,7 +1591,7 @@ namespace Simone.Controllers
                             .ToList();
                     }
 
-                    if (doc.RootElement.TryGetProperty("portada", out var p) && p.ValueKind == JsonValueKind.String)
+                    if (doc.RootElement.TryGetProperty(JSON_PROP_PORTADA, out var p) && p.ValueKind == JsonValueKind.String)
                     {
                         portada = p.GetString();
                     }
@@ -1132,27 +1607,23 @@ namespace Simone.Controllers
         }
 
         private async Task<(bool Success, string ErrorMessage)> SaveGalleryAsync(
-            Producto producto,
-            IFormFile[]? nuevasImagenes,
-            IFormFile? imagenLegacy,
-            int? imagenPrincipalIndex,
-            string? existingImagenPath = null,
-            string? imagenesIgnore = null)
+            Producto producto, IFormFile[]? nuevasImagenes, IFormFile? imagenLegacy,
+            int? imagenPrincipalIndex, string? existingImagenPath = null, string? imagenesIgnore = null)
         {
             try
             {
                 var folder = ProductFolderAbs(producto.ProductoID);
                 Directory.CreateDirectory(folder);
 
-                // RUTA segura
                 if (!Path.GetFullPath(folder).StartsWith(Path.GetFullPath(GalleryRootAbs()), StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Ruta de galería inválida. ProductoId: {ProductoId}", producto.ProductoID);
                     return (false, "Ruta de galería inválida.");
+                }
 
-                // Cargar existentes
-                var metaPath = Path.Combine(folder, $"product-{producto.ProductoID}.gallery.json");
+                var metaPath = Path.Combine(folder, string.Format(PATTERN_GALLERY_JSON, producto.ProductoID));
                 var imagenesExistentes = await LoadExistingImages(metaPath);
 
-                // --- Procesar "ignore" ---
                 var indicesNuevasAIgnorar = new HashSet<int>();
                 var urlsExistentesAEliminar = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -1184,7 +1655,6 @@ namespace Simone.Controllers
                     }
                 }
 
-                // Quitar existentes marcadas para eliminar (por URL)
                 if (urlsExistentesAEliminar.Count > 0 && imagenesExistentes.Count > 0)
                 {
                     var toKeep = new List<string>();
@@ -1196,7 +1666,6 @@ namespace Simone.Controllers
                         }
                         else
                         {
-                            // borrar archivo físico
                             try
                             {
                                 var nombre = Path.GetFileName(new Uri("http://dummy" + url).AbsolutePath);
@@ -1212,7 +1681,6 @@ namespace Simone.Controllers
                     imagenesExistentes = toKeep;
                 }
 
-                // Recopilar nuevas imágenes
                 var archivos = new List<IFormFile>();
                 if (nuevasImagenes != null && nuevasImagenes.Length > 0)
                 {
@@ -1227,23 +1695,24 @@ namespace Simone.Controllers
                     archivos.Add(imagenLegacy);
                 }
 
-                // Validar/guardar nuevas
                 var nuevasUrls = new List<string>();
                 foreach (var archivo in archivos)
                 {
-                    if (nuevasUrls.Count + imagenesExistentes.Count >= _maxFiles) break;
+                    if (nuevasUrls.Count + imagenesExistentes.Count >= MAX_IMAGENES_GALERIA) break;
 
                     var resultado = await GuardarImagenSegura(archivo, folder);
                     if (!resultado.Success)
+                    {
+                        _logger.LogWarning("Error al guardar imagen. ProductoId: {ProductoId}, Error: {Error}",
+                            producto.ProductoID, resultado.ErrorMessage);
                         return (false, resultado.ErrorMessage);
+                    }
 
                     nuevasUrls.Add(resultado.Url!);
                 }
 
-                // Combinar (máx 8)
-                var todasLasImagenes = imagenesExistentes.Concat(nuevasUrls).Take(_maxFiles).ToList();
+                var todasLasImagenes = imagenesExistentes.Concat(nuevasUrls).Take(MAX_IMAGENES_GALERIA).ToList();
 
-                // Portada
                 string? imagenPrincipal = null;
 
                 if (imagenPrincipalIndex.HasValue && imagenPrincipalIndex.Value >= 0
@@ -1267,6 +1736,9 @@ namespace Simone.Controllers
 
                 await LimpiarImagenesNoUsadas(folder, todasLasImagenes);
 
+                _logger.LogDebug("Galería guardada. ProductoId: {ProductoId}, Imágenes: {Count}",
+                    producto.ProductoID, todasLasImagenes.Count);
+
                 return (true, "");
             }
             catch (Exception ex)
@@ -1284,7 +1756,7 @@ namespace Simone.Controllers
                 if (System.IO.File.Exists(metaPath))
                 {
                     using var doc = JsonDocument.Parse(await System.IO.File.ReadAllTextAsync(metaPath));
-                    if (doc.RootElement.TryGetProperty("images", out var arr) && arr.ValueKind == JsonValueKind.Array)
+                    if (doc.RootElement.TryGetProperty(JSON_PROP_IMAGES, out var arr) && arr.ValueKind == JsonValueKind.Array)
                     {
                         imagenes = arr.EnumerateArray()
                             .Select(e => e.GetString()!)
@@ -1304,16 +1776,25 @@ namespace Simone.Controllers
         {
             try
             {
-                if (archivo.Length <= 0 || archivo.Length > _maxImgBytes)
+                if (archivo.Length <= 0 || archivo.Length > MAX_IMAGEN_BYTES)
+                {
+                    _logger.LogWarning("Archivo de imagen inválido o demasiado grande. Tamaño: {Size}", archivo.Length);
                     return (false, null, "Archivo de imagen inválido o demasiado grande.");
+                }
 
                 var extension = Path.GetExtension(archivo.FileName).ToLowerInvariant();
-                if (!_allowedImgExt.Contains(extension))
+                if (!EXTENSIONES_PERMITIDAS_IMAGEN.Contains(extension))
+                {
+                    _logger.LogWarning("Formato de imagen no permitido. Extensión: {Extension}", extension);
                     return (false, null, "Formato de imagen no permitido.");
+                }
 
                 await using var stream = archivo.OpenReadStream();
-                if (!LooksLikeImage(stream, extension, out var mime) || (mime != null && !_allowedMime.Contains(mime)))
+                if (!LooksLikeImage(stream, extension, out var mime) || (mime != null && !MIME_TYPES_PERMITIDOS.Contains(mime)))
+                {
+                    _logger.LogWarning("Contenido de imagen no válido. MIME: {Mime}", mime ?? "desconocido");
                     return (false, null, "Contenido de imagen no válido.");
+                }
 
                 var nombreArchivo = $"{Guid.NewGuid():N}{extension}";
                 var rutaCompleta = Path.Combine(folder, nombreArchivo);
@@ -1321,7 +1802,9 @@ namespace Simone.Controllers
                 await using var fileStream = new FileStream(rutaCompleta, FileMode.Create);
                 await archivo.CopyToAsync(fileStream);
 
-                var url = $"/images/Productos/{Path.GetFileName(folder)}/{nombreArchivo}".Replace("\\", "/");
+                var url = $"/{FOLDER_IMAGES}/{FOLDER_PRODUCTOS}/{Path.GetFileName(folder)}/{nombreArchivo}".Replace("\\", "/");
+
+                _logger.LogDebug("Imagen guardada. Url: {Url}", url);
                 return (true, url, "");
             }
             catch (Exception ex)
@@ -1334,7 +1817,7 @@ namespace Simone.Controllers
         private async Task GuardarMetadata(string metaPath, List<string> imagenes, string? imagenPrincipal)
         {
             var metadata = new { portada = imagenPrincipal, images = imagenes };
-            var json = JsonSerializer.Serialize(metadata, _jsonOpts);
+            var json = JsonSerializer.Serialize(metadata, JSON_OPTIONS);
             await System.IO.File.WriteAllTextAsync(metaPath, json);
         }
 
@@ -1343,7 +1826,7 @@ namespace Simone.Controllers
             try
             {
                 var archivosEnCarpeta = Directory.GetFiles(folder)
-                    .Where(f => !f.EndsWith(".gallery.json", StringComparison.OrdinalIgnoreCase))
+                    .Where(f => !f.EndsWith(PATTERN_GALLERY_EXTENSION, StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
                 foreach (var archivo in archivosEnCarpeta)
@@ -1353,8 +1836,15 @@ namespace Simone.Controllers
 
                     if (!enUso)
                     {
-                        try { System.IO.File.Delete(archivo); }
-                        catch (Exception ex) { _logger.LogWarning(ex, "No se pudo eliminar archivo {Archivo}", archivo); }
+                        try
+                        {
+                            System.IO.File.Delete(archivo);
+                            _logger.LogDebug("Imagen no usada eliminada: {Archivo}", nombreArchivo);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "No se pudo eliminar archivo {Archivo}", archivo);
+                        }
                     }
                 }
             }
@@ -1364,7 +1854,6 @@ namespace Simone.Controllers
             }
         }
 
-        // —— Sniffing rápido de archivos (cabeceras) ——
         private static bool LooksLikeImage(Stream s, string extLower, out string? detected)
         {
             detected = null;
@@ -1376,13 +1865,9 @@ namespace Simone.Controllers
                 s.Seek(0, SeekOrigin.Begin);
                 if (read < 4) return false;
 
-                // JPEG FF D8
                 if (head[0] == 0xFF && head[1] == 0xD8) { detected = "image/jpeg"; return true; }
-                // PNG 89 50 4E 47
                 if (head[0] == 0x89 && head[1] == 0x50 && head[2] == 0x4E && head[3] == 0x47) { detected = "image/png"; return true; }
-                // GIF 'G','I','F'
                 if (head[0] == 0x47 && head[1] == 0x49 && head[2] == 0x46) { detected = "image/gif"; return true; }
-                // WEBP: 'RIFF' .... 'WEBP'
                 if (read >= 12 &&
                     head[0] == (byte)'R' && head[1] == (byte)'I' && head[2] == (byte)'F' && head[3] == (byte)'F' &&
                     head[8] == (byte)'W' && head[9] == (byte)'E' && head[10] == (byte)'B' && head[11] == (byte)'P')
@@ -1392,21 +1877,15 @@ namespace Simone.Controllers
             return false;
         }
 
-        private sealed class TupleIgnoreCaseComparer : IEqualityComparer<(string c, string t)>
+        /// <summary>
+        /// Verifica si la solicitud actual es AJAX
+        /// </summary>
+        private bool EsAjax()
         {
-            public bool Equals((string c, string t) x, (string c, string t) y)
-                => string.Equals(x.c, y.c, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(x.t, y.t, StringComparison.OrdinalIgnoreCase);
-
-            public int GetHashCode((string c, string t) k)
-            {
-                unchecked
-                {
-                    int h1 = StringComparer.OrdinalIgnoreCase.GetHashCode(k.c ?? string.Empty);
-                    int h2 = StringComparer.OrdinalIgnoreCase.GetHashCode(k.t ?? string.Empty);
-                    return (h1 * 397) ^ h2;
-                }
-            }
+            return Request.Headers.TryGetValue(HEADER_AJAX, out var headerValue) &&
+                   string.Equals(headerValue, HEADER_AJAX_VALUE, StringComparison.OrdinalIgnoreCase);
         }
+
+        #endregion
     }
 }

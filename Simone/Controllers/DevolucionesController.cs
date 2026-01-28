@@ -1,205 +1,412 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
-using Simone.ViewModels.Devoluciones;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
-using System;
 
-namespace Simone.Controllers
+namespace Simone.Services
 {
-    [Authorize]
-    public class DevolucionesController : Controller
+    #region Interface
+
+    /// <summary>
+    /// Servicio de gestión de devoluciones
+    /// Maneja la lógica de negocio para crear y procesar devoluciones
+    /// </summary>
+    public interface IDevolucionesService
     {
+        /// <summary>
+        /// Obtiene las cantidades devueltas acumuladas por detalle de venta
+        /// </summary>
+        Task<Dictionary<int, int>> GetDevueltasAcumuladasAsync(int ventaId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Procesa una devolución completa con validaciones y actualización de stock
+        /// </summary>
+        Task<DevolucionResult> ProcesarDevolucionAsync(
+            int ventaId,
+            string motivo,
+            List<LineaDevolucion> lineas,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Verifica si una venta tiene devoluciones registradas
+        /// </summary>
+        Task<bool> TieneDevolucionesAsync(int ventaId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Obtiene el total de unidades devueltas para una venta
+        /// </summary>
+        Task<int> GetTotalDevueltasAsync(int ventaId, CancellationToken ct = default);
+    }
+
+    #endregion
+
+    #region Implementation
+
+    /// <summary>
+    /// Implementación del servicio de devoluciones
+    /// Versión optimizada con mejores prácticas empresariales
+    /// </summary>
+    public class DevolucionesService : IDevolucionesService
+    {
+        #region Dependencias
+
         private readonly TiendaDbContext _context;
-        private readonly UserManager<Usuario> _userManager;
+        private readonly ILogger<DevolucionesService> _logger;
 
-        public DevolucionesController(TiendaDbContext context, UserManager<Usuario> userManager)
+        #endregion
+
+        #region Constantes - Configuración
+
+        private const string ESTADO_CANCELADO = "cancelado";
+        private const string TIPO_MOVIMIENTO_ENTRADA = "Entrada";
+
+        #endregion
+
+        #region Constantes - Mensajes de Log
+
+        // Información
+        private const string LOG_INFO_DEVOLUCION_PROCESADA = "Devolución procesada. VentaId: {VentaId}, Líneas: {Count}, VentaCancelada: {Cancelada}";
+        private const string LOG_INFO_VENTA_CANCELADA = "Venta cancelada por devolución total. VentaId: {VentaId}";
+        private const string LOG_INFO_STOCK_REPUESTO = "Stock repuesto. ProductoId: {ProductoId}, Cantidad: {Cantidad}, StockNuevo: {Stock}";
+
+        // Debug
+        private const string LOG_DEBUG_OBTENIENDO_DEVUELTAS = "Obteniendo devoluciones acumuladas. VentaId: {VentaId}";
+        private const string LOG_DEBUG_PROCESANDO_DEVOLUCION = "Iniciando procesamiento de devolución. VentaId: {VentaId}, Líneas: {Count}";
+        private const string LOG_DEBUG_VALIDANDO_LINEA = "Validando línea. DetalleVentaId: {DetalleVentaId}, Cantidad: {Cantidad}";
+        private const string LOG_DEBUG_CREANDO_REGISTRO = "Creando registro devolución. DetalleVentaId: {DetalleVentaId}, Cantidad: {Cantidad}";
+        private const string LOG_DEBUG_VERIFICANDO_CANCELACION = "Verificando cancelación total. VentaId: {VentaId}, Vendidas: {Vendidas}, Devueltas: {Devueltas}";
+
+        // Advertencias
+        private const string LOG_WARN_VENTA_NO_ENCONTRADA = "Venta no encontrada. VentaId: {VentaId}";
+        private const string LOG_WARN_DETALLE_NO_ENCONTRADO = "Detalle de venta no encontrado. DetalleVentaId: {DetalleVentaId}";
+        private const string LOG_WARN_CANTIDAD_EXCEDIDA = "Cantidad a devolver excede el máximo. DetalleVentaId: {DetalleVentaId}, Solicitada: {Solicitada}, Máximo: {Maximo}";
+        private const string LOG_WARN_SIN_LINEAS = "Intento de procesar devolución sin líneas. VentaId: {VentaId}";
+
+        // Errores
+        private const string LOG_ERROR_PROCESAR_DEVOLUCION = "Error al procesar devolución. VentaId: {VentaId}";
+        private const string LOG_ERROR_OBTENER_DEVUELTAS = "Error al obtener devoluciones acumuladas. VentaId: {VentaId}";
+
+        #endregion
+
+        #region Constantes - Mensajes de Resultado
+
+        private const string MSG_DEVOLUCION_EXITOSA = "Devolución registrada correctamente";
+        private const string MSG_VENTA_NO_ENCONTRADA = "La venta no existe";
+        private const string MSG_SIN_LINEAS = "No se especificaron líneas para devolver";
+        private const string MSG_CANTIDAD_EXCEDIDA = "La línea {0} supera el máximo permitido ({1})";
+        private const string MSG_ERROR_PROCESAR = "Ocurrió un error al procesar la devolución";
+
+        #endregion
+
+        #region Constantes - Excepciones
+
+        private const string EXC_VENTA_ID_INVALIDO = "El ID de venta debe ser mayor a 0";
+        private const string EXC_MOTIVO_VACIO = "El motivo no puede estar vacío";
+        private const string EXC_LINEAS_NULL = "Las líneas no pueden ser nulas";
+
+        #endregion
+
+        #region Constructor
+
+        /// <summary>
+        /// Constructor del servicio de devoluciones
+        /// </summary>
+        public DevolucionesService(TiendaDbContext context, ILogger<DevolucionesService> logger)
         {
-            _context = context;
-            _userManager = userManager;
+            _context = context ?? throw new ArgumentNullException(nameof(context));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        // GET: /Devoluciones/Crear?ventaId=123
-        [HttpGet]
-        public async Task<IActionResult> Crear(int ventaId, string? returnUrl)
+        #endregion
+
+        #region Helpers - Validación
+
+        private static void ValidateVentaId(int ventaId)
         {
-            var venta = await _context.Ventas
-                .Include(v => v.Usuario)
-                .Include(v => v.DetalleVentas).ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(v => v.VentaID == ventaId);
-
-            if (venta == null) return NotFound();
-
-            // Permitir dueño de la venta o Admin
-            var user = await _userManager.GetUserAsync(User);
-            var esPropietario = venta.UsuarioId == user?.Id;
-            var esAdmin = User.IsInRole("Administrador");
-            if (!esPropietario && !esAdmin) return Forbid();
-
-            // Devueltas acumuladas por detalle
-            var devAcum = await _context.Devoluciones
-                .Where(x => x.DetalleVentaID != 0 && x.DetalleVenta.VentaID == ventaId && x.Aprobada)
-                .GroupBy(x => x.DetalleVentaID)
-                .Select(g => new { DetalleVentaID = g.Key, Cant = g.Sum(x => x.CantidadDevuelta) })
-                .ToDictionaryAsync(t => t.DetalleVentaID, t => t.Cant);
-
-            var vm = new CrearDevolucionVM
+            if (ventaId <= 0)
             {
-                VentaId = venta.VentaID,
-                ReturnUrl = returnUrl,
-                Motivo = "devolucion",
-                Lineas = venta.DetalleVentas.Select(d => new CrearDevolucionVM.LineaVM
-                {
-                    DetalleVentaID = d.DetalleVentaID,
-                    Producto = d.Producto?.Nombre ?? $"Producto #{d.ProductoID}",
-                    CantidadVendida = d.Cantidad,
-                    CantidadDevueltaAcumulada = devAcum.TryGetValue(d.DetalleVentaID, out var c) ? c : 0,
-                    CantidadADevolver = 0 // por defecto 0 para evitar errores
-                }).ToList()
-            };
-
-            return View(vm);
+                throw new ArgumentException(EXC_VENTA_ID_INVALIDO, nameof(ventaId));
+            }
         }
 
-        // POST: /Devoluciones/Crear
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Crear(CrearDevolucionVM vm)
+        private static void ValidateMotivo(string motivo)
         {
-            if (!ModelState.IsValid)
-                return View(await Recargar(vm));
+            if (string.IsNullOrWhiteSpace(motivo))
+            {
+                throw new ArgumentException(EXC_MOTIVO_VACIO, nameof(motivo));
+            }
+        }
 
-            var venta = await _context.Ventas
-                .Include(v => v.Usuario)
-                .Include(v => v.DetalleVentas).ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(v => v.VentaID == vm.VentaId);
+        private static void ValidateLineas(List<LineaDevolucion> lineas)
+        {
+            if (lineas == null)
+            {
+                throw new ArgumentNullException(nameof(lineas), EXC_LINEAS_NULL);
+            }
+        }
 
-            if (venta == null) return NotFound();
+        #endregion
 
-            var user = await _userManager.GetUserAsync(User);
-            var esPropietario = venta.UsuarioId == user?.Id;
-            var esAdmin = User.IsInRole("Administrador");
-            if (!esPropietario && !esAdmin) return Forbid();
+        #region Public Methods
 
-            // Diccionario con devueltas acumuladas vigentes
-            var devAcum = await _context.Devoluciones
-                .Where(x => x.DetalleVenta.VentaID == vm.VentaId && x.Aprobada)
-                .GroupBy(x => x.DetalleVentaID)
-                .Select(g => new { g.Key, Cant = g.Sum(x => x.CantidadDevuelta) })
-                .ToDictionaryAsync(t => t.Key, t => t.Cant);
+        /// <inheritdoc />
+        public async Task<Dictionary<int, int>> GetDevueltasAcumuladasAsync(int ventaId, CancellationToken ct = default)
+        {
+            ValidateVentaId(ventaId);
 
-            using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
-                foreach (var linea in vm.Lineas)
+                _logger.LogDebug(LOG_DEBUG_OBTENIENDO_DEVUELTAS, ventaId);
+
+                var devueltas = await _context.Devoluciones
+                    .AsNoTracking()
+                    .Where(x => x.DetalleVenta.VentaID == ventaId && x.Aprobada)
+                    .GroupBy(x => x.DetalleVentaID)
+                    .Select(g => new { DetalleVentaID = g.Key, Cantidad = g.Sum(x => x.CantidadDevuelta) })
+                    .ToDictionaryAsync(t => t.DetalleVentaID, t => t.Cantidad, ct)
+                    .ConfigureAwait(false);
+
+                return devueltas;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogError(ex, LOG_ERROR_OBTENER_DEVUELTAS, ventaId);
+                throw;
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<DevolucionResult> ProcesarDevolucionAsync(
+            int ventaId,
+            string motivo,
+            List<LineaDevolucion> lineas,
+            CancellationToken ct = default)
+        {
+            ValidateVentaId(ventaId);
+            ValidateMotivo(motivo);
+            ValidateLineas(lineas);
+
+            _logger.LogDebug(LOG_DEBUG_PROCESANDO_DEVOLUCION, ventaId, lineas.Count);
+
+            using var transaction = await _context.Database.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+            try
+            {
+                var lineasValidas = lineas.Where(l => l.CantidadADevolver > 0).ToList();
+
+                if (lineasValidas.Count == 0)
                 {
-                    if (linea.CantidadADevolver <= 0) continue;
-
-                    var det = venta.DetalleVentas.FirstOrDefault(d => d.DetalleVentaID == linea.DetalleVentaID);
-                    if (det == null) { continue; }
-
-                    var yaDev = devAcum.TryGetValue(det.DetalleVentaID, out var c) ? c : 0;
-                    var max = det.Cantidad - yaDev;
-
-                    if (linea.CantidadADevolver > max)
+                    _logger.LogWarning(LOG_WARN_SIN_LINEAS, ventaId);
+                    return new DevolucionResult
                     {
-                        ModelState.AddModelError(string.Empty,
-                            $"La línea {det.DetalleVentaID} supera el máximo permitido ({max}).");
-                        await tx.RollbackAsync();
-                        return View(await Recargar(vm));
+                        Success = false,
+                        Message = MSG_SIN_LINEAS
+                    };
+                }
+
+                var venta = await _context.Ventas
+                    .Include(v => v.DetalleVentas)
+                        .ThenInclude(d => d.Producto)
+                    .FirstOrDefaultAsync(v => v.VentaID == ventaId, ct)
+                    .ConfigureAwait(false);
+
+                if (venta == null)
+                {
+                    _logger.LogWarning(LOG_WARN_VENTA_NO_ENCONTRADA, ventaId);
+                    return new DevolucionResult
+                    {
+                        Success = false,
+                        Message = MSG_VENTA_NO_ENCONTRADA
+                    };
+                }
+
+                var devueltasAcum = await GetDevueltasAcumuladasAsync(ventaId, ct).ConfigureAwait(false);
+
+                var result = new DevolucionResult { Success = true };
+
+                foreach (var linea in lineasValidas)
+                {
+                    _logger.LogDebug(LOG_DEBUG_VALIDANDO_LINEA, linea.DetalleVentaID, linea.CantidadADevolver);
+
+                    var detalle = venta.DetalleVentas.FirstOrDefault(d => d.DetalleVentaID == linea.DetalleVentaID);
+
+                    if (detalle == null)
+                    {
+                        _logger.LogWarning(LOG_WARN_DETALLE_NO_ENCONTRADO, linea.DetalleVentaID);
+                        continue;
                     }
 
-                    // Crear registro de devolución
-                    var dev = new Devoluciones
+                    var yaDevueltas = devueltasAcum.TryGetValue(detalle.DetalleVentaID, out var devPrev) ? devPrev : 0;
+                    var maxPermitido = detalle.Cantidad - yaDevueltas;
+
+                    if (linea.CantidadADevolver > maxPermitido)
                     {
-                        DetalleVentaID = det.DetalleVentaID,
+                        _logger.LogWarning(LOG_WARN_CANTIDAD_EXCEDIDA,
+                            linea.DetalleVentaID, linea.CantidadADevolver, maxPermitido);
+
+                        var error = string.Format(MSG_CANTIDAD_EXCEDIDA, detalle.DetalleVentaID, maxPermitido);
+                        result.Errors.Add(error);
+                        result.Success = false;
+                        continue;
+                    }
+
+                    _logger.LogDebug(LOG_DEBUG_CREANDO_REGISTRO, linea.DetalleVentaID, linea.CantidadADevolver);
+
+                    var devolucion = new Devoluciones
+                    {
+                        DetalleVentaID = detalle.DetalleVentaID,
                         FechaDevolucion = DateTime.UtcNow,
-                        Motivo = vm.Motivo, // "devolucion" | "deposito_falso" | "otro"
+                        Motivo = motivo,
                         CantidadDevuelta = linea.CantidadADevolver,
                         Aprobada = true
                     };
-                    await _context.Devoluciones.AddAsync(dev);
 
-                    // Reponer stock
-                    if (det.Producto != null)
+                    await _context.Devoluciones.AddAsync(devolucion, ct).ConfigureAwait(false);
+
+                    if (detalle.Producto != null)
                     {
-                        det.Producto.Stock += linea.CantidadADevolver;
-                        _context.Productos.Update(det.Producto);
+                        detalle.Producto.Stock += linea.CantidadADevolver;
+                        _context.Productos.Update(detalle.Producto);
 
-                        // (Opcional) registrar movimiento
-                        await _context.MovimientosInventario.AddAsync(new MovimientosInventario
+                        _logger.LogInformation(LOG_INFO_STOCK_REPUESTO,
+                            detalle.ProductoID, linea.CantidadADevolver, detalle.Producto.Stock);
+
+                        var movimiento = new MovimientosInventario
                         {
-                            ProductoID = det.ProductoID,
+                            ProductoID = detalle.ProductoID,
                             Cantidad = linea.CantidadADevolver,
-                            TipoMovimiento = "Entrada",
+                            TipoMovimiento = TIPO_MOVIMIENTO_ENTRADA,
                             FechaMovimiento = DateTime.UtcNow,
-                            Descripcion = $"Devolución Venta #{venta.VentaID} (Detalle #{det.DetalleVentaID})"
-                        });
+                            Descripcion = $"Devolución Venta #{venta.VentaID} (Detalle #{detalle.DetalleVentaID})"
+                        };
+
+                        await _context.MovimientosInventario.AddAsync(movimiento, ct).ConfigureAwait(false);
                     }
                 }
 
-                await _context.SaveChangesAsync();
+                if (!result.Success)
+                {
+                    await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                    result.Message = MSG_ERROR_PROCESAR;
+                    return result;
+                }
 
-                // ¿La devolución resultó total?
+                await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+
                 var totalVendidas = venta.DetalleVentas.Sum(d => d.Cantidad);
-                var totalDevueltas = await _context.Devoluciones
-                    .Where(x => x.DetalleVenta.VentaID == venta.VentaID && x.Aprobada)
-                    .SumAsync(x => x.CantidadDevuelta);
+                var totalDevueltas = await GetTotalDevueltasAsync(ventaId, ct).ConfigureAwait(false);
+
+                _logger.LogDebug(LOG_DEBUG_VERIFICANDO_CANCELACION, ventaId, totalVendidas, totalDevueltas);
 
                 if (totalDevueltas >= totalVendidas)
                 {
-                    // Mantén consistencia con vistas que esperan "cancelado"
-                    venta.Estado = "cancelado";
+                    venta.Estado = ESTADO_CANCELADO;
                     _context.Ventas.Update(venta);
-                    await _context.SaveChangesAsync();
+                    await _context.SaveChangesAsync(ct).ConfigureAwait(false);
+
+                    result.VentaCancelada = true;
+                    _logger.LogInformation(LOG_INFO_VENTA_CANCELADA, ventaId);
                 }
 
-                await tx.CommitAsync();
-                TempData["MensajeExito"] = "Devolución registrada correctamente.";
+                await transaction.CommitAsync(ct).ConfigureAwait(false);
+
+                result.Message = MSG_DEVOLUCION_EXITOSA;
+                _logger.LogInformation(LOG_INFO_DEVOLUCION_PROCESADA, ventaId, lineasValidas.Count, result.VentaCancelada);
+
+                return result;
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                await tx.RollbackAsync();
-                TempData["MensajeError"] = "Ocurrió un error al registrar la devolución.";
-                return View(await Recargar(vm));
+                await transaction.RollbackAsync(ct).ConfigureAwait(false);
+                _logger.LogError(ex, LOG_ERROR_PROCESAR_DEVOLUCION, ventaId);
+
+                return new DevolucionResult
+                {
+                    Success = false,
+                    Message = MSG_ERROR_PROCESAR,
+                    Errors = new List<string> { ex.Message }
+                };
             }
-
-            // Redirección segura
-            if (!string.IsNullOrWhiteSpace(vm.ReturnUrl) && Url.IsLocalUrl(vm.ReturnUrl))
-                return Redirect(vm.ReturnUrl);
-
-            return RedirectToAction("Index", "MisCompras");
         }
 
-        private async Task<CrearDevolucionVM> Recargar(CrearDevolucionVM vm)
+        /// <inheritdoc />
+        public async Task<bool> TieneDevolucionesAsync(int ventaId, CancellationToken ct = default)
         {
-            // reconstruye límites para re-render con errores
-            var venta = await _context.Ventas
-                .Include(v => v.DetalleVentas).ThenInclude(d => d.Producto)
-                .FirstOrDefaultAsync(v => v.VentaID == vm.VentaId);
+            ValidateVentaId(ventaId);
 
-            var devAcum = await _context.Devoluciones
-                .Where(x => x.DetalleVenta.VentaID == vm.VentaId && x.Aprobada)
-                .GroupBy(x => x.DetalleVentaID)
-                .Select(g => new { g.Key, Cant = g.Sum(x => x.CantidadDevuelta) })
-                .ToDictionaryAsync(t => t.Key, t => t.Cant);
-
-            vm.Lineas = venta?.DetalleVentas.Select(d => new CrearDevolucionVM.LineaVM
-            {
-                DetalleVentaID = d.DetalleVentaID,
-                Producto = d.Producto?.Nombre ?? $"Producto #{d.ProductoID}",
-                CantidadVendida = d.Cantidad,
-                CantidadDevueltaAcumulada = devAcum.TryGetValue(d.DetalleVentaID, out var c) ? c : 0,
-                // mantiene el valor ingresado por el usuario en CantidadADevolver
-                CantidadADevolver = vm.Lineas.FirstOrDefault(l => l.DetalleVentaID == d.DetalleVentaID)?.CantidadADevolver ?? 0
-            }).ToList() ?? new List<CrearDevolucionVM.LineaVM>();
-
-            return vm;
+            return await _context.Devoluciones
+                .AsNoTracking()
+                .AnyAsync(d => d.DetalleVenta.VentaID == ventaId, ct)
+                .ConfigureAwait(false);
         }
+
+        /// <inheritdoc />
+        public async Task<int> GetTotalDevueltasAsync(int ventaId, CancellationToken ct = default)
+        {
+            ValidateVentaId(ventaId);
+
+            var total = await _context.Devoluciones
+                .AsNoTracking()
+                .Where(x => x.DetalleVenta.VentaID == ventaId && x.Aprobada)
+                .SumAsync(x => x.CantidadDevuelta, ct)
+                .ConfigureAwait(false);
+
+            return total;
+        }
+
+        #endregion
     }
+
+    #endregion
+
+    #region DTOs
+
+    /// <summary>
+    /// Resultado del procesamiento de devolución
+    /// </summary>
+    public sealed class DevolucionResult
+    {
+        /// <summary>
+        /// Indica si el procesamiento fue exitoso
+        /// </summary>
+        public bool Success { get; set; }
+
+        /// <summary>
+        /// Mensaje descriptivo del resultado
+        /// </summary>
+        public string Message { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Indica si la devolución resultó en cancelación total de la venta
+        /// </summary>
+        public bool VentaCancelada { get; set; }
+
+        /// <summary>
+        /// Errores de validación si los hay
+        /// </summary>
+        public List<string> Errors { get; set; } = new List<string>();
+    }
+
+    /// <summary>
+    /// Línea de devolución a procesar
+    /// </summary>
+    public sealed class LineaDevolucion
+    {
+        /// <summary>
+        /// ID del detalle de venta
+        /// </summary>
+        public int DetalleVentaID { get; set; }
+
+        /// <summary>
+        /// Cantidad a devolver
+        /// </summary>
+        public int CantidadADevolver { get; set; }
+    }
+
+    #endregion
 }

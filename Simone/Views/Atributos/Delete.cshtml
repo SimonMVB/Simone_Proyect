@@ -1,0 +1,266 @@
+﻿@model Simone.Models.CategoriaAtributo
+@{
+    ViewData["Title"] = "Eliminar Atributo";
+    var categoria = ViewBag.Categoria as Simone.Models.Categoria;
+    var tieneProductos = Model.ValoresProductos?.Any() == true;
+    var cantidadProductos = Model.ValoresProductos?.Count ?? 0;
+}
+
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Index">Categorías</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Details" asp-route-id="@categoria?.CategoriaID">
+                            @categoria?.Nombre
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a asp-action="Index" asp-route-categoriaId="@categoria?.CategoriaID">Atributos</a>
+                    </li>
+                    <li class="breadcrumb-item active">Eliminar</li>
+                </ol>
+            </nav>
+            <h2 class="text-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>Eliminar Atributo
+            </h2>
+        </div>
+    </div>
+
+    @if (tieneProductos)
+    {
+        <!-- Alerta si tiene productos asociados -->
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-ban me-2"></i>No se puede eliminar</h4>
+            <p>
+                Este atributo tiene <strong>@cantidadProductos producto(s)</strong> con valores asignados.
+                Debes eliminar o actualizar los valores en esos productos antes de eliminar este atributo.
+            </p>
+            <hr>
+            <div class="mb-0">
+                <a asp-action="Index" asp-route-categoriaId="@Model.CategoriaID" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Listado
+                </a>
+                <a asp-action="Edit" asp-route-id="@Model.AtributoID" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Editar en su lugar
+                </a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="fas fa-box me-2"></i>Productos con este Atributo</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Los siguientes productos tienen valores asignados para este atributo.
+                    Debes eliminar o cambiar estos valores antes de eliminar el atributo.
+                </p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>@cantidadProductos producto(s)</strong> afectados.
+                    Contacta al administrador del sistema para gestionar estos productos.
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Confirmación de eliminación -->
+        <div class="alert alert-warning" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-exclamation-circle me-2"></i>¿Estás seguro?</h4>
+            <p>
+                Estás a punto de eliminar el atributo <strong>"@Model.Nombre"</strong>.
+                Esta acción <strong>no se puede deshacer</strong>.
+            </p>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Atributo</h5>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row">
+                            <dt class="col-sm-5">Nombre:</dt>
+                            <dd class="col-sm-7"><strong>@Model.Nombre</strong></dd>
+
+                            <dt class="col-sm-5">Nombre Técnico:</dt>
+                            <dd class="col-sm-7"><code>@Model.NombreTecnico</code></dd>
+
+                            <dt class="col-sm-5">Categoría:</dt>
+                            <dd class="col-sm-7">@categoria?.Nombre</dd>
+
+                            <dt class="col-sm-5">Tipo de Campo:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-info">@Model.TipoCampo</span>
+                            </dd>
+
+                            @if (!string.IsNullOrEmpty(Model.Grupo))
+                            {
+                                <dt class="col-sm-5">Grupo:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="badge bg-secondary">@Model.Grupo</span>
+                                </dd>
+                            }
+
+                            <dt class="col-sm-5">Orden:</dt>
+                            <dd class="col-sm-7">@Model.Orden</dd>
+
+                            <dt class="col-sm-5">Estado:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge @(Model.Activo ? "bg-success" : "bg-secondary")">
+                                    @(Model.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </dd>
+
+                            @if (Model.Obligatorio)
+                            {
+                                <dt class="col-sm-5">Obligatorio:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-circle"></i> Sí
+                                    </span>
+                                </dd>
+                            }
+
+                            @if (Model.Filtrable)
+                            {
+                                <dt class="col-sm-5">Filtrable:</dt>
+                                <dd class="col-sm-7">
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-filter"></i> Sí
+                                    </span>
+                                </dd>
+                            }
+
+                            <dt class="col-sm-5">Creado:</dt>
+                            <dd class="col-sm-7">@Model.CreadoUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            @if (!string.IsNullOrEmpty(Model.Descripcion))
+                            {
+                                <dt class="col-sm-5">Descripción:</dt>
+                                <dd class="col-sm-7">@Model.Descripcion</dd>
+                            }
+                        </dl>
+
+                        @if (!string.IsNullOrEmpty(Model.IconoClass))
+                        {
+                            <div class="text-center py-3">
+                                <i class="@Model.IconoClass fa-4x text-muted"></i>
+                            </div>
+                        }
+
+                        @if (Model.TieneOpciones && Model.OpcionesLista != null)
+                        {
+                            <hr />
+                            <h6><i class="fas fa-list me-2"></i>Opciones:</h6>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach (var opcion in Model.OpcionesLista)
+                                {
+                                    <span class="badge bg-light text-dark border">@opcion</span>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>Verificaciones</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <strong>Sin productos asociados</strong>
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-info-circle text-info me-2"></i>
+                                <span>Usado en @Model.UsageCount producto(s) históricamente</span>
+                            </li>
+                            <li class="mb-0">
+                                <i class="fas fa-info-circle text-info me-2"></i>
+                                <span>@Model.FilterClickCount click(s) en filtros</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Configuración</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0 small">
+                            <li class="mb-1">
+                                <i class="fas @(Model.Obligatorio ? "fa-check text-success" : "fa-times text-muted") me-2"></i>
+                                Obligatorio
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas @(Model.Filtrable ? "fa-check text-success" : "fa-times text-muted") me-2"></i>
+                                Filtrable
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas @(Model.MostrarEnFicha ? "fa-check text-success" : "fa-times text-muted") me-2"></i>
+                                Mostrar en Ficha
+                            </li>
+                            <li class="mb-0">
+                                <i class="fas @(Model.MostrarEnTarjeta ? "fa-check text-success" : "fa-times text-muted") me-2"></i>
+                                Mostrar en Tarjeta
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Advertencia</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2"><strong>Esta acción:</strong></p>
+                        <ul class="small mb-3">
+                            <li>Eliminará permanentemente el atributo</li>
+                            <li>No se puede deshacer</li>
+                            <li>Los productos ya NO tienen valores asignados</li>
+                        </ul>
+
+                        <form asp-action="Delete" method="post">
+                            <input type="hidden" asp-for="AtributoID" />
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash-alt me-2"></i>Confirmar Eliminación
+                                </button>
+                                <a asp-action="Index" asp-route-categoriaId="@Model.CategoriaID"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-times me-2"></i>Cancelar
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        // Confirmar antes de eliminar
+        $('form').on('submit', function(e) {
+            var confirmed = confirm('¿CONFIRMAS que deseas eliminar este atributo? Esta acción NO se puede deshacer.');
+            if (!confirmed) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+}

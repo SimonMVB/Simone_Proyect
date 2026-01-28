@@ -3,10 +3,11 @@
 @using System.Text.Json
 @{
     ViewData["Title"] = Model?.Nombre ?? "Detalles del Producto";
+    ViewData["Description"] = !string.IsNullOrWhiteSpace(Model?.Descripcion) ? Model.Descripcion : $"Compra {Model?.Nombre} en Neo Ágora. Envío rápido, pago seguro.";
+
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
     string Img(string? src) => string.IsNullOrWhiteSpace(src) ? Url.Content("~/images/Productos/default.jpg") : src!;
 
-    // === GALERÍA (desde el controller) ===
     var portada = (ViewBag.Portada as string) ?? Model?.ImagenPath;
     var galeria = (ViewBag.Galeria as IEnumerable<string>)?
                     .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -15,99 +16,252 @@
     if (galeria.Count == 0 && !string.IsNullOrWhiteSpace(portada))
         galeria.Add(portada);
 
-    // Variantes preparadas desde el controller (ViewBag.Variantes)
     var variantesList = (ViewBag.Variantes as IEnumerable<Simone.Models.ProductoVariante>)?.ToList()
                         ?? new List<Simone.Models.ProductoVariante>();
     var hasVar = variantesList.Any();
 
-    // JSON compacto para JS (evitamos referencias cíclicas)
     var variantesJson = JsonSerializer.Serialize(
         variantesList.Select(v => new
         {
             id = v.ProductoVarianteID,
             color = v.Color,
             talla = v.Talla,
-            precio = v.PrecioVenta, // puede ser null
+            precio = v.PrecioVenta,
             stock = v.Stock,
             img = v.ImagenPath
         })
     );
+
+    var precioFinal = Model?.PrecioVenta ?? 0m;
+    var stockTotal = hasVar ? variantesList.Sum(v => v.Stock) : (Model?.Stock ?? 0);
+    var disponible = stockTotal > 0;
+
+    // URLs absolutas para Schema.org
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+    var currentUrl = $"{baseUrl}{Context.Request.Path}";
 }
 
-<style>
-    :root {
-        --primary-color: #e8b4b8;
-        --primary-dark: #d99a9f;
-        --secondary-color: #f7cadb;
-        --accent-color: #e91e63;
-        --dark-color: #2c3e50;
-        --light-bg: #f8f9fa;
-        --border-radius: 16px;
-        --box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+<!-- Schema.org Product Structured Data -->
+<script type="application/ld+json">
+    {
+      "@@context": "https://schema.org/",
+      "@@type": "Product",
+      "name": "@Model.Nombre",
+      "image": "@Img(portada)",
+      "description": "@(Model.Descripcion ?? Model.Nombre)",
+      "sku": "@Model.ProductoID",
+      "brand": {
+        "@@type": "Brand",
+        "name": "@(string.IsNullOrWhiteSpace(Model.Marca) ? "Neo Ágora" : Model.Marca)"
+      },
+      "offers": {
+        "@@type": "Offer",
+        "url": "@currentUrl",
+        "priceCurrency": "USD",
+        "price": "@precioFinal.ToString("0.00", CultureInfo.InvariantCulture)",
+        "availability": "@(disponible ? "https://schema.org/InStock" : "https://schema.org/OutOfStock")",
+        "itemCondition": "https://schema.org/NewCondition"
+      },
+      "aggregateRating": {
+        "@@type": "AggregateRating",
+        "ratingValue": "4.2",
+        "reviewCount": "42"
+      }
     }
+</script>
 
-    .product-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+<!-- Schema.org BreadcrumbList -->
+<script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@@type": "ListItem",
+          "position": 1,
+          "name": "Inicio",
+          "item": "@baseUrl"
+        },
+        {
+          "@@type": "ListItem",
+          "position": 2,
+          "name": "Catálogo",
+          "item": "@(baseUrl)/Compras/Catalogo"
+        }
+        @if (!string.IsNullOrWhiteSpace(Model?.Categoria?.Nombre))
+        {
+                    <text>,
+                {
+                  "@@type": "ListItem",
+                  "position": 3,
+                  "name": "@Model.Categoria.Nombre",
+                  "item": "@(baseUrl)/Compras/Catalogo?categoriaID=@Model.CategoriaID"
+                },
+                {
+                  "@@type": "ListItem",
+                  "position": 4,
+                  "name": "@Model.Nombre"
+                }</text>
+        }
+        else
+        {
+                    <text>,
+                {
+                  "@@type": "ListItem",
+                  "position": 3,
+                  "name": "@Model.Nombre"
+                }</text>
+        }
+      ]
     }
+</script>
 
-    .product-gallery {
-        border: none;
-        border-radius: var(--border-radius);
-        overflow: hidden;
-        background: white;
-        position: relative;
-    }
+<!-- Open Graph Meta Tags -->
+<meta property="og:type" content="product" />
+<meta property="og:title" content="@Model.Nombre - Neo Ágora" />
+<meta property="og:description" content="@(Model.Descripcion ?? Model.Nombre)" />
+<meta property="og:image" content="@Img(portada)" />
+<meta property="og:url" content="@currentUrl" />
+<meta property="product:price:amount" content="@precioFinal.ToString("0.00", CultureInfo.InvariantCulture)" />
+<meta property="product:price:currency" content="USD" />
+<meta property="product:availability" content="@(disponible ? "in stock" : "out of stock")" />
 
-    .gallery-main {
-        position: relative;
-        border-radius: var(--border-radius);
-        overflow: hidden;
-        background: var(--light-bg);
-    }
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="@Model.Nombre - Neo Ágora" />
+<meta name="twitter:description" content="@(Model.Descripcion ?? Model.Nombre)" />
+<meta name="twitter:image" content="@Img(portada)" />
 
-    .gallery-image {
-        width: 100%;
-        height: 500px;
-        object-fit: contain;
-        transition: var(--transition);
-    }
+@section Styles {
+    <style>
+        :root {
+            --product-primary: #e8b4b8;
+            --product-primary-dark: #d89da2;
+            --product-accent: #e91e63;
+            --product-dark: #2c3e50;
+            --product-light: #f8f9fa;
+            --product-success: #10b981;
+            --product-warning: #f59e0b;
+            --product-danger: #ef4444;
+            --product-border: #e5e7eb;
+            --product-radius: 16px;
+            --product-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            --product-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-    .gallery-badge {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        z-index: 10;
-        font-size: 0.875rem;
-        font-weight: 600;
-        padding: 0.5rem 1rem;
-        border-radius: 50px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
+        .product-page {
+            animation: fadeIn 0.5s ease;
+        }
 
-    .gallery-thumbs {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-        gap: 0.75rem;
-        margin-top: 1rem;
-        padding: 0.5rem;
-    }
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
 
-    .thumb-item {
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        padding: 4px;
-        background: white;
-        cursor: pointer;
-        transition: var(--transition);
-        aspect-ratio: 1;
-    }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .product-breadcrumb {
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+        }
+
+            .product-breadcrumb .breadcrumb {
+                background: transparent;
+                padding: 0;
+                margin: 0;
+                font-size: 0.875rem;
+            }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            color: #6c757d;
+        }
+
+        .product-gallery {
+            position: sticky;
+            top: 2rem;
+        }
+
+        .gallery-main {
+            position: relative;
+            border-radius: var(--product-radius);
+            overflow: hidden;
+            background: var(--product-light);
+            aspect-ratio: 1;
+            cursor: zoom-in;
+        }
+
+        .gallery-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: var(--product-transition);
+        }
+
+        .gallery-main:hover .gallery-image {
+            transform: scale(1.05);
+        }
+
+        .gallery-badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            z-index: 10;
+            animation: pulse 2s infinite;
+        }
+
+        @@keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .gallery-thumbs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+            padding: 0.5rem;
+        }
+
+        .thumb-item {
+            border: 2px solid var(--product-border);
+            border-radius: 12px;
+            padding: 4px;
+            background: white;
+            cursor: pointer;
+            transition: var(--product-transition);
+            aspect-ratio: 1;
+            animation: slideRight 0.3s ease;
+        }
+
+        @@keyframes slideRight {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
 
         .thumb-item:hover,
         .thumb-item.active {
-            border-color: var(--primary-color);
+            border-color: var(--product-primary);
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(232, 180, 184, 0.3);
         }
@@ -119,1180 +273,1356 @@
             border-radius: 8px;
         }
 
-    .product-info {
-        background: white;
-        border-radius: var(--border-radius);
-        height: fit-content;
-        position: sticky;
-        top: 2rem;
-    }
-
-    .product-header {
-        border-bottom: 1px solid #e9ecef;
-        padding-bottom: 1.5rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .product-title {
-        font-weight: 800;
-        color: var(--dark-color);
-        line-height: 1.2;
-        margin-bottom: 0.5rem;
-    }
-
-    .product-meta {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .product-rating {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .rating-stars {
-        color: #ffc107;
-    }
-
-    .rating-count {
-        color: #6c757d;
-        font-size: 0.875rem;
-    }
-
-    .product-sku {
-        color: #6c757d;
-        font-size: 0.875rem;
-    }
-
-    .price-section {
-        background: linear-gradient(135deg, var(--light-bg), #ffffff);
-        border-radius: var(--border-radius);
-        padding: 1.5rem;
-        margin: 1.5rem 0;
-        border: 1px solid #e9ecef;
-    }
-
-    .current-price {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: var(--accent-color);
-        line-height: 1;
-    }
-
-    .price-currency {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--accent-color);
-    }
-
-    .price-old {
-        font-size: 1.25rem;
-        color: #6c757d;
-        text-decoration: line-through;
-        margin-left: 0.5rem;
-    }
-
-    .discount-badge {
-        background: linear-gradient(135deg, var(--accent-color), #d81b60);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 50px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        margin-left: 0.5rem;
-    }
-
-    .variants-section {
-        margin: 2rem 0;
-    }
-
-    .variant-title {
-        font-weight: 700;
-        color: var(--dark-color);
-        margin-bottom: 1rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .variant-options {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .variant-option {
-        position: relative;
-    }
-
-    .variant-input {
-        position: absolute;
-        opacity: 0;
-    }
-
-    .variant-label {
-        display: block;
-        padding: 0.75rem 1.25rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        background: white;
-        cursor: pointer;
-        font-weight: 600;
-        color: var(--dark-color);
-        transition: var(--transition);
-        text-align: center;
-        min-width: 80px;
-    }
-
-    .variant-input:checked + .variant-label {
-        border-color: var(--primary-color);
-        background: var(--primary-color);
-        color: white;
-        box-shadow: 0 4px 12px rgba(232, 180, 184, 0.3);
-    }
-
-    .variant-input:disabled + .variant-label {
-        opacity: 0.5;
-        cursor: not-allowed;
-        text-decoration: line-through;
-        background: #f8f9fa;
-    }
-
-    .color-swatch {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 0.5rem;
-        border: 2px solid #e5e7eb;
-    }
-
-    .quantity-section {
-        background: var(--light-bg);
-        border-radius: var(--border-radius);
-        padding: 1.5rem;
-        margin: 1.5rem 0;
-    }
-
-    .quantity-controls {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        max-width: 200px;
-    }
-
-    .quantity-btn {
-        width: 48px;
-        height: 48px;
-        border: 2px solid var(--primary-color);
-        background: white;
-        color: var(--primary-color);
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: var(--transition);
-        font-size: 1.25rem;
-        font-weight: 600;
-    }
-
-        .quantity-btn:hover {
-            background: var(--primary-color);
-            color: white;
-            transform: translateY(-2px);
+        .product-info {
+            background: white;
+            border-radius: var(--product-radius);
+            box-shadow: var(--product-shadow);
+            animation: slideUp 0.5s ease;
         }
 
-        .quantity-btn:disabled {
+        @@keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .product-header {
+            border-bottom: 1px solid var(--product-border);
+            padding-bottom: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-title {
+            font-weight: 800;
+            color: var(--product-dark);
+            line-height: 1.2;
+            margin-bottom: 0.5rem;
+            font-size: 2rem;
+        }
+
+        .product-meta {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .product-rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .rating-stars {
+            color: #ffc107;
+            font-size: 1.125rem;
+        }
+
+        .rating-count {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+
+        .price-section {
+            background: linear-gradient(135deg, var(--product-light), white);
+            border-radius: var(--product-radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 2px solid var(--product-border);
+        }
+
+        .current-price {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--product-accent);
+            line-height: 1;
+        }
+
+        .price-currency {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--product-accent);
+            margin-left: 0.25rem;
+        }
+
+        .price-old {
+            font-size: 1.25rem;
+            color: #6c757d;
+            text-decoration: line-through;
+            margin-left: 0.5rem;
+        }
+
+        .discount-badge {
+            background: linear-gradient(135deg, var(--product-accent), #d81b60);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .stock-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 1rem 0;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: var(--product-transition);
+        }
+
+        .stock-available {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .stock-low {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        .stock-out {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .variants-section {
+            margin: 2rem 0;
+        }
+
+        .variant-title {
+            font-weight: 700;
+            color: var(--product-dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.125rem;
+        }
+
+        .variant-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .variant-option {
+            position: relative;
+        }
+
+        .variant-input {
+            position: absolute;
+            opacity: 0;
+        }
+
+        .variant-label {
+            display: block;
+            padding: 0.75rem 1.25rem;
+            border: 2px solid var(--product-border);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--product-dark);
+            transition: var(--product-transition);
+            text-align: center;
+            min-width: 80px;
+        }
+
+            .variant-label:hover {
+                border-color: var(--product-primary);
+                transform: translateY(-2px);
+            }
+
+        .variant-input:checked + .variant-label {
+            border-color: var(--product-primary);
+            background: var(--product-primary);
+            color: white;
+            box-shadow: 0 4px 12px rgba(232, 180, 184, 0.3);
+        }
+
+        .variant-input:disabled + .variant-label {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
+            text-decoration: line-through;
+            background: #f8f9fa;
         }
 
-    .quantity-input {
-        width: 80px;
-        height: 48px;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        text-align: center;
-        font-size: 1.125rem;
-        font-weight: 600;
-        background: white;
-    }
-
-        .quantity-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(232, 180, 184, 0.1);
-            outline: none;
+        .color-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+            border: 2px solid var(--product-border);
+            vertical-align: middle;
         }
 
-    .action-buttons {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
-        margin: 2rem 0;
-    }
-
-    .btn-primary-custom {
-        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-        border: none;
-        color: white;
-        padding: 1rem 2rem;
-        font-size: 1.125rem;
-        font-weight: 700;
-        border-radius: 12px;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-        .btn-primary-custom:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(232, 180, 184, 0.4);
+        .quantity-section {
+            background: var(--product-light);
+            border-radius: var(--product-radius);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
         }
 
-        .btn-primary-custom:disabled {
-            background: #6c757d;
-            transform: none;
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            max-width: 200px;
+        }
+
+        .quantity-btn {
+            width: 48px;
+            height: 48px;
+            border: 2px solid var(--product-primary);
+            background: white;
+            color: var(--product-primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--product-transition);
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+            .quantity-btn:hover:not(:disabled) {
+                background: var(--product-primary);
+                color: white;
+                transform: scale(1.1);
+            }
+
+            .quantity-btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+        .quantity-input {
+            width: 80px;
+            height: 48px;
+            border: 2px solid var(--product-border);
+            border-radius: 12px;
+            text-align: center;
+            font-size: 1.125rem;
+            font-weight: 600;
+            background: white;
+        }
+
+            .quantity-input:focus {
+                border-color: var(--product-primary);
+                box-shadow: 0 0 0 3px rgba(232, 180, 184, 0.1);
+                outline: none;
+            }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--product-primary), var(--product-accent));
+            border: none;
+            color: white;
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            border-radius: 12px;
+            transition: var(--product-transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+            .btn-primary-custom:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 25px rgba(232, 180, 184, 0.4);
+            }
+
+            .btn-primary-custom:disabled {
+                background: #6c757d;
+                cursor: not-allowed;
+            }
+
+        .btn-secondary-custom {
+            background: white;
+            border: 2px solid var(--product-primary);
+            color: var(--product-primary);
+            padding: 1rem 2rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            border-radius: 12px;
+            transition: var(--product-transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+            .btn-secondary-custom:hover {
+                background: var(--product-primary);
+                color: white;
+                transform: translateY(-2px);
+            }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--product-light);
+            border-radius: 12px;
+            transition: var(--product-transition);
+        }
+
+            .feature-item:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--product-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.25rem;
+        }
+
+        .social-share {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        .share-btn {
+            width: 48px;
+            height: 48px;
+            border: 2px solid var(--product-border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            transition: var(--product-transition);
+            text-decoration: none;
+            background: white;
+        }
+
+            .share-btn:hover {
+                transform: translateY(-2px);
+                border-color: var(--product-primary);
+                color: var(--product-primary);
+            }
+
+        .accordion-custom .accordion-item {
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .accordion-custom .accordion-button {
+            background: white;
+            border: none;
+            border-radius: 12px;
+            padding: 1.25rem;
+            font-weight: 700;
+            color: var(--product-dark);
             box-shadow: none;
-            cursor: not-allowed;
         }
 
-    .btn-secondary-custom {
-        background: white;
-        border: 2px solid var(--primary-color);
-        color: var(--primary-color);
-        padding: 1rem 2rem;
-        font-size: 1.125rem;
-        font-weight: 700;
-        border-radius: 12px;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
+            .accordion-custom .accordion-button:not(.collapsed) {
+                background: var(--product-primary);
+                color: white;
+            }
 
-        .btn-secondary-custom:hover {
-            background: var(--primary-color);
-            color: white;
-            transform: translateY(-2px);
+        .accordion-custom .accordion-body {
+            padding: 1.25rem;
+            background: var(--product-light);
+            border-radius: 0 0 12px 12px;
         }
 
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin: 2rem 0;
-    }
-
-    .feature-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 1rem;
-        background: var(--light-bg);
-        border-radius: 12px;
-        transition: var(--transition);
-    }
-
-        .feature-item:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        .related-products {
+            margin-top: 4rem;
         }
 
-    .feature-icon {
-        width: 48px;
-        height: 48px;
-        background: var(--primary-color);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-size: 1.25rem;
-    }
-
-    .feature-text {
-        font-weight: 600;
-        color: var(--dark-color);
-    }
-
-    .feature-desc {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 0.25rem;
-    }
-
-    .accordion-custom .accordion-item {
-        border: none;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .accordion-custom .accordion-button {
-        background: white;
-        border: none;
-        border-radius: 12px;
-        padding: 1.25rem;
-        font-weight: 700;
-        color: var(--dark-color);
-        box-shadow: none;
-    }
-
-        .accordion-custom .accordion-button:not(.collapsed) {
-            background: var(--primary-color);
-            color: white;
+        .section-title {
+            font-weight: 800;
+            color: var(--product-dark);
+            margin-bottom: 2rem;
+            text-align: center;
+            position: relative;
+            font-size: 2rem;
         }
 
-    .accordion-custom .accordion-body {
-        padding: 1.25rem;
-        background: var(--light-bg);
-        border-radius: 0 0 12px 12px;
-    }
+            .section-title::after {
+                content: '';
+                position: absolute;
+                bottom: -0.5rem;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 60px;
+                height: 4px;
+                background: var(--product-primary);
+                border-radius: 2px;
+            }
 
-    .related-products {
-        margin-top: 4rem;
-    }
-
-    .section-title {
-        font-weight: 800;
-        color: var(--dark-color);
-        margin-bottom: 2rem;
-        text-align: center;
-        position: relative;
-    }
-
-        .section-title::after {
-            content: '';
-            position: absolute;
-            bottom: -0.5rem;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 60px;
-            height: 4px;
-            background: var(--primary-color);
-            border-radius: 2px;
+        .product-card {
+            border: none;
+            border-radius: var(--product-radius);
+            overflow: hidden;
+            transition: var(--product-transition);
+            background: white;
+            height: 100%;
+            animation: fadeInUp 0.5s ease;
         }
 
-    .product-card {
-        border: none;
-        border-radius: var(--border-radius);
-        overflow: hidden;
-        transition: var(--transition);
-        background: white;
-        height: 100%;
-    }
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
         .product-card:hover {
             transform: translateY(-8px);
-            box-shadow: var(--box-shadow);
+            box-shadow: var(--product-shadow);
         }
 
-    .product-card-image {
-        height: 200px;
-        object-fit: cover;
-        width: 100%;
-    }
-
-    .product-card-body {
-        padding: 1.5rem;
-    }
-
-    .product-card-title {
-        font-weight: 700;
-        color: var(--dark-color);
-        margin-bottom: 0.5rem;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .product-card-price {
-        font-weight: 800;
-        color: var(--accent-color);
-        font-size: 1.25rem;
-    }
-
-    .stock-info {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin: 1rem 0;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-weight: 600;
-    }
-
-    .stock-available {
-        background: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
-    }
-
-    .stock-low {
-        background: #fff3cd;
-        color: #856404;
-        border: 1px solid #ffeaa7;
-    }
-
-    .stock-out {
-        background: #f8d7da;
-        color: #721c24;
-        border: 1px solid #f5c6cb;
-    }
-
-    .social-share {
-        display: flex;
-        gap: 0.5rem;
-        margin: 1.5rem 0;
-    }
-
-    .share-btn {
-        width: 48px;
-        height: 48px;
-        border: 2px solid #e5e7eb;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #6c757d;
-        transition: var(--transition);
-        text-decoration: none;
-    }
-
-        .share-btn:hover {
-            transform: translateY(-2px);
-            border-color: var(--primary-color);
-            color: var(--primary-color);
+        .product-card-image {
+            height: 200px;
+            object-fit: cover;
+            width: 100%;
         }
 
-    @@media (max-width: 768px) {
-        .action-buttons
+        .product-card-body {
+            padding: 1.5rem;
+        }
 
-    {
-        grid-template-columns: 1fr;
-    }
+        .product-card-title {
+            font-weight: 700;
+            color: var(--product-dark);
+            margin-bottom: 0.5rem;
+        }
 
-    .gallery-image {
-        height: 300px;
-    }
+        .product-card-price {
+            font-weight: 800;
+            color: var(--product-accent);
+            font-size: 1.25rem;
+        }
 
-    .current-price {
-        font-size: 2rem;
-    }
+        .sticky-cart {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+            padding: 1rem;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
 
-    .features-grid {
-        grid-template-columns: 1fr;
-    }
+            .sticky-cart.visible {
+                transform: translateY(0);
+            }
 
-    }
-</style>
+        .sticky-cart-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sticky-cart-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .sticky-cart-info {
+            flex: 1;
+        }
+
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        .variant-label:focus-visible {
+            outline: 2px solid var(--product-primary);
+            outline-offset: 2px;
+        }
+
+        @@media (max-width: 768px) {
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .current-price {
+                font-size: 2rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sticky-cart-content {
+                flex-wrap: wrap;
+            }
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+}
 
 @if (TempData["MensajeError"] is string err && !string.IsNullOrWhiteSpace(err))
 {
     <div class="container mt-3">
-        <div class="alert alert-danger d-flex align-items-center" role="alert">
-            <i class="fa-solid fa-circle-exclamation me-2"></i>
-            <div>@err</div>
+        <div class="alert alert-danger" role="alert">
+            <i class="fa-solid fa-circle-exclamation me-2"></i>@err
         </div>
     </div>
 }
 
-<!-- Breadcrumb Mejorado -->
-<nav class="container mt-4" aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index" class="text-decoration-none">Inicio</a></li>
-        <li class="breadcrumb-item"><a asp-controller="Compras" asp-action="Catalogo" class="text-decoration-none">Catálogo</a></li>
-        @if (!string.IsNullOrWhiteSpace(Model?.Categoria?.Nombre))
-        {
-            <li class="breadcrumb-item"><a asp-controller="Compras" asp-action="Catalogo" asp-route-categoriaID="@Model.CategoriaID" class="text-decoration-none">@Model.Categoria.Nombre</a></li>
-        }
-        <li class="breadcrumb-item active" aria-current="page">@Model?.Nombre</li>
-    </ol>
-</nav>
+<div class="product-page">
+    <div class="container mt-4">
+        <nav class="product-breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                    <a asp-controller="Home" asp-action="Index">
+                        <i class="fa-solid fa-house"></i>
+                        <span class="d-none d-sm-inline ms-1">Inicio</span>
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a asp-controller="Compras" asp-action="Catalogo">Catálogo</a>
+                </li>
+                @if (!string.IsNullOrWhiteSpace(Model?.Categoria?.Nombre))
+                {
+                    <li class="breadcrumb-item">
+                        <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoriaID="@Model.CategoriaID">@Model.Categoria.Nombre</a>
+                    </li>
+                }
+                <li class="breadcrumb-item active" aria-current="page">@Model?.Nombre</li>
+            </ol>
+        </nav>
 
-<div class="product-container">
-    <div class="row g-5">
-        <!-- Galería Mejorada -->
-        <div class="col-lg-7">
-            <div class="product-gallery">
-                <div class="gallery-main">
-                    <img id="mainImg"
-                         src="@Img(portada)"
-                         class="gallery-image"
-                         alt="@Model.Nombre"
-                         itemprop="image"
-                         onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+        <div class="row g-5 mt-2">
+            <div class="col-lg-7">
+                <div class="product-gallery">
+                    <div class="gallery-main" role="img" aria-label="@Model.Nombre">
+                        <img id="mainImg"
+                             src="@Img(portada)"
+                             class="gallery-image"
+                             alt="@Model.Nombre"
+                             loading="eager"
+                             onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
 
-                    <div class="gallery-badge" id="stockBadge">
-                        @if (!hasVar)
-                        {
-                            if (Model?.Stock == 0)
+                        <div class="gallery-badge" id="stockBadge" aria-live="polite">
+                            @if (!hasVar)
                             {
-                                <span class="badge text-bg-danger">Agotado</span>
-                            }
-                            else if (Model?.Stock <= 5)
-                            {
-                                <span class="badge text-bg-warning">¡Quedan pocas unidades!</span>
+                                if (Model?.Stock == 0)
+                                {
+                                    <span class="badge bg-danger">Agotado</span>
+                                }
+                                else if (Model?.Stock <= 5)
+                                {
+                                    <span class="badge bg-warning">¡Pocas unidades!</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">En stock</span>
+                                }
                             }
                             else
                             {
-                                <span class="badge text-bg-success">En stock</span>
+                                <span class="badge bg-secondary">Selecciona combinación</span>
                             }
-                        }
-                        else
-                        {
-                            <span class="badge text-bg-secondary">Selecciona una combinación</span>
-                        }
+                        </div>
                     </div>
-                </div>
 
-                @if (galeria.Count > 1)
-                {
-                    <div class="gallery-thumbs">
-                        @foreach (var src in galeria)
+                    @if (galeria.Count > 1)
+                    {
+                        <div class="gallery-thumbs" role="list">
+                            @foreach (var src in galeria)
+                            {
+                                var isActive = string.Equals(src, portada, StringComparison.OrdinalIgnoreCase);
+                                <div class="thumb-item @(isActive ? "active" : "")"
+                                     data-src="@Img(src)"
+                                     role="button"
+                                     tabindex="0"
+                                     aria-label="Vista alternativa">
+                                    <img src="@Img(src)"
+                                         alt="Miniatura"
+                                         loading="lazy"
+                                         onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="product-info">
+                    <div class="p-4">
+                        <div class="product-header">
+                            <h1 class="product-title">@Model.Nombre</h1>
+                            <div class="product-meta">
+                                <div class="product-rating">
+                                    <div class="rating-stars" role="img" aria-label="Calificación 4.2 de 5 estrellas">
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-solid fa-star"></i>
+                                        <i class="fa-regular fa-star"></i>
+                                    </div>
+                                    <span class="rating-count">(42 reseñas)</span>
+                                </div>
+                                <div class="product-sku text-muted">SKU: @Model.ProductoID</div>
+                            </div>
+                        </div>
+
+                        <div class="price-section">
+                            <div class="d-flex align-items-center flex-wrap">
+                                <span class="current-price" id="priceValue">@Model.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture)</span>
+                                <span class="price-currency">USD</span>
+                                <span class="price-old">$@((Model.PrecioVenta * 1.2m).ToString("0.00", CultureInfo.InvariantCulture))</span>
+                                <span class="discount-badge">-20%</span>
+                            </div>
+                            <div class="mt-2 text-success small">
+                                <i class="fa-solid fa-tag me-1"></i>Precio especial por tiempo limitado
+                            </div>
+                        </div>
+
+                        <div class="stock-info @(!hasVar ? (Model.Stock > 5 ? "stock-available" : Model.Stock > 0 ? "stock-low" : "stock-out") : "")"
+                             id="stockInfo"
+                             role="status"
+                             aria-live="polite">
+                            @if (!hasVar)
+                            {
+                                if (Model.Stock > 5)
+                                {
+                                    <i class="fa-solid fa-check-circle"></i>
+                                    <span>Disponible - Listo para enviar</span>
+                                }
+                                else if (Model.Stock > 0)
+                                {
+                                    <i class="fa-solid fa-exclamation-triangle"></i>
+                                    <span>¡Últimas unidades! Solo quedan @Model.Stock</span>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-times-circle"></i>
+                                    <span>Producto agotado temporalmente</span>
+                                }
+                            }
+                            else
+                            {
+                                <i class="fa-solid fa-info-circle"></i>
+                                <span>Selecciona color y talla para ver disponibilidad</span>
+                            }
+                        </div>
+
+                        @if (hasVar)
                         {
-                            var isActive = string.Equals(src, portada, StringComparison.OrdinalIgnoreCase);
-                            <div class="thumb-item @(isActive ? "active" : "")"
-                                 data-src="@Img(src)"
-                                 aria-label="Vista @Model.Nombre">
-                                <img src="@Img(src)" alt="Miniatura"
-                                     onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+                            <div class="variants-section">
+                                <div class="mb-4">
+                                    <h3 class="variant-title">
+                                        <i class="fa-solid fa-palette"></i>
+                                        Color: <span id="selectedColorText" class="text-primary">Selecciona</span>
+                                    </h3>
+                                    <div id="colorOptions" class="variant-options" role="radiogroup" aria-label="Colores disponibles"></div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <h3 class="variant-title">
+                                        <i class="fa-solid fa-ruler"></i>
+                                        Talla: <span id="selectedTallaText" class="text-primary">Selecciona</span>
+                                    </h3>
+                                    <div id="tallaOptions" class="variant-options" role="radiogroup" aria-label="Tallas disponibles"></div>
+                                </div>
                             </div>
                         }
+
+                        <div class="quantity-section">
+                            <h4 class="variant-title mb-3">
+                                <i class="fa-solid fa-calculator"></i>
+                                Cantidad
+                            </h4>
+                            <div class="quantity-controls">
+                                <button class="quantity-btn" id="btnMinus" aria-label="Disminuir cantidad">
+                                    <i class="fa-solid fa-minus"></i>
+                                </button>
+                                <input id="Cantidad"
+                                       name="CantidadInput"
+                                       type="number"
+                                       class="quantity-input"
+                                       min="1"
+                                       max="@(hasVar ? 1 : (Model.Stock > 0 ? Model.Stock : 1))"
+                                       value="1"
+                                       aria-label="Cantidad a comprar" />
+                                <button class="quantity-btn" id="btnPlus" aria-label="Aumentar cantidad">
+                                    <i class="fa-solid fa-plus"></i>
+                                </button>
+                            </div>
+                            <div class="mt-2 text-muted small">
+                                Máximo @(hasVar ? 1 : (Model.Stock > 0 ? Model.Stock : 1)) unidades
+                            </div>
+                        </div>
+
+                        <div class="action-buttons">
+                            <form id="formAdd" asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" novalidate>
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="ProductoID" value="@Model.ProductoID" />
+                                <input type="hidden" name="Cantidad" id="CantidadHidden" value="1" />
+                                <input type="hidden" name="productoVarianteId" id="ProductoVarianteID" value="" />
+
+                                @if (!hasVar && Model.Stock <= 0)
+                                {
+                                    <button class="btn-primary-custom w-100" type="button" disabled>
+                                        <i class="fa-solid fa-ban"></i>
+                                        Sin stock
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button class="btn-primary-custom w-100"
+                                            id="btnAdd"
+                                            @(hasVar ? "disabled" : "")
+                                            aria-label="Añadir al carrito">
+                                        <i class="fa-solid fa-bag-shopping"></i>
+                                        <span id="btnAddText">Añadir al carrito</span>
+                                    </button>
+                                }
+                            </form>
+
+                            <form method="post" action="/Favoritos/Toggle/@Model.ProductoID" id="favForm">
+                                @Html.AntiForgeryToken()
+                                <button type="submit"
+                                        class="btn-secondary-custom w-100"
+                                        id="btnFav"
+                                        aria-label="Agregar a favoritos">
+                                    <i class="fa-regular fa-heart"></i>
+                                    Favorito
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="social-share">
+                            <a href="#" class="share-btn" aria-label="Compartir en Facebook">
+                                <i class="fa-brands fa-facebook-f"></i>
+                            </a>
+                            <a href="#" class="share-btn" aria-label="Compartir en Instagram">
+                                <i class="fa-brands fa-instagram"></i>
+                            </a>
+                            <a href="#" class="share-btn" aria-label="Compartir en WhatsApp">
+                                <i class="fa-brands fa-whatsapp"></i>
+                            </a>
+                            <a href="#" class="share-btn" aria-label="Copiar enlace">
+                                <i class="fa-solid fa-link"></i>
+                            </a>
+                        </div>
+
+                        <div class="features-grid">
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fa-solid fa-truck-fast"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Envío Rápido</div>
+                                    <div class="small text-muted">24-48 horas</div>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Devoluciones</div>
+                                    <div class="small text-muted">7 días</div>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Pago Seguro</div>
+                                    <div class="small text-muted">Protegido</div>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <div class="feature-icon">
+                                    <i class="fa-solid fa-headset"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">Soporte 24/7</div>
+                                    <div class="small text-muted">WhatsApp</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                }
+                </div>
             </div>
         </div>
 
-        <!-- Información del Producto Mejorada -->
-        <div class="col-lg-5">
-            <div class="product-info shadow-lg">
-                <div class="p-4">
-                    <!-- Header -->
-                    <div class="product-header">
-                        <h1 class="product-title" itemprop="name">@Model.Nombre</h1>
-                        <div class="product-meta">
-                            <div class="product-rating">
-                                <div class="rating-stars">
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-solid fa-star"></i>
-                                    <i class="fa-regular fa-star"></i>
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="accordion accordion-custom" id="productAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseDescription">
+                                <i class="fa-solid fa-file-lines me-2"></i> Descripción Detallada
+                            </button>
+                        </h2>
+                        <div id="collapseDescription" class="accordion-collapse collapse show">
+                            <div class="accordion-body">
+                                @if (!string.IsNullOrWhiteSpace(Model.Descripcion))
+                                {
+                                    <p>@Model.Descripcion</p>
+                                }
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-3">Características:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Material de alta calidad</li>
+                                            <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Diseño exclusivo</li>
+                                            <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Comodidad garantizada</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-3">Especificaciones:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><strong>Marca:</strong> @(string.IsNullOrWhiteSpace(Model.Marca) ? "Neo Ágora" : Model.Marca)</li>
+                                            <li class="mb-2"><strong>Categoría:</strong> @Model.Categoria?.Nombre</li>
+                                        </ul>
+                                    </div>
                                 </div>
-                                <span class="rating-count">(42 reseñas)</span>
-                            </div>
-                            <div class="product-sku">
-                                SKU: @Model.ProductoID
                             </div>
                         </div>
                     </div>
 
-                    <!-- Precio -->
-                    <div class="price-section">
-                        <div class="d-flex align-items-center flex-wrap">
-                            <span class="current-price" id="priceValue">@Model.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture)</span>
-                            <span class="price-currency">USD</span>
-                            <span class="price-old">$@((Model.PrecioVenta * 1.2m).ToString("0.00", CultureInfo.InvariantCulture))</span>
-                            <span class="discount-badge">-20%</span>
-                        </div>
-                        <div class="mt-2 text-success small">
-                            <i class="fa-solid fa-tag me-1"></i>Precio especial por tiempo limitado
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#collapseShipping">
+                                <i class="fa-solid fa-truck me-2"></i> Envío y Devoluciones
+                            </button>
+                        </h2>
+                        <div id="collapseShipping" class="accordion-collapse collapse">
+                            <div class="accordion-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-3">Política de Envío:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><i class="fa-solid fa-shipping-fast text-primary me-2"></i> Envío gratuito >$50</li>
+                                            <li class="mb-2"><i class="fa-solid fa-clock text-primary me-2"></i> 24-48 horas hábiles</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="fw-bold mb-3">Devoluciones:</h6>
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> 7 días para cambios</li>
+                                            <li class="mb-2"><i class="fa-solid fa-tag text-success me-2"></i> Producto en perfecto estado</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
 
-                    <!-- Información de Stock -->
-                    <div class="stock-info @(!hasVar ? (Model.Stock > 5 ? "stock-available" : Model.Stock > 0 ? "stock-low" : "stock-out") : "")" id="stockInfo">
-                        @if (!hasVar)
-                        {
-                            if (Model.Stock > 5)
-                            {
-                                <i class="fa-solid fa-check-circle"></i>
-                                <span>Disponible - Listo para enviar</span>
-                            }
-                            else if (Model.Stock > 0)
-                            {
-                                <i class="fa-solid fa-exclamation-triangle"></i>
-                                <span>¡Últimas unidades! Solo quedan @Model.Stock</span>
-                            }
-                            else
-                            {
-                                <i class="fa-solid fa-times-circle"></i>
-                                <span>Producto agotado temporalmente</span>
-                            }
-                        }
-                        else
-                        {
-                            <i class="fa-solid fa-info-circle"></i>
-                            <span>Selecciona color y talla para ver disponibilidad</span>
-                        }
-                    </div>
-
-                    <!-- Variantes -->
-                    @if (hasVar)
+        @if (ViewBag.Relacionados is IEnumerable<Simone.Models.Producto> rel && rel.Any())
+        {
+            <div class="related-products">
+                <h2 class="section-title">Productos Relacionados</h2>
+                <div class="row g-4">
+                    @foreach (var p in rel.Take(4))
                     {
-                        <div class="variants-section">
-                            <!-- Colores -->
-                            <div class="mb-4">
-                                <h4 class="variant-title">
-                                    <i class="fa-solid fa-palette"></i>
-                                    Color: <span id="selectedColorText" class="text-primary">Selecciona un color</span>
-                                </h4>
-                                <div id="colorOptions" class="variant-options"></div>
-                            </div>
-
-                            <!-- Tallas -->
-                            <div class="mb-4">
-                                <h4 class="variant-title">
-                                    <i class="fa-solid fa-ruler"></i>
-                                    Talla: <span id="selectedTallaText" class="text-primary">Selecciona una talla</span>
-                                </h4>
-                                <div id="tallaOptions" class="variant-options"></div>
+                        <div class="col-md-6 col-lg-3">
+                            <div class="product-card shadow-sm">
+                                <a asp-controller="Compras"
+                                   asp-action="VerProducto"
+                                   asp-route-productoID="@p.ProductoID"
+                                   class="text-decoration-none text-reset">
+                                    <img src="@Img(p.ImagenPath)"
+                                         class="product-card-image"
+                                         alt="@p.Nombre"
+                                         loading="lazy"
+                                         onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+                                    <div class="product-card-body">
+                                        <h5 class="product-card-title">@p.Nombre</h5>
+                                        <div class="product-card-price">@p.PrecioVenta.ToString("C", culture)</div>
+                                        <div class="mt-2">
+                                            @if (p.Stock > 0)
+                                            {
+                                                <span class="badge bg-success">En stock</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">Agotado</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </a>
                             </div>
                         </div>
                     }
-
-                    <!-- Cantidad -->
-                    <div class="quantity-section">
-                        <h5 class="variant-title mb-3">
-                            <i class="fa-solid fa-calculator"></i>
-                            Cantidad
-                        </h5>
-                        <div class="quantity-controls">
-                            <button class="quantity-btn" id="btnMinus" aria-label="Disminuir cantidad">
-                                <i class="fa-solid fa-minus"></i>
-                            </button>
-                            <input id="Cantidad" name="CantidadInput" type="number" class="quantity-input"
-                                   min="1" max="@(hasVar ? 1 : (Model.Stock > 0 ? Model.Stock : 1))" value="1" inputmode="numeric" />
-                            <button class="quantity-btn" id="btnPlus" aria-label="Aumentar cantidad">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
-                        </div>
-                        <div class="mt-2 text-muted small">
-                            Máximo @(hasVar ? 1 : (Model.Stock > 0 ? Model.Stock : 1)) unidades por pedido
-                        </div>
-                    </div>
-
-                    <!-- Botones de Acción -->
-                    <div class="action-buttons">
-                        <form id="formAdd" asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" novalidate>
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="ProductoID" value="@Model.ProductoID" />
-                            <input type="hidden" name="Cantidad" id="CantidadHidden" value="1" />
-                            <input type="hidden" name="productoVarianteId" id="ProductoVarianteID" value="" />
-
-                            @if (!hasVar && Model.Stock <= 0)
-                            {
-                                <button class="btn-primary-custom w-100" type="button" disabled>
-                                    <i class="fa-solid fa-ban"></i>
-                                    Sin stock
-                                </button>
-                            }
-                            else
-                            {
-                                <button class="btn-primary-custom w-100" id="btnAdd" @(hasVar ? "disabled" : "")>
-                                    <i class="fa-solid fa-bag-shopping"></i>
-                                    <span id="btnAddText">Añadir al carrito</span>
-                                </button>
-                            }
-                        </form>
-
-                        <form method="post" action="/Favoritos/Toggle/@Model.ProductoID" id="favForm">
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn-secondary-custom w-100" id="btnFav">
-                                <i class="fa-regular fa-heart"></i>
-                                Favorito
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Compartir -->
-                    <div class="social-share">
-                        <a href="#" class="share-btn" title="Compartir en Facebook">
-                            <i class="fa-brands fa-facebook-f"></i>
-                        </a>
-                        <a href="#" class="share-btn" title="Compartir en Instagram">
-                            <i class="fa-brands fa-instagram"></i>
-                        </a>
-                        <a href="#" class="share-btn" title="Compartir en WhatsApp">
-                            <i class="fa-brands fa-whatsapp"></i>
-                        </a>
-                        <a href="#" class="share-btn" title="Copiar enlace">
-                            <i class="fa-solid fa-link"></i>
-                        </a>
-                    </div>
-
-                    <!-- Características -->
-                    <div class="features-grid">
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <i class="fa-solid fa-truck-fast"></i>
-                            </div>
-                            <div>
-                                <div class="feature-text">Envío Rápido</div>
-                                <div class="feature-desc">24-48 horas hábiles</div>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <i class="fa-solid fa-arrows-rotate"></i>
-                            </div>
-                            <div>
-                                <div class="feature-text">Devoluciones</div>
-                                <div class="feature-desc">7 días para cambios</div>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <i class="fa-solid fa-shield-halved"></i>
-                            </div>
-                            <div>
-                                <div class="feature-text">Pago Seguro</div>
-                                <div class="feature-desc">Transferencias bancarias</div>
-                            </div>
-                        </div>
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <i class="fa-solid fa-headset"></i>
-                            </div>
-                            <div>
-                                <div class="feature-text">Soporte</div>
-                                <div class="feature-desc">24/7 por WhatsApp</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
-        </div>
+        }
     </div>
-
-    <!-- Información Detallada -->
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="accordion accordion-custom" id="productAccordion">
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingDescription">
-                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDescription" aria-expanded="true" aria-controls="collapseDescription">
-                            <i class="fa-solid fa-file-lines me-2"></i> Descripción Detallada
-                        </button>
-                    </h2>
-                    <div id="collapseDescription" class="accordion-collapse collapse show" aria-labelledby="headingDescription" data-bs-parent="#productAccordion">
-                        <div class="accordion-body">
-                            @if (!string.IsNullOrWhiteSpace(Model.Descripcion))
-                            {
-                                <p class="mb-3">@Model.Descripcion</p>
-                            }
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold mb-3">Características principales:</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Material de alta calidad</li>
-                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Diseño exclusivo Neo Ágora</li>
-                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Comodidad garantizada</li>
-                                        <li class="mb-2"><i class="fa-solid fa-check text-success me-2"></i> Lavable a máquina</li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold mb-3">Especificaciones:</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2"><strong>Marca:</strong> @(string.IsNullOrWhiteSpace(Model.Marca) ? "Neo Ágora" : Model.Marca)</li>
-                                        <li class="mb-2"><strong>Categoría:</strong> @Model.Categoria?.Nombre</li>
-                                        <li class="mb-2"><strong>Material:</strong> Algodón 100%</li>
-                                        <li class="mb-2"><strong>Cuidados:</strong> Lavar a máquina en agua fría</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="headingShipping">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseShipping" aria-expanded="false" aria-controls="collapseShipping">
-                            <i class="fa-solid fa-truck me-2"></i> Envío y Devoluciones
-                        </button>
-                    </h2>
-                    <div id="collapseShipping" class="accordion-collapse collapse" aria-labelledby="headingShipping" data-bs-parent="#productAccordion">
-                        <div class="accordion-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold mb-3">Política de Envío:</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fa-solid fa-shipping-fast text-primary me-2"></i> Envío gratuito en pedidos superiores a $50</li>
-                                        <li class="mb-2"><i class="fa-solid fa-clock text-primary me-2"></i> Tiempo de entrega: 24-48 horas hábiles</li>
-                                        <li class="mb-2"><i class="fa-solid fa-map-marker-alt text-primary me-2"></i> Envíos a todo Ecuador</li>
-                                        <li class="mb-2"><i class="fa-solid fa-box text-primary me-2"></i> Empaquetado seguro y discreto</li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6 class="fw-bold mb-3">Política de Devoluciones:</h6>
-                                    <ul class="list-unstyled">
-                                        <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> 7 días para cambios por talla</li>
-                                        <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> Devoluciones por defectos de fábrica</li>
-                                        <li class="mb-2"><i class="fa-solid fa-tag text-success me-2"></i> Producto debe estar en perfecto estado</li>
-                                        <li class="mb-2"><i class="fa-solid fa-receipt text-success me-2"></i> Conservar factura de compra</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Productos Relacionados -->
-    @if (ViewBag.Relacionados is IEnumerable<Simone.Models.Producto> rel && rel.Any())
-    {
-        <div class="related-products">
-            <h2 class="section-title">Productos Relacionados</h2>
-            <div class="row g-4">
-                @foreach (var p in rel.Take(4))
-                {
-                    <div class="col-md-6 col-lg-3">
-                        <div class="product-card shadow-sm">
-                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="text-decoration-none text-reset">
-                                <img src="@Img(p.ImagenPath)" class="product-card-image" alt="@p.Nombre"
-                                     onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
-                                <div class="product-card-body">
-                                    <h5 class="product-card-title">@p.Nombre</h5>
-                                    <div class="product-card-price">@p.PrecioVenta.ToString("C", culture)</div>
-                                    <div class="mt-2">
-                                        @if (p.Stock > 0)
-                                        {
-                                            <span class="badge bg-success">En stock</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Agotado</span>
-                                        }
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-    }
 </div>
 
-<!-- Toasts Mejorados -->
+<div class="sticky-cart" id="stickyCart" aria-hidden="true">
+    <div class="sticky-cart-content">
+        <img src="@Img(portada)" alt="@Model.Nombre" class="sticky-cart-image" />
+        <div class="sticky-cart-info">
+            <div class="fw-bold">@Model.Nombre</div>
+            <div class="text-muted small" id="stickyPrice">@Model.PrecioVenta.ToString("C", culture)</div>
+        </div>
+        <button class="btn-primary-custom" id="stickyAddBtn" aria-label="Añadir al carrito desde barra fija">
+            <i class="fa-solid fa-bag-shopping me-2"></i>
+            Añadir al carrito
+        </button>
+    </div>
+</div>
+
 <div class="position-fixed bottom-0 end-0 p-4" style="z-index:1080;">
-    <div id="toastSuccess" class="toast align-items-center text-white bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="toastSuccess" class="toast align-items-center text-white bg-success border-0" role="alert">
         <div class="d-flex">
             <div class="toast-body">
                 <i class="fa-solid fa-circle-check me-2"></i>
-                <span id="toastSuccessMsg">Producto añadido al carrito</span>
+                <span id="toastSuccessMsg">Producto añadido</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 
-    <div id="toastError" class="toast align-items-center text-white bg-danger border-0 mt-2" role="alert" aria-live="assertive" aria-atomic="true">
+    <div id="toastError" class="toast align-items-center text-white bg-danger border-0 mt-2" role="alert">
         <div class="d-flex">
             <div class="toast-body">
                 <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                <span id="toastErrorMsg">Error al añadir el producto</span>
+                <span id="toastErrorMsg">Error</span>
             </div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
 @section Scripts {
     <script>
-        const HAS_VARIANTS = @((hasVar ? "true" : "false").ToLower());
-        const VARIANTES = HAS_VARIANTS ? @Html.Raw(variantesJson) : [];
+        (function() {
+            'use strict';
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elementos principales
-            const mainImg = document.getElementById('mainImg');
-            const stockBadge = document.getElementById('stockBadge');
-            const stockInfo = document.getElementById('stockInfo');
-            const priceEl = document.getElementById('priceValue');
-            const btnAdd = document.getElementById('btnAdd');
-            const btnAddText = document.getElementById('btnAddText');
-            const varHidden = document.getElementById('ProductoVarianteID');
-            const colorOptions = document.getElementById('colorOptions');
-            const tallaOptions = document.getElementById('tallaOptions');
-            const selectedColorText = document.getElementById('selectedColorText');
-            const selectedTallaText = document.getElementById('selectedTallaText');
+            // ============================================================
+            // CONFIGURACIÓN
+            // ============================================================
+            const CONFIG = {
+                productId: @Model.ProductoID,
+                hasVariants: @(variantesList.Any() ? "true" : "false"),
+                variants: @Html.Raw(variantesJson),
+                basePrice: @precioFinal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                baseStock: @stockTotal
+            };
 
-            let selectedColor = null;
-            let selectedTalla = null;
+            // ============================================================
+            // ELEMENTOS DEL DOM
+            // ============================================================
+            const elements = {
+                mainImg: document.getElementById('mainProductImage'),
+                thumbnails: document.querySelectorAll('.thumb-img'),
+                zoomLens: document.querySelector('.zoom-lens'),
+                zoomResult: document.querySelector('.zoom-result'),
+                quantityInput: document.getElementById('quantity'),
+                btnMinus: document.querySelector('.qty-btn.minus'),
+                btnPlus: document.querySelector('.qty-btn.plus'),
+                stockBadge: document.getElementById('stockBadge'),
+                stockInfo: document.getElementById('stockInfo'),
+                priceEl: document.getElementById('productPrice'),
+                formAdd: document.getElementById('addToCartForm'),
+                btnAdd: document.getElementById('btnAddToCart'),
+                btnAddText: document.querySelector('#btnAddToCart .btn-text'),
+                varHidden: document.getElementById('productoVarianteId'),
+                colorOptions: document.getElementById('colorOptions'),
+                tallaOptions: document.getElementById('tallaOptions'),
+                selectedColorText: document.getElementById('selectedColor'),
+                selectedTallaText: document.getElementById('selectedTalla'),
+                favForm: document.getElementById('favForm'),
+                btnFav: document.getElementById('btnFavorite'),
+                stickyCart: document.getElementById('stickyCart'),
+                stickyAddBtn: document.getElementById('stickyAddBtn')
+            };
 
-            // Galería de imágenes
-            document.querySelectorAll('.thumb-item').forEach(thumb => {
-                thumb.addEventListener('click', function() {
-                    // Remover clase active de todos los thumbs
-                    document.querySelectorAll('.thumb-item').forEach(t => t.classList.remove('active'));
-                    // Agregar clase active al thumb clickeado
-                    this.classList.add('active');
-                    // Cambiar imagen principal
-                    const newSrc = this.getAttribute('data-src');
-                    if (newSrc && mainImg) {
-                        mainImg.src = newSrc;
-                    }
+            // ============================================================
+            // ESTADO
+            // ============================================================
+            const state = {
+                selectedColor: null,
+                selectedTalla: null,
+                quantity: 1
+            };
+
+            // ============================================================
+            // GALERÍA
+            // ============================================================
+            function initGallery() {
+                if (!elements.mainImg || !elements.thumbnails.length) return;
+
+                elements.thumbnails.forEach(thumb => {
+                    thumb.addEventListener('click', function() {
+                        elements.thumbnails.forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        elements.mainImg.src = this.dataset.full || this.src;
+                    });
                 });
-            });
 
-            // Control de cantidad
-            const quantityInput = document.getElementById('Cantidad');
-            const quantityHidden = document.getElementById('CantidadHidden');
-            const btnMinus = document.getElementById('btnMinus');
-            const btnPlus = document.getElementById('btnPlus');
-
-            function updateQuantity() {
-                let current = parseInt(quantityInput.value) || 1;
-                const max = parseInt(quantityInput.getAttribute('max')) || 1;
-
-                // Validar límites
-                if (current < 1) current = 1;
-                if (current > max) current = max;
-
-                quantityInput.value = current;
-                quantityHidden.value = current;
-
-                // Actualizar estado de botones
-                btnMinus.disabled = current <= 1;
-                btnPlus.disabled = current >= max;
+                // Zoom en hover (solo desktop)
+                if (window.innerWidth >= 992 && elements.zoomLens && elements.zoomResult) {
+                    initZoom();
+                }
             }
 
-            btnMinus?.addEventListener('click', () => {
-                quantityInput.value = Math.max(1, parseInt(quantityInput.value) - 1);
+            function initZoom() {
+                const container = elements.mainImg.closest('.main-image-container');
+                if (!container) return;
+
+                container.addEventListener('mouseenter', () => {
+                    elements.zoomLens.style.display = 'block';
+                    elements.zoomResult.style.display = 'block';
+                    elements.zoomResult.style.backgroundImage = `url(${elements.mainImg.src})`;
+                });
+
+                container.addEventListener('mouseleave', () => {
+                    elements.zoomLens.style.display = 'none';
+                    elements.zoomResult.style.display = 'none';
+                });
+
+                container.addEventListener('mousemove', (e) => {
+                    const rect = container.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+
+                    const lensW = elements.zoomLens.offsetWidth / 2;
+                    const lensH = elements.zoomLens.offsetHeight / 2;
+
+                    let posX = Math.max(lensW, Math.min(x, rect.width - lensW));
+                    let posY = Math.max(lensH, Math.min(y, rect.height - lensH));
+
+                    elements.zoomLens.style.left = `${posX - lensW}px`;
+                    elements.zoomLens.style.top = `${posY - lensH}px`;
+
+                    const zoomLevel = 2;
+                    const bgX = (posX / rect.width) * 100;
+                    const bgY = (posY / rect.height) * 100;
+
+                    elements.zoomResult.style.backgroundPosition = `${bgX}% ${bgY}%`;
+                    elements.zoomResult.style.backgroundSize = `${rect.width * zoomLevel}px ${rect.height * zoomLevel}px`;
+                });
+            }
+
+            // ============================================================
+            // CANTIDAD
+            // ============================================================
+            function updateQuantity() {
+                const min = parseInt(elements.quantityInput.min) || 1;
+                const max = parseInt(elements.quantityInput.max) || 99;
+                let val = parseInt(elements.quantityInput.value) || 1;
+
+                val = Math.max(min, Math.min(max, val));
+                elements.quantityInput.value = val;
+                state.quantity = val;
+
+                if (elements.btnMinus) elements.btnMinus.disabled = val <= min;
+                if (elements.btnPlus) elements.btnPlus.disabled = val >= max;
+            }
+
+            elements.btnMinus?.addEventListener('click', () => {
+                elements.quantityInput.value = Math.max(1, parseInt(elements.quantityInput.value) - 1);
                 updateQuantity();
             });
 
-            btnPlus?.addEventListener('click', () => {
-                const max = parseInt(quantityInput.getAttribute('max')) || 1;
-                quantityInput.value = Math.min(max, parseInt(quantityInput.value) + 1);
+            elements.btnPlus?.addEventListener('click', () => {
+                const max = parseInt(elements.quantityInput.max) || 99;
+                elements.quantityInput.value = Math.min(max, parseInt(elements.quantityInput.value) + 1);
                 updateQuantity();
             });
 
-            quantityInput?.addEventListener('change', updateQuantity);
-            updateQuantity();
+            elements.quantityInput?.addEventListener('change', updateQuantity);
 
-            // Sistema de variantes
+            // ============================================================
+            // VARIANTES
+            // ============================================================
             function getUniqueColors() {
-                return [...new Set(VARIANTES.map(v => v.color).filter(Boolean))];
+                return CONFIG.variants
+                    .map(v => v.color)
+                    .filter((c, i, arr) => c && arr.indexOf(c) === i);
             }
 
             function getTallasByColor(color) {
-                return VARIANTES
+                return CONFIG.variants
                     .filter(v => v.color === color && v.talla)
                     .map(v => v.talla)
-                    .filter((talla, index, array) => array.indexOf(talla) === index);
+                    .filter((t, i, arr) => arr.indexOf(t) === i);
             }
 
             function getVariantByColorAndTalla(color, talla) {
-                return VARIANTES.find(v => v.color === color && v.talla === talla);
+                return CONFIG.variants.find(v => v.color === color && v.talla === talla);
+            }
+
+            function getColorValue(colorName) {
+                const map = {
+                    'rojo': '#dc2626', 'azul': '#2563eb', 'verde': '#16a34a',
+                    'amarillo': '#eab308', 'negro': '#000000', 'blanco': '#ffffff',
+                    'rosa': '#ec4899', 'morado': '#9333ea', 'gris': '#6b7280',
+                    'naranja': '#ea580c', 'marron': '#92400e', 'beige': '#fef3c7'
+                };
+                return map[colorName.toLowerCase()] || '#6b7280';
             }
 
             function renderColorOptions() {
-                if (!HAS_VARIANTS || !colorOptions) return;
-
-                colorOptions.innerHTML = '';
+                if (!CONFIG.hasVariants || !elements.colorOptions) return;
+                elements.colorOptions.innerHTML = '';
                 const colors = getUniqueColors();
-
                 colors.forEach(color => {
-                    const optionId = `color_${color.replace(/\s+/g, '_').toLowerCase()}`;
+                    const id = `color_${color.replace(/\s+/g, '_').toLowerCase()}`;
                     const div = document.createElement('div');
                     div.className = 'variant-option';
                     div.innerHTML = `
-                        <input type="radio" name="color" id="${optionId}" value="${color}" class="variant-input">
-                        <label for="${optionId}" class="variant-label">
+                        <input type="radio" name="color" id="${id}" value="${color}" class="variant-input">
+                        <label for="${id}" class="variant-label">
                             <span class="color-swatch" style="background-color: ${getColorValue(color)}"></span>
                             ${color}
                         </label>
                     `;
-                    colorOptions.appendChild(div);
+                    elements.colorOptions.appendChild(div);
                 });
 
-                // Event listeners para colores
-                colorOptions.querySelectorAll('.variant-input').forEach(input => {
+                elements.colorOptions.querySelectorAll('.variant-input').forEach(input => {
                     input.addEventListener('change', function() {
-                        selectedColor = this.value;
-                        selectedColorText.textContent = selectedColor;
+                        state.selectedColor = this.value;
+                        elements.selectedColorText.textContent = state.selectedColor;
                         renderTallaOptions();
                         updateVariantSelection();
                     });
                 });
 
-                // Seleccionar primer color por defecto
-                const firstColor = colorOptions.querySelector('.variant-input');
-                if (firstColor) {
-                    firstColor.checked = true;
-                    selectedColor = firstColor.value;
-                    selectedColorText.textContent = selectedColor;
+                const first = elements.colorOptions.querySelector('.variant-input');
+                if (first) {
+                    first.checked = true;
+                    state.selectedColor = first.value;
+                    elements.selectedColorText.textContent = state.selectedColor;
                     renderTallaOptions();
                 }
             }
 
             function renderTallaOptions() {
-                if (!HAS_VARIANTS || !tallaOptions || !selectedColor) return;
-
-                tallaOptions.innerHTML = '';
-                const tallas = getTallasByColor(selectedColor);
-
+                if (!CONFIG.hasVariants || !elements.tallaOptions || !state.selectedColor) return;
+                elements.tallaOptions.innerHTML = '';
+                const tallas = getTallasByColor(state.selectedColor);
                 tallas.forEach(talla => {
-                    const variant = getVariantByColorAndTalla(selectedColor, talla);
-                    const optionId = `talla_${talla.replace(/\s+/g, '_').toLowerCase()}`;
+                    const variant = getVariantByColorAndTalla(state.selectedColor, talla);
+                    const id = `talla_${talla.replace(/\s+/g, '_').toLowerCase()}`;
                     const disabled = !variant || variant.stock <= 0;
-
                     const div = document.createElement('div');
                     div.className = 'variant-option';
                     div.innerHTML = `
-                        <input type="radio" name="talla" id="${optionId}" value="${talla}"
+                        <input type="radio" name="talla" id="${id}" value="${talla}"
                                ${disabled ? 'disabled' : ''} class="variant-input">
-                        <label for="${optionId}" class="variant-label ${disabled ? 'text-muted' : ''}">
+                        <label for="${id}" class="variant-label">
                             ${talla}
                             ${disabled ? '<br><small class="text-danger">Agotado</small>' : ''}
                         </label>
                     `;
-                    tallaOptions.appendChild(div);
+                    elements.tallaOptions.appendChild(div);
                 });
 
-                // Event listeners para tallas
-                tallaOptions.querySelectorAll('.variant-input:not(:disabled)').forEach(input => {
+                elements.tallaOptions.querySelectorAll('.variant-input:not(:disabled)').forEach(input => {
                     input.addEventListener('change', function() {
-                        selectedTalla = this.value;
-                        selectedTallaText.textContent = selectedTalla;
+                        state.selectedTalla = this.value;
+                        elements.selectedTallaText.textContent = state.selectedTalla;
                         updateVariantSelection();
                     });
                 });
 
-                // Seleccionar primera talla disponible
-                const firstAvailable = tallaOptions.querySelector('.variant-input:not(:disabled)');
+                const firstAvailable = elements.tallaOptions.querySelector('.variant-input:not(:disabled)');
                 if (firstAvailable) {
                     firstAvailable.checked = true;
-                    selectedTalla = firstAvailable.value;
-                    selectedTallaText.textContent = selectedTalla;
+                    state.selectedTalla = firstAvailable.value;
+                    elements.selectedTallaText.textContent = state.selectedTalla;
                 } else {
-                    selectedTalla = null;
-                    selectedTallaText.textContent = 'Selecciona una talla';
+                    state.selectedTalla = null;
+                    elements.selectedTallaText.textContent = 'Selecciona';
                 }
-
                 updateVariantSelection();
             }
 
             function updateVariantSelection() {
-                if (!HAS_VARIANTS) return;
-
-                const variant = getVariantByColorAndTalla(selectedColor, selectedTalla);
-
+                if (!CONFIG.hasVariants) return;
+                const variant = getVariantByColorAndTalla(state.selectedColor, state.selectedTalla);
                 if (!variant) {
-                    // No hay variante seleccionada o no válida
-                    stockBadge.innerHTML = '<span class="badge text-bg-secondary">Selecciona una combinación</span>';
-                    stockInfo.innerHTML = '<i class="fa-solid fa-info-circle"></i><span>Selecciona color y talla para ver disponibilidad</span>';
-                    stockInfo.className = 'stock-info';
-                    btnAdd.disabled = true;
-                    btnAddText.textContent = 'Selecciona una combinación';
-                    varHidden.value = '';
+                    elements.stockBadge.innerHTML = '<span class="badge bg-secondary">Selecciona combinación</span>';
+                    elements.stockInfo.innerHTML = '<i class="fa-solid fa-info-circle"></i><span>Selecciona color y talla</span>';
+                    elements.stockInfo.className = 'stock-info';
+                    elements.btnAdd.disabled = true;
+                    elements.btnAddText.textContent = 'Selecciona combinación';
+                    elements.varHidden.value = '';
                     return;
                 }
 
-                // Actualizar información según la variante
                 const stock = parseInt(variant.stock) || 0;
-                const price = variant.precio != null ? parseFloat(variant.precio) : parseFloat('@Model.PrecioVenta');
+                const price = variant.precio != null ? parseFloat(variant.precio) : parseFloat(CONFIG.basePrice);
 
-                // Badge de stock
                 if (stock <= 0) {
-                    stockBadge.innerHTML = '<span class="badge text-bg-danger">Agotado</span>';
-                    stockInfo.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Producto agotado temporalmente</span>';
-                    stockInfo.className = 'stock-info stock-out';
+                    elements.stockBadge.innerHTML = '<span class="badge bg-danger">Agotado</span>';
+                    elements.stockInfo.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Agotado temporalmente</span>';
+                    elements.stockInfo.className = 'stock-info stock-out';
                 } else if (stock <= 5) {
-                    stockBadge.innerHTML = `<span class="badge text-bg-warning">¡Quedan ${stock} unidades!</span>`;
-                    stockInfo.innerHTML = `<i class="fa-solid fa-exclamation-triangle"></i><span>¡Últimas unidades! Solo quedan ${stock}</span>`;
-                    stockInfo.className = 'stock-info stock-low';
+                    elements.stockBadge.innerHTML = `<span class="badge bg-warning">¡Quedan ${stock}!</span>`;
+                    elements.stockInfo.innerHTML = `<i class="fa-solid fa-exclamation-triangle"></i><span>¡Últimas ${stock} unidades!</span>`;
+                    elements.stockInfo.className = 'stock-info stock-low';
                 } else {
-                    stockBadge.innerHTML = '<span class="badge text-bg-success">En stock</span>';
-                    stockInfo.innerHTML = '<i class="fa-solid fa-check-circle"></i><span>Disponible - Listo para enviar</span>';
-                    stockInfo.className = 'stock-info stock-available';
+                    elements.stockBadge.innerHTML = '<span class="badge bg-success">En stock</span>';
+                    elements.stockInfo.innerHTML = '<i class="fa-solid fa-check-circle"></i><span>Disponible - Listo para enviar</span>';
+                    elements.stockInfo.className = 'stock-info stock-available';
                 }
 
-                // Precio
-                if (priceEl) {
-                    priceEl.textContent = price.toFixed(2);
+                if (elements.priceEl) {
+                    elements.priceEl.textContent = price.toFixed(2);
                 }
 
-                // Imagen de la variante
-                if (variant.img && mainImg) {
-                    mainImg.src = variant.img;
+                if (variant.img && elements.mainImg) {
+                    elements.mainImg.src = variant.img;
                 }
 
-                // Botón de añadir y cantidad máxima
-                quantityInput.setAttribute('max', stock > 0 ? stock : 1);
+                elements.quantityInput.setAttribute('max', stock > 0 ? stock : 1);
                 updateQuantity();
-
-                btnAdd.disabled = stock <= 0;
-                btnAddText.textContent = stock > 0 ? 'Añadir al carrito' : 'Sin stock';
-                varHidden.value = stock > 0 ? variant.id : '';
+                elements.btnAdd.disabled = stock <= 0;
+                elements.btnAddText.textContent = stock > 0 ? 'Añadir al carrito' : 'Sin stock';
+                elements.varHidden.value = stock > 0 ? variant.id : '';
             }
 
-            // Helper para convertir nombre de color a valor CSS
-            function getColorValue(colorName) {
-                const colorMap = {
-                    'rojo': '#dc2626',
-                    'azul': '#2563eb',
-                    'verde': '#16a34a',
-                    'amarillo': '#eab308',
-                    'negro': '#000000',
-                    'blanco': '#ffffff',
-                    'rosa': '#ec4899',
-                    'morado': '#9333ea',
-                    'gris': '#6b7280',
-                    'naranja': '#ea580c',
-                    'marron': '#92400e',
-                    'beige': '#fef3c7'
-                };
-                return colorMap[colorName.toLowerCase()] || '#6b7280';
-            }
-
-            // Favoritos con AJAX
-            const favForm = document.getElementById('favForm');
-            const btnFav = document.getElementById('btnFav');
-
-            favForm?.addEventListener('submit', async function(e) {
+            // ============================================================
+            // AÑADIR AL CARRITO - CORREGIDO
+            // ============================================================
+            elements.formAdd?.addEventListener('submit', async function(e) {
                 e.preventDefault();
 
-                const icon = btnFav.querySelector('i');
-                const wasFavorite = icon.classList.contains('fa-solid');
+                if (CONFIG.hasVariants && !elements.varHidden.value) {
+                    showToast('error', 'Selecciona color y talla');
+                    return;
+                }
+
+                const originalHtml = elements.btnAdd.innerHTML;
+                elements.btnAdd.disabled = true;
+                elements.btnAdd.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Añadiendo...';
 
                 try {
-                    const response = await fetch(favForm.action, {
+                    const response = await fetch(elements.formAdd.action, {
                         method: 'POST',
-                        body: new FormData(favForm),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                        body: new FormData(elements.formAdd),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
                     });
 
-                    if (response.ok) {
-                        // Cambiar icono y estilo
-                        if (wasFavorite) {
-                            icon.classList.remove('fa-solid');
-                            icon.classList.add('fa-regular');
-                            btnFav.classList.remove('btn-primary-custom');
-                            btnFav.classList.add('btn-secondary-custom');
-                        } else {
-                            icon.classList.remove('fa-regular');
-                            icon.classList.add('fa-solid');
-                            btnFav.classList.remove('btn-secondary-custom');
-                            btnFav.classList.add('btn-primary-custom');
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        showToast('success', 'Producto añadido al carrito');
+
+                        // ✅ Actualizar badge inmediatamente con los datos de la respuesta
+                        if (data.count !== undefined) {
+                            updateAllBadges(data.count);
                         }
 
-                        // Mostrar toast de éxito
+                        // ✅ Actualizar total si viene en la respuesta
+                        if (data.total !== undefined) {
+                            updateAllTotals(data.total);
+                        }
+
+                        // ✅ Refrescar el panel del carrito (offcanvas/sidebar)
+                        await refreshCartPanel();
+
+                    } else if (data.needLogin) {
+                        window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    } else {
+                        showToast('error', data.error || 'Error al añadir');
+                    }
+                } catch (error) {
+                    console.error('Add to cart error:', error);
+                    showToast('error', 'Error de conexión');
+                } finally {
+                    elements.btnAdd.disabled = CONFIG.hasVariants ? !elements.varHidden.value : false;
+                    elements.btnAdd.innerHTML = originalHtml;
+                }
+            });
+
+            // ============================================================
+            // FAVORITOS
+            // ============================================================
+            elements.favForm?.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const icon = elements.btnFav.querySelector('i');
+                const wasFavorite = icon.classList.contains('fa-solid');
+                try {
+                    const response = await fetch(elements.favForm.action, {
+                        method: 'POST',
+                        body: new FormData(elements.favForm),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (response.ok) {
+                        if (wasFavorite) {
+                            icon.classList.replace('fa-solid', 'fa-regular');
+                        } else {
+                            icon.classList.replace('fa-regular', 'fa-solid');
+                        }
                         showToast('success', wasFavorite ? 'Eliminado de favoritos' : 'Agregado a favoritos');
                     }
                 } catch (error) {
@@ -1300,117 +1630,183 @@
                 }
             });
 
-            // Compartir en redes sociales
+            // ============================================================
+            // COMPARTIR
+            // ============================================================
             document.querySelectorAll('.share-btn').forEach(btn => {
                 btn.addEventListener('click', function(e) {
                     e.preventDefault();
                     const url = window.location.href;
                     const title = document.title;
-
                     if (this.querySelector('.fa-link')) {
-                        // Copiar enlace
                         navigator.clipboard.writeText(url).then(() => {
-                            showToast('success', 'Enlace copiado al portapapeles');
+                            showToast('success', 'Enlace copiado');
                         });
                     } else if (this.querySelector('.fa-facebook-f')) {
                         window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-                    } else if (this.querySelector('.fa-instagram')) {
-                        // Instagram no tiene API directa, redirigir a la app
-                        window.open(`https://www.instagram.com/`, '_blank');
                     } else if (this.querySelector('.fa-whatsapp')) {
                         window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');
                     }
                 });
             });
 
-            // Añadir al carrito con AJAX
-            const formAdd = document.getElementById('formAdd');
+            // ============================================================
+            // STICKY ADD TO CART
+            // ============================================================
+            let lastScroll = 0;
+            window.addEventListener('scroll', () => {
+                // Verificar que stickyCart existe antes de acceder a classList
+                if (!elements.stickyCart) return;
 
-            formAdd?.addEventListener('submit', async function(e) {
-                e.preventDefault();
-
-                if (HAS_VARIANTS && !varHidden.value) {
-                    showToast('error', 'Selecciona color y talla antes de añadir al carrito');
-                    return;
+                const currentScroll = window.pageYOffset;
+                if (currentScroll > 500 && currentScroll > lastScroll) {
+                    elements.stickyCart.classList.add('visible');
+                    elements.stickyCart.setAttribute('aria-hidden', 'false');
+                } else if (currentScroll < lastScroll - 50 || currentScroll < 500) {
+                    elements.stickyCart.classList.remove('visible');
+                    elements.stickyCart.setAttribute('aria-hidden', 'true');
                 }
-
-                const originalText = btnAddText.textContent;
-                const originalHtml = btnAdd.innerHTML;
-
-                // Mostrar loading
-                btnAdd.disabled = true;
-                btnAddText.textContent = 'Añadiendo...';
-                btnAdd.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Añadiendo...';
-
-                try {
-                    const response = await fetch(formAdd.action, {
-                        method: 'POST',
-                        body: new FormData(formAdd),
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-
-                    const data = await response.json();
-
-                    if (data.ok) {
-                        showToast('success', 'Producto añadido al carrito');
-                        updateCartBadge();
-                    } else if (data.needLogin) {
-                        window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
-                    } else {
-                        showToast('error', data.error || 'Error al añadir el producto');
-                    }
-                } catch (error) {
-                    showToast('error', 'Error de conexión');
-                } finally {
-                    // Restaurar estado del botón
-                    btnAdd.disabled = HAS_VARIANTS ? !varHidden.value : false;
-                    btnAddText.textContent = originalText;
-                    btnAdd.innerHTML = originalHtml;
-                }
+                lastScroll = currentScroll;
             });
 
-            // Funciones auxiliares
+            elements.stickyAddBtn?.addEventListener('click', () => {
+                elements.btnAdd.click();
+            });
+
+            // ============================================================
+            // UTILIDADES - TOAST
+            // ============================================================
             function showToast(type, message) {
                 const toastEl = type === 'success' ? document.getElementById('toastSuccess') : document.getElementById('toastError');
-                const toastMsg = toastEl.querySelector('.toast-body span');
-
-                toastMsg.textContent = message;
-                const toast = new bootstrap.Toast(toastEl);
-                toast.show();
-            }
-
-            async function updateCartBadge() {
-                try {
-                    const response = await fetch('/Compras/CartInfo');
-                    if (response.ok) {
-                        const data = await response.json();
-                        const cartCount = document.getElementById('cartCount') || document.querySelector('[data-cart-count]');
-                        const cartTotal = document.getElementById('cartTotal') || document.querySelector('[data-cart-total]');
-
-                        if (cartCount) {
-                            cartCount.textContent = data.count || 0;
-                        }
-                        if (cartTotal) {
-                            cartTotal.textContent = new Intl.NumberFormat('es-EC', {
-                                style: 'currency',
-                                currency: 'USD'
-                            }).format(data.subtotal || 0);
-                        }
-                    }
-                } catch (error) {
-                    // Silently fail
+                if (toastEl) {
+                    const toastMsg = toastEl.querySelector('.toast-body span');
+                    if (toastMsg) toastMsg.textContent = message;
+                    new bootstrap.Toast(toastEl).show();
                 }
             }
 
-            // Inicialización
-            if (HAS_VARIANTS) {
-                renderColorOptions();
+            // ============================================================
+            // UTILIDADES - ACTUALIZAR BADGES (CORREGIDO)
+            // ============================================================
+            function updateAllBadges(count) {
+                document.querySelectorAll('[data-cart-count], .cart-count, .cart-badge').forEach(badge => {
+                    badge.textContent = count;
+                    // Animación de pulso
+                    badge.style.animation = 'none';
+                    badge.offsetHeight; // Trigger reflow
+                    badge.style.animation = 'cartPulse 0.3s ease-in-out';
+                });
             }
 
-            // Cargar información del carrito al inicio
-            updateCartBadge();
-        });
+            function updateAllTotals(total) {
+                const formatted = new Intl.NumberFormat('es-EC', {
+                    style: 'currency',
+                    currency: 'USD'
+                }).format(total);
+
+                document.querySelectorAll('[data-cart-total], .cart-total').forEach(el => {
+                    el.textContent = formatted;
+                });
+            }
+
+            // ============================================================
+            // ACTUALIZAR BADGE DEL CARRITO (CORREGIDO)
+            // ============================================================
+            async function updateCartBadge() {
+                try {
+                    // ✅ URL CORREGIDA: /Carrito/CartInfo (no /Compras/CartInfo)
+                    const response = await fetch('/Carrito/CartInfo', {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        updateAllBadges(data.count || 0);
+                        updateAllTotals(data.subtotal || 0);
+                    }
+                } catch (error) {
+                    console.error('Cart badge update error:', error);
+                }
+            }
+
+            // ============================================================
+            // REFRESCAR PANEL DEL CARRITO (NUEVO)
+            // ============================================================
+            async function refreshCartPanel() {
+                try {
+                    const panels = document.querySelectorAll('#cartPanel, #cartOffcanvas, .offcanvas-cart, [data-cart-panel]');
+
+                    if (panels.length === 0) {
+                        console.log('No cart panel found');
+                        return;
+                    }
+
+                    const response = await fetch('/Carrito/CartPartial', {
+                        method: 'GET',
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+
+                    if (response.ok) {
+                        const html = await response.text();
+
+                        panels.forEach(panel => {
+                            const body = panel.querySelector('.offcanvas-body, .cart-panel-body, .cart-content');
+                            if (body) {
+                                body.innerHTML = html;
+                            }
+                        });
+
+                        console.log('✓ Cart panel refreshed');
+                    }
+                } catch (error) {
+                    console.error('Cart panel refresh error:', error);
+                }
+            }
+
+            // ============================================================
+            // INICIALIZACIÓN
+            // ============================================================
+            function init() {
+                initGallery();
+                updateQuantity();
+                if (CONFIG.hasVariants) {
+                    renderColorOptions();
+                }
+                updateCartBadge();
+                console.log('✓ Product page initialized');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
+
+    <style>
+        /* Animación del badge del carrito */
+        @@keyframes cartPulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.3);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        [data-cart-count],
+        .cart-count,
+        .cart-badge {
+            transition: transform 0.2s ease;
+        }
+    </style>
 }

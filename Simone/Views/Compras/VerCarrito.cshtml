@@ -1,488 +1,1461 @@
 ﻿@model IEnumerable<Simone.Models.CarritoDetalle>
 @{
     ViewData["Title"] = "Carrito de Compras";
+    ViewData["Description"] = "Revisa y confirma tu carrito de compras en Neo Ágora. Envío rápido, pago seguro.";
+
     var totalCarrito = Model.Sum(x => x.Total);
     decimal descuento = ViewBag.Descuento ?? 0m;
     string codigoCupon = ViewBag.CodigoCupon ?? "";
     var totalConDescuento = Math.Max(0m, totalCarrito - descuento);
 }
 
-<div class="ui container mt-5" id="cart-root"
-     data-descuento="@descuento"
-     data-cod="@codigoCupon"
-     data-envio="0">
-    <h2 class="ui header">
-        <i class="shopping cart icon"></i>
-        <div class="content">
-            Carrito de Compras
-            <div class="sub header">Revisa, modifica o elimina productos antes de confirmar tu compra</div>
-        </div>
-    </h2>
+@section Styles {
+    <style>
+        :root {
+            --cart-primary: #e8b4b8;
+            --cart-primary-dark: #d89da2;
+            --cart-accent: #e91e63;
+            --cart-success: #10b981;
+            --cart-warning: #f59e0b;
+            --cart-danger: #ef4444;
+            --cart-dark: #2c3e50;
+            --cart-light: #f8f9fa;
+            --cart-border: #e5e7eb;
+            --cart-radius: 12px;
+            --cart-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            --cart-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-    <div class="ui divider"></div>
+        /* Animations */
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
 
-    @if (Model.Any())
-    {
-        <!-- token global para AJAX -->
-        <form id="af-global" class="d-none" method="post">
-            @Html.AntiForgeryToken()
-        </form>
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-        <table class="ui celled striped table" id="cart-table">
-            <thead>
-                <tr>
-                    <th>Producto</th>
-                    <th>Variante</th>
-                    <th style="width: 160px;">Cantidad</th>
-                    <th>Precio Unitario</th>
-                    <th>Total</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr data-row
-                        data-id="@item.CarritoDetalleID"
-                        data-product-id="@item.ProductoID"
-                        data-variant-id="@(item.ProductoVarianteID?.ToString() ?? "")">
-                        <td>
-                            <div>
-                                <div>@item.Producto?.Nombre</div>
-                                @* Si quieres, aquí se puede mostrar imagen o código de producto *@
-                            </div>
-                        </td>
-                        <td>
-                            @if (item.Variante != null)
-                            {
-                                <!-- Ajusta los nombres de propiedades si en tu entidad difieren -->
-                                <span class="ui tiny label">
-                                    @(string.Join(" / ", new[] {
-                                                (item.Variante.Color ?? "").Trim(),
-                                                (item.Variante.Talla ?? "").Trim()
-                                                }.Where(s => !string.IsNullOrWhiteSpace(s))))
-                    </span>
-                                        }
-                            else
-                            {
-                                <span class="text-muted">—</span>
-                            }
-                        </td>
-                        <td>
-                            <div class="ui action input">
-                                <input type="number" data-qty min="1" value="@item.Cantidad" style="width:80px" />
-                                <button type="button" class="ui icon blue button" data-update title="Actualizar" aria-label="Actualizar cantidad">
-                                    <i class="sync alternate icon"></i>
-                                </button>
-                            </div>
-                        </td>
-                        <td>$<span data-price>@item.Precio.ToString("F2")</span></td>
-                        <td>$<span data-subtotal>@item.Total.ToString("F2")</span></td>
-                        <td>
-                            <button type="button" class="ui red icon button" data-remove title="Eliminar">
-                                <i class="trash icon"></i>
-                            </button>
-                        </td>
-                    </tr>
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes zoomIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @@keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+
+            10%, 30%, 50%, 70%, 90% {
+                transform: translateX(-5px);
+            }
+
+            20%, 40%, 60%, 80% {
+                transform: translateX(5px);
+            }
+        }
+
+        @@keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-10px);
+            }
+
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @@keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            to {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+        }
+
+        @@keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+
+        .cart-page {
+            animation: fadeIn 0.5s ease;
+            min-height: 60vh;
+        }
+
+        /* Breadcrumbs */
+        .cart-breadcrumb {
+            background: white;
+            padding: 1rem;
+            border-radius: var(--cart-radius);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            margin-bottom: 1.5rem;
+            animation: slideDown 0.4s ease;
+        }
+
+            .cart-breadcrumb ol {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+                align-items: center;
+                font-size: 0.875rem;
+            }
+
+            .cart-breadcrumb li + li::before {
+                content: "›";
+                margin-right: 0.5rem;
+                color: #6c757d;
+            }
+
+            .cart-breadcrumb a {
+                color: var(--cart-accent);
+                text-decoration: none;
+                transition: var(--cart-transition);
+            }
+
+                .cart-breadcrumb a:hover {
+                    color: var(--cart-primary-dark);
                 }
-            </tbody>
-            <tfoot>
-                <tr>
-                    <th colspan="4" class="right aligned">Subtotal:</th>
-                    <th colspan="2">$<span id="ft-subtotal">@totalCarrito.ToString("F2")</span></th>
-                </tr>
 
-                <tr id="ft-cupon-row" class="@(descuento > 0 ? "" : "d-none")">
-                    <th colspan="4" class="right aligned">
-                        Cupón aplicado (<span id="ft-cupon-cod">@codigoCupon</span>):
-                    </th>
-                    <th colspan="2" class="negative">- $<span id="ft-desc">@descuento.ToString("F2")</span></th>
-                </tr>
-                <tr id="ft-cupon-actions" class="@(descuento > 0 ? "" : "d-none")">
-                    <th colspan="6" class="right aligned">
-                        <button type="button" class="ui tiny button red" id="btn-remove-coupon">
-                            <i class="close icon"></i> Quitar Cupón
-                        </button>
-                    </th>
-                </tr>
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            position: relative;
+        }
 
-                <tr id="ft-envio-row">
-                    <th colspan="4" class="right aligned">
-                        Envío:
-                        <span class="ui tiny label" id="envio-fuente-label" style="display:none;margin-left:6px;"></span>
-                    </th>
-                    <th colspan="2">$<span id="ft-envio">0.00</span></th>
-                </tr>
+            .progress-steps::before {
+                content: '';
+                position: absolute;
+                top: 20px;
+                left: 0;
+                right: 0;
+                height: 2px;
+                background: var(--cart-border);
+                z-index: 0;
+            }
 
-                <tr>
-                    <th colspan="4" class="right aligned">Total a Pagar:</th>
-                    <th colspan="2"><strong>$<span id="ft-total">@totalConDescuento.ToString("F2")</span></strong></th>
-                </tr>
-            </tfoot>
-        </table>
+        .progress-step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .progress-step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--cart-border);
+            margin: 0 auto 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: var(--cart-transition);
+        }
+
+        .progress-step.active .progress-step-circle {
+            background: var(--cart-primary);
+            border-color: var(--cart-primary);
+            color: white;
+            animation: zoomIn 0.4s ease;
+        }
+
+        .progress-step.completed .progress-step-circle {
+            background: var(--cart-success);
+            border-color: var(--cart-success);
+            color: white;
+        }
+
+        /* Product Thumbnail */
+        .product-thumb {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--cart-border);
+        }
+
+        /* Table Enhancements */
+        .cart-table {
+            animation: slideDown 0.5s ease;
+        }
+
+            .cart-table tbody tr {
+                animation: fadeIn 0.3s ease;
+                transition: var(--cart-transition);
+            }
+
+                .cart-table tbody tr:hover {
+                    background: var(--cart-light) !important;
+                }
+
+                .cart-table tbody tr.removing {
+                    animation: fadeOut 0.3s ease forwards;
+                }
+
+        /* Quantity Controls */
+        .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .quantity-control input {
+                width: 60px !important;
+                text-align: center;
+                font-weight: 600;
+            }
+
+            .quantity-control button {
+                transition: var(--cart-transition);
+            }
+
+                .quantity-control button:hover:not(:disabled) {
+                    transform: scale(1.1);
+                }
+
+                .quantity-control button:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+
+                .quantity-control button.loading {
+                    pointer-events: none;
+                }
+
+        /* Variant Badge */
+        .variant-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            background: var(--cart-light);
+            border: 1px solid var(--cart-border);
+            border-radius: 50px;
+            font-size: 0.875rem;
+        }
+
+        /* Action Buttons */
+        .btn-remove {
+            transition: var(--cart-transition);
+        }
+
+            .btn-remove:hover {
+                transform: scale(1.1);
+            }
+
+            .btn-remove.loading {
+                pointer-events: none;
+                opacity: 0.6;
+            }
+
+        /* Summary Card */
+        .summary-card {
+            background: white;
+            border-radius: var(--cart-radius);
+            padding: 1.5rem;
+            box-shadow: var(--cart-shadow);
+            position: sticky;
+            top: 2rem;
+            animation: slideDown 0.5s ease;
+        }
+
+        /* Coupon Section */
+        .coupon-section {
+            background: white;
+            border-radius: var(--cart-radius);
+            padding: 1.5rem;
+            box-shadow: var(--cart-shadow);
+            animation: slideDown 0.6s ease;
+        }
+
+        .coupon-input-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+            .coupon-input-group input {
+                flex: 1;
+            }
+
+        /* Shipping Section */
+        .shipping-section {
+            background: white;
+            border-radius: var(--cart-radius);
+            padding: 1.5rem;
+            box-shadow: var(--cart-shadow);
+            margin-top: 1rem;
+            animation: slideDown 0.7s ease;
+        }
+
+        /* Toast Notifications */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .toast {
+            min-width: 300px;
+            padding: 1rem 1.5rem;
+            border-radius: var(--cart-radius);
+            box-shadow: var(--cart-shadow);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: slideDown 0.3s ease;
+            color: white;
+        }
+
+            .toast.success {
+                background: var(--cart-success);
+            }
+
+            .toast.error {
+                background: var(--cart-danger);
+            }
+
+            .toast.warning {
+                background: var(--cart-warning);
+            }
+
+            .toast.removing {
+                animation: fadeOut 0.3s ease forwards;
+            }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 9998;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+            .modal-overlay.active {
+                display: flex;
+            }
+
+        .modal-content {
+            background: white;
+            border-radius: var(--cart-radius);
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            animation: zoomIn 0.3s ease;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cart-dark);
+            margin: 0;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+            .modal-actions button {
+                flex: 1;
+            }
+
+        /* Sticky Summary Mobile */
+        .sticky-summary {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+            padding: 1rem;
+            z-index: 1000;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+            .sticky-summary.visible {
+                transform: translateY(0);
+            }
+
+        .sticky-summary-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .sticky-summary-total {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--cart-accent);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .empty-state-icon {
+            font-size: 5rem;
+            color: var(--cart-border);
+            margin-bottom: 1.5rem;
+        }
+
+        .empty-state-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--cart-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state-text {
+            color: #6c757d;
+            margin-bottom: 2rem;
+        }
+
+        /* Skeleton Loader */
+        .skeleton {
+            background: linear-gradient( 90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75% );
+            background-size: 1000px 100%;
+            animation: shimmer 2s infinite;
+            border-radius: 4px;
+        }
+
+        .skeleton-row {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+            align-items: center;
+        }
+
+        .skeleton-thumb {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+        }
+
+        .skeleton-text {
+            height: 20px;
+            flex: 1;
+        }
+
+        /* Loading Button States */
+        .button.loading {
+            position: relative;
+            pointer-events: none;
+            color: transparent !important;
+        }
+
+            .button.loading::after {
+                content: '';
+                position: absolute;
+                width: 16px;
+                height: 16px;
+                top: 50%;
+                left: 50%;
+                margin: -8px 0 0 -8px;
+                border: 2px solid #fff;
+                border-radius: 50%;
+                border-top-color: transparent;
+                animation: spin 0.6s linear infinite;
+            }
+
+        @@keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .cart-table {
+                font-size: 0.875rem;
+            }
+
+            .product-thumb {
+                width: 50px;
+                height: 50px;
+            }
+
+            .summary-card {
+                position: static;
+            }
+
+            .toast-container {
+                left: 1rem;
+                right: 1rem;
+                bottom: 1rem;
+            }
+
+            .toast {
+                min-width: 0;
+            }
+        }
+
+        /* Focus Visible */
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible {
+            outline: 2px solid var(--cart-primary);
+            outline-offset: 2px;
+        }
+
+        /* Reduced Motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+}
+
+<div class="cart-page">
+    <div class="ui container" style="margin-top: 2rem;">
+        <!-- Breadcrumbs -->
+        <nav class="cart-breadcrumb" aria-label="breadcrumb">
+            <ol>
+                <li>
+                    <a href="@Url.Action("Index", "Home")">
+                        <i class="home icon"></i>
+                        <span>Inicio</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="@Url.Action("Catalogo", "Compras")">Catálogo</a>
+                </li>
+                <li aria-current="page" style="color: #2c3e50; font-weight: 600;">Carrito</li>
+            </ol>
+        </nav>
+
+        <!-- Progress Steps -->
+        <div class="progress-steps">
+            <div class="progress-step active">
+                <div class="progress-step-circle">
+                    <i class="shopping cart icon"></i>
+                </div>
+                <div>Carrito</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-step-circle">2</div>
+                <div>Dirección</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-step-circle">3</div>
+                <div>Pago</div>
+            </div>
+            <div class="progress-step">
+                <div class="progress-step-circle">
+                    <i class="check icon"></i>
+                </div>
+                <div>Confirmación</div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <h2 class="ui header" style="margin-top: 2rem;">
+            <i class="shopping cart icon"></i>
+            <div class="content">
+                Carrito de Compras
+                <div class="sub header">Revisa, modifica o elimina productos antes de confirmar tu compra</div>
+            </div>
+        </h2>
 
         <div class="ui divider"></div>
 
-        <div class="ui two column stackable grid">
-            <div class="column">
-                <div class="ui form">
-                    <div class="field">
-                        <label>¿Tienes un código de cupón?</label>
-                        <div class="ui action input">
-                            <input type="text" id="coupon-input" placeholder="Ingresa tu cupón..." value="@(descuento > 0 ? codigoCupon : "")" />
-                            <button type="button" class="ui teal button" id="btn-apply-coupon">Aplicar</button>
+        @if (Model.Any())
+        {
+            <!-- CSRF Token Form -->
+            <form id="af-global" class="d-none" method="post">
+                @Html.AntiForgeryToken()
+            </form>
+
+            <div id="cart-root"
+                 data-descuento="@descuento"
+                 data-cod="@codigoCupon"
+                 data-envio="0">
+
+                <div class="ui stackable grid">
+                    <!-- Left Column: Cart Table -->
+                    <div class="eleven wide column">
+                        <table class="ui celled striped table cart-table" id="cart-table" role="table">
+                            <thead>
+                                <tr role="row">
+                                    <th role="columnheader">Producto</th>
+                                    <th role="columnheader">Variante</th>
+                                    <th role="columnheader" style="width: 180px;">Cantidad</th>
+                                    <th role="columnheader">Precio</th>
+                                    <th role="columnheader">Total</th>
+                                    <th role="columnheader">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model)
+                                {
+                                    <tr data-row
+                                        data-id="@item.CarritoDetalleID"
+                                        data-product-id="@item.ProductoID"
+                                        data-variant-id="@(item.ProductoVarianteID?.ToString() ?? "")"
+                                        role="row">
+                                        <td role="cell">
+                                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                                <img src="@(string.IsNullOrWhiteSpace(item.Producto?.ImagenPath) ? Url.Content("~/images/Productos/default.jpg") : item.Producto.ImagenPath)"
+                                                     alt="@item.Producto?.Nombre"
+                                                     class="product-thumb"
+                                                     loading="lazy"
+                                                     onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
+                                                <div>
+                                                    <div style="font-weight: 600;">@item.Producto?.Nombre</div>
+                                                    <div class="ui tiny grey text">SKU: @item.ProductoID</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td role="cell">
+                                            @if (item.Variante != null)
+                                            {
+                                                <div class="variant-badge">
+                                                    <i class="tag icon"></i>
+                                                    @(string.Join(" / ", new[] {
+                                                                                (item.Variante.Color ?? "").Trim(),
+                                                                                (item.Variante.Talla ?? "").Trim()
+                                                                                }.Where(s => !string.IsNullOrWhiteSpace(s))))
+                                    </div>
+                                                                        }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td role="cell">
+                                            <div class="quantity-control">
+                                                <button type="button"
+                                                        class="ui icon button"
+                                                        data-qty-minus
+                                                        aria-label="Disminuir cantidad">
+                                                    <i class="minus icon"></i>
+                                                </button>
+                                                <input type="number"
+                                                       data-qty
+                                                       min="1"
+                                                       value="@item.Cantidad"
+                                                       aria-label="Cantidad" />
+                                                <button type="button"
+                                                        class="ui icon button"
+                                                        data-qty-plus
+                                                        aria-label="Aumentar cantidad">
+                                                    <i class="plus icon"></i>
+                                                </button>
+                                                <button type="button"
+                                                        class="ui icon blue button"
+                                                        data-update
+                                                        title="Actualizar"
+                                                        aria-label="Actualizar cantidad">
+                                                    <i class="sync alternate icon"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td role="cell">
+                                            $<span data-price>@item.Precio.ToString("F2")</span>
+                                        </td>
+                                        <td role="cell">
+                                            <strong>$<span data-subtotal>@item.Total.ToString("F2")</span></strong>
+                                        </td>
+                                        <td role="cell">
+                                            <button type="button"
+                                                    class="ui red icon button btn-remove"
+                                                    data-remove
+                                                    title="Eliminar"
+                                                    aria-label="Eliminar producto">
+                                                <i class="trash icon"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Right Column: Summary -->
+                    <div class="five wide column">
+                        <div class="summary-card">
+                            <h3 class="ui header">
+                                <i class="calculator icon"></i>
+                                Resumen del Pedido
+                            </h3>
+                            <div class="ui divider"></div>
+
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <span>Subtotal:</span>
+                                <strong>$<span id="ft-subtotal">@totalCarrito.ToString("F2")</span></strong>
+                            </div>
+
+                            <div id="ft-coupon-row" class="@(descuento > 0 ? "" : "d-none")"
+                                 style="display: flex; justify-content: space-between; margin-bottom: 0.75rem; color: var(--cart-success);">
+                                <span>
+                                    Cupón (<span id="ft-cupon-cod">@codigoCupon</span>):
+                                </span>
+                                <strong>- $<span id="ft-desc">@descuento.ToString("F2")</span></strong>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <span>
+                                    Envío:
+                                    <span id="envio-fuente-label" class="ui tiny label" style="display:none;"></span>
+                                </span>
+                                <strong>$<span id="ft-envio">0.00</span></strong>
+                            </div>
+
+                            <div class="ui divider"></div>
+
+                            <div style="display: flex; justify-content: space-between; font-size: 1.25rem; margin-bottom: 1.5rem;">
+                                <span style="font-weight: 700;">Total:</span>
+                                <strong style="color: var(--cart-accent);">
+                                    $<span id="ft-total">@totalConDescuento.ToString("F2")</span>
+                                </strong>
+                            </div>
+
+                            <form asp-controller="Carrito" asp-action="ConfirmarCompra" method="post">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="EnvioProvincia" id="h-envio-prov" />
+                                <input type="hidden" name="EnvioCiudad" id="h-envio-ciudad" />
+                                <input type="hidden" name="EnvioPrecio" id="h-envio-precio" />
+
+                                <button class="ui green fluid huge button" type="submit">
+                                    <i class="check icon"></i> Confirmar Compra
+                                </button>
+                            </form>
+
+                            <div class="ui tiny grey text" style="margin-top: 0.5rem; text-align: center;">
+                                <i class="shield alternate icon"></i> Pago 100% seguro
+                            </div>
+                        </div>
+
+                        <!-- Coupon Section -->
+                        <div class="coupon-section" style="margin-top: 1rem;">
+                            <h4 class="ui header">
+                                <i class="tag icon"></i>
+                                Cupón de Descuento
+                            </h4>
+                            <div class="coupon-input-group">
+                                <input type="text"
+                                       id="coupon-input"
+                                       class="ui input"
+                                       placeholder="Código de cupón"
+                                       value="@(descuento > 0 ? codigoCupon : "")" />
+                                <button type="button"
+                                        class="ui teal button"
+                                        id="btn-apply-coupon">
+                                    Aplicar
+                                </button>
+                            </div>
+
+                            <div id="ft-coupon-actions" class="@(descuento > 0 ? "" : "d-none")"
+                                 style="margin-top: 0.5rem;">
+                                <button type="button"
+                                        class="ui tiny red button"
+                                        id="btn-remove-coupon">
+                                    <i class="close icon"></i> Quitar Cupón
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Shipping Section -->
+                        <div class="shipping-section">
+                            <h4 class="ui header">
+                                <i class="truck icon"></i>
+                                Calcular Envío
+                            </h4>
+                            <div class="ui form">
+                                <div class="field">
+                                    <label>Provincia</label>
+                                    <select id="ddl-provincia" class="ui dropdown">
+                                        <option value="">Selecciona provincia…</option>
+                                    </select>
+                                </div>
+                                <div class="field">
+                                    <label>Ciudad</label>
+                                    <select id="ddl-ciudad" class="ui dropdown">
+                                        <option value="">(toda la provincia)</option>
+                                    </select>
+                                    <small class="ui grey text">Opcional: si seleccionas ciudad, tiene prioridad sobre provincia.</small>
+                                </div>
+                                <button type="button"
+                                        class="ui fluid button"
+                                        id="btn-calc-envio">
+                                    <i class="calculator icon"></i> Calcular Envío
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div id="coupon-msg" class="ui hidden message"></div>
-
-                <div class="ui segment">
-                    <h4 class="ui header"><i class="truck icon"></i> Envío</h4>
-                    <div class="ui form">
-                        <div class="two fields">
-                            <div class="field">
-                                <label>Provincia</label>
-                                <select id="ddl-provincia" class="ui dropdown">
-                                    <option value="">Selecciona provincia…</option>
-                                </select>
-                            </div>
-                            <div class="field">
-                                <label>Ciudad</label>
-                                <select id="ddl-ciudad" class="ui dropdown">
-                                    <option value="">(toda la provincia)</option>
-                                </select>
-                                <div class="ui tiny grey text">Si eliges ciudad, tiene prioridad sobre la tarifa de provincia.</div>
-                            </div>
-                        </div>
-                        <button type="button" class="ui button" id="btn-calc-envio">
-                            <i class="calculator icon"></i> Calcular envío
-                        </button>
-                        <div id="envio-msg" class="ui tiny hidden message" style="margin-top:8px;"></div>
-                    </div>
+            </div>
+        }
+        else
+        {
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="shopping basket icon"></i>
                 </div>
+                <h3 class="empty-state-title">Tu carrito está vacío</h3>
+                <p class="empty-state-text">
+                    Descubre miles de productos en nuestro catálogo y comienza tu compra
+                </p>
+                <a href="@Url.Action("Catalogo", "Compras")" class="ui large primary button">
+                    <i class="shopping bag icon"></i>
+                    Ver Catálogo
+                </a>
             </div>
-
-            <div class="right aligned column">
-                <form asp-controller="Carrito" asp-action="ConfirmarCompra" method="post">
-                    @Html.AntiForgeryToken()
-
-                    <!-- NUEVO: envío elegido -->
-                    <input type="hidden" name="EnvioProvincia" id="h-envio-prov" />
-                    <input type="hidden" name="EnvioCiudad" id="h-envio-ciudad" />
-                    <input type="hidden" name="EnvioPrecio" id="h-envio-precio" />
-
-                    <button class="ui green huge button">
-                        <i class="check icon"></i> Confirmar Compra
-                    </button>
-                </form>
-                <div class="ui tiny grey text" style="margin-top:8px;">
-                    * El costo de envío se confirmará al registrar la orden.
-                </div>
-            </div>
-        </div>
-    }
-    else
-    {
-        <div class="ui icon warning message">
-            <i class="shopping basket icon"></i>
-            <div class="content">
-                <div class="header">Tu carrito está vacío</div>
-                <p>Agrega productos desde el catálogo para comenzar tu compra.</p>
-            </div>
-        </div>
-    }
+        }
+    </div>
 </div>
+
+<!-- Sticky Summary (Mobile) -->
+<div class="sticky-summary" id="sticky-summary" aria-hidden="true">
+    <div class="sticky-summary-content">
+        <div>
+            <div class="ui tiny grey text">Total a Pagar</div>
+            <div class="sticky-summary-total">$<span id="sticky-total">@totalConDescuento.ToString("F2")</span></div>
+        </div>
+        <button class="ui green button" id="sticky-checkout-btn">
+            <i class="check icon"></i>
+            Confirmar
+        </button>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal-overlay" id="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modal-title">
+                <i class="exclamation triangle icon"></i>
+                Confirmar Eliminación
+            </h3>
+        </div>
+        <p id="modal-message">¿Estás seguro de que deseas eliminar este producto del carrito?</p>
+        <div class="modal-actions">
+            <button class="ui button" id="modal-cancel">Cancelar</button>
+            <button class="ui red button" id="modal-confirm">
+                <i class="trash icon"></i>
+                Eliminar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container" role="status" aria-live="polite"></div>
 
 @section Scripts {
     <script>
-        (() => {
-          const $  = (s, root=document) => root.querySelector(s);
-          const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
-          const root = $('#cart-root'); if (!root) return;
+        (function() {
+            'use strict';
 
-          // ===== Helpers =====
-          const fmt = (n) => (Number(n||0)).toFixed(2);
-          const token = () => $('#af-global input[name="__RequestVerificationToken"]')?.value;
-          const parseN = (s) => { const n = Number(String(s||'').replace(/[^0-9.-]/g,'')); return isNaN(n)?0:n; };
+            // ===== CONFIG =====
+            const CONFIG = {
+                endpoints: {
+                    update: '/Carrito/ActualizarCarrito',
+                    remove: '/Carrito/EliminarDelCarrito',
+                    applyCoupon: '/Carrito/AplicarCupon',
+                    removeCoupon: '/Carrito/QuitarCupon',
+                    cartInfo: '/Carrito/CartInfo',
+                    shippingEstimate: '/api/envios/estimar'
+                },
+                provinces: {
+                    "Azuay": ["Cuenca","Gualaceo","Paute","Sígsig","Nabón","Girón","Santa Isabel"],
+                    "Bolívar": ["Guaranda","Chillanes","Echeandía"],
+                    "Cañar": ["Azogues","La Troncal","El Tambo","Cañar"],
+                    "Carchi": ["Tulcán","Montúfar","Mira"],
+                    "Chimborazo": ["Riobamba","Guano","Alausí","Colta","Chambo"],
+                    "Cotopaxi": ["Latacunga","Salcedo","Saquisilí","Pujilí"],
+                    "El Oro": ["Machala","Santa Rosa","Pasaje","Huaquillas","Arenillas"],
+                    "Esmeraldas": ["Esmeraldas","Atacames","Quinindé","Muisne"],
+                    "Galápagos": ["Puerto Ayora","Puerto Baquerizo Moreno","Puerto Villamil"],
+                    "Guayas": ["Guayaquil","Daule","Samborondón","Durán","Milagro","Playas","El Triunfo","Naranjal","Balao"],
+                    "Imbabura": ["Ibarra","Otavalo","Cotacachi","Atuntaqui"],
+                    "Loja": ["Loja","Catamayo","Macará","Cariamanga"],
+                    "Los Ríos": ["Babahoyo","Quevedo","Vinces","Puebloviejo","Buena Fe"],
+                    "Manabí": ["Portoviejo","Manta","Chone","Bahía de Caráquez","Jipijapa","El Carmen"],
+                    "Morona Santiago": ["Macas","Sucúa","Gualaquiza","Taisha"],
+                    "Napo": ["Tena","Archidona","El Chaco"],
+                    "Orellana": ["Coca","La Joya de los Sachas","Loreto"],
+                    "Pastaza": ["Puyo","Mera","Santa Clara"],
+                    "Pichincha": ["Quito","Sangolquí","Cayambe","Machachi","San Antonio de Pichincha"],
+                    "Santa Elena": ["La Libertad","Salinas","Santa Elena"],
+                    "Santo Domingo de los Tsáchilas": ["Santo Domingo","La Concordia"],
+                    "Sucumbíos": ["Lago Agrio","Shushufindi","Cuyabeno"],
+                    "Tungurahua": ["Ambato","Baños","Pelileo","Tisaleo","Cevallos"],
+                    "Zamora Chinchipe": ["Zamora","Yantzaza","Zumba"]
+                }
+            };
 
-          async function refreshWidget(){
-            try{
-              const r = await fetch('/Carrito/CartInfo', { credentials:'same-origin' });
-              if(!r.ok) return;
-              const d = await r.json();
-              const countEl = document.getElementById('cart-count');
-              const totalEl = document.getElementById('cart-total');
-              if (countEl) countEl.textContent = d.count ?? 0;
-              if (totalEl) totalEl.textContent =
-                new Intl.NumberFormat('es-EC',{style:'currency',currency:'USD'}).format(d.subtotal ?? 0);
-            }catch{}
-          }
+            // ===== ELEMENTS =====
+            const elements = {
+                root: document.getElementById('cart-root'),
+                table: document.getElementById('cart-table'),
+                ftSubtotal: document.getElementById('ft-subtotal'),
+                ftDesc: document.getElementById('ft-desc'),
+                ftCuponCod: document.getElementById('ft-cupon-cod'),
+                ftCouponRow: document.getElementById('ft-coupon-row'),
+                ftCouponActions: document.getElementById('ft-coupon-actions'),
+                ftEnvio: document.getElementById('ft-envio'),
+                ftTotal: document.getElementById('ft-total'),
+                couponInput: document.getElementById('coupon-input'),
+                btnApplyCoupon: document.getElementById('btn-apply-coupon'),
+                btnRemoveCoupon: document.getElementById('btn-remove-coupon'),
+                ddlProvincia: document.getElementById('ddl-provincia'),
+                ddlCiudad: document.getElementById('ddl-ciudad'),
+                btnCalcEnvio: document.getElementById('btn-calc-envio'),
+                envioFuenteLabel: document.getElementById('envio-fuente-label'),
+                hEnvioProv: document.getElementById('h-envio-prov'),
+                hEnvioCiudad: document.getElementById('h-envio-ciudad'),
+                hEnvioPrecio: document.getElementById('h-envio-precio'),
+                stickySummary: document.getElementById('sticky-summary'),
+                stickyTotal: document.getElementById('sticky-total'),
+                stickyCheckoutBtn: document.getElementById('sticky-checkout-btn'),
+                confirmModal: document.getElementById('confirm-modal'),
+                modalCancel: document.getElementById('modal-cancel'),
+                modalConfirm: document.getElementById('modal-confirm'),
+                modalMessage: document.getElementById('modal-message'),
+                toastContainer: document.getElementById('toast-container'),
+                afGlobal: document.getElementById('af-global')
+            };
 
-          function recomputeFooterFromDom(){
-            const sum = $$('#cart-table [data-subtotal]').reduce((acc,el)=>acc + parseN(el.textContent), 0);
-            $('#ft-subtotal').textContent = fmt(sum);
+            // ===== STATE =====
+            let state = {
+                pendingRemove: null,
+                modalCallback: null
+            };
 
-            const desc  = parseN(root.dataset.descuento);
-            const envio = parseN($('#ft-envio')?.textContent);
-            const total = Math.max(0, sum - desc) + envio;
-            $('#ft-total').textContent = fmt(total);
+            // ===== HELPERS =====
+            const fmt = (n) => (Number(n || 0)).toFixed(2);
+            const parseN = (s) => {
+                const n = Number(String(s || '').replace(/[^0-9.-]/g, ''));
+                return isNaN(n) ? 0 : n;
+            };
+            const token = () => elements.afGlobal?.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
-            const hasCoupon = desc > 0;
-            $('#ft-cupon-row')?.classList.toggle('d-none', !hasCoupon);
-            $('#ft-cupon-actions')?.classList.toggle('d-none', !hasCoupon);
-          }
+            function showToast(type, message) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                const icon = type === 'success' ? 'check circle' : type === 'error' ? 'times circle' : 'exclamation triangle';
+                toast.innerHTML = `
+                    <i class="${icon} icon"></i>
+                    <div>${message}</div>
+                `;
+                elements.toastContainer.appendChild(toast);
 
-          function showMsg(el, ok, msg){
-            if (!el) return;
-            el.className = 'ui tiny message ' + (ok ? 'green' : 'red');
-            el.innerHTML = `<i class="${ok?'check':'times'} icon"></i> ${msg}`;
-            el.classList.remove('hidden');
-          }
-
-          // ===== actualizar cantidad =====
-          document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('[data-update]');
-            if (!btn) return;
-
-            const row = btn.closest('[data-row]');
-            const id  = row?.dataset.id;                 // CarritoDetalleID
-            const pid = row?.dataset.productId;          // ProductoID (compatibilidad)
-            const qty = Math.max(1, Number($('[data-qty]', row).value || 1));
-            if (!id || !qty) return;
-
-            const fd = new FormData();
-            fd.append('carritoDetalleId', id);
-            if (pid) fd.append('productoId', pid); // compatibilidad hacia atrás
-            fd.append('cantidad', qty);
-            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
-
-            const r = await fetch('/Carrito/ActualizarCarrito', {
-              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
-            });
-            const data = r.ok ? await r.json() : null;
-
-            if (data?.ok){
-              const price = parseN($('[data-price]', row).textContent);
-              const lineSub = (data.lineSubtotal ?? data.subtotal ?? (qty * price));
-              $('[data-subtotal]', row).textContent = fmt(lineSub);
-              recomputeFooterFromDom();
-              refreshWidget();
-            }else{
-              alert(data?.error || 'No se pudo actualizar la cantidad.');
-            }
-          });
-
-          // ===== eliminar artículo =====
-          document.addEventListener('click', async (e) => {
-            const btn = e.target.closest('[data-remove]');
-            if (!btn) return;
-
-            const row = btn.closest('[data-row]');
-            const id  = row?.dataset.id;                 // CarritoDetalleID
-            const pid = row?.dataset.productId;          // ProductoID (compatibilidad)
-            if (!id) return;
-
-            const fd = new FormData();
-            fd.append('carritoDetalleId', id);
-            if (pid) fd.append('productoId', pid);
-            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
-
-            const r = await fetch('/Carrito/EliminarDelCarrito', {
-              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
-            });
-            const data = r.ok ? await r.json() : null;
-
-            if (data?.ok){
-              row.remove();
-              if ($$('#cart-table tbody tr').length === 0) {
-                location.reload();
-                return;
-              }
-              recomputeFooterFromDom();
-              refreshWidget();
-            }else{
-              alert(data?.error || 'No se pudo eliminar el artículo.');
-            }
-          });
-
-          // ===== aplicar cupón =====
-          $('#btn-apply-coupon')?.addEventListener('click', async () => {
-            const code = $('#coupon-input')?.value?.trim();
-            if (!code) return;
-
-            const fd = new FormData();
-            fd.append('codigoCupon', code);
-            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
-
-            const r = await fetch('/Carrito/AplicarCupon', {
-              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
-            });
-            const data = r.ok ? await r.json() : null;
-
-            if (data?.ok){
-              root.dataset.descuento = data.descuento ?? 0;
-              $('#ft-desc').textContent = fmt(data.descuento ?? 0);
-              $('#ft-cupon-cod').textContent = data.codigo ?? '';
-              showMsg($('#coupon-msg'), true, `Cupón aplicado: ${data.codigo}.`);
-              recomputeFooterFromDom();
-            }else{
-              showMsg($('#coupon-msg'), false, data?.error || 'Cupón inválido o expirado.');
-              root.dataset.descuento = 0;
-              $('#ft-desc').textContent = fmt(0);
-              $('#ft-cupon-cod').textContent = '';
-              recomputeFooterFromDom();
-            }
-          });
-
-          // ===== quitar cupón =====
-          $('#btn-remove-coupon')?.addEventListener('click', async () => {
-            const fd = new FormData();
-            const tk = token(); if (tk) fd.append('__RequestVerificationToken', tk);
-
-            const r = await fetch('/Carrito/QuitarCupon', {
-              method: 'POST', body: fd, headers: { 'X-Requested-With':'XMLHttpRequest' }, credentials:'same-origin'
-            });
-            await (r.ok ? r.json() : null);
-
-            root.dataset.descuento = 0;
-            $('#ft-desc').textContent = fmt(0);
-            $('#ft-cupon-cod').textContent = '';
-            showMsg($('#coupon-msg'), true, 'Cupón eliminado.');
-            recomputeFooterFromDom();
-          });
-
-          // ======== ENVÍOS ========
-          const CAT = {
-            "Azuay": ["Cuenca","Gualaceo","Paute","Sígsig","Nabón","Girón","Santa Isabel"],
-            "Bolívar": ["Guaranda","Chillanes","Echeandía"],
-            "Cañar": ["Azogues","La Troncal","El Tambo","Cañar"],
-            "Carchi": ["Tulcán","Montúfar","Mira"],
-            "Chimborazo": ["Riobamba","Guano","Alausí","Colta","Chambo"],
-            "Cotopaxi": ["Latacunga","Salcedo","Saquisilí","Pujilí"],
-            "El Oro": ["Machala","Santa Rosa","Pasaje","Huaquillas","Arenillas"],
-            "Esmeraldas": ["Esmeraldas","Atacames","Quinindé","Muisne"],
-            "Galápagos": ["Puerto Ayora","Puerto Baquerizo Moreno","Puerto Villamil"],
-            "Guayas": ["Guayaquil","Daule","Samborondón","Durán","Milagro","Playas","El Triunfo","Naranjal","Balao"],
-            "Imbabura": ["Ibarra","Otavalo","Cotacachi","Atuntaqui"],
-            "Loja": ["Loja","Catamayo","Macará","Cariamanga"],
-            "Los Ríos": ["Babahoyo","Quevedo","Vinces","Puebloviejo","Buena Fe"],
-            "Manabí": ["Portoviejo","Manta","Chone","Bahía de Caráquez","Jipijapa","El Carmen"],
-            "Morona Santiago": ["Macas","Sucúa","Gualaquiza","Taisha"],
-            "Napo": ["Tena","Archidona","El Chaco"],
-            "Orellana": ["Coca","La Joya de los Sachas","Loreto"],
-            "Pastaza": ["Puyo","Mera","Santa Clara"],
-            "Pichincha": ["Quito","Sangolquí","Cayambe","Machachi","San Antonio de Pichincha"],
-            "Santa Elena": ["La Libertad","Salinas","Santa Elena"],
-            "Santo Domingo de los Tsáchilas": ["Santo Domingo","La Concordia"],
-            "Sucumbíos": ["Lago Agrio","Shushufindi","Cuyabeno"],
-            "Tungurahua": ["Ambato","Baños","Pelileo","Tisaleo","Cevallos"],
-            "Zamora Chinchipe": ["Zamora","Yantzaza","Zumba"]
-          };
-
-          const ddlProv = $('#ddl-provincia');
-          const ddlCity = $('#ddl-ciudad');
-          const btnCalc = $('#btn-calc-envio');
-          const lblEnv  = $('#ft-envio');
-          const fuente  = $('#envio-fuente-label');
-          const envioMsg = $('#envio-msg');
-
-          const hProv = $('#h-envio-prov');
-          const hCity = $('#h-envio-ciudad');
-          const hPrecio = $('#h-envio-precio');
-
-          function fillProvinces() {
-            ddlProv.innerHTML = '<option value="">Selecciona provincia…</option>';
-            Object.keys(CAT).sort().forEach(p => {
-              const opt = document.createElement('option');
-              opt.value = p; opt.textContent = p; ddlProv.appendChild(opt);
-            });
-          }
-          function fillCities(prov, selected="") {
-            ddlCity.innerHTML = '<option value="">(toda la provincia)</option>';
-            (CAT[prov] || []).forEach(c => {
-              const opt = document.createElement('option');
-              opt.value = c; opt.textContent = c;
-              if (selected && selected.toLowerCase() === c.toLowerCase()) opt.selected = true;
-              ddlCity.appendChild(opt);
-            });
-          }
-
-          ddlProv?.addEventListener('change', () => {
-            fillCities(ddlProv.value, "");
-            // reset envío cuando cambie el destino
-            lblEnv.textContent = fmt(0);
-            fuente.style.display = 'none';
-            root.dataset.envio = "0";
-            hProv.value = ddlProv.value || "";
-            hCity.value = "";
-            hPrecio.value = "0";
-            recomputeFooterFromDom();
-          });
-          ddlCity?.addEventListener('change', () => {
-            lblEnv.textContent = fmt(0);
-            fuente.style.display = 'none';
-            root.dataset.envio = "0";
-            hCity.value = ddlCity.value || "";
-            hPrecio.value = "0";
-            recomputeFooterFromDom();
-          });
-
-          btnCalc?.addEventListener('click', async () => {
-            const prov = (ddlProv.value || '').trim();
-            const city = (ddlCity.value || '').trim();
-
-            if (!prov){
-              showMsg(envioMsg, false, 'Selecciona una provincia.');
-              return;
+                setTimeout(() => {
+                    toast.classList.add('removing');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
             }
 
-            try{
-              const q = new URLSearchParams({ provincia: prov, ciudad: city || '' });
-              const r = await fetch(`/api/envios/estimar?${q.toString()}`, { credentials:'same-origin' });
-              const j = await r.json();
-
-              if (!r.ok || j?.ok === false){
-                lblEnv.textContent = fmt(0);
-                root.dataset.envio = "0";
-                fuente.style.display = 'none';
-                hPrecio.value = "0";
-                showMsg(envioMsg, false, j?.error || 'No hay tarifa para ese destino.');
-                recomputeFooterFromDom();
-                return;
-              }
-
-              const precio = Number(j?.precio ?? 0);
-              lblEnv.textContent = fmt(precio);
-              root.dataset.envio = String(precio);
-              hProv.value = prov;
-              hCity.value = city || "";
-              hPrecio.value = fmt(precio);
-
-              if (j?.fuente){
-                fuente.textContent = j.fuente === 'vendedor' ? 'Tarifa vendedor' : 'Tarifa admin';
-                fuente.className = 'ui tiny label ' + (j.fuente === 'vendedor' ? 'blue' : 'grey');
-                fuente.style.display = '';
-              } else {
-                fuente.style.display = 'none';
-              }
-
-              showMsg(envioMsg, true, `Envío calculado: $${fmt(precio)} ${city ? `(${prov} / ${city})` : `(${prov})`}.`);
-              recomputeFooterFromDom();
-            }catch(e){
-              lblEnv.textContent = fmt(0);
-              root.dataset.envio = "0";
-              fuente.style.display = 'none';
-              hPrecio.value = "0";
-              showMsg(envioMsg, false, 'No se pudo calcular el envío en este momento.');
-              recomputeFooterFromDom();
+            function showModal(message, callback) {
+                elements.modalMessage.textContent = message;
+                state.modalCallback = callback;
+                elements.confirmModal.classList.add('active');
             }
-          });
 
-          // ===== init =====
-          fillProvinces();
-          fillCities("", "");
-          recomputeFooterFromDom();
+            function hideModal() {
+                elements.confirmModal.classList.remove('active');
+                state.modalCallback = null;
+            }
+
+            function recomputeFooter() {
+                const rows = Array.from(document.querySelectorAll('#cart-table [data-row]'));
+                const sum = rows.reduce((acc, row) => {
+                    const subtotal = parseN(row.querySelector('[data-subtotal]')?.textContent);
+                    return acc + subtotal;
+                }, 0);
+
+                elements.ftSubtotal.textContent = fmt(sum);
+
+                const desc = parseN(elements.root?.dataset.descuento || 0);
+                const envio = parseN(elements.ftEnvio?.textContent || 0);
+                const total = Math.max(0, sum - desc) + envio;
+
+                elements.ftTotal.textContent = fmt(total);
+                if (elements.stickyTotal) elements.stickyTotal.textContent = fmt(total);
+
+                const hasCoupon = desc > 0;
+                elements.ftCouponRow?.classList.toggle('d-none', !hasCoupon);
+                elements.ftCouponActions?.classList.toggle('d-none', !hasCoupon);
+            }
+
+            async function refreshWidget() {
+                try {
+                    const response = await fetch(CONFIG.endpoints.cartInfo, { credentials: 'same-origin' });
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    const countEl = document.getElementById('cart-count');
+                    const totalEl = document.getElementById('cart-total');
+                    if (countEl) countEl.textContent = data.count ?? 0;
+                    if (totalEl) {
+                        totalEl.textContent = new Intl.NumberFormat('es-EC', {
+                            style: 'currency',
+                            currency: 'USD'
+                        }).format(data.subtotal ?? 0);
+                    }
+                } catch (e) {
+                    console.error('Widget refresh error:', e);
+                }
+            }
+
+            function setButtonLoading(button, loading) {
+                if (loading) {
+                    button.classList.add('loading');
+                    button.disabled = true;
+                } else {
+                    button.classList.remove('loading');
+                    button.disabled = false;
+                }
+            }
+
+            // ===== QUANTITY CONTROLS =====
+            document.addEventListener('click', (e) => {
+                const btnMinus = e.target.closest('[data-qty-minus]');
+                if (btnMinus) {
+                    const row = btnMinus.closest('[data-row]');
+                    const input = row?.querySelector('[data-qty]');
+                    if (input) {
+                        input.value = Math.max(1, parseInt(input.value || 1) - 1);
+                    }
+                }
+
+                const btnPlus = e.target.closest('[data-qty-plus]');
+                if (btnPlus) {
+                    const row = btnPlus.closest('[data-row]');
+                    const input = row?.querySelector('[data-qty]');
+                    if (input) {
+                        input.value = parseInt(input.value || 1) + 1;
+                    }
+                }
+            });
+
+            // ===== UPDATE QUANTITY =====
+            document.addEventListener('click', async (e) => {
+                const btnUpdate = e.target.closest('[data-update]');
+                if (!btnUpdate) return;
+
+                const row = btnUpdate.closest('[data-row]');
+                const id = row?.dataset.id;
+                const pid = row?.dataset.productId;
+                const input = row?.querySelector('[data-qty]');
+                const qty = Math.max(1, Number(input?.value || 1));
+
+                if (!id) return;
+
+                setButtonLoading(btnUpdate, true);
+
+                const fd = new FormData();
+                fd.append('carritoDetalleId', id);
+                if (pid) fd.append('productoId', pid);
+                fd.append('cantidad', qty);
+                const tk = token();
+                if (tk) fd.append('__RequestVerificationToken', tk);
+
+                try {
+                    const response = await fetch(CONFIG.endpoints.update, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+
+                    const data = response.ok ? await response.json() : null;
+
+                    if (data?.ok) {
+                        const price = parseN(row.querySelector('[data-price]')?.textContent);
+                        const lineSub = data.lineSubtotal ?? data.subtotal ?? (qty * price);
+                        row.querySelector('[data-subtotal]').textContent = fmt(lineSub);
+                        recomputeFooter();
+                        refreshWidget();
+                        showToast('success', 'Cantidad actualizada');
+                    } else {
+                        showToast('error', data?.error || 'No se pudo actualizar');
+                        if (input) input.value = Math.max(1, parseInt(input.dataset.originalValue || 1));
+                    }
+                } catch (error) {
+                    showToast('error', 'Error de conexión');
+                    if (input) input.value = Math.max(1, parseInt(input.dataset.originalValue || 1));
+                } finally {
+                    setButtonLoading(btnUpdate, false);
+                }
+            });
+
+            // Store original values
+            document.querySelectorAll('[data-qty]').forEach(input => {
+                input.dataset.originalValue = input.value;
+                input.addEventListener('input', () => {
+                    if (parseInt(input.value) < 1) input.value = 1;
+                });
+            });
+
+            // ===== REMOVE ITEM =====
+            document.addEventListener('click', (e) => {
+                const btnRemove = e.target.closest('[data-remove]');
+                if (!btnRemove) return;
+
+                const row = btnRemove.closest('[data-row]');
+                const productName = row?.querySelector('td:first-child div div:first-child')?.textContent || 'este producto';
+
+                showModal(
+                    `¿Estás seguro de que deseas eliminar "${productName}" del carrito?`,
+                    async () => {
+                        const id = row?.dataset.id;
+                        const pid = row?.dataset.productId;
+                        if (!id) return;
+
+                        setButtonLoading(btnRemove, true);
+
+                        const fd = new FormData();
+                        fd.append('carritoDetalleId', id);
+                        if (pid) fd.append('productoId', pid);
+                        const tk = token();
+                        if (tk) fd.append('__RequestVerificationToken', tk);
+
+                        try {
+                            const response = await fetch(CONFIG.endpoints.remove, {
+                                method: 'POST',
+                                body: fd,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                                credentials: 'same-origin'
+                            });
+
+                            const data = response.ok ? await response.json() : null;
+
+                            if (data?.ok) {
+                                row.classList.add('removing');
+                                setTimeout(() => {
+                                    row.remove();
+                                    const remainingRows = document.querySelectorAll('#cart-table tbody tr').length;
+                                    if (remainingRows === 0) {
+                                        location.reload();
+                                        return;
+                                    }
+                                    recomputeFooter();
+                                    refreshWidget();
+                                    showToast('success', 'Producto eliminado');
+                                }, 300);
+                            } else {
+                                showToast('error', data?.error || 'No se pudo eliminar');
+                                setButtonLoading(btnRemove, false);
+                            }
+                        } catch (error) {
+                            showToast('error', 'Error de conexión');
+                            setButtonLoading(btnRemove, false);
+                        }
+                    }
+                );
+            });
+
+            // ===== MODAL HANDLERS =====
+            elements.modalCancel?.addEventListener('click', hideModal);
+            elements.modalConfirm?.addEventListener('click', () => {
+                if (state.modalCallback) {
+                    state.modalCallback();
+                }
+                hideModal();
+            });
+
+            elements.confirmModal?.addEventListener('click', (e) => {
+                if (e.target === elements.confirmModal) {
+                    hideModal();
+                }
+            });
+
+            // ===== COUPON =====
+            elements.btnApplyCoupon?.addEventListener('click', async () => {
+                const code = elements.couponInput?.value?.trim();
+                if (!code) {
+                    showToast('warning', 'Ingresa un código de cupón');
+                    return;
+                }
+
+                setButtonLoading(elements.btnApplyCoupon, true);
+
+                const fd = new FormData();
+                fd.append('codigoCupon', code);
+                const tk = token();
+                if (tk) fd.append('__RequestVerificationToken', tk);
+
+                try {
+                    const response = await fetch(CONFIG.endpoints.applyCoupon, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+
+                    const data = response.ok ? await response.json() : null;
+
+                    if (data?.ok) {
+                        elements.root.dataset.descuento = data.descuento ?? 0;
+                        elements.ftDesc.textContent = fmt(data.descuento ?? 0);
+                        elements.ftCuponCod.textContent = data.codigo ?? '';
+                        showToast('success', `Cupón "${data.codigo}" aplicado`);
+                        recomputeFooter();
+                    } else {
+                        showToast('error', data?.error || 'Cupón inválido');
+                        elements.root.dataset.descuento = 0;
+                        elements.ftDesc.textContent = fmt(0);
+                        elements.ftCuponCod.textContent = '';
+                        recomputeFooter();
+                    }
+                } catch (error) {
+                    showToast('error', 'Error al aplicar cupón');
+                } finally {
+                    setButtonLoading(elements.btnApplyCoupon, false);
+                }
+            });
+
+            elements.btnRemoveCoupon?.addEventListener('click', async () => {
+                setButtonLoading(elements.btnRemoveCoupon, true);
+
+                const fd = new FormData();
+                const tk = token();
+                if (tk) fd.append('__RequestVerificationToken', tk);
+
+                try {
+                    await fetch(CONFIG.endpoints.removeCoupon, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    });
+
+                    elements.root.dataset.descuento = 0;
+                    elements.ftDesc.textContent = fmt(0);
+                    elements.ftCuponCod.textContent = '';
+                    elements.couponInput.value = '';
+                    showToast('success', 'Cupón eliminado');
+                    recomputeFooter();
+                } catch (error) {
+                    showToast('error', 'Error al eliminar cupón');
+                } finally {
+                    setButtonLoading(elements.btnRemoveCoupon, false);
+                }
+            });
+
+            // ===== SHIPPING =====
+            function fillProvinces() {
+                elements.ddlProvincia.innerHTML = '<option value="">Selecciona provincia…</option>';
+                Object.keys(CONFIG.provinces).sort().forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p;
+                    opt.textContent = p;
+                    elements.ddlProvincia.appendChild(opt);
+                });
+            }
+
+            function fillCities(province) {
+                elements.ddlCiudad.innerHTML = '<option value="">(toda la provincia)</option>';
+                (CONFIG.provinces[province] || []).forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    elements.ddlCiudad.appendChild(opt);
+                });
+            }
+
+            elements.ddlProvincia?.addEventListener('change', () => {
+                fillCities(elements.ddlProvincia.value);
+                elements.ftEnvio.textContent = fmt(0);
+                elements.envioFuenteLabel.style.display = 'none';
+                elements.root.dataset.envio = "0";
+                elements.hEnvioProv.value = elements.ddlProvincia.value || "";
+                elements.hEnvioCiudad.value = "";
+                elements.hEnvioPrecio.value = "0";
+                recomputeFooter();
+            });
+
+            elements.ddlCiudad?.addEventListener('change', () => {
+                elements.ftEnvio.textContent = fmt(0);
+                elements.envioFuenteLabel.style.display = 'none';
+                elements.root.dataset.envio = "0";
+                elements.hEnvioCiudad.value = elements.ddlCiudad.value || "";
+                elements.hEnvioPrecio.value = "0";
+                recomputeFooter();
+            });
+
+            elements.btnCalcEnvio?.addEventListener('click', async () => {
+                const prov = (elements.ddlProvincia.value || '').trim();
+                const city = (elements.ddlCiudad.value || '').trim();
+
+                if (!prov) {
+                    showToast('warning', 'Selecciona una provincia');
+                    return;
+                }
+
+                setButtonLoading(elements.btnCalcEnvio, true);
+
+                try {
+                    const q = new URLSearchParams({ provincia: prov, ciudad: city || '' });
+                    const response = await fetch(`${CONFIG.endpoints.shippingEstimate}?${q.toString()}`, {
+                        credentials: 'same-origin'
+                    });
+                    const data = await response.json();
+
+                    if (!response.ok || data?.ok === false) {
+                        elements.ftEnvio.textContent = fmt(0);
+                        elements.root.dataset.envio = "0";
+                        elements.envioFuenteLabel.style.display = 'none';
+                        elements.hEnvioPrecio.value = "0";
+                        showToast('error', data?.error || 'No hay tarifa para ese destino');
+                        recomputeFooter();
+                        return;
+                    }
+
+                    const precio = Number(data?.precio ?? 0);
+                    elements.ftEnvio.textContent = fmt(precio);
+                    elements.root.dataset.envio = String(precio);
+                    elements.hEnvioProv.value = prov;
+                    elements.hEnvioCiudad.value = city || "";
+                    elements.hEnvioPrecio.value = fmt(precio);
+
+                    if (data?.fuente) {
+                        elements.envioFuenteLabel.textContent = data.fuente === 'vendedor' ? 'Tarifa vendedor' : 'Tarifa admin';
+                        elements.envioFuenteLabel.className = 'ui tiny label ' + (data.fuente === 'vendedor' ? 'blue' : 'grey');
+                        elements.envioFuenteLabel.style.display = '';
+                    } else {
+                        elements.envioFuenteLabel.style.display = 'none';
+                    }
+
+                    showToast('success', `Envío: $${fmt(precio)} ${city ? `(${prov} / ${city})` : `(${prov})`}`);
+                    recomputeFooter();
+                } catch (error) {
+                    elements.ftEnvio.textContent = fmt(0);
+                    elements.root.dataset.envio = "0";
+                    elements.envioFuenteLabel.style.display = 'none';
+                    elements.hEnvioPrecio.value = "0";
+                    showToast('error', 'No se pudo calcular el envío');
+                    recomputeFooter();
+                } finally {
+                    setButtonLoading(elements.btnCalcEnvio, false);
+                }
+            });
+
+            // ===== STICKY SUMMARY =====
+            let lastScroll = 0;
+            window.addEventListener('scroll', () => {
+                const currentScroll = window.pageYOffset;
+                if (window.innerWidth <= 768) {
+                    if (currentScroll > 300 && currentScroll > lastScroll) {
+                        elements.stickySummary.classList.add('visible');
+                        elements.stickySummary.setAttribute('aria-hidden', 'false');
+                    } else if (currentScroll < lastScroll - 50 || currentScroll < 300) {
+                        elements.stickySummary.classList.remove('visible');
+                        elements.stickySummary.setAttribute('aria-hidden', 'true');
+                    }
+                }
+                lastScroll = currentScroll;
+            });
+
+            elements.stickyCheckoutBtn?.addEventListener('click', () => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+
+            // ===== KEYBOARD SHORTCUTS =====
+            document.addEventListener('keydown', (e) => {
+                // ESC para cerrar modal
+                if (e.key === 'Escape' && elements.confirmModal.classList.contains('active')) {
+                    hideModal();
+                }
+
+                // Enter en input de cantidad para actualizar
+                if (e.key === 'Enter' && e.target.matches('[data-qty]')) {
+                    const row = e.target.closest('[data-row]');
+                    const btnUpdate = row?.querySelector('[data-update]');
+                    if (btnUpdate) btnUpdate.click();
+                }
+
+                // Enter en input de cupón para aplicar
+                if (e.key === 'Enter' && e.target === elements.couponInput) {
+                    elements.btnApplyCoupon?.click();
+                }
+            });
+
+            // ===== INIT =====
+            function init() {
+                if (elements.root) {
+                    fillProvinces();
+                    fillCities("", "");
+                    recomputeFooter();
+                }
+                console.log('✓ Cart initialized');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
         })();
     </script>
 }

@@ -1,0 +1,59 @@
+﻿@model Simone.Models.Categoria
+
+@{
+    var indentStyle = $"padding-left: {Model.Nivel * 25}px";
+    var icon = Model.CategoriasHijas?.Any() == true ? "fas fa-folder text-warning" : "fas fa-file-alt text-info";
+    var estadoBadge = Model.Activa ? "bg-success" : "bg-secondary";
+    var estadoTexto = Model.Activa ? "Activa" : "Inactiva";
+}
+
+<tr data-categoria-id="@Model.CategoriaID" data-nivel="@Model.Nivel">
+    <td style="@indentStyle">
+        <i class="@icon me-2"></i>
+        <strong>@Model.Nombre</strong>
+        @if (Model.Destacada)
+        {
+            <span class="badge bg-warning text-dark ms-2">
+                <i class="fas fa-star"></i> Destacada
+            </span>
+        }
+    </td>
+    <td>
+        <small><code>@Model.Path</code></small>
+    </td>
+    <td class="text-center">
+        <span class="badge bg-info">Nivel @Model.Nivel</span>
+    </td>
+    <td class="text-center">
+        <span class="badge @estadoBadge">@estadoTexto</span>
+    </td>
+    <td class="text-end">
+        <div class="btn-group btn-group-sm" role="group">
+            <a asp-action="Details" asp-route-id="@Model.CategoriaID"
+               class="btn btn-info" title="Ver detalles">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a asp-action="Edit" asp-route-id="@Model.CategoriaID"
+               class="btn btn-warning" title="Editar">
+                <i class="fas fa-edit"></i>
+            </a>
+            <a asp-action="Create" asp-route-padreId="@Model.CategoriaID"
+               class="btn btn-success" title="Agregar subcategoría">
+                <i class="fas fa-plus"></i>
+            </a>
+            <a asp-action="Delete" asp-route-id="@Model.CategoriaID"
+               class="btn btn-danger btn-delete" title="Eliminar">
+                <i class="fas fa-trash"></i>
+            </a>
+        </div>
+    </td>
+</tr>
+
+@* Renderizar hijas recursivamente *@
+@if (Model.CategoriasHijas != null && Model.CategoriasHijas.Any())
+{
+    foreach (var hija in Model.CategoriasHijas.OrderBy(h => h.Orden))
+    {
+        @await Html.PartialAsync("_CategoriaRow", hija)
+    }
+}

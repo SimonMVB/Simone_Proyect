@@ -20,7 +20,7 @@
                     <h1 class="display-4 fw-bold text-white text-shadow mb-3">
                         Descubre Nuestra Colección de Vestidos
                     </h1>
-                    <a asp-controller="Categorias" asp-action="Vestidos"
+                    <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Vestidos"
                        class="btn btn-lg btn-light shadow"
                        aria-label="Ver vestidos">
                         Ver vestidos
@@ -37,7 +37,7 @@
     <div class="container py-4">
         <h2 class="fw-bold mb-2">Body's irresistibles</h2>
         <p class="lead mb-4">¡Llévate el segundo body con <span class="text-warning">envío gratis</span>!</p>
-        <a asp-controller="Categorias" asp-action="Bodys" class="btn btn-warning btn-lg px-4 shadow-sm">
+        <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Body's" class="btn btn-warning btn-lg px-4 shadow-sm">
             <i class="fa-solid fa-bag-shopping me-2"></i> Comprar ahora
         </a>
     </div>
@@ -52,7 +52,7 @@
     <div class="row g-3 g-lg-4">
         <!-- Nota: verifica que los nombres de archivos y acciones coincidan EXACTO en mayúsculas/minúsculas -->
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Blusas" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Blusas" class="cat-card">
                 <img src="~/images/Categorias_slider/blusas.png" asp-append-version="true"
                      class="cat-img" alt="Blusas" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -61,7 +61,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Tops" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Tops" class="cat-card">
                 <img src="~/images/Categorias_slider/tops.png" asp-append-version="true"
                      class="cat-img" alt="Tops" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -70,7 +70,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Bodys" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Body's" class="cat-card">
                 <img src="~/images/Categorias_slider/Bodys.png" asp-append-version="true"
                      class="cat-img" alt="Body's" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -79,8 +79,8 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <!-- Usa el nombre ASCII del método en el Controller (p. ej. TrajeDeBano) -->
-            <a asp-controller="Categorias" asp-action="TrajeDeBano" class="cat-card">
+            <!-- Trajes de Baño -->
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Trajes de Baño" class="cat-card">
                 <img src="~/images/Categorias_slider/Traje_de_bano.png" asp-append-version="true"
                      class="cat-img" alt="Trajes de baño" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -89,7 +89,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Conjuntos" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Conjuntos" class="cat-card">
                 <img src="~/images/Categorias_slider/conjuntos.png" asp-append-version="true"
                      class="cat-img" alt="Conjuntos" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -98,7 +98,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Vestidos" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Vestidos" class="cat-card">
                 <img src="~/images/Categorias_slider/vestidos.png" asp-append-version="true"
                      class="cat-img" alt="Vestidos" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -107,7 +107,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Faldas" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Faldas" class="cat-card">
                 <img src="~/images/Categorias_slider/faldas.png" asp-append-version="true"
                      class="cat-img" alt="Faldas" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -116,7 +116,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Pantalones" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Pantalones" class="cat-card">
                 <img src="~/images/Categorias_slider/Pantalones.png" asp-append-version="true"
                      class="cat-img" alt="Pantalones" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -125,7 +125,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Jeans" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Jeans" class="cat-card">
                 <img src="~/images/Categorias_slider/Jeans.png" asp-append-version="true"
                      class="cat-img" alt="Jeans" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -134,7 +134,7 @@
         </div>
 
         <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Categorias" asp-action="Bolsas" class="cat-card">
+            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Bolsas" class="cat-card">
                 <img src="~/images/Categorias_slider/bolsas.png" asp-append-version="true"
                      class="cat-img" alt="Bolsas" loading="lazy" decoding="async"
                      onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
@@ -263,15 +263,12 @@
 
     /* Respeta usuarios con “reduced motion” */
     @@media (prefers-reduced-motion: reduce) {
-        .banner-img
+        .banner-img {
+            filter: brightness(75%);
+        }
 
-    {
-        filter: brightness(75%);
-    }
-
-    .cat-card, .product-card {
-        transition: none;
-    }
-
+        .cat-card, .product-card {
+            transition: none;
+        }
     }
 </style>

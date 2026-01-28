@@ -367,11 +367,6 @@
                 <h2 class="section-title">15. Ley aplicable y jurisdicción</h2>
                 <p>El Usuario acepta que este acuerdo se rige por la ley ecuatoriana y que, para cualquier divergencia relacionada con la validez, interpretación, ejecución o terminación de estos Términos, serán competentes los juzgados del cantón Milagro, provincia del Guayas, sin perjuicio de los mecanismos amistosos de solución de controversias que las partes puedan explorar previamente.</p>
             </section>
-
-            <div class="legal-actions">
-                <button class="btn-legal btn-decline">No Acepto</button>
-                <button class="btn-legal btn-accept">Acepto los Términos</button>
-            </div>
         </main>
     </div>
 </div>
@@ -437,17 +432,4 @@
                 }
             });
         });
-
-        // Manejar botones de aceptación
-        document.querySelector('.btn-accept').addEventListener('click', function() {
-            alert('¡Gracias por aceptar nuestros términos y condiciones!');
-            // Aquí puedes redirigir o realizar otras acciones
-        });
-
-        document.querySelector('.btn-decline').addEventListener('click', function() {
-            if (confirm('Si no acepta nuestros términos y condiciones, no podrá utilizar nuestros servicios. ¿Está seguro?')) {
-                window.location.href = '/'; // Redirigir a la página principal
-            }
-        });
-    });
 </script>

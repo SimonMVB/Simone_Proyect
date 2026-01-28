@@ -1,8 +1,9 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 using System;
-using System.Threading.Tasks;
+using System.Linq;
 
 namespace Simone.Controllers
 {
@@ -16,6 +17,44 @@ namespace Simone.Controllers
         public LegalController(ILogger<LegalController> logger)
         {
             _logger = logger;
+        }
+
+        // Acción para guardar las preferencias de cookies
+        [HttpPost("guardar-preferencias-cookies")]
+        public IActionResult GuardarPreferenciasCookies(bool analyticsCookies)
+        {
+            // Guardar la preferencia de las cookies analíticas en la sesión
+            HttpContext.Session.SetString("AnalyticsCookies", analyticsCookies.ToString());
+
+            // Registrar el evento en los logs
+            _logger.LogInformation("Preferencias de cookies guardadas para {RemoteIpAddress}", HttpContext.Connection.RemoteIpAddress);
+
+            // Redirigir al usuario nuevamente a la política de cookies
+            return RedirectToAction("PoliticaCookies");
+        }
+
+        // Acción para mostrar la política de cookies y reflejar las preferencias guardadas
+        [HttpGet("politica-cookies")]
+        public IActionResult PoliticaCookies()
+        {
+            // Leer las preferencias de cookies guardadas (si hay)
+            var analyticsCookiesPreference = HttpContext.Session.GetString("AnalyticsCookies");
+
+            // Si no hay preferencia guardada, se activa por defecto
+            var analyticsCookiesChecked = analyticsCookiesPreference == "True";
+
+            // Pasar la preferencia de las cookies a la vista
+            ViewBag.AnalyticsCookiesChecked = analyticsCookiesChecked;
+
+            return View();
+        }
+
+        // Acción para redirigir al catálogo de productos
+        [HttpGet("catalogo")]
+        public IActionResult Catalogo()
+        {
+            // Redirigir al usuario al catálogo
+            return View("Catalogo");
         }
 
         // Cache individualizado por tipo de contenido
@@ -41,14 +80,6 @@ namespace Simone.Controllers
         {
             _logger.LogInformation("Página de Método de Pago accedida desde {RemoteIpAddress}", HttpContext.Connection.RemoteIpAddress);
             return View("MetodoPago");
-        }
-
-        [ResponseCache(Duration = 2592000)] // 30 días
-        [HttpGet("politica-cookies")]
-        public IActionResult PoliticaCookies()
-        {
-            _logger.LogInformation("Página de Política de Cookies accedida desde {RemoteIpAddress}", HttpContext.Connection.RemoteIpAddress);
-            return View();
         }
 
         [ResponseCache(Duration = 2592000)] // 30 días

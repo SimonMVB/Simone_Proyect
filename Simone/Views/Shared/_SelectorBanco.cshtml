@@ -1,153 +1,773 @@
 ﻿@using SimoneCfg = Simone.Configuration
 @model IEnumerable<SimoneCfg.CuentaBancaria>
-@{
-    var selected = ViewBag.BancoCodigo as string;
 
-    var catalogo = new[]{
-        new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
-        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/Guayaquil.png" },
-        new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/Pacifico.png" },
-        new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/Bolivariano.webp" },
-        new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/JEP.png" },
+@{
+    // Variables de configuración
+    var selectedBankCode = ViewBag.BancoCodigo as string;
+    var activeBanks = (Model ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>()).Where(x => x.Activo).ToList();
+    var hasBanks = activeBanks.Any();
+
+    // Catálogo de bancos con metadata
+    var bankCatalog = new[] {
+        new { Codigo = "pichincha",   Nombre = "Banco Pichincha",    Logo = "/images/Bancos/pichincha.webp" },
+        new { Codigo = "guayaquil",   Nombre = "Banco Guayaquil",    Logo = "/images/Bancos/Guayaquil.png" },
+        new { Codigo = "pacifico",    Nombre = "Banco del Pacífico", Logo = "/images/Bancos/Pacifico.png" },
+        new { Codigo = "bolivariano", Nombre = "Banco Bolivariano",  Logo = "/images/Bancos/Bolivariano.webp" },
+        new { Codigo = "jep",         Nombre = "Cooperativa JEP",    Logo = "/images/Bancos/JEP.png" },
     };
-    var dict = catalogo.ToDictionary(x => x.Codigo, x => new { x.Nombre, x.Logo }, StringComparer.OrdinalIgnoreCase);
+
+    var bankMetadata = bankCatalog.ToDictionary(
+        x => x.Codigo,
+        x => new { x.Nombre, x.Logo },
+        StringComparer.OrdinalIgnoreCase
+    );
+
+    // Helper para obtener metadata del banco
+    string GetBankName(SimoneCfg.CuentaBancaria cuenta)
+    {
+        if (!string.IsNullOrWhiteSpace(cuenta.Nombre)) return cuenta.Nombre;
+        if (bankMetadata.TryGetValue(cuenta.Codigo ?? "", out var meta)) return meta.Nombre;
+        return cuenta.Codigo ?? "Banco";
+    }
+
+    string GetBankLogo(SimoneCfg.CuentaBancaria cuenta)
+    {
+        if (!string.IsNullOrWhiteSpace(cuenta.LogoPath)) return cuenta.LogoPath;
+        if (bankMetadata.TryGetValue(cuenta.Codigo ?? "", out var meta)) return meta.Logo;
+        return "/images/product-placeholder.png";
+    }
 }
 
-<style>
-    .banks-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill,minmax(260px,1fr));
-        gap: 14px;
-    }
+<!--
+    ============================================
+    SELECCIÓN DE BANCO - Neo Agora
+    Vista para seleccionar cuenta bancaria
+    Versión Enterprise Optimizada
+    ============================================
+-->
+@section Styles {
+    <style>
+        /* ========== BANK SELECTION STYLES ========== */
 
-    .bank-card {
-        position: relative;
-        display: flex;
-        gap: 12px;
-        align-items: center;
-        border: 1px solid #eef0f4;
-        border-radius: 14px;
-        padding: 12px 14px;
-        background: #fff;
-        cursor: pointer;
-        transition: .15s;
-        user-select: none;
-    }
-
-        .bank-card:hover {
-            box-shadow: 0 6px 16px rgba(0,0,0,.06);
-            transform: translateY(-1px);
+        :root {
+            --bank-primary: #4a6cf7;
+            --bank-primary-hover: #3a5ce7;
+            --bank-border: #eef0f4;
+            --bank-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+            --bank-shadow-selected: 0 8px 18px rgba(74, 108, 247, 0.15);
+            --bank-transition: 0.2s ease;
         }
 
-        .bank-card.selected {
-            border-color: #4a6cf7;
-            box-shadow: 0 8px 18px rgba(74,108,247,.15);
+        /* Container principal */
+        .bank-selection-container {
+            animation: fadeIn 0.4s ease;
         }
 
-    .bank-radio {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        cursor: pointer;
-    }
+        @@keyframes fadeIn {
+            from
 
-    .bank-logo {
-        width: 48px;
-        height: 48px;
-        border-radius: 10px;
-        object-fit: contain;
-        background: #fff;
-        border: 1px solid #eaecef;
-    }
-
-    .bank-name {
-        font-weight: 600;
-    }
-
-    .text-mono {
-        font-family: ui-monospace,Menlo,Consolas,monospace;
-    }
-</style>
-
-<form method="post" asp-controller="Compras" asp-action="ConfirmarBanco" id="frm-select-banco">
-    @Html.AntiForgeryToken()
-
-    <!-- Hidden que consume el backend -->
-    <input type="hidden" name="BancoCodigo" id="BancoCodigo" value="@selected" />
-    <input type="hidden" name="BancoNombre" id="BancoNombre" />
-    <input type="hidden" name="BancoLogo" id="BancoLogo" />
-    <input type="hidden" name="CuentaNumero" id="CuentaNumero" />
-    <input type="hidden" name="CuentaTipo" id="CuentaTipo" />
-
-    <div class="banks-grid">
-        @foreach (var c in (Model ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>()).Where(x => x.Activo))
         {
-            var code = c.Codigo ?? "";
-            var has = dict.TryGetValue(code, out var meta);
-            var nombre = !string.IsNullOrWhiteSpace(c.Nombre) ? c.Nombre : (has ? meta!.Nombre : code);
-            var logo = !string.IsNullOrWhiteSpace(c.LogoPath) ? c.LogoPath : (has ? meta!.Logo : "/images/product-placeholder.png");
-            var isSel = string.Equals(selected, code, StringComparison.OrdinalIgnoreCase);
-
-            <label class="bank-card @(isSel ? "selected" : "")">
-                <input type="radio" name="bank" class="bank-radio"
-                       value="@code"
-                       data-nombre="@nombre"
-                       data-logo="@logo"
-                       data-numero="@(c.Numero ?? "")"
-                       data-tipo="@(c.Tipo ?? "")"
-                       @(isSel ? "checked" : null) />
-                <img src="@logo" alt="@nombre" class="bank-logo" onerror="this.src='/images/product-placeholder.png'">
-                <div>
-                    <div class="bank-name">@nombre</div>
-                    <div class="text-mono">@((c.Numero ?? "—"))</div>
-                    <small class="text-muted">@((c.Tipo ?? "—"))</small>
-                </div>
-            </label>
+            opacity: 0;
+            transform: translateY(10px);
         }
-    </div>
 
-    <div class="invalid-feedback d-block mt-2" id="err-banco" style="display:none">
-        Selecciona un banco para continuar.
-    </div>
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
 
-    <div class="mt-3 d-flex gap-2">
-        <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-circle-check me-1"></i> Usar esta cuenta
-        </button>
-    </div>
-</form>
+        }
+
+        /* Grid de bancos */
+        .banks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Card de banco */
+        .bank-card {
+            position: relative;
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            border: 2px solid var(--bank-border);
+            border-radius: 0.875rem;
+            padding: 0.875rem 1rem;
+            background: #fff;
+            cursor: pointer;
+            transition: all var(--bank-transition);
+            user-select: none;
+        }
+
+            .bank-card:hover {
+                box-shadow: var(--bank-shadow);
+                transform: translateY(-2px);
+                border-color: #d0d5dd;
+            }
+
+            .bank-card.selected {
+                border-color: var(--bank-primary);
+                box-shadow: var(--bank-shadow-selected);
+                background: #f8f9ff;
+            }
+
+            .bank-card:focus-within {
+                outline: 2px solid var(--bank-primary);
+                outline-offset: 2px;
+            }
+
+        /* Radio button oculto pero accesible */
+        .bank-radio {
+            position: absolute;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+        }
+
+            .bank-radio:focus + .bank-card-content {
+                /* El focus se maneja en .bank-card:focus-within */
+            }
+
+        /* Logo del banco */
+        .bank-logo {
+            width: 56px;
+            height: 56px;
+            border-radius: 0.75rem;
+            object-fit: contain;
+            background: #fff;
+            border: 1px solid #eaecef;
+            padding: 0.25rem;
+            flex-shrink: 0;
+            transition: transform var(--bank-transition);
+        }
+
+        .bank-card:hover .bank-logo {
+            transform: scale(1.05);
+        }
+
+        .bank-card.selected .bank-logo {
+            border-color: var(--bank-primary);
+            box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
+        }
+
+        /* Contenido del banco */
+        .bank-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .bank-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bank-account-number {
+            font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 0.125rem;
+        }
+
+        .bank-account-type {
+            font-size: 0.8rem;
+            color: #9ca3af;
+            text-transform: capitalize;
+        }
+
+        /* Indicador de selección */
+        .bank-check-indicator {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--bank-primary);
+            color: white;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            animation: checkBounce 0.3s ease;
+        }
+
+        .bank-card.selected .bank-check-indicator {
+            display: flex;
+        }
+
+        @@keyframes checkBounce {
+            0%
+
+        {
+            transform: scale(0);
+        }
+
+        50% {
+            transform: scale(1.2);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+
+        }
+
+        /* Empty state */
+        .empty-banks-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: #f9fafb;
+            border-radius: 0.875rem;
+            border: 2px dashed #d1d5db;
+        }
+
+        .empty-banks-icon {
+            font-size: 3rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+        }
+
+        .empty-banks-text {
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        /* Error feedback */
+        .bank-error-message {
+            display: none;
+            padding: 0.75rem 1rem;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            border-radius: 0.5rem;
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            animation: slideDown 0.3s ease;
+        }
+
+            .bank-error-message.show {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+        @@keyframes slideDown {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+
+        /* Success feedback */
+        .bank-success-message {
+            display: none;
+            padding: 0.75rem 1rem;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 0.5rem;
+            color: #16a34a;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+            animation: slideDown 0.3s ease;
+        }
+
+            .bank-success-message.show {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+        /* Botones */
+        .bank-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-submit-bank {
+            position: relative;
+            transition: all var(--bank-transition);
+        }
+
+            .btn-submit-bank:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .btn-submit-bank.loading {
+                color: transparent !important;
+                pointer-events: none;
+            }
+
+                .btn-submit-bank.loading::after {
+                    content: "";
+                    position: absolute;
+                    width: 16px;
+                    height: 16px;
+                    top: 50%;
+                    left: 50%;
+                    margin-left: -8px;
+                    margin-top: -8px;
+                    border: 2px solid transparent;
+                    border-top-color: currentColor;
+                    border-radius: 50%;
+                    animation: spin 0.6s linear infinite;
+                }
+
+        @@keyframes spin {
+            to
+
+        {
+            transform: rotate(360deg);
+        }
+
+        }
+
+        /* Responsive */
+        @@media (max-width: 575.98px) {
+            .banks-grid
+
+        {
+            grid-template-columns: 1fr;
+        }
+
+        .bank-card {
+            padding: 0.75rem;
+        }
+
+        .bank-logo {
+            width: 48px;
+            height: 48px;
+        }
+
+        .bank-name {
+            font-size: 0.9rem;
+        }
+
+        .bank-account-number {
+            font-size: 0.8rem;
+        }
+
+        .bank-actions {
+            flex-direction: column;
+        }
+
+            .bank-actions .btn {
+                width: 100%;
+            }
+
+        }
+
+        /* Reduced motion */
+        @@media (prefers-reduced-motion: reduce) {
+            .bank-card, .bank-logo, .bank-check-indicator, .bank-selection-container
+
+        {
+            animation: none !important;
+            transition: none !important;
+        }
+
+        }
+
+        /* Print */
+        @@media print {
+            .bank-card
+
+        {
+            border: 1px solid #d1d5db;
+            box-shadow: none;
+        }
+
+        .bank-card:not(.selected) {
+            display: none;
+        }
+
+        .bank-actions {
+            display: none;
+        }
+
+        }
+    </style>
+}
+
+<div class="bank-selection-container" role="region" aria-label="Selección de banco">
+    @if (!hasBanks)
+    {
+        <!-- Empty state -->
+        <div class="empty-banks-state" role="status">
+            <div class="empty-banks-icon">
+                <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+            </div>
+            <p class="empty-banks-text">
+                <strong>No hay cuentas bancarias configuradas</strong><br />
+                Por favor, contacta al administrador para configurar las cuentas bancarias.
+            </p>
+        </div>
+    }
+    else
+    {
+        <form method="post"
+              asp-controller="Compras"
+              asp-action="ConfirmarBanco"
+              id="frm-select-banco"
+              novalidate>
+            @Html.AntiForgeryToken()
+
+            <!-- Hidden fields que consume el backend -->
+            <input type="hidden"
+                   name="BancoCodigo"
+                   id="BancoCodigo"
+                   value="@selectedBankCode"
+                   aria-hidden="true" />
+            <input type="hidden"
+                   name="BancoNombre"
+                   id="BancoNombre"
+                   aria-hidden="true" />
+            <input type="hidden"
+                   name="BancoLogo"
+                   id="BancoLogo"
+                   aria-hidden="true" />
+            <input type="hidden"
+                   name="CuentaNumero"
+                   id="CuentaNumero"
+                   aria-hidden="true" />
+            <input type="hidden"
+                   name="CuentaTipo"
+                   id="CuentaTipo"
+                   aria-hidden="true" />
+
+            <!-- Grid de bancos -->
+            <div class="banks-grid" role="radiogroup" aria-label="Selecciona una cuenta bancaria">
+                @foreach (var bank in activeBanks)
+                {
+                    var bankCode = bank.Codigo ?? "";
+                    var bankName = GetBankName(bank);
+                    var bankLogo = GetBankLogo(bank);
+                    var accountNumber = bank.Numero ?? "—";
+                    var accountType = bank.Tipo ?? "—";
+                    var isSelected = string.Equals(selectedBankCode, bankCode, StringComparison.OrdinalIgnoreCase);
+                    var bankId = $"bank-{bankCode}";
+
+                    <label class="bank-card @(isSelected ? "selected" : "")"
+                           for="@bankId"
+                           tabindex="0"
+                           role="radio"
+                           aria-checked="@(isSelected ? "true" : "false")"
+                           aria-label="@bankName, cuenta @accountNumber, tipo @accountType">
+
+                        <input type="radio"
+                               name="bank"
+                               id="@bankId"
+                               class="bank-radio"
+                               value="@bankCode"
+                               data-nombre="@bankName"
+                               data-logo="@bankLogo"
+                               data-numero="@accountNumber"
+                               data-tipo="@accountType"
+                               @(isSelected ? "checked" : null)
+                               aria-labelledby="bank-name-@bankCode" />
+
+                        <img src="@bankLogo"
+                             alt="Logo de @bankName"
+                             class="bank-logo"
+                             loading="lazy"
+                             onerror="this.src='/images/product-placeholder.png'; this.onerror=null;" />
+
+                        <div class="bank-info">
+                            <div class="bank-name" id="bank-name-@bankCode">@bankName</div>
+                            <div class="bank-account-number">@accountNumber</div>
+                            <div class="bank-account-type">@accountType</div>
+                        </div>
+
+                        <!-- Indicador de selección -->
+                        <div class="bank-check-indicator" aria-hidden="true">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                    </label>
+                }
+            </div>
+
+            <!-- Mensajes de feedback -->
+            <div class="bank-error-message"
+                 id="err-banco"
+                 role="alert"
+                 aria-live="polite">
+                <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+                <span>Selecciona una cuenta bancaria para continuar.</span>
+            </div>
+
+            <div class="bank-success-message"
+                 id="success-banco"
+                 role="status"
+                 aria-live="polite">
+                <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                <span id="success-banco-text"></span>
+            </div>
+
+            <!-- Acciones -->
+            <div class="bank-actions">
+                <button type="submit"
+                        class="btn btn-primary btn-lg btn-submit-bank"
+                        id="btn-submit-bank"
+                        aria-label="Confirmar cuenta bancaria seleccionada">
+                    <i class="fa-solid fa-circle-check me-2" aria-hidden="true"></i>
+                    Usar esta cuenta
+                </button>
+
+                <a href="@Url.Action("Resumen", "Compras")"
+                   class="btn btn-outline-secondary btn-lg"
+                   aria-label="Volver al resumen de compra">
+                    <i class="fa-solid fa-arrow-left me-2" aria-hidden="true"></i>
+                    Volver
+                </a>
+            </div>
+        </form>
+    }
+</div>
 
 @section Scripts {
     <script>
-        (()=> {
-          const form = document.getElementById('frm-select-banco');
-          const radios = form.querySelectorAll('.bank-radio');
-          const err = document.getElementById('err-banco');
+        (function() {
+            'use strict';
 
-          const setFields = (r) => {
-            document.getElementById('BancoCodigo').value  = r.value || '';
-            document.getElementById('BancoNombre').value  = r.dataset.nombre || '';
-            document.getElementById('BancoLogo').value    = r.dataset.logo || '';
-            document.getElementById('CuentaNumero').value = r.dataset.numero || '';
-            document.getElementById('CuentaTipo').value   = r.dataset.tipo || '';
-          };
+            const form = document.getElementById('frm-select-banco');
+            if (!form) return;
 
-          radios.forEach(r => {
-            r.addEventListener('change', () => {
-              form.querySelectorAll('.bank-card').forEach(c => c.classList.remove('selected'));
-              r.closest('.bank-card')?.classList.add('selected');
-              setFields(r);
-              err.style.display = 'none';
-            });
-            if (r.checked) r.dispatchEvent(new Event('change'));
-          });
+            const CONFIG = {
+                selectors: {
+                    radios: '.bank-radio',
+                    cards: '.bank-card',
+                    errorMsg: '#err-banco',
+                    successMsg: '#success-banco',
+                    submitBtn: '#btn-submit-bank',
+                    hiddenFields: {
+                        codigo: '#BancoCodigo',
+                        nombre: '#BancoNombre',
+                        logo: '#BancoLogo',
+                        numero: '#CuentaNumero',
+                        tipo: '#CuentaTipo'
+                    }
+                },
+                classes: {
+                    selected: 'selected',
+                    loading: 'loading',
+                    show: 'show'
+                }
+            };
 
-          form.addEventListener('submit', (e) => {
-            if (!document.getElementById('BancoCodigo').value) {
-              e.preventDefault();
-              err.style.display = 'block';
+            const elements = {
+                radios: form.querySelectorAll(CONFIG.selectors.radios),
+                cards: form.querySelectorAll(CONFIG.selectors.cards),
+                errorMsg: document.querySelector(CONFIG.selectors.errorMsg),
+                successMsg: document.querySelector(CONFIG.selectors.successMsg),
+                submitBtn: document.querySelector(CONFIG.selectors.submitBtn),
+                hiddenFields: {
+                    codigo: document.querySelector(CONFIG.selectors.hiddenFields.codigo),
+                    nombre: document.querySelector(CONFIG.selectors.hiddenFields.nombre),
+                    logo: document.querySelector(CONFIG.selectors.hiddenFields.logo),
+                    numero: document.querySelector(CONFIG.selectors.hiddenFields.numero),
+                    tipo: document.querySelector(CONFIG.selectors.hiddenFields.tipo)
+                }
+            };
+
+            /**
+             * Actualiza los campos hidden con los datos del banco seleccionado
+             */
+            function updateHiddenFields(radio) {
+                const data = {
+                    codigo: radio.value || '',
+                    nombre: radio.dataset.nombre || '',
+                    logo: radio.dataset.logo || '',
+                    numero: radio.dataset.numero || '',
+                    tipo: radio.dataset.tipo || ''
+                };
+
+                Object.keys(data).forEach(key => {
+                    if (elements.hiddenFields[key]) {
+                        elements.hiddenFields[key].value = data[key];
+                    }
+                });
+
+                return data;
             }
-          });
+
+            /**
+             * Actualiza la UI cuando se selecciona un banco
+             */
+            function handleBankSelection(radio) {
+                // Remover selección previa
+                elements.cards.forEach(card => {
+                    card.classList.remove(CONFIG.classes.selected);
+                    card.setAttribute('aria-checked', 'false');
+                });
+
+                // Marcar como seleccionado
+                const selectedCard = radio.closest(CONFIG.selectors.cards);
+                if (selectedCard) {
+                    selectedCard.classList.add(CONFIG.classes.selected);
+                    selectedCard.setAttribute('aria-checked', 'true');
+                }
+
+                // Actualizar campos hidden
+                const bankData = updateHiddenFields(radio);
+
+                // Ocultar error
+                hideError();
+
+                // Mostrar feedback de éxito (opcional)
+                showSuccess(`${bankData.nombre} seleccionado`);
+
+                // Anunciar a screen readers
+                announceSelection(bankData.nombre);
+            }
+
+            /**
+             * Muestra mensaje de error
+             */
+            function showError(message) {
+                if (elements.errorMsg) {
+                    if (message) {
+                        elements.errorMsg.querySelector('span').textContent = message;
+                    }
+                    elements.errorMsg.classList.add(CONFIG.classes.show);
+                }
+            }
+
+            /**
+             * Oculta mensaje de error
+             */
+            function hideError() {
+                if (elements.errorMsg) {
+                    elements.errorMsg.classList.remove(CONFIG.classes.show);
+                }
+            }
+
+            /**
+             * Muestra mensaje de éxito temporal
+             */
+            function showSuccess(message) {
+                if (elements.successMsg) {
+                    const textElement = elements.successMsg.querySelector('#success-banco-text');
+                    if (textElement) {
+                        textElement.textContent = message;
+                    }
+                    elements.successMsg.classList.add(CONFIG.classes.show);
+
+                    // Auto-hide después de 2 segundos
+                    setTimeout(() => {
+                        elements.successMsg.classList.remove(CONFIG.classes.show);
+                    }, 2000);
+                }
+            }
+
+            /**
+             * Anuncia selección a screen readers
+             */
+            function announceSelection(bankName) {
+                const announcement = document.createElement('div');
+                announcement.setAttribute('role', 'status');
+                announcement.setAttribute('aria-live', 'polite');
+                announcement.classList.add('visually-hidden');
+                announcement.textContent = `${bankName} seleccionado`;
+                document.body.appendChild(announcement);
+
+                setTimeout(() => {
+                    document.body.removeChild(announcement);
+                }, 1000);
+            }
+
+            /**
+             * Valida que haya un banco seleccionado
+             */
+            function validateSelection() {
+                const codigoValue = elements.hiddenFields.codigo?.value;
+                if (!codigoValue) {
+                    showError();
+                    return false;
+                }
+                return true;
+            }
+
+            /**
+             * Inicializa event listeners
+             */
+            function initializeEventListeners() {
+                // Radio change events
+                elements.radios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        handleBankSelection(this);
+                    });
+
+                    // Inicializar si ya está checked
+                    if (radio.checked) {
+                        handleBankSelection(radio);
+                    }
+                });
+
+                // Keyboard navigation en labels
+                elements.cards.forEach(card => {
+                    card.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            const radio = this.querySelector(CONFIG.selectors.radios);
+                            if (radio) {
+                                radio.checked = true;
+                                radio.dispatchEvent(new Event('change'));
+                            }
+                        }
+                    });
+                });
+
+                // Form submit
+                form.addEventListener('submit', function(e) {
+                    if (!validateSelection()) {
+                        e.preventDefault();
+
+                        // Focus en el primer radio para accesibilidad
+                        const firstRadio = elements.radios[0];
+                        if (firstRadio) {
+                            firstRadio.closest(CONFIG.selectors.cards)?.focus();
+                        }
+
+                        return false;
+                    }
+
+                    // Loading state
+                    if (elements.submitBtn) {
+                        elements.submitBtn.classList.add(CONFIG.classes.loading);
+                        elements.submitBtn.disabled = true;
+                    }
+                });
+            }
+
+            /**
+             * Inicialización
+             */
+            function init() {
+                initializeEventListeners();
+                console.log('✓ Bank selection initialized');
+            }
+
+            // Ejecutar inicialización
+            init();
         })();
     </script>
 }

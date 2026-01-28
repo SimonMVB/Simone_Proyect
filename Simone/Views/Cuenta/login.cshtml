@@ -5,185 +5,258 @@
     var returnUrl = (string?)ViewData["ReturnUrl"] ?? "";
 }
 
-<div class="container py-5" style="max-width: 520px;">
-    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-        <div class="card-header text-center border-0 p-4" style="background: linear-gradient(135deg,#f9d5ec,#f4a7c1);">
-            <h4 class="mb-0 text-white">
-                <i class="fa-solid fa-right-to-bracket me-2"></i> Iniciar sesión
-            </h4>
-        </div>
+@section Styles {
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/css/login.css" asp-append-version="true">
+}
 
-        <div class="card-body p-4">
+<main class="login-page" role="main">
+    <div class="login-container">
+        <!-- Breadcrumb Navigation -->
+        <nav class="login-breadcrumb" aria-label="Navegación">
+            <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
+                <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                    <a href="@Url.Action("Index", "Home")" class="breadcrumb-link" itemprop="item">
+                        <i class="fa-solid fa-house" aria-hidden="true"></i>
+                        <span itemprop="name">Inicio</span>
+                    </a>
+                    <meta itemprop="position" content="1" />
+                </li>
+                <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                    <a href="@Url.Action("Index", "Cuenta")" class="breadcrumb-link" itemprop="item">
+                        <span itemprop="name">Mi Cuenta</span>
+                    </a>
+                    <meta itemprop="position" content="2" />
+                </li>
+                <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+                    <span class="breadcrumb-current" itemprop="name" aria-current="page">Iniciar Sesión</span>
+                    <meta itemprop="position" content="3" />
+                </li>
+            </ol>
+        </nav>
 
-            @* Alertas *@
-            @if (TempData["MensajeError"] is string err && !string.IsNullOrWhiteSpace(err))
-            {
-                <div class="alert alert-danger d-flex align-items-start" role="alert">
-                    <i class="fa-solid fa-circle-exclamation me-2 mt-1"></i>
-                    <div>@err</div>
+        <!-- Contenido Principal: 2 Columnas -->
+        <div class="login-content">
+            <!-- ========== COLUMNA IZQUIERDA - FORMULARIO ========== -->
+            <div class="login-form-column" id="loginCard">
+                <!-- Header -->
+                <header class="form-header">
+                    <h1>
+                        <i class="fa-solid fa-user-circle" aria-hidden="true"></i>
+                        Iniciar sesión
+                    </h1>
+                    <p>Accede a tu cuenta de Neo Ágora</p>
+                </header>
+
+                <!-- Alertas del Servidor -->
+                @if (TempData["MensajeError"] is string errorMsg && !string.IsNullOrWhiteSpace(errorMsg))
+                {
+                    <div class="alert alert-danger" role="alert" aria-live="assertive">
+                        <i class="fa-solid fa-circle-exclamation alert-icon" aria-hidden="true"></i>
+                        <span>@errorMsg</span>
+                    </div>
+                }
+
+                @if (TempData["MensajeExito"] is string successMsg && !string.IsNullOrWhiteSpace(successMsg))
+                {
+                    <div class="alert alert-success" role="alert" aria-live="polite">
+                        <i class="fa-solid fa-circle-check alert-icon" aria-hidden="true"></i>
+                        <span>@successMsg</span>
+                    </div>
+                }
+
+                <!-- Validation Summary -->
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+                <!-- Rate Limit Warning -->
+                <div class="rate-limit-warning" id="rateLimitWarning" role="alert" aria-live="polite">
+                    <i class="fa-solid fa-clock rate-limit-icon" aria-hidden="true"></i>
+                    <span class="rate-limit-text">
+                        Demasiados intentos. Por favor espera
+                        <strong id="rateLimitTimer">30</strong> segundos.
+                    </span>
                 </div>
-            }
-            @if (TempData["MensajeExito"] is string ok && !string.IsNullOrWhiteSpace(ok))
-            {
-                <div class="alert alert-success d-flex align-items-start" role="alert">
-                    <i class="fa-solid fa-circle-check me-2 mt-1"></i>
-                    <div>@ok</div>
+
+                <!-- Botones de Login Social -->
+                <div class="social-login" role="group" aria-label="Iniciar sesión con redes sociales">
+                    <button type="button" class="btn-social btn-google" id="btnGoogle">
+                        <i class="fa-brands fa-google" aria-hidden="true"></i>
+                        <span>Google</span>
+                    </button>
+                    <button type="button" class="btn-social btn-facebook" id="btnFacebook">
+                        <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
+                        <span>Facebook</span>
+                    </button>
                 </div>
-            }
 
-            <div asp-validation-summary="ModelOnly" class="text-danger small mb-3"></div>
+                <!-- Divisor -->
+                <div class="divider" role="separator">
+                    <span class="divider-text">O continúa con email</span>
+                </div>
 
-            <form asp-action="Login" method="post" id="formLogin" novalidate>
-                @Html.AntiForgeryToken()
-                <input type="hidden" name="returnUrl" value="@returnUrl" />
-                <input type="hidden" name="RequestID" value="@ViewData["RequestID"]" />
+                <!-- Formulario de Login -->
+                <form asp-action="Login" method="post" id="loginForm" novalidate autocomplete="on">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <input type="hidden" name="RequestID" value="@(ViewData["RequestID"])" />
 
-                <!-- Email -->
-                <div class="mb-3">
-                    <label asp-for="Email" class="form-label">Correo electrónico</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
+                    <!-- Campo Email -->
+                    <div class="form-group">
+                        <label for="emailInput" class="form-label">
+                            <i class="fa-solid fa-envelope" aria-hidden="true"></i>
+                            Correo electrónico <span class="required">*</span>
+                        </label>
                         <input asp-for="Email"
                                type="email"
+                               id="emailInput"
                                class="form-control"
-                               placeholder="usuario@correo.com"
-                               inputmode="email"
-                               autocomplete="username"
-                               required />
+                               placeholder="tu@correo.com"
+                               autocomplete="email"
+                               required
+                               aria-describedby="emailInputError" />
+                        <span asp-validation-for="Email" id="emailInputError" class="validation-message"></span>
                     </div>
-                    <span asp-validation-for="Email" class="text-danger small"></span>
-                </div>
 
-                <!-- Password -->
-                <div class="mb-1">
-                    <label asp-for="Password" class="form-label">Contraseña</label>
-                    <div class="input-group" id="grpPwd">
-                        <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                        <input asp-for="Password"
-                               type="password"
-                               class="form-control"
-                               placeholder="••••••••"
-                               autocomplete="current-password"
-                               required />
-                        <button class="btn btn-outline-secondary" type="button" id="btnTogglePwd" title="Mostrar/ocultar">
-                            <i class="fa-regular fa-eye"></i>
-                        </button>
+                    <!-- Campo Contraseña -->
+                    <div class="form-group">
+                        <label for="passwordInput" class="form-label">
+                            <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                            Contraseña <span class="required">*</span>
+                        </label>
+                        <div class="password-wrapper">
+                            <input asp-for="Password"
+                                   type="password"
+                                   id="passwordInput"
+                                   class="form-control"
+                                   placeholder="••••••••"
+                                   autocomplete="current-password"
+                                   required
+                                   aria-describedby="passwordInputError" />
+                            <button type="button"
+                                    class="password-toggle"
+                                    id="passwordToggle"
+                                    aria-label="Mostrar contraseña"
+                                    aria-pressed="false">
+                                <i class="fa-regular fa-eye password-toggle-icon" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                        <!-- Caps Lock Warning -->
+                        <div class="caps-warning is-hidden" id="capsWarning" role="alert">
+                            <i class="fa-solid fa-exclamation-triangle" aria-hidden="true"></i>
+                            <span>Bloq Mayús está activado</span>
+                        </div>
+                        <span asp-validation-for="Password" id="passwordInputError" class="validation-message"></span>
                     </div>
-                    <div id="capsWarn" class="form-text text-warning d-none">
-                        <i class="fa-solid fa-unlock-keyhole me-1"></i> Bloq Mayús está activado.
-                    </div>
-                    <span asp-validation-for="Password" class="text-danger small"></span>
-                </div>
 
-                <!-- Remember / Forgot -->
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <div class="form-check">
-                        <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label">Recordarme</label>
-                    </div>
-                    <div>
-                        <a asp-controller="Cuenta" asp-action="OlvidoPassword" class="link-secondary small">
+                    <!-- Recordarme y Olvidé contraseña -->
+                    <div class="form-options">
+                        <label class="form-check">
+                            <input asp-for="RememberMe" type="checkbox" class="form-check-input" id="rememberMe" />
+                            <span class="form-check-label">Recordarme</span>
+                        </label>
+                        <a asp-controller="Cuenta" asp-action="OlvidoPassword" class="forgot-link">
                             ¿Olvidaste tu contraseña?
                         </a>
                     </div>
+
+                    <!-- Botón Submit -->
+                    <button type="submit" class="btn-submit" id="submitBtn">
+                        <span class="btn-text">Ingresar</span>
+                        <i class="fa-solid fa-arrow-right-to-bracket btn-icon" aria-hidden="true"></i>
+                        <i class="fa-solid fa-spinner fa-spin btn-spinner" aria-hidden="true"></i>
+                    </button>
+                </form>
+
+                <!-- Link de Registro -->
+                <div class="register-prompt">
+                    ¿No tienes una cuenta?
+                    <a asp-controller="Cuenta" asp-action="Registrar" class="register-link">
+                        Regístrate aquí
+                    </a>
                 </div>
+            </div>
 
-                <!-- Botón -->
-                <button type="submit" class="btn w-100 py-2 fw-semibold text-white" id="btnLogin"
-                        style="background-color:#f4a7c1; border-color:#f4a7c1;">
-                    <span class="me-2"><i class="fa-solid fa-arrow-right-to-bracket"></i></span> Ingresar
-                </button>
-            </form>
-        </div>
+            <!-- ========== COLUMNA DERECHA - CARACTERÍSTICAS ========== -->
+            <aside class="features-column">
+                <header class="features-header">
+                    <h2>
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        ¿Por qué Neo Ágora?
+                    </h2>
+                    <p>Miles de clientes confían en nosotros</p>
+                </header>
 
-        <div class="card-footer text-center small bg-white">
-            ¿No tienes una cuenta?
-            <a asp-controller="Cuenta" asp-action="Registrar" class="fw-semibold" style="color:#f4a7c1;">
-                Regístrate aquí
-            </a>
+                <div class="features-grid">
+                    <article class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i class="fa-solid fa-lock feature-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h3 class="feature-title">100% Seguro</h3>
+                            <p class="feature-description">
+                                Protección de datos con encriptación SSL/TLS de última generación
+                            </p>
+                        </div>
+                    </article>
+
+                    <article class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i class="fa-solid fa-truck-fast feature-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h3 class="feature-title">Envío Rápido</h3>
+                            <p class="feature-description">
+                                Recibe tus productos en 24-48 horas con seguimiento en tiempo real
+                            </p>
+                        </div>
+                    </article>
+
+                    <article class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i class="fa-solid fa-credit-card feature-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h3 class="feature-title">Pago Fácil</h3>
+                            <p class="feature-description">
+                                Múltiples métodos: tarjetas, PayPal, transferencia y más
+                            </p>
+                        </div>
+                    </article>
+
+                    <article class="feature-card">
+                        <div class="feature-icon-wrapper">
+                            <i class="fa-solid fa-headset feature-icon" aria-hidden="true"></i>
+                        </div>
+                        <div class="feature-content">
+                            <h3 class="feature-title">Soporte 24/7</h3>
+                            <p class="feature-description">
+                                Siempre disponibles por chat, email o teléfono
+                            </p>
+                        </div>
+                    </article>
+                </div>
+            </aside>
         </div>
+    </div>
+</main>
+
+<!-- Success Overlay - OCULTO POR DEFECTO -->
+<div class="success-overlay" id="successOverlay" role="dialog" aria-modal="true" aria-labelledby="successTitle" aria-hidden="true">
+    <div class="success-modal">
+        <div class="success-icon-wrapper">
+            <i class="fa-solid fa-check success-icon" aria-hidden="true"></i>
+        </div>
+        <h2 class="success-title" id="successTitle">¡Bienvenido!</h2>
+        <p class="success-message">Redirigiendo a tu cuenta...</p>
     </div>
 </div>
 
+<!-- Screen Reader Announcer -->
+<div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true" role="status"></div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
-    <script>
-        (function () {
-            const form = document.getElementById('formLogin');
-            const btn  = document.getElementById('btnLogin');
-            const pwd  = document.getElementById('@Html.IdFor(m => m.Password)');
-            const toggle = document.getElementById('btnTogglePwd');
-            const capsWarn = document.getElementById('capsWarn');
-
-            // Mostrar/ocultar contraseña
-            toggle?.addEventListener('click', (e) => {
-                e.preventDefault();
-                const isPwd = pwd.getAttribute('type') === 'password';
-                pwd.setAttribute('type', isPwd ? 'text' : 'password');
-                const i = toggle.querySelector('i');
-                i.classList.toggle('fa-eye');
-                i.classList.toggle('fa-eye-slash');
-            });
-
-            // Detector de CapsLock
-            const handleCaps = (evt) => {
-                const caps = evt.getModifierState && evt.getModifierState('CapsLock');
-                capsWarn.classList.toggle('d-none', !caps);
-            };
-            ['keyup','keydown'].forEach(ev => pwd.addEventListener(ev, handleCaps));
-
-            // Habilitar/deshabilitar por validez
-            const toggleSubmit = () => {
-                let valid = form.checkValidity();
-                if (window.jQuery && $.validator && $(form).data('validator')) {
-                    valid = valid && $(form).valid();
-                }
-                btn.disabled = !valid;
-            };
-
-            // Validación en vivo
-            ['input','change','keyup','blur'].forEach(evt => {
-                form.addEventListener(evt, toggleSubmit, true);
-            });
-
-            // Estado inicial
-            toggleSubmit();
-
-            // Evitar doble envío
-            form.addEventListener('submit', function () {
-                if (window.jQuery && $.validator && !$(form).valid()) return;
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Ingresando...';
-            }, { once: true });
-
-            // Rehabilitar al navegar atrás
-            window.addEventListener('pageshow', () => {
-                btn.disabled = false;
-                btn.innerHTML = '<span class="me-2"><i class="fa-solid fa-arrow-right-to-bracket"></i></span> Ingresar';
-            });
-        })();
-    </script>
-
-    <style>
-        .input-group-text {
-            background: #fff;
-        }
-
-        .form-control:focus {
-            border-color: #f4a7c1;
-            box-shadow: 0 0 0 .25rem rgba(244,167,193,.25);
-        }
-
-        .btn:disabled {
-            opacity: .65;
-        }
-
-        a.link-secondary {
-            text-decoration: none;
-        }
-
-            a.link-secondary:hover {
-                text-decoration: underline;
-            }
-    </style>
+    <script src="~/js/login.js" asp-append-version="true"></script>
 }

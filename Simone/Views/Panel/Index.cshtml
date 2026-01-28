@@ -1,511 +1,875 @@
 @model Usuario
 @{
     ViewData["Title"] = "Panel de Control";
+    ViewData["Description"] = "Centro de gestión y administración del sistema Neo Ágora.";
 
     var bancosAdminCount = ViewBag.BancosAdminCount as int? ?? -1;
     var bancosProvCount = ViewBag.BancosProvCount as int? ?? -1;
 
     var isAdmin = User.IsInRole("Administrador");
     var isVendedor = User.IsInRole("Vendedor");
+
+    var userName = Model?.NombreCompleto ?? User.Identity?.Name ?? "Usuario";
 }
 
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<style>
-    :root {
-        --primary-dark: #1A1A1A;
-        --primary-light: #fff;
-        --accent-purple: #4B0082;
-        --accent-gold: #D4AF37;
-        --light-gray: #F8F8F8;
-        --medium-gray: #E0E0E0;
-        --dark-gray: #333;
-        --text-color: #333;
-        --text-light: #777;
-        --success: #28a745;
-        --danger: #dc3545;
-        --warning: #ffc107;
-        --info: #17a2b8;
-    }
-
-    body {
-        font-family: 'Montserrat',sans-serif;
-        background: #f5f5f7;
-        color: var(--text-color)
-    }
-
-    .dashboard-container {
-        max-width: 1200px;
-        margin: 2rem auto;
-        padding: 0 15px
-    }
-
-    .dashboard-header {
-        background: linear-gradient(135deg,var(--accent-purple),#2E0854);
-        color: #fff;
-        padding: 2rem;
-        border-radius: 12px 12px 0 0;
-        margin-bottom: 0
-    }
-
-    .dashboard-title {
-        font-size: 2rem;
-        margin-bottom: .5rem;
-        display: flex;
-        align-items: center
-    }
-
-    .dashboard-subtitle {
-        font-size: 1rem;
-        opacity: .9;
-        margin-bottom: 0
-    }
-
-    .dashboard-content {
-        background: #fff;
-        border-radius: 0 0 12px 12px;
-        box-shadow: 0 10px 30px rgba(0,0,0,.08);
-        padding: 2rem
-    }
-
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill,minmax(350px,1fr));
-        gap: 1.5rem
-    }
-
-    .dashboard-card {
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,.08);
-        padding: 1.5rem;
-        transition: .3s;
-        border-left: 4px solid var(--accent-purple);
-        display: flex;
-        flex-direction: column;
-        height: 100%
-    }
-
-        .dashboard-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0,0,0,.15);
-            border-left-color: var(--accent-gold)
+@section Styles {
+    <style>
+        :root {
+            --panel-primary: #e91e63;
+            --panel-primary-light: #f48fb1;
+            --panel-primary-dark: #c2185b;
+            --panel-secondary: #9c27b0;
+            --panel-accent: #ff4081;
+            --panel-success: #4caf50;
+            --panel-warning: #ff9800;
+            --panel-danger: #f44336;
+            --panel-info: #2196f3;
+            --panel-dark: #212121;
+            --panel-text: #424242;
+            --panel-light: #fafafa;
+            --panel-white: #ffffff;
+            --panel-border: #e0e0e0;
+            --panel-shadow: 0 8px 32px rgba(233, 30, 99, 0.15);
+            --panel-shadow-lg: 0 16px 48px rgba(233, 30, 99, 0.2);
         }
 
-    .card-header {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 1rem
-    }
-
-    .card-icon {
-        font-size: 1.5rem;
-        color: var(--accent-purple);
-        margin-right: 1rem;
-        flex-shrink: 0
-    }
-
-    .card-title {
-        font-size: 1.3rem;
-        font-weight: 600;
-        margin-bottom: .25rem;
-        color: var(--dark-gray)
-    }
-
-    .card-subtitle {
-        font-size: .9rem;
-        color: var(--text-light);
-        margin-bottom: 0
-    }
-
-    .card-body {
-        flex-grow: 1;
-        margin-bottom: 1.5rem
-    }
-
-    .card-description {
-        font-size: .95rem;
-        color: var(--text-color);
-        line-height: 1.5
-    }
-
-    .card-footer {
-        margin-top: auto
-    }
-
-    .card-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: .5rem 1.25rem;
-        border-radius: 30px;
-        font-weight: 500;
-        font-size: .9rem;
-        transition: .3s;
-        text-decoration: none
-    }
-
-    .btn-primary {
-        background: var(--accent-purple);
-        color: #fff
-    }
-
-        .btn-primary:hover {
-            background: #5E2D8C
+        /* Page Layout */
+        .panel-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%);
+            padding: 2rem 0;
+            animation: fadeIn 0.6s ease;
         }
 
-    .btn-success {
-        background: var(--success);
-        color: #fff
-    }
+        @@keyframes fadeIn {
+            from
 
-        .btn-success:hover {
-            background: #218838
+        {
+            opacity: 0;
         }
 
-    .btn-warning {
-        background: var(--warning);
-        color: var(--primary-dark)
-    }
-
-        .btn-warning:hover {
-            background: #e0a800
+        to {
+            opacity: 1;
         }
 
-    .btn-info {
-        background: var(--info);
-        color: #fff
-    }
-
-        .btn-info:hover {
-            background: #138496
         }
 
-    .chip {
-        display: inline-block;
-        padding: .25rem .5rem;
-        font-size: .75rem;
-        border-radius: 999px;
-        background: #f2f2f7;
-        color: #333;
-        margin-left: .5rem
-    }
+        .panel-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
 
-    @@media (max-width:992px) {
+        /* Breadcrumb */
+        .panel-breadcrumb {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            animation: slideDown 0.4s ease;
+        }
+
+        @@keyframes slideDown {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+
+            .breadcrumb li + li::before {
+                content: "›";
+                margin: 0 0.5rem;
+                color: #9e9e9e;
+                font-weight: bold;
+            }
+
+            .breadcrumb a {
+                color: var(--panel-primary);
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.3s;
+            }
+
+                .breadcrumb a:hover {
+                    color: var(--panel-primary-dark);
+                }
+
+            .breadcrumb .active {
+                color: var(--panel-text);
+                font-weight: 600;
+            }
+
+        /* Page Header */
+        .page-header {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            box-shadow: var(--panel-shadow-lg);
+            margin-bottom: 2rem;
+            animation: zoomIn 0.5s ease;
+        }
+
+        @@keyframes zoomIn {
+            from
+
+        {
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--panel-dark);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+            .page-title i {
+                color: var(--panel-primary);
+            }
+
+        .page-subtitle {
+            color: #757575;
+            font-size: 1rem;
+        }
+
+        .welcome-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--panel-primary-light), var(--panel-accent));
+            color: white;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-top: 1rem;
+        }
+
+        /* Dashboard Grid */
         .dashboard-grid {
-            grid-template-columns: repeat(auto-fill,minmax(300px,1fr))
-        }
-    }
-
-    @@media (max-width:768px) {
-        .dashboard-header {
-            padding: 1.5rem
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 2rem;
         }
 
-        .dashboard-content {
-            padding: 1.5rem
+        /* Module Card */
+        .module-card {
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--panel-shadow);
+            padding: 2rem;
+            transition: all 0.3s;
+            border-left: 4px solid var(--panel-primary);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            animation: slideDown 0.6s ease;
         }
 
-        .dashboard-title {
-            font-size: 1.75rem
-        }
-    }
+            .module-card:hover {
+                transform: translateY(-8px);
+                box-shadow: var(--panel-shadow-lg);
+                border-left-color: var(--panel-accent);
+            }
 
-    @@media (max-width:576px) {
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--panel-primary), var(--panel-accent));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+        }
+
+        .card-title-section {
+            flex: 1;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--panel-dark);
+            margin-bottom: 0.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: #757575;
+            font-weight: 500;
+        }
+
+        .card-body {
+            flex-grow: 1;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-description {
+            color: var(--panel-text);
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+
+        .card-footer {
+            margin-top: auto;
+        }
+
+        .card-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--panel-primary), var(--panel-accent));
+            color: white;
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(233, 30, 99, 0.35);
+                color: white;
+            }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--panel-success), #66bb6a);
+            color: white;
+        }
+
+            .btn-success:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(76, 175, 80, 0.35);
+                color: white;
+            }
+
+        .btn-warning {
+            background: linear-gradient(135deg, var(--panel-warning), #ffa726);
+            color: white;
+        }
+
+            .btn-warning:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(255, 152, 0, 0.35);
+                color: white;
+            }
+
+        .btn-info {
+            background: linear-gradient(135deg, var(--panel-info), #42a5f5);
+            color: white;
+        }
+
+            .btn-info:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(33, 150, 243, 0.35);
+                color: white;
+            }
+
+        /* Badge Chip */
+        .badge-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            background: linear-gradient(135deg, var(--panel-primary-light), var(--panel-accent));
+            color: white;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* Role Badge */
+        .role-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 2px solid var(--panel-primary);
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--panel-primary);
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 20px;
+            box-shadow: var(--panel-shadow);
+            margin-bottom: 2rem;
+            animation: slideDown 0.5s ease;
+        }
+
+        .quick-actions-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--panel-dark);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .quick-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem;
+            background: var(--panel-light);
+            border: 2px solid var(--panel-border);
+            border-radius: 12px;
+            color: var(--panel-dark);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+            .quick-btn:hover {
+                background: var(--panel-primary);
+                border-color: var(--panel-primary);
+                color: white;
+                transform: translateY(-2px);
+            }
+
+            .quick-btn i {
+                font-size: 1.25rem;
+            }
+
+        /* Responsive */
+        @@media (max-width: 991px) {
+            .dashboard-grid
+
+        {
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+
+        }
+
+        @@media (max-width: 768px) {
+            .page-header
+
+        {
+            padding: 1.5rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+        }
+
         .dashboard-grid {
-            grid-template-columns: 1fr
+            grid-template-columns: 1fr;
         }
 
-        .dashboard-title {
-            font-size: 1.5rem
+        .quick-actions-grid {
+            grid-template-columns: 1fr;
         }
 
-        .dashboard-subtitle {
-            font-size: .9rem
         }
-    }
-</style>
 
-<div class="dashboard-container">
-    <div class="dashboard-header">
-        <h1 class="dashboard-title"><i class="fas fa-cog me-3"></i> @ViewData["Title"]</h1>
-        <p class="dashboard-subtitle">Gestión central del sistema y módulos disponibles</p>
-    </div>
+        /* Focus Visible */
+        button:focus-visible,
+        a:focus-visible {
+            outline: 3px solid var(--panel-primary);
+            outline-offset: 2px;
+        }
 
-    <div class="dashboard-content">
-        <div class="dashboard-grid">
+        /* Reduced Motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after
+
+        {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        }
+    </style>
+}
+
+<div class="panel-page">
+    <div class="panel-container">
+        <!-- Breadcrumb -->
+        <nav class="panel-breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li>
+                    <a href="@Url.Action("Index", "Home")">
+                        <i class="fa-solid fa-house"></i>
+                        Inicio
+                    </a>
+                </li>
+                <li class="active" aria-current="page">Panel de Control</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fa-solid fa-chart-line"></i>
+                Panel de Control
+            </h1>
+            <p class="page-subtitle">Centro de gestión y administración del sistema</p>
+
+            <div class="welcome-badge">
+                <i class="fa-solid fa-user-circle"></i>
+                <span>Bienvenido, @userName</span>
+            </div>
 
             @if (isAdmin)
             {
-                <!-- (ADMIN) Usuarios -->
-                <div class="dashboard-card">
+                <div class="role-badge" style="margin-left: 1rem; margin-top: 1rem;">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Administrador</span>
+                </div>
+            }
+            else if (isVendedor)
+            {
+                <div class="role-badge" style="margin-left: 1rem; margin-top: 1rem;">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Vendedor</span>
+                </div>
+            }
+        </div>
+
+        <!-- Quick Actions -->
+        @if (isAdmin)
+        {
+            <div class="quick-actions">
+                <h2 class="quick-actions-title">
+                    <i class="fa-solid fa-bolt"></i>
+                    Acciones Rápidas
+                </h2>
+                <div class="quick-actions-grid">
+                    <a href="@Url.Action("Reportes", "Panel")" class="quick-btn">
+                        <i class="fa-solid fa-chart-bar"></i>
+                        <span>Ver Reportes</span>
+                    </a>
+                    <a href="@Url.Action("Usuarios", "Panel")" class="quick-btn">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Usuarios</span>
+                    </a>
+                    <a href="@Url.Action("Productos", "Panel")" class="quick-btn">
+                        <i class="fa-solid fa-boxes"></i>
+                        <span>Productos</span>
+                    </a>
+                    <a href="/Logs" class="quick-btn">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Ver Logs</span>
+                    </a>
+                </div>
+            </div>
+        }
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard-grid">
+            @if (isAdmin)
+            {
+                <!-- ADMIN: Usuarios -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-users"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Usuarios</h3>
                             <p class="card-subtitle">Gestión de cuentas</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Administra usuarios registrados, roles y acceso al sistema.</p>
+                        <p class="card-description">
+                            Administra usuarios registrados, roles y permisos de acceso al sistema.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-primary" asp-controller="Panel" asp-action="Usuarios">
-                            <i class="fas fa-eye me-2"></i> Ver Usuarios
+                            <i class="fa-solid fa-eye"></i>
+                            <span>Ver Usuarios</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Productos -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Productos -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-boxes"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-boxes"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Productos</h3>
-                            <p class="card-subtitle">Inventario</p>
+                            <p class="card-subtitle">Inventario completo</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Administra el catálogo de productos, modifica stock o edita detalles.</p>
+                        <p class="card-description">
+                            Administra el catálogo completo de productos, stock, precios y detalles.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-info" asp-controller="Panel" asp-action="Productos">
-                            <i class="fas fa-boxes me-2"></i> Ver Productos
+                            <i class="fa-solid fa-boxes"></i>
+                            <span>Ver Productos</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Categorías -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Categorías -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-folder"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-folder"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Categorías</h3>
-                            <p class="card-subtitle">Gestión de productos</p>
+                            <p class="card-subtitle">Organización principal</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Crea y organiza las categorías del inventario de productos.</p>
+                        <p class="card-description">
+                            Crea y organiza las categorías principales del inventario de productos.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-success" asp-controller="Panel" asp-action="Categorias">
-                            <i class="fas fa-folder me-2"></i> Ver Categorías
+                            <i class="fa-solid fa-folder"></i>
+                            <span>Ver Categorías</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Subcategorías -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Subcategorías -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-tags"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-tags"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Subcategorías</h3>
                             <p class="card-subtitle">Organización detallada</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Administra las subcategorías para una mejor organización del inventario.</p>
+                        <p class="card-description">
+                            Administra subcategorías para mejor organización del inventario.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-warning" asp-controller="Panel" asp-action="Subcategorias">
-                            <i class="fas fa-tags me-2"></i> Ver Subcategorías
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Ver Subcategorías</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Proveedores -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Proveedores -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-truck"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-truck"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Proveedores</h3>
                             <p class="card-subtitle">Abastecimiento</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Gestiona empresas proveedoras y contactos comerciales.</p>
+                        <p class="card-description">
+                            Gestiona empresas proveedoras y contactos comerciales.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-warning" asp-controller="Panel" asp-action="Proveedores">
-                            <i class="fas fa-truck me-2"></i> Ver Proveedores
+                            <i class="fa-solid fa-truck"></i>
+                            <span>Ver Proveedores</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Bancos -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Cuentas Bancarias -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-university"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-university"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">
-                                Cuentas Bancarias (Admin)
+                                Cuentas Bancarias
                                 @if (bancosAdminCount >= 0)
                                 {
-                                    <span class="chip">Activas: <strong>@bancosAdminCount</strong></span>
+                                    <span class="badge-chip">
+                                        <i class="fa-solid fa-check-circle"></i>
+                                        <span>@bancosAdminCount activas</span>
+                                    </span>
                                 }
                             </h3>
-                            <p class="card-subtitle">Depósitos / transferencias</p>
+                            <p class="card-subtitle">Configuración de pagos</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Define las cuentas bancarias del <strong>administrador</strong> para pagos centralizados.</p>
+                        <p class="card-description">
+                            Define las cuentas bancarias del <strong>administrador</strong> para pagos centralizados.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-primary" asp-controller="AdminBancos" asp-action="Index">
-                            <i class="fas fa-university me-2"></i> Configurar Bancos
+                            <i class="fa-solid fa-university"></i>
+                            <span>Configurar Bancos</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Logs -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Registros -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-clock"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Registros</h3>
-                            <p class="card-subtitle">Auditoría</p>
+                            <p class="card-subtitle">Auditoría del sistema</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Revisa los logs de actividad del sistema.</p>
+                        <p class="card-description">
+                            Revisa los logs de actividad y auditoría del sistema completo.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a href="/Logs" class="card-btn btn-primary">
-                            <i class="fas fa-clock me-2"></i> Ver Logs
+                            <i class="fa-solid fa-file-lines"></i>
+                            <span>Ver Logs</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (ADMIN) Reportes -->
-                <div class="dashboard-card">
+                <!-- ADMIN: Reportes -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-chart-bar"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Reportes</h3>
-                            <p class="card-subtitle">Estadísticas</p>
+                            <p class="card-subtitle">Estadísticas y métricas</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Consulta reportes de ventas, inventario y métricas.</p>
+                        <p class="card-description">
+                            Consulta reportes de ventas, inventario y métricas del negocio.
+                        </p>
                     </div>
                     <div class="card-footer">
-                        <a href="@Url.Action("Reportes", "Panel")" class="card-btn btn-success">
-                            <i class="fas fa-chart-bar me-2"></i> Ver Reportes
+                        <a class="card-btn btn-success" asp-controller="Panel" asp-action="Reportes">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Ver Reportes</span>
                         </a>
                     </div>
                 </div>
             }
             else if (isVendedor)
             {
-                <!-- (VENDEDOR) Productos -->
-                <div class="dashboard-card">
+                <!-- VENDEDOR: Productos -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-boxes"></i></div>
-                        <div>
-                            <h3 class="card-title">Productos</h3>
-                            <p class="card-subtitle">Inventario</p>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-boxes"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Mis Productos</h3>
+                            <p class="card-subtitle">Inventario de mi tienda</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Consulta y gestiona el catálogo de productos disponibles.</p>
+                        <p class="card-description">
+                            Consulta y gestiona el catálogo de productos de tu tienda.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-info" asp-controller="Panel" asp-action="Productos">
-                            <i class="fas fa-boxes me-2"></i> Ver Productos
+                            <i class="fa-solid fa-boxes"></i>
+                            <span>Ver Productos</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (VENDEDOR) Mis Subcategorías -->
-                <div class="dashboard-card">
+                <!-- VENDEDOR: Subcategorías -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-tags"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-tags"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Mis Subcategorías</h3>
-                            <p class="card-subtitle">Organización de mi tienda</p>
+                            <p class="card-subtitle">Organización</p>
                         </div>
                     </div>
                     <div class="card-body">
                         <p class="card-description">
                             Crea y administra subcategorías <strong>solo de tu tienda</strong>.
-                            Se validan duplicados por <em>(vendedor, categoría, nombre)</em>.
+                            Validación por vendedor, categoría y nombre.
                         </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-warning" asp-controller="Panel" asp-action="Subcategorias">
-                            <i class="fas fa-tags me-2"></i> Ver Subcategorías
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Ver Subcategorías</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (VENDEDOR) Reportes -->
-                <div class="dashboard-card">
+                <!-- VENDEDOR: Reportes -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-chart-bar"></i></div>
-                        <div>
-                            <h3 class="card-title">Reportes</h3>
-                            <p class="card-subtitle">Mis ventas</p>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-chart-bar"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Mis Reportes</h3>
+                            <p class="card-subtitle">Ventas de mi tienda</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Consulta tus ventas y totales correspondientes <strong>solo a tus productos</strong>.</p>
+                        <p class="card-description">
+                            Consulta tus ventas y totales <strong>solo de tus productos</strong>.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-success" asp-controller="Vendedor" asp-action="Reportes">
-                            <i class="fas fa-chart-bar me-2"></i> Ver Reportes
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Ver Reportes</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (VENDEDOR) Mis Cuentas Bancarias -->
-                <div class="dashboard-card">
+                <!-- VENDEDOR: Cuentas Bancarias -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fas fa-university"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-university"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">
                                 Mis Cuentas Bancarias
                                 @if (bancosProvCount >= 0)
                                 {
-                                    <span class="chip">Activas: <strong>@bancosProvCount</strong></span>
+                                    <span class="badge-chip">
+                                        <i class="fa-solid fa-check-circle"></i>
+                                        <span>@bancosProvCount activas</span>
+                                    </span>
                                 }
                             </h3>
-                            <p class="card-subtitle">Pago directo a mi tienda</p>
+                            <p class="card-subtitle">Pago directo</p>
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="card-description">Registra las cuentas bancarias de tu tienda. Se mostrarán cuando el carrito contenga <strong>solo productos tuyos</strong>.</p>
+                        <p class="card-description">
+                            Registra tus cuentas bancarias. Se mostrarán cuando el carrito contenga
+                            <strong>solo productos tuyos</strong>.
+                        </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-primary" asp-controller="Vendedor" asp-action="Bancos">
-                            <i class="fas fa-university me-2"></i> Configurar Bancos
+                            <i class="fa-solid fa-university"></i>
+                            <span>Configurar Bancos</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- (VENDEDOR) Tarifas de Envío)  👈 NUEVO -->
-                <div class="dashboard-card">
+                <!-- VENDEDOR: Tarifas de Envío -->
+                <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon"><i class="fa-solid fa-truck-fast"></i></div>
-                        <div>
+                        <div class="card-icon">
+                            <i class="fa-solid fa-truck-fast"></i>
+                        </div>
+                        <div class="card-title-section">
                             <h3 class="card-title">Tarifas de Envío</h3>
                             <p class="card-subtitle">Por provincia / ciudad</p>
                         </div>
                     </div>
                     <div class="card-body">
                         <p class="card-description">
-                            Define el costo de envío según el destino. Puedes crear reglas por <strong>provincia</strong>
-                            completa o específicas por <strong>ciudad</strong>. Prioridad: Ciudad &gt; Provincia.
+                            Define el costo de envío según destino. Crea reglas por <strong>provincia</strong>
+                            o específicas por <strong>ciudad</strong>. Prioridad: Ciudad &gt; Provincia.
                         </p>
                     </div>
                     <div class="card-footer">
                         <a class="card-btn btn-primary" asp-controller="Vendedor" asp-action="Envios">
-                            <i class="fa-solid fa-truck-fast me-2"></i> Configurar Envíos
+                            <i class="fa-solid fa-truck-fast"></i>
+                            <span>Configurar Envíos</span>
                         </a>
                     </div>
                 </div>
             }
-
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (function() {
+            'use strict';
+            console.log('✓ Panel initialized');
+        })();
+    </script>
+}

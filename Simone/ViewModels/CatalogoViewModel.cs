@@ -131,6 +131,9 @@ public class CatalogoViewModel
     // ===== Post al carrito =====
     public int ProductoID { get; set; }
     public int Cantidad { get; set; } = 1;
+    public string? SearchTerm { get; set; }
+    public decimal? PrecioMin { get; set; }
+    public decimal? PrecioMax { get; set; }
 
     /// <summary>Variante seleccionada (nullable para productos sin variantes). La vista envía "ProductoVarianteID".</summary>
     public int? ProductoVarianteID { get; set; }

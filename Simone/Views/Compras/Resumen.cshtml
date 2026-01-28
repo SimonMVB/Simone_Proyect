@@ -8,14 +8,12 @@
 @{
     ViewData["Title"] = "Resumen de Compra";
 
-    // Totales base
+    var culture = new CultureInfo("es-EC");
+
     decimal totalCompra = 0m;
     if (ViewBag.TotalCompra is decimal d) totalCompra = d;
     else if (ViewBag.TotalCompra != null) totalCompra = Convert.ToDecimal(ViewBag.TotalCompra);
 
-    var culture = new CultureInfo("es-EC");
-
-    // Envío
     decimal envioTotal = 0m;
     if (ViewBag.EnvioTotal is decimal e) envioTotal = e;
     else if (ViewBag.EnvioTotal != null) envioTotal = Convert.ToDecimal(ViewBag.EnvioTotal);
@@ -26,14 +24,12 @@
 
     decimal grandTotal = totalCompra + (canComputeShipping ? envioTotal : 0m);
 
-    // Carrito
     var items = (ViewBag.CarritoDetalles as IEnumerable<CarritoDetalle>) ?? Enumerable.Empty<CarritoDetalle>();
+    var hasItems = items.Any();
 
-    // Resolver pagos
     bool esMulti = ((bool?)ViewBag.EsMultiVendedor == true);
     string vendedorIdUnico = ViewBag.VendedorIdUnico as string ?? "";
 
-    // Cuentas activas
     var cuentasProv = (ViewBag.CuentasProveedor as IEnumerable<SimoneCfg.CuentaBancaria> ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>())
                         .Where(c => c?.Activo == true)
                         .ToList();
@@ -46,7 +42,9 @@
     bool hayCuentas = esMulti ? hayAdm : (hayProv || hayAdm);
     int numCtas = esMulti ? cuentasAdmin.Count : (hayProv ? cuentasProv.Count : cuentasAdmin.Count);
 
-    // Diccionario para JS
+    bool hasAddress = (ViewBag.HasAddress == true);
+    bool canCheckout = hasAddress && hayCuentas && hasItems;
+
     var bankItems = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
     string fallbackLogo = Url.Content("~/images/product-placeholder.png");
 
@@ -87,7 +85,6 @@
         }
     }
 
-    // camelCase para que JS lea b.nombre, b.numero, etc.
     var bankItemsJson = JsonSerializer.Serialize(
         bankItems,
         new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }
@@ -97,528 +94,1043 @@
 @section Styles {
     <style>
         :root {
-            --primary: #e8b4b8;
-            --border: #e8e8e8;
-            --shadow: 0 10px 30px rgba(0,0,0,.08);
+            --checkout-primary: #e8b4b8;
+            --checkout-primary-hover: #d89da2;
+            --checkout-success: #10b981;
+            --checkout-border: #e8e8e8;
+            --checkout-light: #f9fafb;
+            --checkout-shadow: 0 10px 30px rgba(0,0,0,.08);
+            --checkout-radius: 16px;
+            --checkout-transition: all 0.3s ease;
+        }
+
+        .checkout-container {
+            animation: fadeIn 0.5s ease;
+        }
+
+        @@keyframes fadeIn {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+
+        .checkout-breadcrumb {
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: var(--checkout-shadow);
+            margin-bottom: 1.5rem;
+        }
+
+            .checkout-breadcrumb .breadcrumb {
+                background: transparent;
+                padding: 0;
+                margin: 0;
+                font-size: 0.875rem;
+            }
+
+        .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            color: #6c757d;
+        }
+
+        .checkout-stepper {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: white;
+            border-radius: var(--checkout-radius);
+            box-shadow: var(--checkout-shadow);
+        }
+
+        .stepper-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+            .stepper-step:not(:last-child)::after {
+                content: "";
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                width: 100%;
+                height: 2px;
+                background: var(--checkout-border);
+                z-index: 0;
+            }
+
+            .stepper-step.completed:not(:last-child)::after {
+                background: var(--checkout-success);
+            }
+
+            .stepper-step.active:not(:last-child)::after {
+                background: linear-gradient(to right, var(--checkout-success) 50%, var(--checkout-border) 50%);
+            }
+
+        .stepper-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid var(--checkout-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #6c757d;
+            z-index: 1;
+            transition: var(--checkout-transition);
+        }
+
+        .stepper-step.completed .stepper-icon {
+            background: var(--checkout-success);
+            border-color: var(--checkout-success);
+            color: white;
+        }
+
+        .stepper-step.active .stepper-icon {
+            background: var(--checkout-primary);
+            border-color: var(--checkout-primary);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(232, 180, 184, 0.2);
+        }
+
+        .stepper-label {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .stepper-step.active .stepper-label {
+            color: var(--checkout-primary);
+            font-weight: 600;
+        }
+
+        .stepper-step.completed .stepper-label {
+            color: var(--checkout-success);
         }
 
         .summary-card {
-            background: #fff;
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            margin-bottom: 18px
+            background: white;
+            border: 1px solid var(--checkout-border);
+            border-radius: var(--checkout-radius);
+            box-shadow: var(--checkout-shadow);
+            margin-bottom: 1.5rem;
+            animation: slideUp 0.4s ease;
+        }
+
+        @@keyframes slideUp {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         }
 
         .summary-header {
-            padding: 14px 18px;
-            border-bottom: 1px solid var(--border)
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--checkout-border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
+
+            .summary-header i {
+                color: var(--checkout-primary);
+                font-size: 1.25rem;
+            }
 
         .summary-title {
             margin: 0;
-            font-size: 18px
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a1a1a;
         }
 
         .summary-body {
-            padding: 16px 18px
+            padding: 1.25rem;
+        }
+
+        .address-card {
+            background: var(--checkout-light);
+            border: 2px solid var(--checkout-border);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            transition: var(--checkout-transition);
+        }
+
+            .address-card:hover {
+                border-color: var(--checkout-primary);
+            }
+
+        .address-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--checkout-primary);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .address-card-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+        }
+
+            .address-card-item i {
+                color: #9ca3af;
+                margin-top: 0.25rem;
+                width: 16px;
+            }
+
+        .payment-methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
         }
 
         .payment-method {
-            border: 1px dashed #e6e6e6;
-            border-radius: 12px;
-            padding: 14px 10px;
-            cursor: pointer
+            border: 2px dashed var(--checkout-border);
+            border-radius: 0.75rem;
+            padding: 1.25rem 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--checkout-transition);
+            background: white;
         }
 
-            .payment-method.active {
-                border-color: var(--primary);
-                background: rgba(232,180,184,.06)
+            .payment-method:hover {
+                border-color: var(--checkout-primary);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             }
 
-        .bank-card {
-            transition: .2s;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            padding: 12px;
-            cursor: pointer;
-            background: #fff;
-            height: 100%;
-            display: flex;
-            align-items: center
+            .payment-method.active {
+                border-color: var(--checkout-primary);
+                border-style: solid;
+                background: rgba(232,180,184,0.06);
+                box-shadow: 0 4px 12px rgba(232,180,184,0.2);
+            }
+
+            .payment-method.disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                pointer-events: none;
+            }
+
+        .method-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--checkout-primary);
         }
 
-            .bank-card:hover, .bank-card.selected {
-                border-color: var(--primary);
-                background-color: rgba(232,180,184,.05);
-                box-shadow: 0 4px 12px rgba(232,180,184,.2)
+        .payment-method h5 {
+            font-size: 1rem;
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+
+        .bank-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .bank-card {
+            transition: var(--checkout-transition);
+            border: 2px solid var(--checkout-border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            cursor: pointer;
+            background: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+            .bank-card:hover {
+                border-color: var(--checkout-primary);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(232,180,184,0.15);
+            }
+
+            .bank-card.selected {
+                border-color: var(--checkout-primary);
+                background-color: rgba(232,180,184,0.05);
+                box-shadow: 0 4px 12px rgba(232,180,184,0.2);
             }
 
         .bank-logo {
-            height: 35px;
-            margin-right: 12px;
-            border-radius: 5px
+            height: 40px;
+            width: 60px;
+            object-fit: contain;
+            border-radius: 0.375rem;
+            border: 1px solid var(--checkout-border);
+            padding: 0.25rem;
         }
+
+        .bank-info h6 {
+            margin: 0 0 0.25rem 0;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .bank-info small {
+            color: #6c757d;
+        }
+
+        .bank-details-card {
+            background: #f0f9ff;
+            border: 2px solid #bfdbfe;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        @@keyframes slideDown {
+            from
+
+        {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        }
+
+        .bank-details-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            color: #1e40af;
+            font-weight: 600;
+        }
+
+        .bank-details-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .bank-detail-item {
+            margin-bottom: 0.75rem;
+        }
+
+            .bank-detail-item strong {
+                color: #374151;
+                font-weight: 600;
+            }
 
         .text-mono {
-            font-family: ui-monospace,Consolas,monospace
+            font-family: ui-monospace, Consolas, monospace;
+            font-size: 0.95rem;
         }
 
-        .pay-destination {
-            border-left: 4px solid var(--primary);
-            background: #fff;
-            padding: 12px 14px;
-            border-radius: 10px
+        .copy-btn {
+            border: 1px solid #d1d5db;
+            background: white;
+            padding: 0.25rem 0.625rem;
+            border-radius: 0.375rem;
+            font-size: 0.8rem;
+            transition: var(--checkout-transition);
         }
+
+            .copy-btn:hover {
+                background: var(--checkout-light);
+                border-color: var(--checkout-primary);
+            }
 
         .productos-container {
             display: flex;
             flex-direction: column;
-            gap: 12px
+            gap: 1rem;
         }
 
         .product-item {
             display: flex;
-            gap: 12px;
-            align-items: center
+            gap: 1rem;
+            align-items: center;
+            padding: 0.75rem;
+            background: var(--checkout-light);
+            border-radius: 0.5rem;
+            transition: var(--checkout-transition);
         }
+
+            .product-item:hover {
+                background: #f3f4f6;
+            }
 
         .product-img {
             width: 64px;
             height: 64px;
             object-fit: cover;
-            border-radius: 10px;
-            border: 1px solid var(--border)
+            border-radius: 0.5rem;
+            border: 1px solid var(--checkout-border);
+            flex-shrink: 0;
         }
 
         .product-info {
-            flex: 1
+            flex: 1;
+            min-width: 0;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+        }
+
+        .product-details {
+            font-size: 0.875rem;
+            color: #6c757d;
         }
 
         .product-price {
-            min-width: 110px;
-            text-align: right
+            font-weight: 600;
+            color: var(--checkout-primary);
+            text-align: right;
+            min-width: 100px;
         }
 
-        .copy-btn {
-            border: 1px solid var(--border);
-            background: #fff;
-            padding: .2rem .5rem;
-            border-radius: 6px
+        .total-section {
+            border-top: 2px solid var(--checkout-border);
+            padding-top: 1rem;
+            margin-top: 1rem;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+            .total-row.grand-total {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: var(--checkout-primary);
+                padding-top: 0.75rem;
+                border-top: 1px solid var(--checkout-border);
+                margin-top: 0.5rem;
+            }
+
+        .envio-detail {
+            background: var(--checkout-light);
+            border: 1px dashed #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .alert-checkout {
+            border-radius: 0.75rem;
+            border: none;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+            .alert-checkout.alert-light {
+                background: var(--checkout-light);
+                border: 1px solid var(--checkout-border);
+            }
+
+        .empty-state-checkout {
+            text-align: center;
+            padding: 3rem 1rem;
+            background: var(--checkout-light);
+            border-radius: 0.75rem;
+            border: 2px dashed var(--checkout-border);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            color: #9ca3af;
+            margin-bottom: 1rem;
+            opacity: 0.6;
         }
 
         .sticky-summary {
             position: sticky;
-            top: 20px
+            top: 20px;
         }
 
-        .envio-detail {
-            background: #f9fafb;
-            border: 1px dashed #e5e7eb;
-            border-radius: 8px;
-            padding: 8px 10px
+        .btn-checkout-submit {
+            background: linear-gradient(135deg, var(--checkout-primary) 0%, var(--checkout-primary-hover) 100%);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            transition: var(--checkout-transition);
+            box-shadow: 0 4px 12px rgba(232, 180, 184, 0.3);
+        }
+
+            .btn-checkout-submit:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 16px rgba(232, 180, 184, 0.4);
+            }
+
+            .btn-checkout-submit:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .btn-checkout-submit.loading {
+                color: transparent;
+                pointer-events: none;
+            }
+
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        .bank-card:focus-visible,
+        .payment-method:focus-visible {
+            outline: 2px solid var(--checkout-primary);
+            outline-offset: 2px;
+        }
+
+        @@media (max-width: 991.98px) {
+            .checkout-stepper
+
+        {
+            padding: 1rem;
+        }
+
+        .stepper-label {
+            font-size: 0.75rem;
+        }
+
+        .stepper-icon {
+            width: 36px;
+            height: 36px;
+            font-size: 0.875rem;
+        }
+
+        }
+
+        @@media (max-width: 575.98px) {
+            .stepper-label
+
+        {
+            display: none;
+        }
+
+        .payment-methods-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .bank-cards-grid {
+            grid-template-columns: 1fr;
+        }
+
+        }
+
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after
+
+        {
+            animation-duration: 0.01ms !important;
+            transition-duration: 0.01ms !important;
+        }
+
         }
     </style>
 }
 
-<div class="container pb-5">
-    <div class="my-3 small text-muted">Pago &rsaquo; Confirmación</div>
+<div class="checkout-container">
+    <div class="container pb-5">
+        <nav class="checkout-breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                    <a href="@Url.Action("Index", "Home")">
+                        <i class="fa-solid fa-house"></i>
+                        <span class="d-none d-sm-inline ms-1">Inicio</span>
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="@Url.Action("VerCarrito", "Compras")">Carrito</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Resumen de Compra</li>
+            </ol>
+        </nav>
 
-    <div class="row g-4">
-        <!-- IZQUIERDA -->
-        <div class="col-12 col-lg-8 order-lg-1">
-            <!-- Dirección -->
-            <div class="summary-card">
-                <div class="summary-header">
-                    <h3 class="summary-title"><i class="fas fa-map-marker-alt"></i> Dirección de Envío</h3>
-                </div>
-                <div class="summary-body">
-                    @if (ViewBag.HasAddress)
-                    {
-                        <div class="p-3" style="background:#f9f9f9;border-radius:10px;">
-                            <h5 class="mb-1 d-flex align-items-center gap-2 text-primary">
-                                <i class="fas fa-user-circle"></i>
-                                @(string.IsNullOrWhiteSpace(Model.NombreCompleto) ? "Cliente" : Model.NombreCompleto)
-                            </h5>
-                            <p class="mb-1"><i class="fas fa-id-card me-2"></i>@(string.IsNullOrWhiteSpace(Model.Cedula) ? "Sin cédula" : Model.Cedula)</p>
-                            <p class="mb-1"><i class="fas fa-home me-2"></i>@(string.IsNullOrWhiteSpace(Model.Direccion) ? "Sin dirección" : Model.Direccion)</p>
-                            <p class="mb-1"><i class="fas fa-city me-2"></i>@(string.IsNullOrWhiteSpace(Model.Ciudad) ? "Sin ciudad" : Model.Ciudad), @(string.IsNullOrWhiteSpace(Model.Provincia) ? "Sin provincia" : Model.Provincia)</p>
-                            <p class="mb-0"><i class="fas fa-phone me-2"></i>@(string.IsNullOrWhiteSpace(Model.Telefono) ? "Sin teléfono" : Model.Telefono)</p>
-                            <a asp-controller="Cuenta" asp-action="Perfil" class="btn btn-outline-primary btn-sm mt-2">
-                                <i class="fas fa-pen-to-square me-1"></i> Editar Dirección
-                            </a>
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="text-center py-4">
-                            <i class="fas fa-map-marker-alt fa-2x text-muted mb-3"></i>
-                            <p class="mb-2 text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Para continuar, agrega tu dirección de envío.</p>
-                            <a asp-controller="Cuenta" asp-action="Perfil" class="btn btn-primary">Agregar Dirección</a>
-                        </div>
-                    }
-                </div>
+        <div class="checkout-stepper">
+            <div class="stepper-step completed">
+                <div class="stepper-icon"><i class="fa-solid fa-check"></i></div>
+                <div class="stepper-label">Carrito</div>
             </div>
-
-            <!-- Pago -->
-            <div class="summary-card">
-                <div class="summary-header">
-                    <h3 class="summary-title"><i class="fas fa-credit-card"></i> Método de Pago</h3>
-                </div>
-                <div class="summary-body">
-                    <div class="pay-destination mb-3">
-                        @if (esMulti)
-                        {
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-building me-2 text-primary"></i>
-                                <div><strong>Pagos centralizados al Administrador.</strong> Tu pedido incluye productos de varias tiendas; realiza el depósito a las cuentas del administrador.</div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-store me-2 text-primary"></i>
-                                <div><strong>Pago directo a la tienda.</strong> Selecciona la cuenta de la tienda para transferir.</div>
-                            </div>
-                        }
-                    </div>
-
-                    <!-- Métodos (solo depósito activo) -->
-                    <div class="row mb-4">
-                        <div class="col-md-4 mb-3">
-                            <div class="payment-method text-center" data-method="card" tabindex="0" role="button" aria-label="Pago con tarjeta (próximamente)">
-                                <i class="fas fa-credit-card method-icon"></i>
-                                <h5>Tarjeta</h5>
-                                <p class="small text-muted">Próximamente</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="payment-method text-center active" data-method="deposit" tabindex="0" role="button" aria-label="Pago por depósito / transferencia">
-                                <i class="fas fa-university method-icon"></i>
-                                <h5>Depósito</h5>
-                                <p class="small text-muted">Transferencia Bancaria</p>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="payment-method text-center" data-method="paypal" tabindex="0" role="button" aria-label="Pago con PayPal (próximamente)">
-                                <i class="fab fa-paypal method-icon"></i>
-                                <h5>PayPal</h5>
-                                <p class="small text-muted">Próximamente</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Depósito -->
-                    <div id="form-deposit" class="payment-form" aria-live="polite">
-                        <div class="alert alert-light border">
-                            <h5 class="d-flex align-items-center mb-1">
-                                <i class="fas fa-info-circle me-2 text-primary"></i> Instrucciones de Pago
-                            </h5>
-                            <ol class="mb-2 mt-2">
-                                <li>Selecciona el banco para realizar tu transferencia.</li>
-                                <li>Realiza la transferencia desde tu banco.</li>
-                                <li><strong>Adjunta el comprobante</strong> y confirma tu compra.</li>
-                                <li>Validaremos tu pago en un máximo de 24 horas.</li>
-                            </ol>
-                        </div>
-
-                        @{
-                            bool renderAdmin = esMulti || (!hayProv && hayAdm);
-                        }
-                        <div class="mb-3" id="bank-selection"
-                             data-hay-cuentas="@(hayCuentas ? "1" : "0")"
-                             data-num-cuentas="@numCtas">
-                            <label class="form-label fw-semibold">
-                                @(renderAdmin ? "Selecciona una cuenta del administrador" : "Selecciona una cuenta de la tienda")
-                            </label>
-
-                            <div class="row">
-                                @if (renderAdmin)
-                                {
-                                    if (cuentasAdmin.Any())
-                                    {
-                                        foreach (var c in cuentasAdmin)
-                                        {
-                                            var dataVal = $"admin:{c.Codigo}";
-                                            <div class="col-md-6 mb-3">
-                                                <div class="bank-card" data-bank="@dataVal" tabindex="0" role="button" aria-label="@c.Nombre">
-                                                    <div class="d-flex align-items-center">
-                                                        <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath)"
-                                                             alt="@c.Nombre" class="bank-logo"
-                                                             onerror="this.src='@fallbackLogo'">
-                                                        <div>
-                                                            <h6 class="mb-0">@c.Nombre</h6>
-                                                            <small class="text-muted">@c.Tipo · @c.Numero</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <div class="col-12">
-                                            <div class="alert alert-warning">No hay cuentas del administrador configuradas.</div>
-                                        </div>
-                                    }
-                                }
-                                else
-                                {
-                                    if (cuentasProv.Any() && !string.IsNullOrWhiteSpace(vendedorIdUnico))
-                                    {
-                                        foreach (var c in cuentasProv)
-                                        {
-                                            var dataVal = $"tienda:{vendedorIdUnico}:{c.Codigo}";
-                                            <div class="col-md-6 mb-3">
-                                                <div class="bank-card" data-bank="@dataVal" tabindex="0" role="button" aria-label="@c.Nombre">
-                                                    <div class="d-flex align-items-center">
-                                                        <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath)"
-                                                             class="bank-logo" alt="@c.Nombre"
-                                                             onerror="this.src='@fallbackLogo'">
-                                                        <div>
-                                                            <h6 class="mb-0">@c.Nombre</h6>
-                                                            <small class="text-muted">@c.Tipo · @c.Numero</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                    else if (cuentasAdmin.Any())
-                                    {
-                                        <div class="col-12">
-                                            <div class="alert alert-info">
-                                                La tienda no tiene cuentas configuradas. Mostrando <strong>cuentas del administrador</strong>.
-                                            </div>
-                                        </div>
-
-                                        @foreach (var c in cuentasAdmin)
-                                        {
-                                            var dataVal = $"admin:{c.Codigo}";
-                                            <div class="col-md-6 mb-3">
-                                                <div class="bank-card" data-bank="@dataVal" tabindex="0" role="button" aria-label="@c.Nombre">
-                                                    <div class="d-flex align-items-center">
-                                                        <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath)"
-                                                             class="bank-logo" alt="@c.Nombre"
-                                                             onerror="this.src='@fallbackLogo'">
-                                                        <div>
-                                                            <h6 class="mb-0">@c.Nombre</h6>
-                                                            <small class="text-muted">@c.Tipo · @c.Numero</small>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <div class="col-12"><div class="alert alert-warning">No hay cuentas disponibles.</div></div>
-                                    }
-                                }
-                            </div>
-                        </div>
-
-                        <!-- Detalle de la cuenta elegida -->
-                        <div id="bank-details" class="mb-3 d-none" aria-live="polite">
-                            <h5 class="d-flex align-items-center"><i class="fas fa-university me-2"></i> Detalles de la Cuenta</h5>
-                            <div class="p-3 border rounded" style="background:#f0f9ff;">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <p class="mb-1"><strong>Banco:</strong> <span id="bank-name">-</span></p>
-                                        <p class="mb-1">
-                                            <strong>N° de cuenta:</strong> <span id="account-number" class="text-mono">-</span>
-                                            <button type="button" class="ms-2 copy-btn btn-sm" id="copy-account" aria-label="Copiar número de cuenta">Copiar</button>
-                                        </p>
-                                        <p class="mb-1"><strong>Tipo:</strong> <span id="account-type">-</span></p>
-                                        <p class="mb-1"><strong>Titular:</strong> <span id="account-owner">-</span></p>
-                                        <p class="mb-0"><strong>RUC:</strong> <span id="account-ruc">-</span></p>
-                                    </div>
-                                    <img id="bank-logo" src="@fallbackLogo" class="bank-logo" alt="logo" onerror="this.src='@fallbackLogo'">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Campos del depósito -->
-                        <div class="mb-3">
-                            <label for="depositName" class="form-label">Nombre de quien deposita</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
-                                <input type="text" class="form-control" id="depositName" name="Depositante" form="form-finalizar"
-                                       placeholder="Ingresa tu nombre completo" required autocomplete="name"
-                                       value="@(string.IsNullOrWhiteSpace(Model?.NombreCompleto) ? "" : Model.NombreCompleto)">
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="depositReceipt" class="form-label">Comprobante de pago</label>
-                            <div class="input-group">
-                                <input type="file" class="form-control" id="depositReceipt" name="Comprobante" form="form-finalizar" accept="image/*,.pdf" required>
-                            </div>
-                            <div class="form-text text-muted">Formatos aceptados: JPG, PNG, WEBP, PDF (máximo 5MB)</div>
-                        </div>
-                    </div>
-                </div>
+            <div class="stepper-step completed">
+                <div class="stepper-icon"><i class="fa-solid fa-check"></i></div>
+                <div class="stepper-label">Dirección</div>
+            </div>
+            <div class="stepper-step active">
+                <div class="stepper-icon">3</div>
+                <div class="stepper-label">Pago</div>
+            </div>
+            <div class="stepper-step">
+                <div class="stepper-icon">4</div>
+                <div class="stepper-label">Confirmación</div>
             </div>
         </div>
 
-        <!-- DERECHA -->
-        <div class="col-12 col-lg-4 order-lg-2">
-            <div class="sticky-summary">
+        <div class="row g-4">
+            <div class="col-12 col-lg-8 order-lg-1">
                 <div class="summary-card">
                     <div class="summary-header">
-                        <h3 class="summary-title"><i class="fas fa-shopping-bag"></i> Tu Pedido</h3>
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                        <h2 class="summary-title">Dirección de Envío</h2>
                     </div>
                     <div class="summary-body">
-                        @if (items != null && items.Any())
+                        @if (hasAddress)
                         {
-                            <div class="productos-container">
-                                @foreach (var item in items)
-                                {
-                                    var vimg = item?.Variante?.ImagenPath;
-                                    var pimg = item?.Producto?.ImagenPath;
-                                    var img = !string.IsNullOrWhiteSpace(vimg) ? vimg : (!string.IsNullOrWhiteSpace(pimg) ? pimg : Url.Content("~/images/product-placeholder.png"));
-
-                                    var color = item?.Variante?.Color;
-                                    var talla = item?.Variante?.Talla;
-                                    var hasCT = !string.IsNullOrWhiteSpace(color) || !string.IsNullOrWhiteSpace(talla);
-
-                                    decimal precioUnit = item?.Precio ?? 0m;
-                                    int cant = item?.Cantidad ?? 0;
-                                    var lineTotal = precioUnit * cant;
-
-                                    <div class="product-item">
-                                        <img src="@img" alt="@(item?.Producto?.Nombre ?? "Producto")" class="product-img" loading="lazy" onerror="this.src='@Url.Content("~/images/product-placeholder.png")'">
-                                        <div class="product-info">
-                                            <div class="product-name">
-                                                @((item?.Producto?.Nombre) ?? "Producto")
-                                                @if (hasCT)
-                                                {
-                                                    <span class="text-muted small">
-                                                        [
-                                                        @if (!string.IsNullOrWhiteSpace(color))
-                                                        {
-                                                            @color
-                                                            ;
-                                                        }
-                                                        @if (!string.IsNullOrWhiteSpace(color) && !string.IsNullOrWhiteSpace(talla))
-                                                        {
-                                                            <text>/</text>
-                                                        }
-                                                        @if (!string.IsNullOrWhiteSpace(talla))
-                                                        {
-                                                            @talla
-                                                            ;
-                                                        }
-                                                        ]
-                                                    </span>
-                                                }
-                                            </div>
-                                            <div class="product-details">
-                                                Cantidad: @cant
-                                                <span class="text-muted">·</span>
-                                                <span>@precioUnit.ToString("C", culture)</span>
-                                            </div>
-                                        </div>
-                                        <div class="product-price">@lineTotal.ToString("C", culture)</div>
-                                    </div>
-                                }
+                            <div class="address-card">
+                                <div class="address-card-title">
+                                    <i class="fa-solid fa-user-circle"></i>
+                                    <span>@(string.IsNullOrWhiteSpace(Model.NombreCompleto) ? "Cliente" : Model.NombreCompleto)</span>
+                                </div>
+                                <div class="address-card-item">
+                                    <i class="fa-solid fa-id-card"></i>
+                                    <span>@(string.IsNullOrWhiteSpace(Model.Cedula) ? "Sin cédula" : Model.Cedula)</span>
+                                </div>
+                                <div class="address-card-item">
+                                    <i class="fa-solid fa-home"></i>
+                                    <span>@(string.IsNullOrWhiteSpace(Model.Direccion) ? "Sin dirección" : Model.Direccion)</span>
+                                </div>
+                                <div class="address-card-item">
+                                    <i class="fa-solid fa-city"></i>
+                                    <span>@(string.IsNullOrWhiteSpace(Model.Ciudad) ? "Sin ciudad" : Model.Ciudad), @(string.IsNullOrWhiteSpace(Model.Provincia) ? "Sin provincia" : Model.Provincia)</span>
+                                </div>
+                                <div class="address-card-item">
+                                    <i class="fa-solid fa-phone"></i>
+                                    <span>@(string.IsNullOrWhiteSpace(Model.Telefono) ? "Sin teléfono" : Model.Telefono)</span>
+                                </div>
+                                <a asp-controller="Cuenta" asp-action="Perfil" class="btn btn-outline-primary btn-sm mt-3">
+                                    <i class="fa-solid fa-pen-to-square me-1"></i> Editar Dirección
+                                </a>
                             </div>
                         }
                         else
                         {
-                            <div class="text-center py-4">
-                                <i class="fas fa-shopping-cart fa-2x text-muted mb-3"></i>
-                                <p class="text-muted mb-0">No hay productos en tu carrito.</p>
+                            <div class="empty-state-checkout">
+                                <div class="empty-state-icon">
+                                    <i class="fa-solid fa-map-marker-alt"></i>
+                                </div>
+                                <h3 class="h5 mb-2">Dirección de envío requerida</h3>
+                                <p class="text-muted mb-3">Para continuar con tu compra, necesitas agregar una dirección de envío.</p>
+                                <a asp-controller="Cuenta" asp-action="Perfil" class="btn btn-primary">
+                                    <i class="fa-solid fa-plus me-2"></i>Agregar Dirección
+                                </a>
                             </div>
                         }
+                    </div>
+                </div>
 
-                        <div class="total-section mt-3">
-                            <div class="d-flex justify-content-between"><span>Subtotal:</span><span>@totalCompra.ToString("C", culture)</span></div>
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <i class="fa-solid fa-credit-card"></i>
+                        <h2 class="summary-title">Método de Pago</h2>
+                    </div>
+                    <div class="summary-body">
+                        <div class="alert-checkout alert-light">
+                            @if (esMulti)
+                            {
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fa-solid fa-building text-primary mt-1"></i>
+                                    <div>
+                                        <strong>Pagos centralizados al Administrador</strong>
+                                        <p class="mb-0 small text-muted mt-1">Tu pedido incluye productos de varias tiendas. Realiza el depósito a las cuentas del administrador.</p>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fa-solid fa-store text-primary mt-1"></i>
+                                    <div>
+                                        <strong>Pago directo a la tienda</strong>
+                                        <p class="mb-0 small text-muted mt-1">Selecciona una cuenta de la tienda para realizar tu transferencia bancaria.</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
 
-                            <div class="d-flex justify-content-between align-items-start">
-                                <span>Envío:</span>
-                                <span>
-                                    @if (canComputeShipping)
+                        <div class="payment-methods-grid">
+                            <div class="payment-method disabled" data-method="card">
+                                <i class="fa-solid fa-credit-card method-icon"></i>
+                                <h5>Tarjeta</h5>
+                                <p class="small text-muted mb-0">Próximamente</p>
+                            </div>
+                            <div class="payment-method active" data-method="deposit" tabindex="0">
+                                <i class="fa-solid fa-university method-icon"></i>
+                                <h5>Depósito</h5>
+                                <p class="small text-muted mb-0">Transferencia Bancaria</p>
+                            </div>
+                            <div class="payment-method disabled" data-method="paypal">
+                                <i class="fa-brands fa-paypal method-icon"></i>
+                                <h5>PayPal</h5>
+                                <p class="small text-muted mb-0">Próximamente</p>
+                            </div>
+                        </div>
+
+                        <div id="form-deposit" class="payment-form">
+                            <div class="alert-checkout alert-light">
+                                <h3 class="h6 d-flex align-items-center mb-2">
+                                    <i class="fa-solid fa-info-circle me-2 text-primary"></i> Instrucciones de Pago
+                                </h3>
+                                <ol class="mb-0 ps-3">
+                                    <li>Selecciona el banco para realizar tu transferencia</li>
+                                    <li>Realiza la transferencia desde tu banco</li>
+                                    <li><strong>Adjunta el comprobante de pago</strong></li>
+                                    <li>Validaremos tu pago en un máximo de 24 horas</li>
+                                </ol>
+                            </div>
+
+                            @{
+                                bool renderAdmin = esMulti || (!hayProv && hayAdm);
+                            }
+
+                            <div class="mb-4" id="bank-selection"
+                                 data-hay-cuentas="@(hayCuentas ? "1" : "0")"
+                                 data-num-cuentas="@numCtas">
+                                <label class="form-label fw-semibold">
+                                    @(renderAdmin ? "Selecciona una cuenta del administrador" : "Selecciona una cuenta de la tienda")
+                                </label>
+
+                                <div class="bank-cards-grid">
+                                    @if (renderAdmin)
                                     {
-                                        @envioTotal.ToString("C", culture)
+                                        if (cuentasAdmin.Any())
+                                        {
+                                            foreach (var c in cuentasAdmin)
+                                            {
+                                                var dataVal = $"admin:{c.Codigo}";
+                                                <div class="bank-card" data-bank="@dataVal" tabindex="0">
+                                                    <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath)"
+                                                         alt="@c.Nombre" class="bank-logo" loading="lazy"
+                                                         onerror="this.src='@fallbackLogo'" />
+                                                    <div class="bank-info">
+                                                        <h6>@c.Nombre</h6>
+                                                        <small>@c.Tipo · @c.Numero</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-warning mb-0">
+                                                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                                                No hay cuentas del administrador configuradas.
+                                            </div>
+                                        }
                                     }
                                     else
                                     {
-
-                                        <span class="text-muted">—</span>
+                                        @if (cuentasProv.Any() && !string.IsNullOrWhiteSpace(vendedorIdUnico))
+                                        {
+                                            foreach (var c in cuentasProv)
+                                            {
+                                                var dataVal = $"tienda:{vendedorIdUnico}:{c.Codigo}";
+                                                <div class="bank-card" data-bank="@dataVal" tabindex="0">
+                                                    <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath)"
+                                                         class="bank-logo" alt="@c.Nombre" loading="lazy"
+                                                         onerror="this.src='@fallbackLogo'" />
+                                                    <div class="bank-info">
+                                                        <h6>@c.Nombre</h6>
+                                                        <small>@c.Tipo · @c.Numero</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else if (cuentasAdmin.Any())
+                                        {
+                                            <div class="alert alert-info mb-3">
+                                                <i class="fa-solid fa-info-circle me-2"></i>
+                                                La tienda no tiene cuentas configuradas. Mostrando <strong>cuentas del administrador</strong>.
+                                            </div>
+                                            @foreach (var c in cuentasAdmin)
+                                            {
+                                                var dataVal = $"admin:{c.Codigo}";
+                                                <div class="bank-card" data-bank="@dataVal" tabindex="0">
+                                                    <img src="@(string.IsNullOrWhiteSpace(c.LogoPath) ? fallbackLogo : c.LogoPath)"
+                                                         class="bank-logo" alt="@c.Nombre" loading="lazy"
+                                                         onerror="this.src='@fallbackLogo'" />
+                                                    <div class="bank-info">
+                                                        <h6>@c.Nombre</h6>
+                                                        <small>@c.Tipo · @c.Numero</small>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-warning mb-0">
+                                                <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                                                No hay cuentas disponibles.
+                                            </div>
+                                        }
                                     }
-                                </span>
+                                </div>
                             </div>
 
-                            @if (canComputeShipping && (envioMensajes.Any() || envioPorTienda.Any()))
+                            <div id="bank-details" class="mb-4 d-none">
+                                <div class="bank-details-card">
+                                    <div class="bank-details-header">
+                                        <i class="fa-solid fa-university"></i>
+                                        <span>Detalles de la Cuenta</span>
+                                    </div>
+                                    <div class="bank-details-content">
+                                        <div class="flex-grow-1">
+                                            <div class="bank-detail-item">
+                                                <strong>Banco:</strong> <span id="bank-name">-</span>
+                                            </div>
+                                            <div class="bank-detail-item">
+                                                <strong>N° de cuenta:</strong> <span id="account-number" class="text-mono">-</span>
+                                                <button type="button" class="ms-2 copy-btn" id="copy-account">
+                                                    <i class="fa-solid fa-copy me-1"></i>Copiar
+                                                </button>
+                                            </div>
+                                            <div class="bank-detail-item">
+                                                <strong>Tipo:</strong> <span id="account-type">-</span>
+                                            </div>
+                                            <div class="bank-detail-item">
+                                                <strong>Titular:</strong> <span id="account-owner">-</span>
+                                            </div>
+                                            <div class="bank-detail-item mb-0">
+                                                <strong>RUC:</strong> <span id="account-ruc">-</span>
+                                            </div>
+                                        </div>
+                                        <img id="bank-logo" src="@fallbackLogo" class="bank-logo" alt="Logo" onerror="this.src='@fallbackLogo'" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="depositName" class="form-label fw-semibold">
+                                    Nombre de quien deposita <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fa-solid fa-user text-muted"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="depositName" name="Depositante"
+                                           form="form-finalizar" placeholder="Ingresa tu nombre completo" required
+                                           autocomplete="name" value="@(string.IsNullOrWhiteSpace(Model?.NombreCompleto) ? "" : Model.NombreCompleto)" />
+                                </div>
+                                <div class="form-text">Nombre de la persona que realizó la transferencia</div>
+                            </div>
+
+                            <div class="mb-0">
+                                <label for="depositReceipt" class="form-label fw-semibold">
+                                    Comprobante de pago <span class="text-danger">*</span>
+                                </label>
+                                <input type="file" class="form-control" id="depositReceipt" name="Comprobante"
+                                       form="form-finalizar" accept="image/*,.pdf" required />
+                                <div class="form-text">
+                                    <i class="fa-solid fa-info-circle me-1"></i>
+                                    Formatos aceptados: JPG, PNG, WEBP, PDF (máximo 5MB)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-4 order-lg-2">
+                <div class="sticky-summary">
+                    <div class="summary-card">
+                        <div class="summary-header">
+                            <i class="fa-solid fa-shopping-bag"></i>
+                            <h2 class="summary-title">Tu Pedido</h2>
+                        </div>
+                        <div class="summary-body">
+                            @if (hasItems)
                             {
-                                <div class="envio-detail mt-2">
-                                    @if (envioPorTienda.Any())
+                                <div class="productos-container">
+                                    @foreach (var item in items)
                                     {
-                                        <div class="small mb-1"><strong>Desglose por tienda</strong></div>
-                                        <ul class="mb-2" style="padding-left:18px;">
-                                            @foreach (var kv in envioPorTienda)
-                                            {
-                                                <li class="small">@kv.Key: @kv.Value.ToString("C", culture)</li>
-                                            }
-                                        </ul>
-                                    }
-                                    @if (envioMensajes.Any())
-                                    {
-                                        <div class="small text-muted">
-                                            @foreach (var m in envioMensajes)
-                                            {
-                                                <div><i class="fas fa-info-circle me-1"></i>@m</div>
-                                            }
+                                        var vimg = item?.Variante?.ImagenPath;
+                                        var pimg = item?.Producto?.ImagenPath;
+                                        var img = !string.IsNullOrWhiteSpace(vimg) ? vimg : (!string.IsNullOrWhiteSpace(pimg) ? pimg : fallbackLogo);
+                                        var color = item?.Variante?.Color;
+                                        var talla = item?.Variante?.Talla;
+                                        var hasCT = !string.IsNullOrWhiteSpace(color) || !string.IsNullOrWhiteSpace(talla);
+                                        decimal precioUnit = item?.Precio ?? 0m;
+                                        int cant = item?.Cantidad ?? 0;
+                                        var lineTotal = precioUnit * cant;
+
+                                        <div class="product-item">
+                                            <img src="@img" alt="@(item?.Producto?.Nombre ?? "Producto")"
+                                                 class="product-img" loading="lazy" onerror="this.src='@fallbackLogo'" />
+                                            <div class="product-info">
+                                                <div class="product-name">@((item?.Producto?.Nombre) ?? "Producto")</div>
+                                                @if (hasCT)
+                                                {
+                                                    <div class="text-muted small">
+                                                        @if (!string.IsNullOrWhiteSpace(color))
+                                                        {
+                                                            <span>@color</span>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(color) && !string.IsNullOrWhiteSpace(talla))
+                                                        {
+                                                            <span> / </span>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(talla))
+                                                        {
+                                                            <span>Talla @talla</span>
+                                                        }
+                                                    </div>
+                                                }
+                                                <div class="product-details">Cantidad: @cant × @precioUnit.ToString("C", culture)</div>
+                                            </div>
+                                            <div class="product-price">@lineTotal.ToString("C", culture)</div>
                                         </div>
                                     }
                                 </div>
                             }
-                            else if (!canComputeShipping)
+                            else
                             {
-                                <div class="small text-muted mt-1">
-                                    <i class="fas fa-location-dot me-1"></i>
-                                    Agrega/actualiza tu dirección para calcular el costo de envío.
+                                <div class="empty-state-checkout">
+                                    <div class="empty-state-icon"><i class="fa-solid fa-shopping-cart"></i></div>
+                                    <p class="text-muted mb-0">No hay productos en tu carrito</p>
                                 </div>
                             }
 
-                            <div class="d-flex justify-content-between">
-                                <span>Total:</span>
-                                <span class="fw-bold" style="color:var(--primary);">@grandTotal.ToString("C", culture)</span>
+                            <div class="total-section">
+                                <div class="total-row">
+                                    <span>Subtotal:</span>
+                                    <span>@totalCompra.ToString("C", culture)</span>
+                                </div>
+                                <div class="total-row">
+                                    <span>Envío:</span>
+                                    <span>
+                                        @if (canComputeShipping)
+                                        {
+                                            @envioTotal.ToString("C", culture)
+                                        }
+                                        else
+                                        {
+
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </span>
+                                </div>
+                                @if (canComputeShipping && (envioMensajes.Any() || envioPorTienda.Any()))
+                                {
+                                    <div class="envio-detail">
+                                        @if (envioPorTienda.Any())
+                                        {
+                                            <div class="small fw-semibold mb-1">Desglose por tienda:</div>
+                                            <ul class="mb-2 ps-3">
+                                                @foreach (var kv in envioPorTienda)
+                                                {
+                                                    <li class="small">@kv.Key: @kv.Value.ToString("C", culture)</li>
+                                                }
+                                            </ul>
+                                        }
+                                        @if (envioMensajes.Any())
+                                        {
+                                            <div class="small text-muted">
+                                                @foreach (var m in envioMensajes)
+                                                {
+                                                    <div><i class="fa-solid fa-info-circle me-1"></i>@m</div>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else if (!canComputeShipping)
+                                {
+                                    <div class="small text-muted">
+                                        <i class="fa-solid fa-location-dot me-1"></i>
+                                        Agrega tu dirección para calcular el envío
+                                    </div>
+                                }
+                                <div class="total-row grand-total">
+                                    <span>Total:</span>
+                                    <span>@grandTotal.ToString("C", culture)</span>
+                                </div>
+                            </div>
+
+                            <div class="text-center mt-3">
+                                <small class="text-muted d-flex align-items-center justify-content-center gap-2">
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Ecuador.svg/320px-Flag_of_Ecuador.svg.png"
+                                         alt="Ecuador" height="16" loading="lazy" />
+                                    <span>Precios en USD</span>
+                                </small>
                             </div>
                         </div>
-
-                        <div class="text-center mt-3">
-                            <small class="text-muted d-flex align-items-center justify-content-center">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b7/Flag_of_Ecuador.svg/320px-Flag_of_Ecuador.svg.png" alt="Ecuador" height="16" class="me-2">
-                                Todos los precios en dólares estadounidenses (USD)
-                            </small>
-                        </div>
                     </div>
-                </div>
 
-                <!-- Finalizar -->
-                <form id="form-finalizar" asp-controller="Compras" asp-action="ConfirmarCompra" method="post" enctype="multipart/form-data" novalidate>
-                    @Html.AntiForgeryToken()
-                    <!-- Debe empezar por "dep": -->
-                    <input type="hidden" id="MetodoPagoInput" name="MetodoPago" value="deposito_transferencia" />
-                    <input type="hidden" id="BancoSeleccionado" name="BancoSeleccionado" value="" />
-                    <button type="submit"
-                            class="btn btn-primary w-100 py-3"
-                            id="btnFinalizar"
-                            @( (ViewBag.HasAddress == true && hayCuentas) ? null : "disabled" )>
-                        <span class="btn-text"><i class="fas fa-lock me-2"></i> Finalizar Compra</span>
-                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true" aria-label="Procesando"></span>
-                    </button>
-                    @if (ViewBag.HasAddress != true)
-                    {
-                        <div class="form-text text-danger mt-2">Agrega una dirección para habilitar el botón.</div>
-                    }
-                    else if (!hayCuentas)
-                    {
-                        <div class="form-text text-danger mt-2">No hay cuentas disponibles para este pedido.</div>
-                    }
-                </form>
+                    <form id="form-finalizar" asp-controller="Compras" asp-action="ConfirmarCompra"
+                          method="post" enctype="multipart/form-data" novalidate>
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" id="MetodoPagoInput" name="MetodoPago" value="deposito_transferencia" />
+                        <input type="hidden" id="BancoSeleccionado" name="BancoSeleccionado" value="" />
+
+                        <button type="submit" class="btn btn-checkout-submit w-100" id="btnFinalizar"
+                                @(canCheckout ? null : "disabled")>
+                            <span class="btn-text">
+                                <i class="fa-solid fa-lock me-2"></i> Finalizar Compra
+                            </span>
+                            <span class="spinner-border spinner-border-sm d-none"></span>
+                        </button>
+
+                        @if (!hasAddress)
+                        {
+                            <div class="form-text text-danger mt-2 text-center">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                Agrega una dirección para continuar
+                            </div>
+                        }
+                        else if (!hayCuentas)
+                        {
+                            <div class="form-text text-danger mt-2 text-center">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                No hay cuentas disponibles
+                            </div>
+                        }
+                        else if (!hasItems)
+                        {
+                            <div class="form-text text-danger mt-2 text-center">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                Tu carrito está vacío
+                            </div>
+                        }
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -627,118 +1139,176 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const esMultiVendedor = @(esMulti ? "true" : "false");
-            const bankMap = @Html.Raw(bankItemsJson);
+        (function() {
+            'use strict';
 
-            // Métodos (solo Depósito)
-            const methods = document.querySelectorAll('.payment-method');
-            const forms   = document.querySelectorAll('.payment-form');
-            methods.forEach(m => {
-                const handler = () => {
-                    const name = m.dataset.method;
-                    if (name !== 'deposit') {
-                        Swal.fire({icon:'info', title:'¡Próximamente!', text:'Por favor elige Depósito.', confirmButtonColor:'#e8b4b8'});
-                        return;
-                    }
-                    methods.forEach(x => x.classList.remove('active'));
-                    m.classList.add('active');
-                    forms.forEach(f => f.classList.add('d-none'));
-                    document.getElementById('form-deposit').classList.remove('d-none');
-                    // Mantener formato que espera el controlador (empieza por 'dep')
-                    document.getElementById('MetodoPagoInput').value = 'deposito_transferencia';
-                };
-                m.addEventListener('click', handler);
-                m.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); handler(); } });
-            });
+            const CONFIG = {
+                esMultiVendedor: @(esMulti.ToString().ToLower()),
+                bankMap: @Html.Raw(bankItemsJson),
+                hayCuentas: @(hayCuentas.ToString().ToLower()),
+                numCuentas: @numCtas,
+                maxFileSize: 5242880,
+                allowedExtensions: ['jpg', 'jpeg', 'png', 'webp', 'pdf']
+            };
 
-            const bankSelEl = document.getElementById('bank-selection');
-            const hayCuentas = (bankSelEl?.dataset.hayCuentas === '1');
-            const numCuentas = parseInt(bankSelEl?.dataset.numCuentas || '0', 10);
+            const elements = {
+                methods: document.querySelectorAll('.payment-method'),
+                forms: document.querySelectorAll('.payment-form'),
+                bankCards: Array.from(document.querySelectorAll('.bank-card')),
+                bankDetails: document.getElementById('bank-details'),
+                hiddenBank: document.getElementById('BancoSeleccionado'),
+                finalizarForm: document.getElementById('form-finalizar'),
+                submitBtn: document.getElementById('btnFinalizar')
+            };
 
-            const bankCards   = Array.from(document.querySelectorAll('.bank-card'));
-            const bankDetails = document.getElementById('bank-details');
-            const hiddenBank  = document.getElementById('BancoSeleccionado');
-
-            function paintDetails(key){
-                const b = bankMap[key];
-                if (!b) return;
-                bankDetails.classList.remove('d-none');
-                document.getElementById('bank-name').textContent      = b.nombre || '-';
-                document.getElementById('account-number').textContent = b.numero || '-';
-                document.getElementById('account-type').textContent   = b.tipo   || '-';
-                document.getElementById('account-owner').textContent  = b.titular|| '-';
-                document.getElementById('account-ruc').textContent    = b.ruc    || '-';
+            function paintBankDetails(key) {
+                const bank = CONFIG.bankMap[key];
+                if (!bank) return;
+                elements.bankDetails?.classList.remove('d-none');
+                document.getElementById('bank-name').textContent = bank.nombre || '-';
+                document.getElementById('account-number').textContent = bank.numero || '-';
+                document.getElementById('account-type').textContent = bank.tipo || '-';
+                document.getElementById('account-owner').textContent = bank.titular || '-';
+                document.getElementById('account-ruc').textContent = bank.ruc || '-';
                 const logo = document.getElementById('bank-logo');
-                if (logo && b.logo){ logo.src=b.logo; logo.alt=b.nombre||'logo'; }
+                if (logo && bank.logo) { logo.src = bank.logo; logo.alt = bank.nombre || 'Logo'; }
             }
 
-            function selectCard(card){
-                bankCards.forEach(c => c.classList.remove('selected'));
+            function selectBankCard(card) {
+                elements.bankCards.forEach(c => c.classList.remove('selected'));
                 card.classList.add('selected');
                 const key = card.getAttribute('data-bank');
-                if (esMultiVendedor && key.startsWith('tienda:')) {
-                    Swal.fire({icon:'warning', title:'No permitido', text:'Para carritos con varias tiendas, paga a la cuenta del administrador.', confirmButtonColor:'#e8b4b8'});
+                if (CONFIG.esMultiVendedor && key.startsWith('tienda:')) {
+                    Swal.fire({ icon: 'warning', title: 'No permitido',
+                        text: 'Para carritos multi-tienda, paga al administrador.',
+                        confirmButtonColor: '#e8b4b8' });
                     card.classList.remove('selected');
-                    hiddenBank.value = '';
-                    bankDetails.classList.add('d-none');
+                    elements.hiddenBank.value = '';
+                    elements.bankDetails?.classList.add('d-none');
                     return;
                 }
-                hiddenBank.value = key; // admin:{codigo} | tienda:{vId}:{codigo}
-                paintDetails(key);
+                elements.hiddenBank.value = key;
+                paintBankDetails(key);
             }
 
-            bankCards.forEach(card => {
-                card.addEventListener('click', ()=>selectCard(card));
-                card.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); selectCard(card);} });
-            });
-
-            // Autoselección si hay una sola opción visible
-            if (hayCuentas && numCuentas === 1 && bankCards.length === 1) {
-                selectCard(bankCards[0]);
-            }
-
-            // Copiar número
-            const copyBtn = document.getElementById('copy-account');
-            copyBtn?.addEventListener('click', () => {
-                const n = document.getElementById('account-number')?.textContent?.trim();
-                if (!n || n === '-') return;
-                navigator.clipboard.writeText(n).then(()=>{
-                    const prev = copyBtn.textContent;
-                    copyBtn.textContent='¡Copiado!';
-                    setTimeout(()=>copyBtn.textContent=prev,1500);
+            function initPaymentMethods() {
+                elements.methods.forEach(method => {
+                    const handler = () => {
+                        const name = method.dataset.method;
+                        if (name !== 'deposit') {
+                            Swal.fire({ icon: 'info', title: '¡Próximamente!',
+                                text: 'Por favor elige Depósito.', confirmButtonColor: '#e8b4b8' });
+                            return;
+                        }
+                        elements.methods.forEach(m => m.classList.remove('active'));
+                        method.classList.add('active');
+                        elements.forms.forEach(f => f.classList.add('d-none'));
+                        document.getElementById('form-deposit')?.classList.remove('d-none');
+                        document.getElementById('MetodoPagoInput').value = 'deposito_transferencia';
+                    };
+                    method.addEventListener('click', handler);
+                    method.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); }
+                    });
                 });
-            });
+            }
 
-            // Validación submit
-            const finalizarForm = document.getElementById('form-finalizar');
-            finalizarForm.addEventListener('submit', function(e){
-                const metodo = (document.getElementById('MetodoPagoInput')?.value || '').toLowerCase();
-                const btn = document.getElementById('btnFinalizar');
-                if (btn?.disabled) { e.preventDefault(); return; }
-
-                if (metodo.startsWith('dep')) {
-                    const nombre  = document.getElementById('depositName')?.value.trim();
-                    const archivo = document.getElementById('depositReceipt')?.files[0];
-                    const banco   = hiddenBank.value;
-
-                    if (!banco){ e.preventDefault(); Swal.fire({icon:'warning',title:'Selecciona una cuenta bancaria',confirmButtonColor:'#e8b4b8'}); return; }
-                    if (esMultiVendedor && banco.startsWith('tienda:')){ e.preventDefault(); Swal.fire({icon:'warning',title:'No permitido',text:'En pedidos multi-tienda, selecciona una cuenta del administrador.',confirmButtonColor:'#e8b4b8'}); return; }
-                    if (!nombre){ e.preventDefault(); Swal.fire({icon:'warning',title:'Campo requerido',text:'Ingresa el nombre de quien deposita.',confirmButtonColor:'#e8b4b8'}); return; }
-                    if (!archivo){ e.preventDefault(); Swal.fire({icon:'warning',title:'Campo requerido',text:'Adjunta el comprobante.',confirmButtonColor:'#e8b4b8'}); return; }
-
-                    const exts=['jpg','jpeg','png','webp','pdf'];
-                    const ext=(archivo.name.split('.').pop()||'').toLowerCase();
-                    const max=5*1024*1024;
-                    if (!exts.includes(ext)){ e.preventDefault(); Swal.fire({icon:'error',title:'Formato inválido',text:'JPG, PNG, WEBP o PDF.',confirmButtonColor:'#e8b4b8'}); return; }
-                    if (archivo.size>max){ e.preventDefault(); Swal.fire({icon:'error',title:'Archivo muy grande',text:'Máximo 5MB.',confirmButtonColor:'#e8b4b8'}); return; }
+            function initBankSelection() {
+                elements.bankCards.forEach(card => {
+                    card.addEventListener('click', () => selectBankCard(card));
+                    card.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectBankCard(card); }
+                    });
+                });
+                if (CONFIG.hayCuentas && CONFIG.numCuentas === 1 && elements.bankCards.length === 1) {
+                    selectBankCard(elements.bankCards[0]);
                 }
+            }
 
-                // UX: spinner
-                btn.disabled = true;
-                btn.querySelector('.btn-text')?.classList.add('d-none');
-                btn.querySelector('.spinner-border')?.classList.remove('d-none');
-            });
-        });
+            function initCopyButton() {
+                const copyBtn = document.getElementById('copy-account');
+                if (!copyBtn) return;
+                copyBtn.addEventListener('click', () => {
+                    const number = document.getElementById('account-number')?.textContent?.trim();
+                    if (!number || number === '-') return;
+                    navigator.clipboard.writeText(number).then(() => {
+                        const original = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>¡Copiado!';
+                        setTimeout(() => copyBtn.innerHTML = original, 1500);
+                    });
+                });
+            }
+
+            function validateForm(e) {
+                const btn = elements.submitBtn;
+                if (btn?.disabled) { e.preventDefault(); return false; }
+                const metodo = document.getElementById('MetodoPagoInput')?.value?.toLowerCase();
+                if (metodo.startsWith('dep')) {
+                    const nombre = document.getElementById('depositName')?.value.trim();
+                    const archivo = document.getElementById('depositReceipt')?.files[0];
+                    const banco = elements.hiddenBank.value;
+                    if (!banco) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Selecciona una cuenta bancaria', confirmButtonColor: '#e8b4b8' });
+                        return false;
+                    }
+                    if (CONFIG.esMultiVendedor && banco.startsWith('tienda:')) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'No permitido',
+                            text: 'En pedidos multi-tienda, selecciona cuenta del administrador.',
+                            confirmButtonColor: '#e8b4b8' });
+                        return false;
+                    }
+                    if (!nombre) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Campo requerido',
+                            text: 'Ingresa el nombre de quien deposita.', confirmButtonColor: '#e8b4b8' });
+                        return false;
+                    }
+                    if (!archivo) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'warning', title: 'Campo requerido',
+                            text: 'Adjunta el comprobante.', confirmButtonColor: '#e8b4b8' });
+                        return false;
+                    }
+                    const ext = (archivo.name.split('.').pop() || '').toLowerCase();
+                    if (!CONFIG.allowedExtensions.includes(ext)) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Formato inválido',
+                            text: 'Formatos: JPG, PNG, WEBP, PDF.', confirmButtonColor: '#e8b4b8' });
+                        return false;
+                    }
+                    if (archivo.size > CONFIG.maxFileSize) {
+                        e.preventDefault();
+                        Swal.fire({ icon: 'error', title: 'Archivo muy grande',
+                            text: 'Máximo 5MB.', confirmButtonColor: '#e8b4b8' });
+                        return false;
+                    }
+                }
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('loading');
+                    btn.querySelector('.btn-text')?.classList.add('d-none');
+                    btn.querySelector('.spinner-border')?.classList.remove('d-none');
+                }
+                return true;
+            }
+
+            function init() {
+                initPaymentMethods();
+                initBankSelection();
+                initCopyButton();
+                if (elements.finalizarForm) {
+                    elements.finalizarForm.addEventListener('submit', validateForm);
+                }
+                console.log('✓ Checkout initialized');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
 }

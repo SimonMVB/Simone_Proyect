@@ -1,91 +1,178 @@
 ﻿@using Simone.Models
 @using SimoneCfg = Simone.Configuration
+
 @{
+    // ============================================
+    // GESTIÓN DE CUENTAS BANCARIAS - Neo Agora
+    // Vista para vendedores y administradores
+    // Versión Enterprise Optimizada
+    // ============================================
+
+    // Variables de contexto
     var cuentas = (ViewBag.Cuentas as IEnumerable<SimoneCfg.CuentaBancaria>) ?? Enumerable.Empty<SimoneCfg.CuentaBancaria>();
+    var cuentasList = cuentas.ToList();
+    var totalCuentas = cuentasList.Count;
+    var cuentasActivas = cuentasList.Count(c => c.Activo);
+
+    // Roles y permisos
     bool esVendedor = User.IsInRole("Vendedor");
     bool esAdmin = User.IsInRole("Administrador");
     string? targetVendorId = ViewBag.TargetVendorId as string;
     bool adminAyudando = esAdmin && !string.IsNullOrWhiteSpace(targetVendorId);
     bool ctxVendedor = esVendedor || adminAyudando;
 
+    // Títulos dinámicos
     ViewData["Title"] = ctxVendedor ? "Mis Cuentas Bancarias" : "Bancos del Administrador";
+    ViewData["Description"] = ctxVendedor
+        ? "Gestiona las cuentas bancarias de tu tienda para recibir pagos"
+        : "Administra las cuentas bancarias del sistema";
 
-    // Catálogo mejorado con rutas corregidas y placeholders
-    var catalogo = new[]{
-        new { Codigo="pichincha",   Nombre="Banco Pichincha",    Logo="/images/Bancos/pichincha.webp" },
-        new { Codigo="guayaquil",   Nombre="Banco Guayaquil",    Logo="/images/Bancos/guayaquil.png" },
-        new { Codigo="pacifico",    Nombre="Banco del Pacífico", Logo="/images/Bancos/pacifico.png" },
-        new { Codigo="bolivariano", Nombre="Banco Bolivariano",  Logo="/images/Bancos/bolivariano.webp" },
-        new { Codigo="jep",         Nombre="Cooperativa JEP",    Logo="/images/Bancos/jep.png" },
+    // Catálogo de bancos con metadata
+    var bankCatalog = new[] {
+        new { Codigo = "pichincha",   Nombre = "Banco Pichincha",    Logo = "/images/Bancos/pichincha.webp" },
+        new { Codigo = "guayaquil",   Nombre = "Banco Guayaquil",    Logo = "/images/Bancos/guayaquil.png" },
+        new { Codigo = "pacifico",    Nombre = "Banco del Pacífico", Logo = "/images/Bancos/pacifico.png" },
+        new { Codigo = "bolivariano", Nombre = "Banco Bolivariano",  Logo = "/images/Bancos/bolivariano.webp" },
+        new { Codigo = "jep",         Nombre = "Cooperativa JEP",    Logo = "/images/Bancos/jep.png" },
     };
 
-    var modelErrors = ViewBag.ModelErrors as string;
+    // Helper para obtener metadata del banco
+    string GetBankLogoUrl(string codigo, string? logoPath = null)
+    {
+        if (!string.IsNullOrWhiteSpace(logoPath)) return logoPath;
+        var bank = bankCatalog.FirstOrDefault(b => b.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+        return bank?.Logo ?? "/images/placeholder-bank.png";
+    }
+
+    string GetBankName(string codigo, string? nombre = null)
+    {
+        if (!string.IsNullOrWhiteSpace(nombre)) return nombre;
+        var bank = bankCatalog.FirstOrDefault(b => b.Codigo.Equals(codigo, StringComparison.OrdinalIgnoreCase));
+        return bank?.Nombre ?? codigo;
+    }
 }
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>@ViewData["Title"]</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+@section Styles {
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" />
+
     <style>
+        /* ========== BANK MANAGEMENT STYLES ========== */
+
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #f8fafc;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --danger: #ef4444;
-            --dark: #1e293b;
-            --light: #f1f5f9;
-            --border: #e2e8f0;
-            --text: #475569;
-            --text-light: #94a3b8;
-            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-            --radius: 12px;
-            --transition: all 0.3s ease;
+            --bank-primary: #6366f1;
+            --bank-primary-dark: #4f46e5;
+            --bank-secondary: #f8fafc;
+            --bank-success: #10b981;
+            --bank-warning: #f59e0b;
+            --bank-danger: #ef4444;
+            --bank-dark: #1e293b;
+            --bank-light: #f1f5f9;
+            --bank-border: #e2e8f0;
+            --bank-text: #475569;
+            --bank-text-light: #94a3b8;
+            --bank-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --bank-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --bank-radius: 12px;
+            --bank-transition: all 0.3s ease;
         }
 
-        * {
-            font-family: 'Inter', sans-serif;
+        /* Font Override */
+        .bank-management-page * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
-        body {
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            color: var(--text);
-            min-height: 100vh;
+        /* Container */
+        .bank-management-container {
+            animation: fadeIn 0.5s ease;
         }
 
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Page Title */
         .page-title {
             font-family: 'Playfair Display', serif;
             font-weight: 700;
-            color: var(--dark);
+            color: var(--bank-dark);
             font-size: 2.25rem;
             margin-bottom: 0.5rem;
+            line-height: 1.2;
         }
 
-        .card-elev {
+        /* Cards */
+        .card-bank {
             background: white;
             border: none;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            transition: var(--transition);
+            border-radius: var(--bank-radius);
+            box-shadow: var(--bank-shadow);
+            transition: var(--bank-transition);
             overflow: hidden;
         }
 
-        .card-header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            .card-bank:hover {
+                box-shadow: var(--bank-shadow-lg);
+            }
+
+        .card-header-bank {
+            background: linear-gradient(135deg, var(--bank-primary) 0%, var(--bank-primary-dark) 100%);
             color: white;
             border: none;
             padding: 1.25rem 1.5rem;
             font-weight: 600;
         }
 
-        /* CORRECCIÓN CRÍTICA: Estilos para imágenes de bancos */
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--bank-radius);
+            padding: 1.5rem;
+            box-shadow: var(--bank-shadow);
+            transition: var(--bank-transition);
+        }
+
+            .stat-card:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--bank-shadow-lg);
+            }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon-primary {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--bank-primary);
+        }
+
+        .stat-icon-success {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--bank-success);
+        }
+
+        /* Bank Logo Containers */
         .bank-logo-container {
             width: 80px;
             height: 80px;
@@ -93,10 +180,11 @@
             align-items: center;
             justify-content: center;
             background: white;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
+            border: 2px solid var(--bank-border);
+            border-radius: var(--bank-radius);
             padding: 8px;
-            box-shadow: var(--shadow);
+            box-shadow: var(--bank-shadow);
+            flex-shrink: 0;
         }
 
         .bank-logo {
@@ -108,27 +196,12 @@
         }
 
         .bank-logo-sm {
-            max-width: 40px;
-            max-height: 40px;
-            object-fit: contain;
+            width: 50px;
+            height: 50px;
+            padding: 4px;
         }
 
-        .bank-preview {
-            display: flex;
-            gap: 1.25rem;
-            align-items: center;
-            background: var(--secondary);
-            border: 2px dashed var(--border);
-            padding: 1.5rem;
-            border-radius: var(--radius);
-            transition: var(--transition);
-        }
-
-            .bank-preview.active {
-                border-color: var(--primary);
-                background: rgba(99, 102, 241, 0.05);
-            }
-
+        /* Bank Selector Grid */
         .bank-selector {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -138,24 +211,63 @@
 
         .bank-option {
             background: white;
-            border: 2px solid var(--border);
-            border-radius: var(--radius);
+            border: 2px solid var(--bank-border);
+            border-radius: var(--bank-radius);
             padding: 1.5rem 1rem;
             text-align: center;
             cursor: pointer;
-            transition: var(--transition);
+            transition: var(--bank-transition);
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 0.75rem;
             min-height: 140px;
+            position: relative;
         }
 
+            .bank-option:hover {
+                border-color: var(--bank-primary);
+                transform: translateY(-2px);
+                box-shadow: var(--bank-shadow);
+            }
+
             .bank-option.active {
-                border-color: var(--primary);
+                border-color: var(--bank-primary);
                 background: rgba(99, 102, 241, 0.05);
                 box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
             }
+
+                .bank-option.active::after {
+                    content: "✓";
+                    position: absolute;
+                    top: 0.5rem;
+                    right: 0.5rem;
+                    width: 24px;
+                    height: 24px;
+                    background: var(--bank-primary);
+                    color: white;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 0.875rem;
+                    font-weight: bold;
+                    animation: checkBounce 0.3s ease;
+                }
+
+        @@keyframes checkBounce {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
 
         .bank-option-logo-container {
             width: 60px;
@@ -164,7 +276,7 @@
             align-items: center;
             justify-content: center;
             background: white;
-            border: 1px solid var(--border);
+            border: 1px solid var(--bank-border);
             border-radius: 8px;
             padding: 6px;
         }
@@ -175,15 +287,60 @@
             object-fit: contain;
         }
 
-        /* Resto de estilos se mantienen igual... */
-        .table thead th {
-            background: var(--secondary);
-            color: var(--dark);
-            border-bottom: 2px solid var(--border);
-            font-weight: 600;
-            padding: 1rem 0.75rem;
+        .bank-option-name {
+            font-weight: 500;
+            color: var(--bank-dark);
+            font-size: 0.9rem;
         }
 
+        /* Bank Preview */
+        .bank-preview {
+            display: flex;
+            gap: 1.25rem;
+            align-items: center;
+            background: var(--bank-secondary);
+            border: 2px dashed var(--bank-border);
+            padding: 1.5rem;
+            border-radius: var(--bank-radius);
+            transition: var(--bank-transition);
+        }
+
+            .bank-preview.active {
+                border-color: var(--bank-primary);
+                background: rgba(99, 102, 241, 0.05);
+                border-style: solid;
+            }
+
+        /* Table Styles */
+        .table-bank {
+            margin: 0;
+        }
+
+            .table-bank thead th {
+                background: var(--bank-secondary);
+                color: var(--bank-dark);
+                border-bottom: 2px solid var(--bank-border);
+                font-weight: 600;
+                padding: 1rem 0.75rem;
+                font-size: 0.875rem;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+            .table-bank tbody tr {
+                transition: var(--bank-transition);
+            }
+
+                .table-bank tbody tr:hover {
+                    background: rgba(99, 102, 241, 0.02);
+                }
+
+            .table-bank td {
+                padding: 1rem 0.75rem;
+                vertical-align: middle;
+            }
+
+        /* Status Badge */
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -196,213 +353,385 @@
 
             .status-badge.active {
                 background: rgba(16, 185, 129, 0.1);
-                color: var(--success);
+                color: var(--bank-success);
             }
 
             .status-badge.inactive {
                 background: rgba(100, 116, 139, 0.1);
-                color: var(--text-light);
+                color: var(--bank-text-light);
             }
 
-        .toggle-switch {
+        /* Empty State */
+        .empty-state {
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            color: var(--bank-text-light);
+            margin-bottom: 1.5rem;
+            opacity: 0.5;
+        }
+
+        /* Form Validation */
+        .was-validated .form-control:invalid,
+        .was-validated .form-select:invalid {
+            border-color: var(--bank-danger);
+        }
+
+        .was-validated .form-control:valid,
+        .was-validated .form-select:valid {
+            border-color: var(--bank-success);
+        }
+
+        /* Loading State */
+        .btn-loading {
             position: relative;
-            display: inline-block;
-            width: 50px;
-            height: 24px;
+            color: transparent !important;
+            pointer-events: none;
         }
 
-            .toggle-switch input {
-                opacity: 0;
-                width: 0;
-                height: 0;
-            }
-
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #ccc;
-            transition: .4s;
-            border-radius: 24px;
-        }
-
-            .toggle-slider:before {
-                position: absolute;
+            .btn-loading::after {
                 content: "";
-                height: 16px;
+                position: absolute;
                 width: 16px;
-                left: 4px;
-                bottom: 4px;
-                background-color: white;
-                transition: .4s;
+                height: 16px;
+                top: 50%;
+                left: 50%;
+                margin-left: -8px;
+                margin-top: -8px;
+                border: 2px solid transparent;
+                border-top-color: currentColor;
                 border-radius: 50%;
+                animation: spin 0.6s linear infinite;
             }
 
-        input:checked + .toggle-slider {
-            background-color: var(--success);
+        @@keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
         }
 
-            input:checked + .toggle-slider:before {
-                transform: translateX(26px);
+        /* Alert Enhancements */
+        .alert {
+            border: none;
+            border-radius: var(--bank-radius);
+            box-shadow: var(--bank-shadow);
+            animation: slideDown 0.3s ease;
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
             }
 
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive */
         @@media (max-width: 768px) {
-            .bank-selector
+            .page-title {
+                font-size: 1.75rem;
+            }
 
-        {
-            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            .bank-selector {
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bank-preview {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .table-responsive {
+                font-size: 0.875rem;
+            }
         }
 
+        /* Print */
+        @@media print {
+            .stats-grid, .card-header-bank, .btn, .alert {
+                display: none !important;
+            }
+
+            .card-bank {
+                box-shadow: none;
+                border: 1px solid var(--bank-border);
+            }
+        }
+
+        /* Reduced Motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
-</head>
-<body>
-    <div class="container py-4">
+}
+
+<!-- Container Principal -->
+<div class="bank-management-container bank-management-page" role="main">
+    <div class="container-fluid py-4">
         <!-- Header -->
         <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between mb-4">
             <div class="mb-3 mb-md-0">
                 <h1 class="page-title">
-                    <i class="fa-solid fa-landmark me-2"></i>@ViewData["Title"]
+                    <i class="fa-solid fa-landmark me-2" aria-hidden="true"></i>
+                    @ViewData["Title"]
                 </h1>
-                <p class="text-muted">
-                    @(ctxVendedor ?
-                                        "Gestiona las cuentas bancarias de tu tienda para recibir pagos" :
-                                        "Administra las cuentas bancarias del sistema")
+                <p class="text-muted mb-0">
+                    @ViewData["Description"]
                 </p>
             </div>
+
+            @if (ctxVendedor && esAdmin)
+            {
+                <a asp-controller="Panel" asp-action="Index"
+                   class="btn btn-outline-secondary">
+                    <i class="fa-solid fa-arrow-left me-2" aria-hidden="true"></i>
+                    Volver al Panel
+                </a>
+            }
         </div>
 
-        <!-- Alertas -->
-        @if (TempData["MensajeExito"] is string okMsg)
+        <!-- Stats Cards -->
+        @if (totalCuentas > 0)
         {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fa-solid fa-circle-check me-2"></i>
-                @okMsg
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-primary">
+                        <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label text-muted small">Total Cuentas</div>
+                    <div class="stat-value h3 fw-bold mb-0">@totalCuentas</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon stat-icon-success">
+                        <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-label text-muted small">Cuentas Activas</div>
+                    <div class="stat-value h3 fw-bold mb-0 text-success">@cuentasActivas</div>
+                </div>
             </div>
         }
-        @if (TempData["MensajeError"] is string errMsg)
+
+        <!-- Alertas -->
+        @if (TempData["MensajeExito"] is string successMsg)
         {
-            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                @errMsg
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fa-solid fa-circle-check me-2" aria-hidden="true"></i>
+                <strong>¡Éxito!</strong> @successMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
+            </div>
+        }
+
+        @if (TempData["MensajeError"] is string errorMsg)
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fa-solid fa-triangle-exclamation me-2" aria-hidden="true"></i>
+                <strong>Error:</strong> @errorMsg
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
             </div>
         }
 
         <!-- Formulario -->
-        <div class="card card-elev mb-5">
-            <div class="card-header">
-                <i class="fa-solid fa-plus-circle me-2"></i>
+        <div class="card card-bank mb-4">
+            <div class="card-header-bank">
+                <i class="fa-solid fa-plus-circle me-2" aria-hidden="true"></i>
                 @(ctxVendedor ? "Agregar / Editar Cuenta Bancaria" : "Nueva / Editar Cuenta (Administrador)")
             </div>
             <div class="card-body p-4">
                 <form method="post"
                       asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
                       asp-action="@(ctxVendedor ? "Save" : "SaveAdmin")"
-                      id="frmBanco" class="row g-4" novalidate>
+                      id="frmBanco"
+                      class="row g-4"
+                      novalidate
+                      aria-label="Formulario de cuenta bancaria">
                     @Html.AntiForgeryToken()
 
                     @if (adminAyudando)
                     {
-                        <input type="hidden" name="vId" value="@targetVendorId" />
+                        <input type="hidden" name="vId" value="@targetVendorId" aria-hidden="true" />
                     }
 
-                    <input type="hidden" id="OriginalCodigo" name="OriginalCodigo" />
+                    <input type="hidden" id="OriginalCodigo" name="OriginalCodigo" aria-hidden="true" />
+                    <input type="hidden" id="Codigo" name="Codigo" required aria-hidden="true" />
+                    <input type="hidden" id="Nombre" name="Nombre" required aria-hidden="true" />
+                    <input type="hidden" id="LogoPath" name="LogoPath" aria-hidden="true" />
 
                     <!-- Selección de Banco -->
                     <div class="col-12">
-                        <div class="mb-4">
-                            <h5 class="fw-semibold mb-3">
-                                <i class="fa-solid fa-building-columns me-2"></i>
-                                Selecciona un Banco
-                            </h5>
-                            <div class="bank-selector">
-                                @foreach (var b in catalogo)
-                                {
-                                    <div class="bank-option" data-bank-code="@b.Codigo" data-bank-name="@b.Nombre" data-bank-logo="@b.Logo">
-                                        <div class="bank-option-logo-container">
-                                            <img src="@b.Logo" class="bank-option-logo" alt="@b.Nombre"
-                                                 onerror="this.src='/images/placeholder-bank.png'">
-                                        </div>
-                                        <span class="bank-option-name fw-medium">@b.Nombre</span>
+                        <h5 class="fw-semibold mb-3">
+                            <i class="fa-solid fa-building-columns me-2" aria-hidden="true"></i>
+                            Selecciona un Banco
+                        </h5>
+                        <div class="bank-selector" role="radiogroup" aria-label="Selecciona un banco">
+                            @foreach (var bank in bankCatalog)
+                            {
+                                <div class="bank-option"
+                                     data-bank-code="@bank.Codigo"
+                                     data-bank-name="@bank.Nombre"
+                                     data-bank-logo="@bank.Logo"
+                                     role="radio"
+                                     aria-checked="false"
+                                     aria-label="@bank.Nombre"
+                                     tabindex="0">
+                                    <div class="bank-option-logo-container">
+                                        <img src="@bank.Logo"
+                                             class="bank-option-logo"
+                                             alt="Logo de @bank.Nombre"
+                                             loading="lazy"
+                                             onerror="this.src='/images/placeholder-bank.png'" />
                                     </div>
-                                }
-                            </div>
+                                    <span class="bank-option-name">@bank.Nombre</span>
+                                </div>
+                            }
                         </div>
                     </div>
 
                     <!-- Vista Previa -->
                     <div class="col-12">
-                        <div class="bank-preview" id="bankPreview">
+                        <div class="bank-preview" id="bankPreview" role="status" aria-live="polite">
                             <div class="bank-logo-container">
-                                <img id="logoPreview" class="bank-logo" src="/images/placeholder-bank.png"
-                                     alt="Vista previa del banco">
+                                <img id="logoPreview"
+                                     class="bank-logo"
+                                     src="/images/placeholder-bank.png"
+                                     alt="Vista previa del banco" />
                             </div>
                             <div class="flex-grow-1">
                                 <h5 class="fw-bold mb-1" id="bankName">Selecciona un banco</h5>
-                                <p class="text-muted mb-0" id="bankDescription">Los datos del banco se establecerán automáticamente</p>
+                                <p class="text-muted mb-0 small" id="bankDescription">
+                                    Los datos del banco se establecerán automáticamente
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     <!-- Campos del formulario -->
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Número de Cuenta *</label>
-                        <input id="Numero" name="Numero" class="form-control" inputmode="numeric" maxlength="20"
-                               pattern="[0-9]{6,20}" placeholder="Ej. 2210704773" required>
-                        <div class="invalid-feedback">Ingresa un número de cuenta válido (6-20 dígitos)</div>
+                        <label for="Numero" class="form-label fw-semibold">
+                            Número de Cuenta <span class="text-danger">*</span>
+                        </label>
+                        <input id="Numero"
+                               name="Numero"
+                               type="text"
+                               class="form-control"
+                               inputmode="numeric"
+                               maxlength="20"
+                               pattern="[0-9]{6,20}"
+                               placeholder="Ej. 2210704773"
+                               required
+                               aria-required="true"
+                               aria-describedby="numeroHelp" />
+                        <div class="invalid-feedback">
+                            Ingresa un número de cuenta válido (6-20 dígitos)
+                        </div>
+                        <div id="numeroHelp" class="form-text">
+                            Solo números, entre 6 y 20 dígitos
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Tipo de Cuenta *</label>
-                        <select id="Tipo" name="Tipo" class="form-select" required>
+                        <label for="Tipo" class="form-label fw-semibold">
+                            Tipo de Cuenta <span class="text-danger">*</span>
+                        </label>
+                        <select id="Tipo"
+                                name="Tipo"
+                                class="form-select"
+                                required
+                                aria-required="true">
                             <option value="">Selecciona un tipo</option>
                             <option value="Cuenta de Ahorros">Cuenta de Ahorros</option>
                             <option value="Cuenta Corriente">Cuenta Corriente</option>
                         </select>
-                        <div class="invalid-feedback">Selecciona un tipo de cuenta</div>
+                        <div class="invalid-feedback">
+                            Selecciona un tipo de cuenta
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Nombre del Titular</label>
-                        <input id="Titular" name="Titular" class="form-control" placeholder="Nombre completo del titular" maxlength="120">
+                        <label for="Titular" class="form-label fw-semibold">
+                            Nombre del Titular
+                        </label>
+                        <input id="Titular"
+                               name="Titular"
+                               type="text"
+                               class="form-control"
+                               placeholder="Nombre completo del titular"
+                               maxlength="120"
+                               aria-describedby="titularHelp" />
+                        <div id="titularHelp" class="form-text">
+                            Opcional - Nombre del titular de la cuenta
+                        </div>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">RUC / Cédula</label>
-                        <input id="Ruc" name="Ruc" class="form-control" inputmode="numeric"
-                               pattern="^\d{10}(\d{3})?$" maxlength="13" placeholder="10 o 13 dígitos">
-                        <div class="invalid-feedback">Formato inválido. Use 10 o 13 dígitos</div>
+                        <label for="Ruc" class="form-label fw-semibold">
+                            RUC / Cédula
+                        </label>
+                        <input id="Ruc"
+                               name="Ruc"
+                               type="text"
+                               class="form-control"
+                               inputmode="numeric"
+                               pattern="^\d{10}(\d{3})?$"
+                               maxlength="13"
+                               placeholder="10 o 13 dígitos"
+                               aria-describedby="rucHelp" />
+                        <div class="invalid-feedback">
+                            Formato inválido. Use 10 o 13 dígitos
+                        </div>
+                        <div id="rucHelp" class="form-text">
+                            Opcional - Cédula (10) o RUC (13 dígitos)
+                        </div>
                     </div>
 
                     <!-- Estado -->
                     <div class="col-12">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="Activo" name="Activo" value="true" checked>
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   id="Activo"
+                                   name="Activo"
+                                   value="true"
+                                   checked
+                                   aria-describedby="activoHelp" />
                             <label class="form-check-label fw-semibold" for="Activo">
                                 Cuenta activa
                             </label>
                         </div>
-                        <div class="form-text">Las cuentas inactivas no se mostrarán a los clientes</div>
+                        <div id="activoHelp" class="form-text">
+                            Las cuentas inactivas no se mostrarán a los clientes
+                        </div>
                     </div>
-
-                    <!-- Campos Ocultos -->
-                    <input type="hidden" id="Codigo" name="Codigo" required>
-                    <input type="hidden" id="Nombre" name="Nombre" required>
-                    <input type="hidden" id="LogoPath" name="LogoPath">
 
                     <!-- Botones -->
                     <div class="col-12">
                         <div class="d-flex gap-2 pt-3 border-top">
-                            <button type="reset" class="btn btn-outline-secondary" id="btnLimpiar">
-                                <i class="fa-solid fa-eraser me-1"></i> Limpiar
+                            <button type="reset"
+                                    class="btn btn-outline-secondary"
+                                    id="btnLimpiar">
+                                <i class="fa-solid fa-eraser me-1" aria-hidden="true"></i>
+                                Limpiar
                             </button>
-                            <button type="submit" class="btn btn-primary" id="btnGuardar">
-                                <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cuenta
+                            <button type="submit"
+                                    class="btn btn-primary"
+                                    id="btnGuardar">
+                                <i class="fa-solid fa-floppy-disk me-1" aria-hidden="true"></i>
+                                Guardar Cuenta
                             </button>
                         </div>
                     </div>
@@ -411,61 +740,75 @@
         </div>
 
         <!-- Lista de Cuentas -->
-        <div class="card card-elev">
-            <div class="card-header bg-white d-flex align-items-center justify-content-between">
+        <div class="card card-bank">
+            <div class="card-header-bank d-flex align-items-center justify-content-between">
                 <h5 class="mb-0">
-                    <i class="fa-solid fa-list-check me-2"></i> Cuentas Registradas
+                    <i class="fa-solid fa-list-check me-2" aria-hidden="true"></i>
+                    Cuentas Registradas
                 </h5>
-                <span class="badge bg-primary">@cuentas.Count() cuenta(s)</span>
+                <span class="badge bg-white text-primary">
+                    @totalCuentas cuenta@(totalCuentas != 1 ? "s" : "")
+                </span>
             </div>
             <div class="card-body p-0">
-                @if (cuentas.Any())
+                @if (cuentasList.Any())
                 {
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-bank table-hover align-middle mb-0"
+                               role="table"
+                               aria-label="Lista de cuentas bancarias">
                             <thead>
                                 <tr>
-                                    <th>Banco</th>
-                                    <th>Número</th>
-                                    <th>Tipo</th>
-                                    <th>Titular</th>
-                                    <th>Estado</th>
-                                    <th class="text-center">Acciones</th>
+                                    <th scope="col">Banco</th>
+                                    <th scope="col">Número</th>
+                                    <th scope="col">Tipo</th>
+                                    <th scope="col">Titular</th>
+                                    <th scope="col">Estado</th>
+                                    <th scope="col" class="text-center">Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach (var c in cuentas)
+                                @foreach (var cuenta in cuentasList)
                                 {
+                                    var bankName = GetBankName(cuenta.Codigo ?? "", cuenta.Nombre);
+                                    var bankLogo = GetBankLogoUrl(cuenta.Codigo ?? "", cuenta.LogoPath);
+
                                     <tr>
                                         <td>
-                                            <div class="d-flex align-items-center">
-                                                <div class="bank-logo-container me-3">
-                                                    <img src="@c.LogoPath" class="bank-logo-sm"
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="bank-logo-container bank-logo-sm">
+                                                    <img src="@bankLogo"
+                                                         class="bank-logo"
                                                          onerror="this.src='/images/placeholder-bank.png'"
-                                                         alt="@c.Nombre">
+                                                         alt="Logo de @bankName"
+                                                         loading="lazy" />
                                                 </div>
                                                 <div>
-                                                    <div class="fw-semibold">@c.Nombre</div>
-                                                    <small class="text-muted">@c.Codigo</small>
+                                                    <div class="fw-semibold">@bankName</div>
+                                                    <small class="text-muted">@cuenta.Codigo</small>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="fw-mono">@c.Numero</td>
-                                        <td>@c.Tipo</td>
                                         <td>
-                                            @(!string.IsNullOrWhiteSpace(c.Titular) ? c.Titular : "—")
+                                            <span class="font-monospace">@cuenta.Numero</span>
+                                        </td>
+                                        <td>@cuenta.Tipo</td>
+                                        <td>
+                                            @(!string.IsNullOrWhiteSpace(cuenta.Titular) ? cuenta.Titular : "—")
                                         </td>
                                         <td>
-                                            @if (c.Activo)
+                                            @if (cuenta.Activo)
                                             {
-                                                <span class="status-badge active">
-                                                    <i class="fa-solid fa-circle"></i> Activa
+                                                <span class="status-badge active" role="status">
+                                                    <i class="fa-solid fa-circle" aria-hidden="true"></i>
+                                                    Activa
                                                 </span>
                                             }
                                             else
                                             {
-                                                <span class="status-badge inactive">
-                                                    <i class="fa-solid fa-circle"></i> Inactiva
+                                                <span class="status-badge inactive" role="status">
+                                                    <i class="fa-solid fa-circle" aria-hidden="true"></i>
+                                                    Inactiva
                                                 </span>
                                             }
                                         </td>
@@ -473,32 +816,36 @@
                                             <div class="d-flex gap-2 justify-content-center">
                                                 <button type="button"
                                                         class="btn btn-outline-primary btn-sm"
-                                                        data-codigo="@c.Codigo"
-                                                        data-nombre="@c.Nombre"
-                                                        data-numero="@c.Numero"
-                                                        data-tipo="@c.Tipo"
-                                                        data-titular="@c.Titular"
-                                                        data-ruc="@c.Ruc"
-                                                        data-logo="@c.LogoPath"
-                                                        data-activo="@c.Activo"
+                                                        data-codigo="@cuenta.Codigo"
+                                                        data-nombre="@cuenta.Nombre"
+                                                        data-numero="@cuenta.Numero"
+                                                        data-tipo="@cuenta.Tipo"
+                                                        data-titular="@cuenta.Titular"
+                                                        data-ruc="@cuenta.Ruc"
+                                                        data-logo="@cuenta.LogoPath"
+                                                        data-activo="@cuenta.Activo"
                                                         onclick="editarDesdeData(this)"
+                                                        aria-label="Editar cuenta de @bankName"
                                                         title="Editar cuenta">
-                                                    <i class="fa-regular fa-pen-to-square"></i>
+                                                    <i class="fa-regular fa-pen-to-square" aria-hidden="true"></i>
                                                 </button>
 
                                                 <form method="post"
                                                       asp-controller="@(ctxVendedor ? "Vendedor" : "AdminBancos")"
                                                       asp-action="@(ctxVendedor ? "Delete" : "DeleteAdmin")"
                                                       class="d-inline"
-                                                      onsubmit="return confirm('¿Estás seguro de eliminar la cuenta de @c.Nombre?');">
+                                                      onsubmit="return confirm('¿Estás seguro de eliminar la cuenta de @bankName (@cuenta.Numero)?');">
                                                     @Html.AntiForgeryToken()
                                                     @if (adminAyudando)
                                                     {
-                                                        <input type="hidden" name="vId" value="@targetVendorId" />
+                                                        <input type="hidden" name="vId" value="@targetVendorId" aria-hidden="true" />
                                                     }
-                                                    <input type="hidden" name="codigo" value="@c.Codigo" />
-                                                    <button class="btn btn-outline-danger btn-sm" type="submit" title="Eliminar cuenta">
-                                                        <i class="fa-regular fa-trash-can"></i>
+                                                    <input type="hidden" name="codigo" value="@cuenta.Codigo" aria-hidden="true" />
+                                                    <button class="btn btn-outline-danger btn-sm"
+                                                            type="submit"
+                                                            aria-label="Eliminar cuenta de @bankName"
+                                                            title="Eliminar cuenta">
+                                                        <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
                                                     </button>
                                                 </form>
                                             </div>
@@ -511,166 +858,354 @@
                 }
                 else
                 {
-                    <div class="text-center py-5">
-                        <i class="fa-solid fa-university fa-3x text-muted mb-3"></i>
-                        <h5 class="text-muted">No hay cuentas registradas</h5>
-                        <p class="text-muted">Comienza agregando tu primera cuenta bancaria</p>
+                    <div class="empty-state" role="status">
+                        <div class="empty-state-icon">
+                            <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+                        </div>
+                        <h5 class="text-muted mb-2">No hay cuentas registradas</h5>
+                        <p class="text-muted mb-3">
+                            Comienza agregando tu primera cuenta bancaria usando el formulario anterior
+                        </p>
+                        <button type="button"
+                                class="btn btn-primary"
+                                onclick="document.getElementById('Numero').focus()">
+                            <i class="fa-solid fa-plus-circle me-2" aria-hidden="true"></i>
+                            Agregar Primera Cuenta
+                        </button>
                     </div>
                 }
             </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+@section Scripts {
     <script>
-        (() => {
-            // Elementos del DOM
-            const bankOptions = document.querySelectorAll('.bank-option');
-            const bankPreview = document.getElementById('bankPreview');
-            const nameL = document.getElementById('bankName');
-            const descL = document.getElementById('bankDescription');
-            const logo = document.getElementById('logoPreview');
+        (function() {
+            'use strict';
 
-            const f = document.getElementById('frmBanco');
-            const hOrig = document.getElementById('OriginalCodigo');
-            const hCod = document.getElementById('Codigo');
-            const hNom = document.getElementById('Nombre');
-            const hLogo = document.getElementById('LogoPath');
-            const inpN = document.getElementById('Numero');
-            const selT = document.getElementById('Tipo');
-            const inpTi = document.getElementById('Titular');
-            const inpR = document.getElementById('Ruc');
-            const chkA = document.getElementById('Activo');
-            const btnG = document.getElementById('btnGuardar');
+            // ============================================
+            // BANK MANAGEMENT - JavaScript Module
+            // ============================================
 
-            // Configurar selección de bancos
-            bankOptions.forEach(option => {
-                option.addEventListener('click', function() {
-                    // Remover clase activa de todas las opciones
-                    bankOptions.forEach(opt => {
-                        opt.classList.remove('active');
-                        opt.style.borderColor = '';
-                    });
+            const CONFIG = {
+                selectors: {
+                    form: '#frmBanco',
+                    bankOptions: '.bank-option',
+                    bankPreview: '#bankPreview',
+                    inputs: {
+                        originalCode: '#OriginalCodigo',
+                        code: '#Codigo',
+                        name: '#Nombre',
+                        logo: '#LogoPath',
+                        number: '#Numero',
+                        type: '#Tipo',
+                        holder: '#Titular',
+                        ruc: '#Ruc',
+                        active: '#Activo'
+                    },
+                    preview: {
+                        logo: '#logoPreview',
+                        name: '#bankName',
+                        description: '#bankDescription'
+                    },
+                    buttons: {
+                        save: '#btnGuardar',
+                        clear: '#btnLimpiar'
+                    }
+                },
+                classes: {
+                    active: 'active',
+                    loading: 'btn-loading',
+                    validated: 'was-validated'
+                },
+                messages: {
+                    selectBank: 'Por favor selecciona un banco de la lista.',
+                    configured: 'Cuenta bancaria configurada - Lista para guardar',
+                    selectBankDefault: 'Los datos del banco se establecerán automáticamente',
+                    defaultBankName: 'Selecciona un banco'
+                }
+            };
 
-                    // Agregar clase activa a la opción seleccionada
-                    this.classList.add('active');
+            const elements = {};
 
-                    // Obtener datos del banco
-                    const code = this.getAttribute('data-bank-code');
-                    const name = this.getAttribute('data-bank-name');
-                    const logoPath = this.getAttribute('data-bank-logo');
+            /**
+             * Inicializa referencias del DOM
+             */
+            function initializeDOM() {
+                // Form elements
+                elements.form = document.querySelector(CONFIG.selectors.form);
+                elements.bankOptions = document.querySelectorAll(CONFIG.selectors.bankOptions);
+                elements.bankPreview = document.querySelector(CONFIG.selectors.bankPreview);
 
-                    // Actualizar campos ocultos
-                    hCod.value = code;
-                    hNom.value = name;
-                    hLogo.value = logoPath;
-
-                    // Actualizar vista previa
-                    setPreview(name, logoPath, true);
+                // Inputs
+                Object.keys(CONFIG.selectors.inputs).forEach(key => {
+                    elements[key] = document.querySelector(CONFIG.selectors.inputs[key]);
                 });
-            });
 
-            function setPreview(nombre, logoPath, configured = false) {
+                // Preview elements
+                Object.keys(CONFIG.selectors.preview).forEach(key => {
+                    elements.preview = elements.preview || {};
+                    elements.preview[key] = document.querySelector(CONFIG.selectors.preview[key]);
+                });
+
+                // Buttons
+                Object.keys(CONFIG.selectors.buttons).forEach(key => {
+                    elements.buttons = elements.buttons || {};
+                    elements.buttons[key] = document.querySelector(CONFIG.selectors.buttons[key]);
+                });
+            }
+
+            /**
+             * Actualiza la vista previa del banco
+             */
+            function updatePreview(name, logoPath, configured = false) {
+                if (!elements.preview) return;
+
                 if (configured) {
-                    nameL.textContent = nombre || "Banco no especificado";
-                    descL.textContent = "Cuenta bancaria configurada - Lista para guardar";
-                    bankPreview.classList.add('active');
+                    elements.preview.name.textContent = name || 'Banco no especificado';
+                    elements.preview.description.textContent = CONFIG.messages.configured;
+                    elements.bankPreview?.classList.add(CONFIG.classes.active);
                 } else {
-                    nameL.textContent = "Selecciona un banco";
-                    descL.textContent = "Los datos del banco se establecerán automáticamente";
-                    bankPreview.classList.remove('active');
+                    elements.preview.name.textContent = CONFIG.messages.defaultBankName;
+                    elements.preview.description.textContent = CONFIG.messages.selectBankDefault;
+                    elements.bankPreview?.classList.remove(CONFIG.classes.active);
                 }
 
-                // CORRECCIÓN: Manejo mejorado de imágenes
-                if (logoPath && logoPath !== "/images/placeholder-bank.png") {
+                // Cargar logo con fallback
+                if (logoPath && logoPath !== '/images/placeholder-bank.png') {
                     const img = new Image();
+                    img.onload = () => {
+                        if (elements.preview.logo) {
+                            elements.preview.logo.src = logoPath;
+                        }
+                    };
+                    img.onerror = () => {
+                        if (elements.preview.logo) {
+                            elements.preview.logo.src = '/images/placeholder-bank.png';
+                        }
+                    };
                     img.src = logoPath;
-                    img.onload = function() {
-                        logo.src = logoPath;
-                    };
-                    img.onerror = function() {
-                        logo.src = '/images/placeholder-bank.png';
-                    };
                 } else {
-                    logo.src = '/images/placeholder-bank.png';
+                    if (elements.preview.logo) {
+                        elements.preview.logo.src = '/images/placeholder-bank.png';
+                    }
                 }
             }
 
-            window.editarDesdeData = function (btn) {
-                const d = btn.dataset;
+            /**
+             * Maneja la selección de un banco
+             */
+            function handleBankSelection(option) {
+                // Remover selección previa
+                elements.bankOptions.forEach(opt => {
+                    opt.classList.remove(CONFIG.classes.active);
+                    opt.setAttribute('aria-checked', 'false');
+                });
+
+                // Marcar como seleccionado
+                option.classList.add(CONFIG.classes.active);
+                option.setAttribute('aria-checked', 'true');
+
+                // Obtener datos
+                const code = option.dataset.bankCode;
+                const name = option.dataset.bankName;
+                const logo = option.dataset.bankLogo;
+
+                // Actualizar campos hidden
+                if (elements.code) elements.code.value = code || '';
+                if (elements.name) elements.name.value = name || '';
+                if (elements.logo) elements.logo.value = logo || '';
+
+                // Actualizar vista previa
+                updatePreview(name, logo, true);
+            }
+
+            /**
+             * Limpia el formulario
+             */
+            function clearForm() {
+                if (!elements.form) return;
+
+                setTimeout(() => {
+                    elements.form.reset();
+
+                    // Remover selecciones de banco
+                    elements.bankOptions.forEach(opt => {
+                        opt.classList.remove(CONFIG.classes.active);
+                        opt.setAttribute('aria-checked', 'false');
+                    });
+
+                    // Limpiar campos hidden
+                    if (elements.originalCode) elements.originalCode.value = '';
+                    if (elements.code) elements.code.value = '';
+                    if (elements.name) elements.name.value = '';
+                    if (elements.logo) elements.logo.value = '';
+
+                    // Resetear vista previa
+                    updatePreview(null, null, false);
+
+                    // Remover validación
+                    elements.form.classList.remove(CONFIG.classes.validated);
+
+                    // Resetear botón
+                    if (elements.buttons.save) {
+                        elements.buttons.save.disabled = false;
+                        elements.buttons.save.innerHTML = '<i class="fa-solid fa-floppy-disk me-1" aria-hidden="true"></i> Guardar Cuenta';
+                    }
+
+                    // Marcar activo por defecto
+                    if (elements.active) elements.active.checked = true;
+                }, 0);
+            }
+
+            /**
+             * Edita una cuenta desde data attributes
+             */
+            window.editarDesdeData = function(button) {
+                const data = button.dataset;
                 editar(
-                    d.codigo, d.nombre || '', d.numero || '', d.tipo || '',
-                    d.titular || '', d.ruc || '', d.logo || '', d.activo === 'true'
+                    data.codigo,
+                    data.nombre || '',
+                    data.numero || '',
+                    data.tipo || '',
+                    data.titular || '',
+                    data.ruc || '',
+                    data.logo || '',
+                    data.activo === 'True'
                 );
             };
 
+            /**
+             * Carga datos de cuenta para edición
+             */
             window.editar = function(codigo, nombre, numero, tipo, titular, ruc, logoPath, activo) {
-                // Restablecer selección de bancos
-                bankOptions.forEach(opt => opt.classList.remove('active'));
+                // Remover selecciones previas
+                elements.bankOptions.forEach(opt => {
+                    opt.classList.remove(CONFIG.classes.active);
+                    opt.setAttribute('aria-checked', 'false');
+                });
 
-                // Seleccionar el banco correspondiente
-                const bankOption = Array.from(bankOptions).find(opt =>
-                    opt.getAttribute('data-bank-code') === codigo);
+                // Seleccionar banco correspondiente
+                const bankOption = Array.from(elements.bankOptions).find(opt =>
+                    opt.dataset.bankCode === codigo
+                );
 
                 if (bankOption) {
-                    bankOption.classList.add('active');
+                    bankOption.classList.add(CONFIG.classes.active);
+                    bankOption.setAttribute('aria-checked', 'true');
                 }
 
-                // Actualizar campos del formulario
-                hOrig.value = codigo;
-                hCod.value = codigo;
-                hNom.value = nombre || codigo;
-                hLogo.value = logoPath || "/images/placeholder-bank.png";
-
-                inpN.value = numero || "";
-                selT.value = tipo || "";
-                inpTi.value = titular || "";
-                inpR.value = ruc || "";
-                chkA.checked = (activo === true || activo === "true");
+                // Actualizar campos
+                if (elements.originalCode) elements.originalCode.value = codigo;
+                if (elements.code) elements.code.value = codigo;
+                if (elements.name) elements.name.value = nombre || codigo;
+                if (elements.logo) elements.logo.value = logoPath || '/images/placeholder-bank.png';
+                if (elements.number) elements.number.value = numero || '';
+                if (elements.type) elements.type.value = tipo || '';
+                if (elements.holder) elements.holder.value = titular || '';
+                if (elements.ruc) elements.ruc.value = ruc || '';
+                if (elements.active) elements.active.checked = (activo === true || activo === 'True');
 
                 // Actualizar vista previa
-                setPreview(nombre, logoPath, true);
+                updatePreview(nombre, logoPath, true);
 
-                // Desplazar al formulario
-                window.scrollTo({ top: 0, behavior: "smooth" });
+                // Scroll al formulario
+                window.scrollTo({ top: 0, behavior: 'smooth' });
 
-                // Actualizar texto del botón
-                btnG.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i> Actualizar Cuenta';
+                // Actualizar botón
+                if (elements.buttons.save) {
+                    elements.buttons.save.innerHTML = '<i class="fa-solid fa-pen-to-square me-1" aria-hidden="true"></i> Actualizar Cuenta';
+                }
             };
 
-            document.getElementById('btnLimpiar')?.addEventListener('click', () => {
-                setTimeout(() => {
-                    f.reset();
-                    bankOptions.forEach(opt => opt.classList.remove('active'));
-                    hOrig.value = "";
-                    hCod.value = hNom.value = hLogo.value = "";
-                    setPreview(null, null, false);
-                    f.classList.remove('was-validated');
-                    btnG.disabled = false;
-                    btnG.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cuenta';
-                    chkA.checked = true;
-                }, 0);
-            });
+            /**
+             * Inicializa event listeners
+             */
+            function initializeEventListeners() {
+                // Selección de bancos
+                elements.bankOptions.forEach(option => {
+                    // Click event
+                    option.addEventListener('click', function() {
+                        handleBankSelection(this);
+                    });
 
-            f?.addEventListener('submit', (e) => {
-                // Validar que se haya seleccionado un banco
-                if (!hCod.value) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    alert('Por favor selecciona un banco de la lista.');
-                    return;
+                    // Keyboard support
+                    option.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleBankSelection(this);
+                        }
+                    });
+                });
+
+                // Botón limpiar
+                if (elements.buttons.clear) {
+                    elements.buttons.clear.addEventListener('click', clearForm);
                 }
 
-                if (!f.checkValidity()) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                } else {
-                    btnG.disabled = true;
-                    btnG.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Guardando...';
+                // Form submit
+                if (elements.form) {
+                    elements.form.addEventListener('submit', function(e) {
+                        // Validar que se haya seleccionado un banco
+                        if (!elements.code || !elements.code.value) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            alert(CONFIG.messages.selectBank);
+                            return false;
+                        }
+
+                        // ========== FIX: Manejar checkbox Activo correctamente ==========
+                        // Remover cualquier hidden input previo de Activo
+                        const existingHidden = this.querySelector('input[type="hidden"][name="Activo"]');
+                        if (existingHidden) {
+                            existingHidden.remove();
+                        }
+
+                        // Si el checkbox NO está marcado, agregar hidden input con false
+                        const activoCheckbox = elements.active;
+                        if (activoCheckbox && !activoCheckbox.checked) {
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = 'Activo';
+                            hiddenInput.value = 'false';
+                            this.appendChild(hiddenInput);
+                        }
+                        // Si está marcado, el checkbox enviará value="true" automáticamente
+                        // ================================================================
+
+                        if (!this.checkValidity()) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        } else {
+                            // Loading state
+                            if (elements.buttons.save) {
+                                elements.buttons.save.classList.add(CONFIG.classes.loading);
+                                elements.buttons.save.disabled = true;
+                                // No cambiar innerHTML para que el pseudo-element ::after funcione
+                            }
+                        }
+
+                        this.classList.add(CONFIG.classes.validated);
+                    });
                 }
-                f.classList.add('was-validated');
-            });
+            }
+
+            /**
+             * Inicialización principal
+             */
+            function init() {
+                initializeDOM();
+                initializeEventListeners();
+                console.log('✓ Bank management initialized');
+            }
+
+            // Ejecutar cuando el DOM esté listo
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
         })();
     </script>
-</body>
-</html>
+}

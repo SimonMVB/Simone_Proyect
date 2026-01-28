@@ -1,113 +1,534 @@
 ﻿@model IEnumerable<Simone.Models.CarritoDetalle>
 @using System.Globalization
 @{
+    Layout = null;
+
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
+    var cartItems = Model?.ToList() ?? new List<Simone.Models.CarritoDetalle>();
+    var hasItems = cartItems.Any();
+    var itemCount = cartItems.Sum(x => x.Cantidad);
+    var totalAmount = cartItems.Sum(x => x.Precio * x.Cantidad);
+    var defaultImg = Url.Content("~/images/Productos/default.jpg");
 
-    string Img(string? src) => string.IsNullOrWhiteSpace(src)
-        ? Url.Content("~/images/Productos/default.jpg")
-        : src!;
+    string GetImageUrl(Simone.Models.CarritoDetalle item) =>
+        !string.IsNullOrWhiteSpace(item?.Variante?.ImagenPath) ? item.Variante.ImagenPath :
+        !string.IsNullOrWhiteSpace(item?.Producto?.ImagenPath) ? item.Producto.ImagenPath : defaultImg;
 
-    // Escoge imagen de variante si existe; si no, la del producto
-    string ImgFor(Simone.Models.CarritoDetalle it)
-        => Img(it?.Variante?.ImagenPath ?? it?.Producto?.ImagenPath);
-
-    decimal total = Model?.Sum(x => x.Precio * x.Cantidad) ?? 0m;
+    string GetItemName(Simone.Models.CarritoDetalle item) =>
+        item?.Producto?.Nombre ?? "Producto";
 }
 
 <div id="mini-cart" class="cart-partial">
-    <h5 class="mb-3">Mis artículos</h5>
-    <hr />
 
-    @if (Model == null || !Model.Any())
+    <!-- Header -->
+    <div class="cart-header">
+        <div class="d-flex align-items-center justify-content-between">
+            <h2 class="cart-title">
+                <i class="fa-solid fa-shopping-bag"></i>
+                Mis artículos
+            </h2>
+            <span class="cart-badge-count" data-cart-count>@itemCount</span>
+        </div>
+    </div>
+
+    @if (!hasItems)
     {
-        <div class="alert alert-info mb-0" role="alert">
-            No tienes artículos en tu carrito.
+        <!-- Estado vacío -->
+        <div class="cart-empty">
+            <div class="cart-empty-icon">
+                <i class="fa-solid fa-cart-shopping"></i>
+            </div>
+            <h3>Tu carrito está vacío</h3>
+            <p>¡Explora nuestros productos!</p>
+            <a href="@Url.Action("Catalogo", "Compras")" class="btn-explore">
+                <i class="fa-solid fa-store me-2"></i>
+                Explorar productos
+            </a>
         </div>
     }
     else
     {
-        <!-- token global reutilizable para AJAX -->
-        <form id="mini-cart-af" class="d-none" method="post">@Html.AntiForgeryToken()</form>
-
-        <ul class="list-group">
-            @foreach (var item in Model)
+        <!-- Lista de productos -->
+        <div class="cart-items">
+            @foreach (var item in cartItems)
             {
-                var p = item.Producto;
-                var v = item.Variante; // puede ser null
-                                       <li class="list-group-item" data-row data-id="@item.ProductoID" data-det-id="@item.CarritoDetalleID">
-                                           <div class="row align-items-center g-2">
-                                               <!-- Imagen (variante -> producto -> default) -->
-                                               <div class="col-3">
-                                                   <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID">
-                                                       <img src="@ImgFor(item)"
-                                                            alt="@(p?.Nombre ?? "Producto")"
-                                                            class="img-fluid rounded"
-                                                            onerror="this.src='@Url.Content("~/images/Productos/default.jpg")';" />
-                                                   </a>
-                                               </div>
+                var subtotal = item.Precio * item.Cantidad;
+                var hasVariant = item.Variante != null &&
+                (!string.IsNullOrWhiteSpace(item.Variante.Color) || !string.IsNullOrWhiteSpace(item.Variante.Talla));
 
-                        <!-- Detalles -->
-                        <div class="col-6">
-                            <h6 class="mb-1 text-truncate">
-                                <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@item.ProductoID" class="text-decoration-none">
-                                    @(p?.Nombre ?? "Producto")
-                                </a>
-                                @* Variante: [Color/Talla] *@
-                                @if (v != null && (!string.IsNullOrWhiteSpace(v.Color) || !string.IsNullOrWhiteSpace(v.Talla)))
-                                {
-                                    <span class="text-muted small">
-                                        [
-                                        @if (!string.IsNullOrWhiteSpace(v.Color))
-                                        {
-                                            @v.Color
-                                        }
-             @if (!string.IsNullOrWhiteSpace(v.Color) && !string.IsNullOrWhiteSpace(v.Talla))
-            {
-                                            <text>/</text>
-                                        }
-                                        @if (!string.IsNullOrWhiteSpace(v.Talla))
-                                        {
-                                            @v.Talla
-                                        }
-                                        ]
-                                    </span>
-                                }
-                            </h6>
+                <div class="cart-item" data-item-id="@item.CarritoDetalleID">
 
-                            <div class="small text-muted">Cantidad: <span data-qty>@item.Cantidad</span></div>
-                            <div class="small">Precio: @item.Precio.ToString("C", culture)</div>
-                        </div>
+                    <!-- Imagen -->
+                    <a href="@Url.Action("VerProducto", "Compras", new { productoID = item.ProductoID })"
+                       class="cart-item-img">
+                        <img src="@GetImageUrl(item)"
+                             alt="@GetItemName(item)"
+                             loading="lazy"
+                             onerror="this.src='@defaultImg'" />
+                    </a>
 
-                        <!-- Total y acciones -->
-                        <div class="col-3 text-end">
-                            <div class="mb-2 fw-semibold" data-subtotal>
-                                @((item.Precio * item.Cantidad).ToString("C", culture))
-                            </div>
+                    <!-- Info -->
+                    <div class="cart-item-info">
+                        <a href="@Url.Action("VerProducto", "Compras", new { productoID = item.ProductoID })"
+                           class="cart-item-name">
+                            @GetItemName(item)
+                        </a>
 
-                            <!-- Fallback clásico (si no hay JS) -->
-                            <form asp-controller="Compras" asp-action="EliminarArticulo" method="post" class="d-inline">
-                                @Html.AntiForgeryToken()
-                                <input type="hidden" name="carritoDetalleID" value="@item.CarritoDetalleID" />
-                                <button type="submit" class="btn btn-sm btn-danger" title="Eliminar artículo">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </form>
+                        @if (hasVariant)
+                        {
+                            <span class="cart-item-variant">
+                                @(item.Variante!.Color)@((!string.IsNullOrWhiteSpace(item.Variante.Color) && !string.IsNullOrWhiteSpace(item.Variante.Talla)) ? " / " : "")@(item.Variante.Talla)
+                            </span>
+                        }
+
+                        <div class="cart-item-meta">
+                            <span>Cant: <strong>@item.Cantidad</strong></span>
+                            <span>@item.Precio.ToString("C2", culture)</span>
                         </div>
                     </div>
-                </li>
-            }
-        </ul>
 
-        <!-- Total general -->
-        <div class="mt-3 text-end">
-            <h5 class="mb-0">Total: <span id="mini-cart-total">@total.ToString("C", culture)</span></h5>
+                    <!-- Subtotal y eliminar con FORM (para AJAX) -->
+                    <div class="cart-item-actions">
+                        <span class="cart-item-subtotal">@subtotal.ToString("C2", culture)</span>
+
+                        <form class="remove-form"
+                              asp-controller="Carrito"
+                              asp-action="EliminarDelCarrito"
+                              method="post"
+                              data-ajax="true">
+                            <input type="hidden" name="carritoDetalleId" value="@item.CarritoDetalleID" />
+                            <button type="submit" class="btn-remove" title="Eliminar">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
         </div>
 
-        @if (User?.Identity?.IsAuthenticated == true)
-        {
-            <a href="@Url.Action("Resumen", "Compras")" class="btn btn-lg btn-success w-100 mt-3">
-                <i class="fa fa-shopping-cart me-2"></i> Comprar Ahora
-            </a>
-        }
+        <!-- Resumen -->
+        <div class="cart-summary">
+            <div class="cart-summary-row">
+                <span>Subtotal</span>
+                <span class="cart-summary-total" data-cart-total>@totalAmount.ToString("C2", culture)</span>
+            </div>
+            <p class="cart-summary-note">
+                <i class="fa-solid fa-truck me-1"></i>
+                Envío calculado en checkout
+            </p>
+
+            <div class="cart-summary-actions">
+                <a href="@Url.Action("Resumen", "Compras")" class="btn-checkout">
+                    <i class="fa-solid fa-lock me-2"></i>
+                    Proceder al pago
+                </a>
+                <a href="@Url.Action("Catalogo", "Compras")" class="btn-continue">
+                    Continuar comprando
+                </a>
+            </div>
+        </div>
     }
 </div>
+
+<style>
+    .cart-partial {
+        --cart-primary: #e8b4b8;
+        --cart-primary-dark: #d89da2;
+        --cart-danger: #ef4444;
+        --cart-text: #1f2937;
+        --cart-text-muted: #6b7280;
+        --cart-border: #e5e7eb;
+        --cart-bg-hover: #f9fafb;
+        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+        color: var(--cart-text);
+    }
+
+    .cart-header {
+        padding: 0 0 1rem;
+        border-bottom: 1px solid var(--cart-border);
+        margin-bottom: 1rem;
+    }
+
+    .cart-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+        .cart-title i {
+            color: var(--cart-primary-dark);
+        }
+
+    .cart-badge-count {
+        background: var(--cart-primary);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.6rem;
+        border-radius: 50px;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .cart-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+    }
+
+    .cart-empty-icon {
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, var(--cart-primary), var(--cart-primary-dark));
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+
+        .cart-empty-icon i {
+            font-size: 1.75rem;
+            color: #fff;
+        }
+
+    .cart-empty h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .cart-empty p {
+        font-size: 0.85rem;
+        color: var(--cart-text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .btn-explore {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: var(--cart-primary);
+        color: #fff;
+        border-radius: 50px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+        .btn-explore:hover {
+            background: var(--cart-primary-dark);
+            color: #fff;
+        }
+
+    .cart-items {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .cart-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--cart-border);
+        transition: all 0.3s ease;
+    }
+
+        .cart-item:last-child {
+            border-bottom: none;
+        }
+
+        .cart-item.removing {
+            opacity: 0;
+            transform: translateX(50px);
+            max-height: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+    .cart-item-img {
+        flex-shrink: 0;
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--cart-bg-hover);
+    }
+
+        .cart-item-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .cart-item-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.2rem;
+    }
+
+    .cart-item-name {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: var(--cart-text);
+        text-decoration: none;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+        .cart-item-name:hover {
+            color: var(--cart-primary-dark);
+        }
+
+    .cart-item-variant {
+        font-size: 0.7rem;
+        color: var(--cart-text-muted);
+        background: var(--cart-bg-hover);
+        padding: 0.1rem 0.4rem;
+        border-radius: 4px;
+        width: fit-content;
+    }
+
+    .cart-item-meta {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--cart-text-muted);
+    }
+
+        .cart-item-meta strong {
+            color: var(--cart-text);
+        }
+
+    .cart-item-actions {
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        justify-content: space-between;
+    }
+
+    .cart-item-subtotal {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--cart-primary-dark);
+    }
+
+    .remove-form {
+        margin: 0;
+        padding: 0;
+    }
+
+    .btn-remove {
+        width: 26px;
+        height: 26px;
+        border: none;
+        background: transparent;
+        color: var(--cart-text-muted);
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: all 0.2s;
+    }
+
+        .btn-remove:hover {
+            background: #fef2f2;
+            color: var(--cart-danger);
+        }
+
+        .btn-remove:disabled {
+            opacity: 0.5;
+            cursor: wait;
+        }
+
+    .cart-summary {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 2px solid var(--cart-border);
+    }
+
+    .cart-summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+
+        .cart-summary-row span:first-child {
+            font-weight: 500;
+        }
+
+    .cart-summary-total {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--cart-primary-dark);
+    }
+
+    .cart-summary-note {
+        font-size: 0.7rem;
+        color: var(--cart-text-muted);
+        margin-bottom: 1rem;
+    }
+
+    .cart-summary-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .btn-checkout {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.7rem 1rem;
+        background: linear-gradient(135deg, var(--cart-primary), var(--cart-primary-dark));
+        color: #fff;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+        .btn-checkout:hover {
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(232, 180, 184, 0.4);
+        }
+
+    .btn-view-cart {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.6rem 1rem;
+        background: transparent;
+        color: var(--cart-text);
+        border: 1px solid var(--cart-border);
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-decoration: none;
+    }
+
+        .btn-view-cart:hover {
+            background: var(--cart-bg-hover);
+            border-color: var(--cart-primary);
+            color: var(--cart-text);
+        }
+
+    .btn-continue {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem;
+        color: var(--cart-text-muted);
+        font-size: 0.75rem;
+        text-decoration: none;
+    }
+
+        .btn-continue:hover {
+            color: var(--cart-primary-dark);
+        }
+</style>
+
+<script>
+    (function() {
+        'use strict';
+
+        const cartPartial = document.getElementById('mini-cart');
+        if (!cartPartial) return;
+
+        // Formatear moneda
+        const formatCurrency = (amount) => new Intl.NumberFormat('es-EC', {
+            style: 'currency', currency: 'USD'
+        }).format(amount);
+
+        // Actualizar badges globales
+        const updateBadges = (count) => {
+            document.querySelectorAll('[data-cart-count], .cart-count, .cart-badge').forEach(el => {
+                el.textContent = count;
+            });
+        };
+
+        // Actualizar totales
+        const updateTotals = (total) => {
+            document.querySelectorAll('[data-cart-total]').forEach(el => {
+                el.textContent = formatCurrency(total);
+            });
+        };
+
+        // Manejar forms con AJAX
+        cartPartial.querySelectorAll('.remove-form[data-ajax="true"]').forEach(form => {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const btn = this.querySelector('.btn-remove');
+                const item = this.closest('.cart-item');
+
+                if (!btn || !item) return;
+
+                // Deshabilitar botón
+                btn.disabled = true;
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+                try {
+                    // Usar FormData del form - INCLUYE el token CSRF automáticamente
+                    const formData = new FormData(this);
+
+                    const response = await fetch(this.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Error del servidor');
+                    }
+
+                    const data = await response.json();
+
+                    if (data.ok) {
+                        // Animar y eliminar
+                        item.classList.add('removing');
+
+                        setTimeout(() => {
+                            item.remove();
+                            updateBadges(data.count);
+                            updateTotals(data.total);
+
+                            // Actualizar badge local
+                            const localBadge = cartPartial.querySelector('.cart-badge-count');
+                            if (localBadge) localBadge.textContent = data.count;
+
+                            // Si no hay más items, recargar
+                            if (!cartPartial.querySelector('.cart-item')) {
+                                location.reload();
+                            }
+                        }, 300);
+                    } else {
+                        throw new Error(data.error || 'No se pudo eliminar');
+                    }
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    alert('No se pudo eliminar el producto. Intenta de nuevo.');
+                }
+            });
+        });
+
+        console.log('✓ Cart partial ready');
+    })();
+</script>

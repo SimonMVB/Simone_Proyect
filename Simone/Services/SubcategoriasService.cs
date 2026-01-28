@@ -592,8 +592,8 @@ namespace Simone.Services
 
                 // ✅ CORREGIDO: Sin .HasValue ni .Value
                 return await query
-                    .Where(p => p.SubcategoriaID != null && p.SubcategoriaID > 0)  // ✅ Verificación simple
-                    .GroupBy(p => p.SubcategoriaID)                                 // ✅ Sin .Value
+                    .Where(p => p.SubcategoriaID.HasValue && p.SubcategoriaID.Value > 0)  // ✅ Verificación simple
+                    .GroupBy(p => p.SubcategoriaID.Value)                                 // ✅ Sin .Value
                     .Select(g => new { SubcategoriaId = g.Key, Count = g.Count() })
                     .ToDictionaryAsync(x => x.SubcategoriaId, x => x.Count);
             }

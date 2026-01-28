@@ -1,813 +1,316 @@
-﻿@{
+﻿@inject UserManager<Usuario> UserManager
+@inject SignInManager<Usuario> SignInManager
+
+@{
     var carrito = Context.Items["Carrito"] as IEnumerable<Simone.Models.CarritoDetalle>;
     var cartCount = Context.Items["CartCount"] ?? 0;
+    var isCartLocked = Context.Items["CartLocked"]?.ToString() == "1";
 }
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Meta tags esenciales -->
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>@ViewData["Title"] - Neo Agora</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
+    <!-- SEO -->
+    <title>@ViewData["Title"] - Neo Agora</title>
+    <meta name="description" content="@(ViewData["Description"] ?? "Neo Agora - Tu tienda online de moda")" />
+    <meta name="keywords" content="@(ViewData["Keywords"] ?? "moda, ropa, tienda online, fashion")" />
+    <meta name="author" content="Neo Agora" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="@Context.Request.Scheme://@Context.Request.Host@Context.Request.Path" />
+    <meta property="og:title" content="@ViewData["Title"] - Neo Agora" />
+    <meta property="og:description" content="@(ViewData["Description"] ?? "Neo Agora - Tu tienda online de moda")" />
+    <meta property="og:image" content="@(ViewData["OgImage"] ?? "/images/og-default.jpg")" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="@Context.Request.Scheme://@Context.Request.Host@Context.Request.Path" />
+    <meta property="twitter:title" content="@ViewData["Title"] - Neo Agora" />
+    <meta property="twitter:description" content="@(ViewData["Description"] ?? "Neo Agora - Tu tienda online de moda")" />
+    <meta property="twitter:image" content="@(ViewData["OgImage"] ?? "/images/og-default.jpg")" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="~/apple-touch-icon.png" />
+
+    <!-- Preconnect para CDNs (mejora performance) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    <link rel="preconnect" href="https://unpkg.com" crossorigin />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+
+    <!-- Estilos CSS -->
     <!-- Bootstrap 5 -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- FontAwesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
-    <!-- Swiper + Animate -->
-    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
+          crossorigin="anonymous" />
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          rel="stylesheet"
+          integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
+
+    <!-- Swiper -->
+    <link rel="stylesheet"
+          href="https://unpkg.com/swiper@11/swiper-bundle.min.css" />
+
+    <!-- Animate.css -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+          integrity="sha512-c42qTSw/wPZ3/5LBzD+Bw5f7bSF2oxou6wEb+I/lqeaKV5FDIfMvvRp772y4jcJLKuGUOpbJMdg/BTl50fJYAw=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
 
     <!-- Estilos personalizados -->
     <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
-    @RenderSection("Styles", required: false)
-    <style>
-        :root {
-            /* Layout */
-            --nav-h: 68px;
-            --z-navbar: 1100;
-            --z-overlay: 1080;
-            --z-modal: 1200;
-            /* Tema base */
-            --simone-bg: #000;
-            --simone-fg: #fff;
-            --simone-accent: #0d6efd;
-            --simone-danger: #dc3545;
-            --simone-success: #198754;
-        }
+    <link href="~/css/layout.css" rel="stylesheet" asp-append-version="true" />
 
-        /* Base */
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
+    @await RenderSectionAsync("Styles", required: false)
 
-        html {
-            scroll-padding-top: var(--nav-h);
-            scroll-behavior: smooth;
-        }
-
-        body {
-            padding-top: var(--nav-h);
-            overflow-x: hidden;
-            background-color: #f8f9fa;
-            position: relative;
-        }
-
-            body.no-scroll {
-                overflow: hidden;
-                position: fixed;
-                width: 100%;
-                height: 100%;
-            }
-
-        main {
-            padding-top: 8px;
-            position: relative;
-            z-index: 1;
-            min-height: 60vh;
-        }
-
-        /* ================= OVERLAY GLOBAL ================= */
-        .global-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: calc(var(--z-overlay) - 1);
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-        }
-
-            .global-overlay.show {
-                opacity: 0;
-                visibility: visible;
-            }
-
-        /* ================= NAVBAR + DROPDOWN ================= */
-        header, .navbar, .nav-snowglitter {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            z-index: var(--z-navbar);
-        }
-
-        .navbar {
-            min-height: var(--nav-h);
-            background: var(--simone-bg) !important;
-        }
-
-            .navbar .nav-item.dropdown {
-                position: static;
-            }
-
-            .navbar .dropdown-menu {
-                position: absolute;
-                left: auto;
-                right: 0;
-                top: 100%;
-                z-index: calc(var(--z-navbar) + 1);
-                border-radius: 12px;
-                padding: 8px 0;
-                box-shadow: 0 12px 28px rgba(0,0,0,.12);
-                margin-top: 0;
-                border: 1px solid rgba(0,0,0,.1);
-            }
-
-                .navbar .dropdown-menu.dropdown-menu-start {
-                    left: 0;
-                    right: auto;
-                }
-
-        .dropdown-item {
-            border-radius: 8px;
-            margin: 2px 8px;
-            transition: all .2s ease;
-            padding: 0.5rem 1rem;
-        }
-
-            .dropdown-item:hover {
-                background: #f8f9fa;
-                transform: translateX(3px);
-            }
-
-            .dropdown-item i {
-                width: 18px;
-                text-align: center;
-            }
-
-        .nav-snowglitter {
-            position: relative;
-            overflow: visible;
-            background: var(--simone-bg);
-        }
-
-            .nav-snowglitter::before {
-                content: "";
-                position: absolute;
-                inset: 0;
-                pointer-events: none;
-                background-image: radial-gradient(circle, rgba(255,182,193,.5) 2px, transparent 2px), radial-gradient(circle, rgba(255,182,193,.3) 1.5px, transparent 1.5px), radial-gradient(circle, rgba(255,182,193,.6) 1px, transparent 1px);
-                background-size: 100px 100px, 80px 80px, 60px 60px;
-                background-repeat: repeat;
-                animation: glitterFall 15s linear infinite;
-                z-index: 0;
-                opacity: .0;
-            }
-
-        @@keyframes glitterFall {
-            0% {
-                background-position: 0 0, 0 0, 0 0;
-            }
-
-            100% {
-                background-position: 0 1000px, 0 800px, 0 600px;
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+        {
+            "@@context": "https://schema.org",
+            "@@type": "WebSite",
+            "name": "Neo Agora",
+            "url": "@Context.Request.Scheme://@Context.Request.Host",
+            "potentialAction": {
+                "@@type": "SearchAction",
+                "target": "@Context.Request.Scheme://@Context.Request.Host/Compras/Catalogo?q={search_term_string}",
+                "query-input": "required name=search_term_string"
             }
         }
-
-        .nav-snowglitter > * {
-            position: relative;
-            z-index: 1;
-        }
-
-        .navbar-dark .navbar-nav .nav-link,
-        .navbar-dark .navbar-brand {
-            color: var(--simone-fg) !important;
-        }
-
-        /* ============== HERO / CAROUSEL ============== */
-        .carousel, .carousel-inner, .swiper, .swiper-wrapper {
-            overflow: visible;
-            z-index: 1;
-        }
-
-            .carousel .carousel-caption {
-                margin-top: 14px;
-            }
-
-        .hero, .banner, .carousel {
-            position: relative;
-            z-index: 1 !important;
-        }
-
-        /* ===================== SIDEBAR CATEGORÍAS ===================== */
-        #sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 260px;
-            height: 100vh;
-            background: #111;
-            color: #fff;
-            transform: translateX(-100%);
-            transition: transform .3s ease;
-            z-index: var(--z-overlay);
-            padding: 1.25rem;
-            box-shadow: 0 8px 24px rgba(0,0,0,.35);
-            margin-top: var(--nav-h);
-            overflow-y: auto;
-        }
-
-            #sidebar.show {
-                transform: translateX(0);
-            }
-
-            #sidebar .sidebar-icon {
-                width: 22px;
-                height: 22px;
-                object-fit: contain;
-            }
-
-            #sidebar a {
-                color: #eaeaea;
-                text-decoration: none;
-                display: inline-flex;
-                align-items: center;
-                padding: .35rem .25rem;
-                border-radius: .5rem;
-                transition: all 0.2s ease;
-            }
-
-                #sidebar a:hover {
-                    background: rgba(255,255,255,.08);
-                    transform: translateX(5px);
-                }
-
-        /* Botón Uiverse (catálogo) */
-        .button {
-            line-height: 1;
-            display: inline-flex;
-            align-items: center;
-            gap: .75rem;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            background: var(--clr, var(--simone-accent));
-            color: #fff;
-            border-radius: 10rem;
-            font-weight: 600;
-            padding: .75rem 1.5rem .75rem 1.25rem;
-            transition: all 0.3s ease;
-        }
-
-            .button:hover {
-                background: #000;
-                transform: translateY(-2px);
-                box-shadow: 0 4px 12px rgba(0,0,0,.2);
-            }
-
-        .button__icon-wrapper {
-            flex-shrink: 0;
-            width: 25px;
-            height: 25px;
-            position: relative;
-            color: var(--clr, var(--simone-accent));
-            background: #fff;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            overflow: hidden;
-        }
-
-        .button__icon-svg--copy {
-            position: absolute;
-            transform: translate(-150%,150%);
-        }
-
-        .button:hover .button__icon-svg:first-child {
-            transition: transform .3s ease-in-out;
-            transform: translate(150%,-150%);
-        }
-
-        .button:hover .button__icon-svg--copy {
-            transition: transform .3s ease-in-out .1s;
-            transform: translate(0);
-        }
-
-        /* ====================== PANEL CARRITO ====================== */
-        #cartPanel {
-            position: fixed;
-            top: 0;
-            right: -340px;
-            width: 340px;
-            height: 100vh;
-            background: #fff;
-            transition: right .3s ease;
-            z-index: var(--z-overlay);
-            box-shadow: -8px 0 24px rgba(0,0,0,.1);
-            margin-top: var(--nav-h);
-            overflow-y: auto;
-        }
-
-            #cartPanel.show {
-                right: 0;
-            }
-
-        #cart-count {
-            font-size: 10px !important;
-            padding: 2px 6px;
-            min-width: 18px;
-            height: 18px;
-            line-height: 14px;
-            font-weight: 700;
-            display: inline-block;
-            text-align: center;
-            border-radius: 50px;
-            position: absolute;
-            top: -6px;
-            right: -10px;
-            background: var(--simone-danger);
-        }
-
-        /* ====================== FOOTER – Redes ====================== */
-        .wrapper {
-            display: inline-flex;
-            list-style: none;
-            padding-top: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-            gap: .5rem;
-        }
-
-            .wrapper .icon {
-                position: relative;
-                background: #fff;
-                border-radius: 50%;
-                width: 50px;
-                height: 50px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                box-shadow: 0 10px 10px rgba(0,0,0,.1);
-                color: #000;
-                transition: all .3s ease;
-                cursor: pointer;
-            }
-
-            .wrapper .tooltip {
-                position: absolute;
-                top: 0;
-                font-size: 14px;
-                background: #fff;
-                color: #fff;
-                padding: 5px 8px;
-                border-radius: 5px;
-                box-shadow: 0 10px 10px rgba(0,0,0,.1);
-                opacity: 0;
-                pointer-events: none;
-                transition: .3s ease;
-                white-space: nowrap;
-            }
-
-                .wrapper .tooltip::before {
-                    content: "";
-                    position: absolute;
-                    height: 8px;
-                    width: 8px;
-                    background: #fff;
-                    bottom: -3px;
-                    left: 50%;
-                    transform: translateX(-50%) rotate(45deg);
-                }
-
-            .wrapper .icon:hover .tooltip {
-                top: -35px;
-                opacity: 0;
-            }
-
-            .wrapper .facebook:hover, .wrapper .facebook:hover .tooltip, .wrapper .facebook:hover .tooltip::before {
-                background: #1877f2;
-                color: #fff;
-            }
-
-            .wrapper .twitter:hover, .wrapper .twitter:hover .tooltip, .wrapper .twitter:hover .tooltip::before {
-                background: #1da1f2;
-                color: #fff;
-            }
-
-            .wrapper .instagram:hover, .wrapper .instagram:hover .tooltip, .wrapper .instagram:hover .tooltip::before {
-                background: #e4405f;
-                color: #fff;
-            }
-
-            .wrapper .tiktok:hover, .wrapper .tiktok:hover .tooltip, .wrapper .tiktok:hover .tooltip::before {
-                background: #000;
-                color: #fff;
-            }
-
-        /* Insignia de versión */
-        .version-badge {
-            display: inline-block;
-            position: relative;
-            padding: 8px 16px;
-            color: white;
-            font-weight: 500;
-            background: rgba(255,255,255,.25);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,.18);
-            border-radius: 999px;
-            box-shadow: 0 2px 4px rgba(0,0,0,.2);
-            user-select: none;
-            transition: all 0.3s ease;
-        }
-
-            .version-badge:hover {
-                transform: scale(1.05);
-                box-shadow: 0 4px 8px rgba(0,0,0,.3);
-            }
-
-            .version-badge span {
-                width: 25px;
-                height: 25px;
-                position: absolute;
-                top: -12px;
-                right: -2px;
-                transform: rotate(-20deg);
-                filter: blur(.5px);
-            }
-
-                .version-badge span:before, .version-badge span:after {
-                    content: "";
-                    position: absolute;
-                }
-
-                .version-badge span:before {
-                    width: 1px;
-                    height: 100%;
-                    left: 12px;
-                    background: linear-gradient(to bottom, transparent, rgba(255,255,255,.7), transparent);
-                }
-
-                .version-badge span:after {
-                    width: 100%;
-                    height: 1px;
-                    top: 12px;
-                    background: linear-gradient(to left, transparent, rgba(255,255,255,.7), transparent);
-                }
-
-        @@keyframes rotate {
-            0% {
-                transform: rotate(0) scale(1);
-            }
-
-            50% {
-                transform: rotate(180deg) scale(1.8);
-            }
-
-            100% {
-                transform: rotate(360deg) scale(1);
-            }
-        }
-
-        .version-badge:hover span:after, .version-badge:hover span:before {
-            animation: rotate 3s ease-in-out;
-        }
-
-        /* Back to top */
-        .back-to-top {
-            width: 140px;
-            height: 56px;
-            overflow: hidden;
-            border: none;
-            color: #fff;
-            background: none;
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            padding-bottom: 2em;
-            cursor: pointer;
-            z-index: calc(var(--z-overlay) - 1);
-            transition: all 0.3s ease;
-        }
-
-            .back-to-top:hover {
-                transform: translateY(-3px);
-            }
-
-            .back-to-top > div, .back-to-top > svg {
-                position: absolute;
-                width: 100%;
-                height: 100%;
-                display: flex;
-            }
-
-            .back-to-top:before {
-                content: "";
-                position: absolute;
-                height: 2px;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                transform: scaleX(0);
-                transform-origin: bottom right;
-                background: currentColor;
-                transition: transform .25s ease-out;
-            }
-
-            .back-to-top:hover:before {
-                transform: scaleX(1);
-                transform-origin: bottom left;
-            }
-
-            .back-to-top .clone > *, .back-to-top .text > * {
-                opacity: 0;
-                font-size: 1.3rem;
-                transition: .2s;
-                margin-left: 4px;
-            }
-
-            .back-to-top .clone > * {
-                transform: translateY(60px);
-            }
-
-            .back-to-top:hover .clone > * {
-                transform: translateY(0);
-                transition: all .2s cubic-bezier(.215,.61,.355,1) 0s;
-            }
-
-            .back-to-top:hover .text > * {
-                transform: translateY(-60px);
-                transition: all .2s cubic-bezier(.215,.61,.355,1) 0s;
-            }
-
-            .back-to-top:hover .clone > :nth-child(1) {
-                transition-delay: .15s;
-            }
-
-            .back-to-top:hover .clone > :nth-child(2) {
-                transition-delay: .20s;
-            }
-
-            .back-to-top:hover .clone > :nth-child(3) {
-                transition-delay: .25s;
-            }
-
-            .back-to-top svg {
-                width: 20px;
-                right: 0;
-                top: 50%;
-                transform: translateY(-50%) rotate(-50deg);
-                transition: .2s ease-out;
-            }
-
-            .back-to-top:hover svg {
-                transform: translateY(-50%) rotate(-90deg);
-            }
-
-        /* Modal fixes */
-        .modal-backdrop {
-            z-index: calc(var(--z-modal) - 1);
-        }
-
-        .modal {
-            z-index: var(--z-modal);
-        }
-
-        /* Loading states */
-        .loading {
-            opacity: 0.7;
-            pointer-events: none;
-        }
-
-        .btn-loading {
-            position: relative;
-            color: transparent !important;
-        }
-
-            .btn-loading::after {
-                content: "";
-                position: absolute;
-                width: 16px;
-                height: 16px;
-                top: 50%;
-                left: 50%;
-                margin-left: -8px;
-                margin-top: -8px;
-                border: 2px solid transparent;
-                border-top-color: currentColor;
-                border-radius: 50%;
-                animation: spin 1s linear infinite;
-            }
-
-        @@keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Motion reducido */
-        @@media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-
-        /* Responsive */
-        @@media (max-width: 575.98px) {
-            #sidebar {
-                width: 85vw;
-            }
-
-            #cartPanel {
-                width: 100vw;
-                right: -100vw;
-            }
-
-                #cartPanel.show {
-                    right: 0;
-                }
-
-            .navbar-brand {
-                font-size: 1.1rem;
-            }
-
-            #cart-count {
-                right: -6px;
-                top: -6px;
-            }
-
-            .back-to-top {
-                bottom: 20px;
-                right: 20px;
-                transform: scale(0.9);
-            }
-        }
-
-        @@media (min-width: 576px) and (max-width: 991.98px) {
-            #cartPanel {
-                width: 380px;
-                right: -380px;
-            }
-
-                #cartPanel.show {
-                    right: 0;
-                }
-        }
-
-        @@media (max-width: 991.98px) {
-            .navbar .dropdown-menu {
-                position: static !important;
-                margin-top: .5rem;
-                border: none;
-                box-shadow: none;
-            }
-        }
-
-        /* Accessibility */
-        .sr-only {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        /* Focus styles */
-        button:focus-visible,
-        a:focus-visible,
-        input:focus-visible,
-        select:focus-visible,
-        textarea:focus-visible {
-            outline: 2px solid var(--simone-accent);
-            outline-offset: 2px;
-        }
-    </style>
+    </script>
 </head>
 
-<body data-cart-locked="@(Context.Items["CartLocked"]?.ToString() ?? "0")">
+<body data-cart-locked="@(isCartLocked ? "1" : "0")">
+    <!-- Skip to main content (accesibilidad) -->
+    <a href="#main-content" class="skip-to-content sr-only sr-only-focusable">
+        Saltar al contenido principal
+    </a>
+
     <!-- Overlay Global -->
-    <div class="global-overlay" id="globalOverlay" aria-hidden="true"></div>
+    <div class="global-overlay" id="globalOverlay" aria-hidden="true" role="presentation"></div>
 
     <!-- Navbar Superior -->
     <header>
-        <nav class="navbar navbar-expand-lg navbar-dark nav-snowglitter" role="navigation" aria-label="Barra principal">
+        <nav class="navbar navbar-expand-lg navbar-dark nav-snowglitter" role="navigation" aria-label="Navegación principal">
             <div class="container">
-                <!-- Botón abrir categorías -->
-                <button class="btn text-white me-2" id="open-sidebar" aria-expanded="false" aria-label="Abrir menú de categorías" title="Categorías">
-                    <i class="fa-solid fa-bars"></i>
+                <!-- Botón categorías -->
+                <button class="btn text-white me-2"
+                        id="open-sidebar"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="sidebar"
+                        aria-label="Abrir menú de categorías"
+                        title="Categorías">
+                    <i class="fa-solid fa-bars" aria-hidden="true"></i>
                 </button>
 
                 <!-- Logo -->
-                <a class="navbar-brand fw-bold text-white" asp-controller="Home" asp-action="Index">NEO AGORA</a>
+                <a class="navbar-brand fw-bold text-white"
+                   asp-controller="Home"
+                   asp-action="Index"
+                   aria-label="Neo Agora - Ir a inicio">
+                    NEO AGORA
+                </a>
 
-                <!-- Toggler para menú colapsable -->
-                <button class="navbar-toggler border-0 ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Mostrar navegación">
+                <!-- Toggler móvil -->
+                <button class="navbar-toggler border-0 ms-auto"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#navbarNav"
+                        aria-controls="navbarNav"
+                        aria-expanded="false"
+                        aria-label="Alternar navegación">
                     <span class="navbar-toggler-icon"></span>
                 </button>
 
-                <!-- Centro -->
+                <!-- Links centro -->
                 <div class="collapse navbar-collapse justify-content-center" id="navbarNav">
                     <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link text-white" asp-controller="Home" asp-action="Index">HOME</a>
+                            <a class="nav-link text-white"
+                               asp-controller="Home"
+                               asp-action="Index"
+                               aria-current="@(ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "page" : null)">
+                                HOME
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <form asp-controller="home" asp-action="proximamente" method="get" class="d-inline">
-                                <button type="submit" class="btn btn-ofertas text-white" aria-label="Ver ofertas">
-                                    Ofertas
-                                    <!-- estrellas decorativas -->
-                                    <div class="star-1"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
-                                    <div class="star-2"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
-                                    <div class="star-3"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
-                                    <div class="star-4"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
-                                    <div class="star-5"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
-                                    <div class="star-6"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784.11 815.53"><path fill="currentColor" d="M392.05 0c-20.9,210.08 -184.06,378.41 -392.05,407.78 207.96,29.37 371.12,197.68 392.05,407.74 20.93,-210.06 184.09,-378.37 392.05,-407.74 -207.98,-29.38 -371.16,-197.69 -392.06,-407.78z" /></svg></div>
-                                </button>
+                            <form asp-controller="Home" asp-action="Proximamente" method="get" class="d-inline">
                             </form>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-white" asp-controller="Home" asp-action="Nosotros">NOSOTROS</a>
+                            <a class="nav-link text-white"
+                               asp-controller="Home"
+                               asp-action="Nosotros">
+                                NOSOTROS
+                            </a>
                         </li>
                     </ul>
                 </div>
 
-                <!-- Acciones derechas -->
-                <div class="d-flex align-items-center">
-                    <!-- Buscar -->
-                    <a asp-controller="Compras" asp-action="Catalogo" class="text-white mx-2" aria-label="Buscar productos" title="Buscar">
-                        <i class="fa-solid fa-magnifying-glass fa-lg"></i>
-                    </a>
+                <!-- Acciones derecha -->
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Buscador Inteligente Mejorado -->
+                    <div class="smart-search-container">
+                        <!-- Botón Toggle -->
+                        <button type="button"
+                                class="smart-search-toggle"
+                                id="searchToggle"
+                                aria-label="Abrir buscador"
+                                aria-expanded="false">
+                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                        </button>
+                    </div>
+
+                    <!-- Overlay oscuro -->
+                    <div class="smart-search-overlay" id="searchOverlay"></div>
+
+                    <!-- Modal del buscador -->
+                    <div class="smart-search-modal" id="searchModal">
+                        <form action="/Compras/Catalogo" method="get" class="smart-search-form" id="searchForm">
+                            <div class="smart-search-input-wrapper">
+                                <i class="fa-solid fa-magnifying-glass" style="color: var(--color-gray-500); font-size: var(--text-xl);"></i>
+
+                                <input type="text"
+                                       name="searchTerm"
+                                       id="searchInput"
+                                       class="smart-search-input"
+                                       placeholder="Buscar productos, marcas..."
+                                       autocomplete="off"
+                                       aria-label="Buscar productos" />
+
+                                <div class="smart-search-actions">
+                                    <button type="submit"
+                                            class="smart-search-submit"
+                                            aria-label="Buscar">
+                                        <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                                    </button>
+
+                                    <button type="button"
+                                            class="smart-search-close"
+                                            id="searchClose"
+                                            aria-label="Cerrar buscador">
+                                        <i class="fa-solid fa-times" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <!-- Resultados -->
+                        <div class="smart-search-results" id="searchResults"></div>
+                    </div>
 
                     <!-- Favoritos -->
-                    <a href="/Favoritos/Index" id="heart-link" class="mx-2" aria-label="Favoritos" title="Favoritos">
-                        <i id="heart-icon" class="far fa-heart" style="font-size:20px;color:crimson;"></i>
+                    <a href="/Favoritos/Index"
+                       id="heart-link"
+                       aria-label="Ver favoritos"
+                       title="Favoritos">
+                        <i id="heart-icon" class="far fa-heart" style="font-size:20px;color:crimson;" aria-hidden="true"></i>
                     </a>
 
                     <!-- Carrito -->
-                    <a class="text-white mx-2 position-relative" href="javascript:void(0)" id="open-cart" aria-expanded="false" aria-label="Ver carrito" title="Carrito">
-                        <i class="fa-solid fa-cart-shopping fa-lg"></i>
-                        <span id="cart-count" class="position-absolute badge rounded-pill bg-danger">@cartCount</span>
+                    <a class="text-white position-relative"
+                       href="javascript:void(0)"
+                       id="open-cart"
+                       aria-expanded="false"
+                       aria-controls="cartPanel"
+                       aria-label="Ver carrito (@cartCount items)"
+                       title="Carrito">
+                        <i class="fa-solid fa-cart-shopping fa-lg" aria-hidden="true"></i>
+                        <span id="cart-count"
+                              class="position-absolute badge rounded-pill bg-danger"
+                              aria-live="polite"
+                              aria-atomic="true">@cartCount</span>
                     </a>
-
-                    @inject UserManager<Usuario> UserManager
-                    @inject SignInManager<Usuario> SignInManager
 
                     <!-- Usuario -->
                     @if (SignInManager.IsSignedIn(User))
                     {
                         var user = await UserManager.GetUserAsync(User);
                         <div class="dropdown">
-                            <a class="mx-2 dropdown-toggle d-flex align-items-center" id="userDropdown" data-bs-toggle="dropdown" data-bs-display="static"
-                               aria-expanded="false" role="button" aria-label="Menú de usuario" style="text-decoration:none;">
+                            <a class="dropdown-toggle d-flex align-items-center"
+                               id="userDropdown"
+                               data-bs-toggle="dropdown"
+                               data-bs-display="static"
+                               aria-expanded="false"
+                               role="button"
+                               aria-label="Menú de usuario"
+                               style="text-decoration:none;">
                                 @if (!string.IsNullOrEmpty(user.FotoPerfil))
                                 {
-                                    <img src="@user.FotoPerfil" class="rounded-circle border border-light shadow-sm" style="width:38px;height:38px;object-fit:cover;" alt="Avatar" />
+                                    <img src="@user.FotoPerfil"
+                                         class="rounded-circle border border-light shadow-sm"
+                                         style="width:38px;height:38px;object-fit:cover;"
+                                         alt="Avatar de @user.UserName"
+                                         loading="lazy" />
                                 }
                                 else
                                 {
-                                    <i class="fa-solid fa-user fa-lg text-white"></i>
+                                    <i class="fa-solid fa-user fa-lg text-white" aria-hidden="true"></i>
                                 }
                             </a>
 
                             <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown">
                                 <li>
-                                    <a class="dropdown-item d-flex align-items-center" asp-controller="Cuenta" asp-action="Perfil">
-                                        <i class="fa-solid fa-user-circle me-2 text-primary"></i> Perfil
+                                    <a class="dropdown-item d-flex align-items-center"
+                                       asp-controller="Cuenta"
+                                       asp-action="Perfil">
+                                        <i class="fa-solid fa-user-circle me-2 text-primary" aria-hidden="true"></i>
+                                        Perfil
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item d-flex align-items-center" asp-controller="MisCompras" asp-action="Index">
-                                        <i class="fa-solid fa-box me-2 text-success"></i> Mis Pedidos
+                                    <a class="dropdown-item d-flex align-items-center"
+                                       asp-controller="MisCompras"
+                                       asp-action="Index">
+                                        <i class="fa-solid fa-box me-2 text-success" aria-hidden="true"></i>
+                                        Mis Pedidos
                                         @if (ViewBag.PedidosPendientesCount != null && (int)ViewBag.PedidosPendientesCount > 0)
                                         {
-                                            <span class="badge bg-secondary ms-auto" title="Pedidos pendientes">@ViewBag.PedidosPendientesCount</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-light text-muted ms-auto">Estado</span>
+                                            <span class="badge bg-secondary ms-auto"
+                                                  title="@ViewBag.PedidosPendientesCount pedidos pendientes">
+                                                @ViewBag.PedidosPendientesCount
+                                            </span>
                                         }
                                     </a>
                                 </li>
                                 @if (!User.IsInRole("Cliente"))
                                 {
                                     <li>
-                                        <a class="dropdown-item d-flex align-items-center" asp-controller="Panel" asp-action="Index">
-                                            <i class="fa-solid fa-gauge me-2 text-warning"></i> Rol Panel
+                                        <a class="dropdown-item d-flex align-items-center"
+                                           asp-controller="Panel"
+                                           asp-action="Index">
+                                            <i class="fa-solid fa-gauge me-2 text-warning" aria-hidden="true"></i>
+                                            Panel Admin
                                         </a>
                                     </li>
                                 }
+                                <li><hr class="dropdown-divider" /></li>
                                 <li>
-                                    <form asp-controller="Cuenta" asp-action="Logout" method="post" style="display:inline;">
+                                    <form asp-controller="Cuenta"
+                                          asp-action="Logout"
+                                          method="post"
+                                          style="display:inline;">
                                         @Html.AntiForgeryToken()
                                         <button type="submit" class="dropdown-item d-flex align-items-center">
-                                            <i class="fa-solid fa-right-from-bracket me-2 text-danger"></i> Cerrar sesión
+                                            <i class="fa-solid fa-right-from-bracket me-2 text-danger" aria-hidden="true"></i>
+                                            Cerrar sesión
                                         </button>
                                     </form>
                                 </li>
@@ -816,8 +319,11 @@
                     }
                     else
                     {
-                        <a href="@Url.Action("Login", "Cuenta")" class="text-white mx-2" aria-label="Iniciar sesión" title="Iniciar sesión">
-                            <i class="fa-solid fa-user fa-lg"></i>
+                        <a href="@Url.Action("Login", "Cuenta")"
+                           class="text-white"
+                           aria-label="Iniciar sesión"
+                           title="Iniciar sesión">
+                            <i class="fa-solid fa-user fa-lg" aria-hidden="true"></i>
                         </a>
                     }
                 </div>
@@ -825,553 +331,394 @@
         </nav>
     </header>
 
-    <!-- Sidebar de Categorías -->
-    <aside id="sidebar" aria-label="Menú de categorías">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <h5 class="fw-bold mb-0"><i class="fa-solid fa-bars-staggered me-2"></i>Categorías</h5>
-            <button class="btn btn-sm btn-outline-light" id="close-sidebar" aria-label="Cerrar categorías" title="Cerrar">
-                <i class="fa-solid fa-xmark"></i>
+    <!-- Sidebar Categorías -->
+    <aside id="sidebar"
+           class="sidebar"
+           aria-label="Menú de categorías"
+           role="navigation">
+        <div class="sidebar-header d-flex align-items-center justify-content-between mb-3">
+            <h2 class="h5 fw-bold mb-0">
+                <i class="fa-solid fa-bars-staggered me-2" aria-hidden="true"></i>
+                Categorías
+            </h2>
+            <button class="btn btn-sm btn-outline-light"
+                    id="close-sidebar"
+                    type="button"
+                    aria-label="Cerrar menú de categorías"
+                    title="Cerrar">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
         </div>
 
-        <ul class="list-unstyled sidebar-list">
-            <li class="mb-2">
-                <a href="/Compras/Catalogo" class="button w-100 justify-content-between" style="--clr:#7808d0">
-                    <span>Ver todo</span>
-                    <span class="button__icon-wrapper">
-                        <svg viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg" width="10">
-                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
-                        </svg>
-                        <svg viewBox="0 0 14 15" fill="none" width="10" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg button__icon-svg--copy">
-                            <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
-                        </svg>
-                    </span>
-                </a>
-            </li>
+        <nav>
+            <ul class="list-unstyled sidebar-list">
+                <li class="mb-2">
+                    <a href="/Compras/Catalogo"
+                       class="button w-100 justify-content-between"
+                       style="--clr:#7808d0"
+                       aria-label="Ver todos los productos">
+                        <span>Ver todo</span>
+                        <span class="button__icon-wrapper" aria-hidden="true">
+                            <svg viewBox="0 0 14 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg" width="10">
+                                <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
+                            </svg>
+                            <svg viewBox="0 0 14 15" fill="none" width="10" xmlns="http://www.w3.org/2000/svg" class="button__icon-svg button__icon-svg--copy">
+                                <path d="M13.376 11.552l-.264-10.44-10.44-.24.024 2.28 6.96-.048L.2 12.56l1.488 1.488 9.432-9.432-.048 6.912 2.304.024z" fill="currentColor"></path>
+                            </svg>
+                        </span>
+                    </a>
+                </li>
 
-            <li><a href="/Compras/Catalogo?categoriaID=1"><img src="~/images/Categorias_slider/blusas.png" class="me-2 sidebar-icon" alt="Blusas" /> Blusas</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=2"><img src="~/images/Categorias_slider/tops.png" class="me-2 sidebar-icon" alt="Tops" /> Tops</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=3"><img src="~/images/Categorias_slider/bodys.png" class="me-2 sidebar-icon" alt="Bodys" /> Body's</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=4"><img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon" alt="Trajes de baño" /> Trajes de Baño</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=5"><img src="~/images/Categorias_slider/conjuntos.png" class="me-2 sidebar-icon" alt="Conjuntos" /> Conjuntos</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=6"><img src="~/images/Categorias_slider/vestidos.png" class="me-2 sidebar-icon" alt="Vestidos" /> Vestidos</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=7"><img src="~/images/Categorias_slider/faldas.png" class="me-2 sidebar-icon" alt="Faldas" /> Faldas</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=8"><img src="~/images/Categorias_slider/pantalones.png" class="me-2 sidebar-icon" alt="Pantalones" /> Pantalones</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=9"><img src="~/images/Categorias_slider/jeans.png" class="me-2 sidebar-icon" alt="Jeans" /> Jeans</a></li>
-            <li><a href="/Compras/Catalogo?categoriaID=10"><img src="~/images/Categorias_slider/bolsas.png" class="me-2 sidebar-icon" alt="Bolsas" /> Bolsas</a></li>
-        </ul>
+                <li><a href="/Compras/Catalogo?categoriaID=1"><img src="~/images/Categorias_slider/blusas.png" class="me-2 sidebar-icon" alt="" /> Blusas</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=2"><img src="~/images/Categorias_slider/tops.png" class="me-2 sidebar-icon" alt="" /> Tops</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=3"><img src="~/images/Categorias_slider/bodys.png" class="me-2 sidebar-icon" alt="" /> Body's</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=4"><img src="~/images/Categorias_slider/traje_de_bano.png" class="me-2 sidebar-icon" alt="" /> Trajes de Baño</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=5"><img src="~/images/Categorias_slider/conjuntos.png" class="me-2 sidebar-icon" alt="" /> Conjuntos</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=6"><img src="~/images/Categorias_slider/vestidos.png" class="me-2 sidebar-icon" alt="" /> Vestidos</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=7"><img src="~/images/Categorias_slider/faldas.png" class="me-2 sidebar-icon" alt="" /> Faldas</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=8"><img src="~/images/Categorias_slider/pantalones.png" class="me-2 sidebar-icon" alt="" /> Pantalones</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=9"><img src="~/images/Categorias_slider/jeans.png" class="me-2 sidebar-icon" alt="" /> Jeans</a></li>
+                <li><a href="/Compras/Catalogo?categoriaID=10"><img src="~/images/Categorias_slider/bolsas.png" class="me-2 sidebar-icon" alt="" /> Bolsas</a></li>
+            </ul>
+        </nav>
     </aside>
 
-    <!-- Panel del Carrito -->
-    <aside id="cartPanel" aria-label="Panel de carrito">
+    <!-- Panel Carrito -->
+    <aside id="cartPanel"
+           class="cart-panel"
+           aria-label="Panel de carrito">
         <div class="p-3 h-100 d-flex flex-column">
-            <div class="d-flex align-items-center justify-content-between mb-3">
-                <h5 class="mb-0">Carrito</h5>
-                <button class="btn btn-sm btn-outline-dark" id="close-cart" aria-label="Cerrar carrito" title="Cerrar">
-                    <i class="fa-solid fa-xmark"></i>
+            <div class="cart-panel-header d-flex align-items-center justify-content-between mb-3">
+                <h2 class="h5 mb-0">Carrito de compras</h2>
+                <button class="btn btn-sm btn-outline-dark"
+                        id="close-cart"
+                        type="button"
+                        aria-label="Cerrar carrito"
+                        title="Cerrar">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
                 </button>
             </div>
-            <div id="cart-content" class="flex-grow-1 overflow-auto">
+            <div id="cart-content"
+                 class="flex-grow-1 overflow-auto"
+                 role="region"
+                 aria-label="Contenido del carrito"
+                 aria-live="polite">
                 @await Html.PartialAsync("_CartPartial", carrito)
             </div>
         </div>
     </aside>
 
     <!-- Contenido Principal -->
-    <main class="container mt-4 pb-3">
+    <main id="main-content" class="container mt-4 pb-3" role="main">
         @RenderBody()
     </main>
 
     <!-- Footer -->
-    <footer class="bg-dark text-light pt-4 pb-4 mt-5">
+    <footer class="bg-dark text-light pt-4 pb-4 mt-5" role="contentinfo">
         <div class="container text-center">
-            <hr class="mb-4" style="border-top: 1px solid #5c6f7f; width: 90%; margin: 0 auto;">
+            <hr class="mb-4" style="border-top: 1px solid #5c6f7f; width: 90%; margin: 0 auto;" />
 
-            <ul class="wrapper justify-content-center">
-                <li class="icon facebook" title="Facebook"><span class="tooltip">Facebook</span><i class="fab fa-facebook-f"></i></li>
-                <li class="icon instagram" title="Instagram"><span class="tooltip">Instagram</span><i class="fab fa-instagram"></i></li>
-                <li class="icon tiktok" title="TikTok"><span class="tooltip">TikTok</span><i class="fab fa-tiktok"></i></li>
-                <li class="icon twitter" title="X"><span class="tooltip">X</span><i class="fab fa-x-twitter"></i></li>
-            </ul>
+            <!-- Redes sociales -->
+            <nav aria-label="Redes sociales">
+                <ul class="wrapper justify-content-center" role="list">
+                    <li class="icon facebook" title="Facebook">
+                        <a href="#" aria-label="Visitar Facebook">
+                            <span class="tooltip">Facebook</span>
+                            <i class="fab fa-facebook-f" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                    <li class="icon instagram" title="Instagram">
+                        <a href="#" aria-label="Visitar Instagram">
+                            <span class="tooltip">Instagram</span>
+                            <i class="fab fa-instagram" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                    <li class="icon tiktok" title="TikTok">
+                        <a href="#" aria-label="Visitar TikTok">
+                            <span class="tooltip">TikTok</span>
+                            <i class="fab fa-tiktok" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                    <li class="icon twitter" title="X">
+                        <a href="#" aria-label="Visitar X (Twitter)">
+                            <span class="tooltip">X</span>
+                            <i class="fab fa-x-twitter" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
 
-            <div class="version-badge mt-2">v0.1<span></span></div>
+            <!-- Versión -->
+            <div class="version-badge mt-3" aria-label="Versión 0.1">
+                v0.1
+                <span aria-hidden="true"></span>
+            </div>
 
+            <!-- Copyright -->
             <div class="mb-2 mt-4">
                 <strong>NEO AGORA</strong><br />
-                <small>&copy; 2025 NEO AGORA - Todos los derechos reservados.</small>
+                <small>&copy; @DateTime.Now.Year NEO AGORA - Todos los derechos reservados.</small>
             </div>
 
-            <div>
-                <a href="@Url.Action("InformacionGeneral", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Información General
-                </a>
-                <a href="@Url.Action("TerminosCondiciones", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Términos y Condiciones
-                </a>
-                <a href="@Url.Action("AvisoPrivacidad", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Aviso de Privacidad
-                </a>
-                
-                <a href="@Url.Action("MetodoPago", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Métodos de Pago
-                </a>
-                <a href="@Url.Action("PoliticaCookies", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Política de Cookies
-                </a>
-                <a href="@Url.Action("PoliticaPrivacidad", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Política de Privacidad
-                </a>
-                <a href="@Url.Action("PoliticasEnvio", "Legal")" class="text-light text-decoration-underline mx-2">
-                    Políticas de Envío
-                </a>
-               
-            </div>
-
+            <!-- Links legales -->
+            <nav aria-label="Enlaces legales">
+                <div class="footer-links">
+                    <a href="@Url.Action("InformacionGeneral", "Legal")" class="text-light text-decoration-underline">Información General</a>
+                    <a href="@Url.Action("TerminosCondiciones", "Legal")" class="text-light text-decoration-underline">Términos y Condiciones</a>
+                    <a href="@Url.Action("MetodoPago", "Legal")" class="text-light text-decoration-underline">Métodos de Pago</a>
+                    <a href="@Url.Action("PoliticaCookies", "Legal")" class="text-light text-decoration-underline">Política de Cookies</a>
+                    <a href="@Url.Action("PoliticaPrivacidad", "Legal")" class="text-light text-decoration-underline">Política de Privacidad</a>
+                    <a href="@Url.Action("PoliticasEnvio", "Legal")" class="text-light text-decoration-underline">Políticas de Envío</a>
+                </div>
+            </nav>
         </div>
     </footer>
 
-    <!-- Scripts base -->
-    <script defer src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <!-- Botón Back to Top -->
+    <button class="back-to-top"
+            id="backToTop"
+            onclick="scrollToTop()"
+            aria-label="Volver arriba"
+            title="Volver arriba"
+            style="opacity: 0; visibility: hidden;">
+        <div class="text">
+            <span>Back</span>
+            <span>to</span>
+            <span>top</span>
+        </div>
+        <div class="clone">
+            <span>Back</span>
+            <span>to</span>
+            <span>top</span>
+        </div>
+        <svg stroke-width="2"
+             stroke="currentColor"
+             viewBox="0 0 24 24"
+             fill="none"
+             xmlns="http://www.w3.org/2000/svg"
+             width="20"
+             aria-hidden="true">
+            <path d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  stroke-linejoin="round"
+                  stroke-linecap="round" />
+        </svg>
+    </button>
 
-    <!-- Script mejorado: Gestión de paneles y carrito -->
+    <!-- Scripts -->
+    <!-- Swiper (defer para mejor performance) -->
+    <script defer src="https://unpkg.com/swiper@11/swiper-bundle.min.js"></script>
+
+    <!-- Bootstrap Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
+
+    <!-- Scripts personalizados -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/layout.js" asp-append-version="true"></script>
+
+    <!-- Smart Search Script - Mejorado -->
     <script>
-        (function () {
+        (function() {
             'use strict';
 
-            // ======= CONFIGURACIÓN =======
-            const CONFIG = {
-                selectors: {
-                    sidebar: '#sidebar',
-                    cartPanel: '#cartPanel',
-                    overlay: '#globalOverlay',
-                    openSidebar: '#open-sidebar',
-                    closeSidebar: '#close-sidebar',
-                    openCart: '#open-cart',
-                    closeCart: '#close-cart',
-                    cartContent: '#cart-content',
-                    cartCount: '#cart-count'
-                },
-                classes: {
-                    show: 'show',
-                    loading: 'loading',
-                    noScroll: 'no-scroll'
-                },
-                endpoints: {
-                    cartInfo: '/Compras/CartInfo',
-                    cartMini: '/Compras/Mini'
+            // Elementos del DOM
+            const searchToggle = document.getElementById('searchToggle');
+            const searchClose = document.getElementById('searchClose');
+            const searchOverlay = document.getElementById('searchOverlay');
+            const searchModal = document.getElementById('searchModal');
+            const searchInput = document.getElementById('searchInput');
+            const searchResults = document.getElementById('searchResults');
+            const searchForm = document.getElementById('searchForm');
+
+            let searchTimeout = null;
+            let currentRequest = null;
+
+            if (!searchToggle || !searchOverlay || !searchModal || !searchInput) return;
+
+            // Abrir buscador
+            function openSearch() {
+                searchOverlay.classList.add('active');
+                searchModal.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                searchToggle.setAttribute('aria-expanded', 'true');
+                setTimeout(() => searchInput.focus(), 150);
+            }
+
+            // Cerrar buscador
+            function closeSearch() {
+                searchOverlay.classList.remove('active');
+                searchModal.classList.remove('active');
+                document.body.style.overflow = '';
+                searchToggle.setAttribute('aria-expanded', 'false');
+                searchInput.value = '';
+                searchResults.innerHTML = '';
+                searchResults.classList.remove('active');
+            }
+
+            // Event listeners
+            searchToggle.addEventListener('click', openSearch);
+
+            if (searchClose) {
+                searchClose.addEventListener('click', closeSearch);
+            }
+
+            // Cerrar al hacer click en el overlay
+            searchOverlay.addEventListener('click', closeSearch);
+
+            // Cerrar con ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && searchModal.classList.contains('active')) {
+                    closeSearch();
                 }
-            };
+            });
 
-            // ======= ESTADO GLOBAL =======
-            const STATE = {
-                isCartLocked: document.body.dataset.cartLocked === '1',
-                activePanel: null,
-                isLoading: false
-            };
+            // Búsqueda en tiempo real
+            searchInput.addEventListener('input', function() {
+                const query = this.value.trim();
 
-            // ======= ELEMENTOS DEL DOM =======
-            const DOM = {};
+                // Cancelar búsqueda anterior
+                if (searchTimeout) {
+                    clearTimeout(searchTimeout);
+                }
 
-            function initializeDOM() {
-                Object.keys(CONFIG.selectors).forEach(key => {
-                    DOM[key] = document.querySelector(CONFIG.selectors[key]);
+                if (currentRequest) {
+                    currentRequest.abort();
+                }
+
+                // Limpiar resultados si query está vacío
+                if (query.length === 0) {
+                    searchResults.innerHTML = '';
+                    searchResults.classList.remove('active');
+                    return;
+                }
+
+                // Mínimo 2 caracteres para buscar
+                if (query.length < 2) {
+                    searchResults.innerHTML = '<div class="search-loading">Escribe al menos 2 caracteres...</div>';
+                    searchResults.classList.add('active');
+                    return;
+                }
+
+                // Mostrar loading
+                searchResults.innerHTML = '<div class="search-loading"><i class="fa-solid fa-spinner fa-spin"></i> Buscando...</div>';
+                searchResults.classList.add('active');
+
+                // Debounce: esperar 300ms después de que el usuario deje de escribir
+                searchTimeout = setTimeout(function() {
+                    performSearch(query);
+                }, 300);
+            });
+
+            // Realizar búsqueda AJAX
+            function performSearch(query) {
+                const controller = new AbortController();
+                currentRequest = controller;
+
+                fetch(`/Compras/SearchProducts?q=${encodeURIComponent(query)}&limit=8`, {
+                    signal: controller.signal,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Error en búsqueda');
+                    return response.json();
+                })
+                .then(data => {
+                    displayResults(data, query);
+                })
+                .catch(error => {
+                    if (error.name !== 'AbortError') {
+                        console.error('Error:', error);
+                        searchResults.innerHTML = '<div class="search-no-results"><p>Error al buscar. Intenta de nuevo.</p></div>';
+                    }
                 });
             }
 
-            // ======= UTILIDADES =======
-            const utils = {
-                // Formateador de moneda
-                formatCurrency: (amount) => {
-                    return new Intl.NumberFormat('es-EC', {
-                        style: 'currency',
-                        currency: 'USD'
-                    }).format(amount || 0);
-                },
-
-                // Fetch con manejo de errores
-                fetchJSON: async (url, options = {}) => {
-                    try {
-                        const response = await fetch(url, {
-                            credentials: 'same-origin',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                ...options.headers
-                            },
-                            ...options
-                        });
-
-                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                        return await response.json();
-                    } catch (error) {
-                        console.error('Fetch error:', error);
-                        throw error;
-                    }
-                },
-
-                // Bloquear/desbloquear scroll
-                lockScroll: (lock) => {
-                    document.body.classList.toggle(CONFIG.classes.noScroll, lock);
-                },
-
-                // Set aria-expanded
-                setAriaExpanded: (element, expanded) => {
-                    if (element) element.setAttribute('aria-expanded', expanded.toString());
-                },
-
-                // Mostrar loading
-                showLoading: (element) => {
-                    if (element) {
-                        element.classList.add(CONFIG.classes.loading);
-                        element.disabled = true;
-                    }
-                },
-
-                // Ocultar loading
-                hideLoading: (element) => {
-                    if (element) {
-                        element.classList.remove(CONFIG.classes.loading);
-                        element.disabled = false;
-                    }
+            // Mostrar resultados
+            function displayResults(products, query) {
+                if (!products || products.length === 0) {
+                    searchResults.innerHTML = `
+                        <div class="search-no-results">
+                            <i class="fa-solid fa-search" aria-hidden="true"></i>
+                            <p>No se encontraron productos</p>
+                            <small>Intenta con otras palabras</small>
+                        </div>`;
+                    return;
                 }
-            };
 
-            // ======= GESTIÓN DE PANELES =======
-            const panelManager = {
-                // Abrir panel
-                open: (panel, trigger) => {
-                    if (!panel || STATE.isLoading) return;
+                let html = '<div class="search-results-header">';
+                html += `<span class="search-results-count">${products.length} resultado${products.length !== 1 ? 's' : ''}</span>`;
+                html += `<a href="/Compras/Catalogo?searchTerm=${encodeURIComponent(query)}" class="search-view-all">Ver todos <i class="fa-solid fa-arrow-right"></i></a>`;
+                html += '</div>';
 
-                    // Cerrar panel activo si existe
-                    if (STATE.activePanel && STATE.activePanel !== panel) {
-                        panelManager.close(STATE.activePanel);
-                    }
+                html += '<div class="search-results-list">';
 
-                    panel.classList.add(CONFIG.classes.show);
-                    utils.setAriaExpanded(trigger, true);
-                    utils.lockScroll(true);
+                products.forEach(product => {
+                    const productUrl = `/p/${product.productoID}`;
+                    const imageUrl = product.imagenUrl || '/images/placeholder-product.png';
+                    const price = parseFloat(product.precio || 0);
+                    const stock = parseInt(product.stock || 0);
+                    const brandHTML = product.marca ? `<span class="search-result-category">${escapeHtml(product.marca)}</span>` : '';
 
-                    // Mostrar overlay
-                    if (DOM.overlay) {
-                        DOM.overlay.classList.add(CONFIG.classes.show);
-                        DOM.overlay.setAttribute('aria-hidden', 'false');
-                    }
+                    html += `
+                        <a href="${productUrl}" class="search-result-item">
+                            <div class="search-result-image">
+                                <img src="${imageUrl}" alt="${escapeHtml(product.nombre)}" loading="lazy" />
+                            </div>
+                            <div class="search-result-info">
+                                <div class="search-result-name">${highlightQuery(product.nombre, query)}</div>
+                                <div class="search-result-meta">
+                                    <span class="search-result-price">$${price.toFixed(2)}</span>
+                                    ${brandHTML}
+                                    ${stock > 0
+                                        ? '<span class="search-result-stock in-stock"><i class="fa-solid fa-check-circle"></i> Disponible</span>'
+                                        : '<span class="search-result-stock out-of-stock"><i class="fa-solid fa-times-circle"></i> Agotado</span>'}
+                                </div>
+                            </div>
+                        </a>`;
+                });
 
-                    STATE.activePanel = panel;
-                },
+                html += '</div>';
 
-                // Cerrar panel
-                close: (panel) => {
-                    if (!panel) return;
-
-                    panel.classList.remove(CONFIG.classes.show);
-                    utils.lockScroll(false);
-
-                    // Ocultar overlay si no hay paneles activos
-                    if (DOM.overlay) {
-                        DOM.overlay.classList.remove(CONFIG.classes.show);
-                        DOM.overlay.setAttribute('aria-hidden', 'true');
-                    }
-
-                    STATE.activePanel = null;
-                },
-
-                // Cerrar todos los paneles
-                closeAll: () => {
-                    [DOM.sidebar, DOM.cartPanel].forEach(panel => {
-                        if (panel) panel.classList.remove(CONFIG.classes.show);
-                    });
-
-                    utils.lockScroll(false);
-                    if (DOM.overlay) {
-                        DOM.overlay.classList.remove(CONFIG.classes.show);
-                        DOM.overlay.setAttribute('aria-hidden', 'true');
-                    }
-
-                    STATE.activePanel = null;
-                },
-
-                // Toggle panel
-                toggle: (panel, trigger) => {
-                    if (panel.classList.contains(CONFIG.classes.show)) {
-                        panelManager.close(panel);
-                    } else {
-                        panelManager.open(panel, trigger);
-                    }
-                }
-            };
-
-            // ======= GESTIÓN DEL CARRITO =======
-            const cartManager = {
-                // Actualizar badge del carrito
-                updateBadge: async () => {
-                    try {
-                        const data = await utils.fetchJSON(CONFIG.endpoints.cartInfo);
-                        if (DOM.cartCount && data.count != null) {
-                            DOM.cartCount.textContent = data.count;
-                        }
-                    } catch (error) {
-                        console.warn('No se pudo actualizar el badge del carrito');
-                    }
-                },
-
-                // Refrescar contenido del carrito
-                refreshContent: async () => {
-                    try {
-                        const response = await fetch(CONFIG.endpoints.cartMini, {
-                            credentials: 'same-origin',
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        });
-
-                        if (response.ok) {
-                            const html = await response.text();
-                            if (DOM.cartContent) DOM.cartContent.innerHTML = html;
-                        }
-                    } catch (error) {
-                        console.warn('No se pudo actualizar el contenido del carrito');
-                    }
-                },
-
-                // Acción después de modificar el carrito
-                afterMutation: async () => {
-                    await cartManager.updateBadge();
-                    await cartManager.refreshContent();
-
-                    // Sincronizar entre pestañas
-                    try {
-                        localStorage.setItem('simone_cart_updated', Date.now().toString());
-                    } catch (e) {}
-                },
-
-                // Manejar bloqueo del carrito
-                handleLock: () => {
-                    if (!STATE.isCartLocked) return;
-
-                    // Deshabilitar interacciones con el carrito
-                    const cartElements = document.querySelectorAll('#open-cart, [data-cart-open], .cart-toggle');
-                    cartElements.forEach(el => {
-                        el.style.pointerEvents = 'none';
-                        el.style.opacity = '0.5';
-                        el.title = 'Carrito bloqueado durante el pago';
-                    });
-
-                    // Prevenir apertura del panel
-                    if (DOM.openCart) {
-                        DOM.openCart.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            // Puedes mostrar un toast o alerta aquí
-                            console.log('Carrito bloqueado durante el pago');
-                        }, true);
-                    }
-                }
-            };
-
-            // ======= MANEJO DE EVENTOS =======
-            const eventManager = {
-                initialize: () => {
-                    // Eventos de apertura/cierre de paneles
-                    if (DOM.openSidebar) {
-                        DOM.openSidebar.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            panelManager.toggle(DOM.sidebar, DOM.openSidebar);
-                        });
-                    }
-
-                    if (DOM.closeSidebar) {
-                        DOM.closeSidebar.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            panelManager.close(DOM.sidebar);
-                        });
-                    }
-
-                    if (DOM.openCart) {
-                        DOM.openCart.addEventListener('click', (e) => {
-                            if (STATE.isCartLocked) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                return;
-                            }
-                            e.preventDefault();
-                            e.stopPropagation();
-                            panelManager.toggle(DOM.cartPanel, DOM.openCart);
-                        });
-                    }
-
-                    if (DOM.closeCart) {
-                        DOM.closeCart.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            panelManager.close(DOM.cartPanel);
-                        });
-                    }
-
-                    // Cerrar paneles al hacer clic fuera
-                    document.addEventListener('click', (e) => {
-                        const target = e.target;
-
-                        if (DOM.sidebar?.classList.contains(CONFIG.classes.show) &&
-                            !DOM.sidebar.contains(target) &&
-                            !(DOM.openSidebar && DOM.openSidebar.contains(target))) {
-                            panelManager.close(DOM.sidebar);
-                        }
-
-                        if (DOM.cartPanel?.classList.contains(CONFIG.classes.show) &&
-                            !DOM.cartPanel.contains(target) &&
-                            !(DOM.openCart && DOM.openCart.contains(target))) {
-                            panelManager.close(DOM.cartPanel);
-                        }
-                    });
-
-                    // Cerrar paneles con ESC
-                    document.addEventListener('keydown', (e) => {
-                        if (e.key === 'Escape') {
-                            panelManager.closeAll();
-                        }
-                    });
-
-                    // Cerrar paneles con overlay
-                    if (DOM.overlay) {
-                        DOM.overlay.addEventListener('click', () => {
-                            panelManager.closeAll();
-                        });
-                    }
-
-                    // Sincronización entre pestañas
-                    window.addEventListener('storage', (e) => {
-                        if (e.key === 'simone_cart_updated') {
-                            cartManager.afterMutation();
-                        }
-                    });
-
-                    // Sincronización al volver a la pestaña
-                    document.addEventListener('visibilitychange', () => {
-                        if (!document.hidden) {
-                            cartManager.updateBadge();
-                        }
-                    });
-                }
-            };
-
-            // ======= INICIALIZACIÓN =======
-            function initialize() {
-                initializeDOM();
-                eventManager.initialize();
-                cartManager.handleLock();
-
-                // Cargar datos iniciales
-                cartManager.updateBadge();
-
-                // Exponer API global
-                window.NeoAgora = {
-                    panels: panelManager,
-                    cart: cartManager,
-                    utils: utils
-                };
+                searchResults.innerHTML = html;
             }
 
-            // Inicializar cuando el DOM esté listo
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initialize);
-            } else {
-                initialize();
+            // Resaltar texto de búsqueda
+            function highlightQuery(text, query) {
+                if (!text || !query) return escapeHtml(text);
+                const escapedText = escapeHtml(text);
+                const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+                return escapedText.replace(regex, '<mark>$1</mark>');
+            }
+
+            // Escapar HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Escapar regex
+            function escapeRegex(text) {
+                return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             }
         })();
     </script>
 
-    <!-- Script para funcionalidades adicionales -->
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- Script inline mínimo para inicialización crítica -->
     <script>
-        // Back to top functionality
-        function scrollToTop() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
-
-        // Mostrar/ocultar botón back to top
-        window.addEventListener('scroll', () => {
-            const backToTop = document.querySelector('.back-to-top');
-            if (backToTop) {
-                if (window.pageYOffset > 300) {
-                    backToTop.style.opacity = '1';
-                    backToTop.style.visibility = 'visible';
-                } else {
-                    backToTop.style.opacity = '0';
-                    backToTop.style.visibility = 'hidden';
-                }
+        // Configuración global
+        window.NeoAgoraConfig = {
+            cartLocked: @(isCartLocked ? "true" : "false"),
+            endpoints: {
+                cartInfo: '/Compras/CartInfo',
+                cartMini: '/Compras/Mini'
             }
-        });
-
-        // Manejo de modales de Bootstrap
-        document.addEventListener('DOMContentLoaded', () => {
-            // Prevenir problemas con múltiples backdrops
-            const originalModal = bootstrap.Modal.prototype.constructor;
-
-            bootstrap.Modal = class extends originalModal {
-                _showBackdrop() {
-                    super._showBackdrop();
-                    // Asegurar que el backdrop tenga el z-index correcto
-                    const backdrop = document.querySelector('.modal-backdrop');
-                    if (backdrop) {
-                        backdrop.style.zIndex = '1079';
-                    }
-                }
-            };
-
-            // Limpiar backdrops al cerrar modales
-            document.addEventListener('hidden.bs.modal', () => {
-                const backdrops = document.querySelectorAll('.modal-backdrop');
-                if (backdrops.length > 1) {
-                    backdrops.forEach((backdrop, index) => {
-                        if (index > 0) backdrop.remove();
-                    });
-                }
-            });
-        });
-
-        // Mejorar accesibilidad
-        document.addEventListener('keydown', (e) => {
-            // Atajos de teclado
-            if (e.ctrlKey || e.metaKey) {
-                switch (e.key) {
-                    case '1':
-                        e.preventDefault();
-                        window.location.href = '/';
-                        break;
-                    case '2':
-                        e.preventDefault();
-                        document.querySelector('#open-sidebar')?.click();
-                        break;
-                    case '3':
-                        e.preventDefault();
-                        if (!document.body.dataset.cartLocked) {
-                            document.querySelector('#open-cart')?.click();
-                        }
-                        break;
-                }
-            }
-        });
-
-        // Mejorar performance en móviles
-        if ('connection' in navigator) {
-            const connection = navigator.connection;
-            if (connection.saveData || connection.effectiveType.includes('2g')) {
-                // Deshabilitar animaciones pesadas en conexiones lentas
-                document.documentElement.style.setProperty('--animation-duration', '0.01s');
-            }
-        }
+        };
     </script>
-
-    <!-- Botón flotante Back to Top -->
-    <button class="back-to-top" onclick="scrollToTop()" aria-label="Volver arriba" title="Volver arriba" style="opacity: 0; visibility: hidden;">
-        <div class="text"><span>Back</span><span>to</span><span>top</span></div>
-        <div class="clone"><span>Back</span><span>to</span><span>top</span></div>
-        <svg stroke-width="2" stroke="currentColor" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="20">
-            <path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linejoin="round" stroke-linecap="round" />
-        </svg>
-    </button>
-
-    @RenderSection("Scripts", required: false)
 </body>
 </html>

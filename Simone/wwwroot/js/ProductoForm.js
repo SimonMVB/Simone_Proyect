@@ -2,7 +2,7 @@
  * ============================================================================
  * PRODUCTO FORM - JAVASCRIPT MODULAR OPTIMIZADO
  * Archivo: wwwroot/js/ProductoForm.js
- * Versión: 2.0
+ * Versión: 2.1 - FIX PRECIOS
  * ============================================================================
  */
 
@@ -38,7 +38,6 @@
 
             let s = (x ?? '').toString().trim();
 
-            // ✅ CORREGIDO: Manejar formato español (1.200,50) y formato inglés (1,200.50)
             // Contar cuántos puntos y comas hay
             const dotCount = (s.match(/\./g) || []).length;
             const commaCount = (s.match(/,/g) || []).length;
@@ -200,14 +199,12 @@
             // Inicializar con categoría actual
             const currentCat = parseInt(selCat.value || '0', 10);
             if (currentCat) {
-                // ✅ CORREGIDO: Preservar selección al inicializar en modo edición
                 this.fillSubcategories(currentCat, true);
             }
 
             // Event listeners
             selCat.addEventListener('change', (e) => {
                 const catId = parseInt(e.target.value || '0', 10);
-                // Al cambiar categoría manualmente, NO preservar (limpiar)
                 this.fillSubcategories(catId, false);
                 ValidationModule.validateField(selCat);
             });
@@ -223,10 +220,8 @@
 
             if (!selSub) return;
 
-            // ✅ CORREGIDO: Guardar selección actual antes de limpiar
             const currentValue = preserveSelection ? selSub.value : '';
 
-            // Limpiar opciones
             selSub.innerHTML = '<option value="">Seleccione una subcategoría</option>';
 
             if (!categoriaId) {
@@ -235,16 +230,13 @@
                 return;
             }
 
-            // Filtrar subcategorías
             const filtered = State.subcategorias.filter(s => s.CategoriaID == categoriaId);
 
-            // Agregar opciones
             filtered.forEach(s => {
                 const option = document.createElement('option');
                 option.value = s.SubcategoriaID;
                 option.textContent = s.NombreSubcategoria;
 
-                // ✅ CORREGIDO: Restaurar selección si existe
                 if (preserveSelection && s.SubcategoriaID == currentValue) {
                     option.selected = true;
                 }
@@ -308,17 +300,14 @@
 
             if (!uploadArea || !filesInput || !gallery) return;
 
-            // Event listeners
             uploadArea.addEventListener('click', () => filesInput.click());
             uploadArea.addEventListener('dragover', (e) => this.handleDragOver(e));
             uploadArea.addEventListener('dragleave', () => this.handleDragLeave());
             uploadArea.addEventListener('drop', (e) => this.handleDrop(e));
             filesInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files));
 
-            // Cleanup al cerrar
             window.addEventListener('beforeunload', () => State.cleanup());
 
-            // Event delegation para botones de imágenes
             gallery.addEventListener('click', (e) => {
                 const btn = e.target.closest('.image-btn');
                 if (!btn) return;
@@ -370,14 +359,11 @@
 
             const filesToAdd = validFiles.slice(0, availableSlots);
 
-            // Mostrar progreso
             this.showProgress();
 
-            // Agregar archivos
             State.imageFiles.push(...filesToAdd);
             filesToAdd.forEach(file => this.createThumbnail(file));
 
-            // Actualizar input file
             const filesInput = Helpers.$('Imagenes');
             if (filesInput) {
                 const dt = new DataTransfer();
@@ -439,21 +425,17 @@
         },
 
         markAsCover(card) {
-            // Remover badges y active previos
             Helpers.$$('.image-badge').forEach(badge => badge.remove());
             Helpers.$$('.image-btn.active').forEach(btn => btn.classList.remove('active'));
 
-            // Agregar badge
             const badge = document.createElement('span');
             badge.className = 'image-badge';
             badge.textContent = 'Principal';
             card.appendChild(badge);
 
-            // Activar botón
             const starBtn = card.querySelector('[data-action="cover"]');
             if (starBtn) starBtn.classList.add('active');
 
-            // Actualizar inputs ocultos
             const isNew = card.dataset.new === '1';
             if (isNew) {
                 const index = Helpers.$$('#galeria .image-thumbnail[data-new="1"]').indexOf(card);
@@ -477,7 +459,6 @@
                 const index = Helpers.$$('#galeria .image-thumbnail[data-new="1"]').indexOf(card);
                 State.imageFiles.splice(index, 1);
 
-                // Actualizar input file
                 const filesInput = Helpers.$('Imagenes');
                 if (filesInput) {
                     const dt = new DataTransfer();
@@ -561,23 +542,18 @@
 
             if (!checkbox || !box) return;
 
-            // Toggle variantes
             checkbox.addEventListener('change', () => this.toggleVariants());
 
-            // Inputs de colores y tallas
             this.initTagInputs();
 
-            // Botones de acción
             const btnGen = Helpers.$('btnGen');
             const btnClear = Helpers.$('btnClearVars');
 
             if (btnGen) btnGen.addEventListener('click', () => this.generateCombinations());
             if (btnClear) btnClear.addEventListener('click', () => this.clearVariants());
 
-            // Reglas de precio
             this.initPriceRules();
 
-            // Event delegation para tabla
             const table = Helpers.$('tblVars');
             if (table) {
                 table.addEventListener('click', (e) => {
@@ -634,7 +610,6 @@
                 this.setupTagInput(sizeInput, sizeTags, 'talla');
             }
 
-            // Event delegation para remover tags
             [colorTags, sizeTags].forEach(container => {
                 if (!container) return;
                 container.addEventListener('click', (e) => {
@@ -653,7 +628,6 @@
                 const trimmed = value.trim();
                 if (!trimmed) return;
 
-                // Verificar duplicados
                 const existing = Helpers.$$('.tag input', container).map(i => i.value.toLowerCase());
                 if (existing.includes(trimmed.toLowerCase())) {
                     Helpers.toast(`"${trimmed}" ya existe`, 'warning');
@@ -702,10 +676,8 @@
                 return;
             }
 
-            // Limpiar tabla
             tbody.innerHTML = '';
 
-            // Generar combinaciones
             colors.forEach(color => {
                 sizes.forEach(size => {
                     const row = this.createVariantRow(color, size);
@@ -854,7 +826,6 @@
                 }
             });
 
-            // Actualizar elementos
             const totalEl = Helpers.$('summaryTotal');
             const stockEl = Helpers.$('summaryStock');
             const minEl = Helpers.$('summaryMinPrice');
@@ -867,13 +838,11 @@
 
             if (summary) summary.style.display = 'block';
 
-            // Actualizar preview
             const previewStock = Helpers.$('previewStock');
             if (previewStock) previewStock.textContent = `${totalStock} unidades`;
         },
 
         initPriceRules() {
-            // Precio global
             const chkGlobal = Helpers.$('chkPrecioGlobal');
             const inpGlobal = Helpers.$('inpPrecioGlobal');
             const btnApplyGlobal = Helpers.$('btnApplyGlobal');
@@ -901,7 +870,6 @@
                 });
             }
 
-            // Precio por talla
             const chkPorTalla = Helpers.$('chkPrecioPorTalla');
             const boxPorTalla = Helpers.$('boxPrecioPorTalla');
 
@@ -935,7 +903,6 @@
                 container.appendChild(row);
             });
 
-            // Botón aplicar
             const btnApply = document.createElement('button');
             btnApply.type = 'button';
             btnApply.className = 'btn btn-success';
@@ -976,7 +943,6 @@
     // ========== MÓDULO: VALIDACIÓN ==========
     const ValidationModule = {
         init() {
-            // Contador de caracteres en descripción
             const desc = Helpers.$('Descripcion');
             const charCount = Helpers.$('charCount');
 
@@ -991,7 +957,6 @@
                 desc.addEventListener('input', updateCount);
             }
 
-            // Validación en blur
             Helpers.$$('[data-validation]').forEach(field => {
                 field.addEventListener('blur', () => this.validateField(field));
                 field.addEventListener('input', () => {
@@ -1010,12 +975,10 @@
             let isValid = true;
             let message = '';
 
-            // Regla: required
             if (rules.includes('required') && !value) {
                 isValid = false;
                 message = errorEl?.textContent || 'Este campo es requerido';
             }
-            // Regla: number
             else if (rules.includes('number') && value) {
                 const num = Helpers.toNum(value);
                 if (isNaN(num)) {
@@ -1030,7 +993,6 @@
                 }
             }
 
-            // Actualizar UI
             if (isValid) {
                 field.classList.remove('input-has-error', 'error');
                 if (errorEl) errorEl.style.display = 'none';
@@ -1053,7 +1015,6 @@
 
             State.validationErrors = [];
 
-            // Validar campos básicos
             Helpers.$$('[data-validation]').forEach(field => {
                 if (!this.validateField(field)) {
                     const label = field.previousElementSibling?.textContent?.replace('*', '').trim() || field.name;
@@ -1061,7 +1022,6 @@
                 }
             });
 
-            // Validar precio vs compra (producto simple)
             if (!State.hasVariants) {
                 const pc = Helpers.toNum(Helpers.$('PrecioCompra')?.value);
                 const pv = Helpers.toNum(Helpers.$('PrecioVenta')?.value);
@@ -1072,7 +1032,6 @@
                 }
             }
 
-            // Validar variantes
             if (State.hasVariants) {
                 const rows = Helpers.$$('#tblVars tbody tr');
 
@@ -1101,13 +1060,11 @@
                 }
             }
 
-            // Validar imágenes
             const imageCount = Helpers.$$('#galeria .image-thumbnail:not(.removed)').length;
             if (imageCount === 0) {
                 State.validationErrors.push('Debe agregar al menos una imagen');
             }
 
-            // Mostrar errores
             if (State.validationErrors.length > 0) {
                 this.showErrors();
                 Helpers.toast('Corrija los errores antes de enviar', 'error');
@@ -1132,7 +1089,6 @@
 
             card.style.display = 'block';
 
-            // Scroll al primer error
             const firstError = document.querySelector('.input-has-error, .error');
             if (firstError) {
                 firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1188,24 +1144,9 @@
             State.isSubmitting = true;
             this.disableSubmitButton();
 
-            // ✅ CORREGIDO: Normalizar números correctamente
-            Helpers.$$('input[type="number"]').forEach(input => {
-                if (input.value) {
-                    // Remover separadores de miles y normalizar decimal
-                    let value = input.value.toString();
-
-                    // Remover puntos como separadores de miles (formato español)
-                    value = value.replace(/\./g, '');
-
-                    // Convertir coma a punto para decimal
-                    value = value.replace(',', '.');
-
-                    // Asignar valor limpio
-                    input.value = value;
-
-                    Helpers.log(`Normalized ${input.name}: ${input.value}`);
-                }
-            });
+            // ✅ CRITICAL FIX: NO NORMALIZAR VALORES
+            // El InvariantDecimalModelBinder en el servidor ya maneja la normalización
+            // Dejar los valores tal cual están para que el navegador los envíe correctamente
 
             // Remover variantes si modo simple
             if (!State.hasVariants) {
@@ -1247,10 +1188,8 @@
             ValidationModule.init();
             SubmitModule.init();
 
-            // Actualizar preview inicial
             PreviewModule.update();
 
-            // Observar cambios para auto-preview
             const fieldsToWatch = ['#Nombre', '#Marca', '#Stock', '#PrecioCompra', '#PrecioVenta'];
             fieldsToWatch.forEach(selector => {
                 const el = document.querySelector(selector);
@@ -1259,7 +1198,6 @@
                 }
             });
 
-            // Responsive: scroll en focus para móviles
             if (window.innerWidth < 768) {
                 Helpers.$$('.form-input, .form-select, .form-textarea').forEach(input => {
                     input.addEventListener('focus', function () {
@@ -1268,13 +1206,12 @@
                 });
             }
 
-            Helpers.log('ProductoForm initialized successfully');
+            Helpers.log('ProductoForm initialized successfully ✓');
         } catch (error) {
             Helpers.error('Failed to initialize ProductoForm', error);
         }
     }
 
-    // Inicializar cuando DOM esté listo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {

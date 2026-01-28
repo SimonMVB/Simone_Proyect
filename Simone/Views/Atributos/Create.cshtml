@@ -1,0 +1,327 @@
+﻿@model Simone.Models.CategoriaAtributo
+@{
+    ViewData["Title"] = "Crear Atributo";
+    var categoria = ViewBag.Categoria as Simone.Models.Categoria;
+}
+
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Index">Categorías</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Details" asp-route-id="@categoria?.CategoriaID">
+                            @categoria?.Nombre
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a asp-action="Index" asp-route-categoriaId="@categoria?.CategoriaID">Atributos</a>
+                    </li>
+                    <li class="breadcrumb-item active">Nuevo Atributo</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-plus-circle me-2"></i>Crear Nuevo Atributo</h2>
+            <p class="text-muted">Categoría: <strong>@categoria?.Nombre</strong></p>
+        </div>
+    </div>
+
+    <form asp-action="Create" method="post">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <input type="hidden" asp-for="CategoriaID" />
+
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label asp-for="Nombre" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Nombre <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Nombre" class="form-control" id="nombreInput"
+                                   placeholder="Ej: Largo, Material, Color" required />
+                            <span asp-validation-for="Nombre" class="text-danger"></span>
+                        </div>
+
+                        <!-- Nombre Técnico -->
+                        <div class="mb-3">
+                            <label asp-for="NombreTecnico" class="form-label">
+                                <i class="fas fa-code me-1"></i>Nombre Técnico
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="NombreTecnico" class="form-control" id="nombreTecnicoInput"
+                                       placeholder="Se generará automáticamente" />
+                                <button type="button" class="btn btn-outline-secondary" id="btnGenerarNombreTecnico">
+                                    <i class="fas fa-sync-alt"></i> Generar
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Nombre para uso interno (sin espacios, minúsculas). Ej: largo, material, color
+                            </small>
+                            <span asp-validation-for="NombreTecnico" class="text-danger"></span>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label asp-for="Descripcion" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Descripción
+                            </label>
+                            <textarea asp-for="Descripcion" class="form-control" rows="2"
+                                      placeholder="Descripción breve del atributo"></textarea>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Tipo de Campo -->
+                        <div class="mb-3">
+                            <label asp-for="TipoCampo" class="form-label">
+                                <i class="fas fa-list-alt me-1"></i>Tipo de Campo <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="TipoCampo" class="form-select" id="tipoCampoSelect" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="text">Texto</option>
+                                <option value="number">Número</option>
+                                <option value="select">Lista desplegable (select)</option>
+                                <option value="multiselect">Selección múltiple</option>
+                                <option value="checkbox">Checkbox (Sí/No)</option>
+                                <option value="color">Color</option>
+                                <option value="date">Fecha</option>
+                            </select>
+                            <span asp-validation-for="TipoCampo" class="text-danger"></span>
+                        </div>
+
+                        <!-- Opciones (para select/multiselect) -->
+                        <div class="mb-3" id="opcionesContainer" style="display: none;">
+                            <label for="opciones" class="form-label">
+                                <i class="fas fa-list me-1"></i>Opciones <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="opciones" id="opciones" class="form-control" rows="5"
+                                      placeholder="Una opción por línea&#10;Ej:&#10;Mini&#10;Corto&#10;Midi&#10;Largo&#10;Maxi"></textarea>
+                            <small class="form-text text-muted">
+                                Escribe una opción por línea. Se usarán para el campo select o multiselect.
+                            </small>
+                        </div>
+
+                        <!-- Unidad (para número) -->
+                        <div class="mb-3" id="unidadContainer" style="display: none;">
+                            <label asp-for="Unidad" class="form-label">
+                                <i class="fas fa-ruler me-1"></i>Unidad de Medida
+                            </label>
+                            <input asp-for="Unidad" class="form-control" placeholder="Ej: cm, kg, ml" />
+                            <small class="form-text text-muted">
+                                Para campos numéricos. Ej: cm, kg, ml, pulgadas
+                            </small>
+                        </div>
+
+                        <!-- Icono -->
+                        <div class="mb-3">
+                            <label asp-for="IconoClass" class="form-label">
+                                <i class="fas fa-icons me-1"></i>Icono (FontAwesome)
+                            </label>
+                            <input asp-for="IconoClass" class="form-control"
+                                   placeholder="Ej: fas fa-ruler, fas fa-tshirt" />
+                        </div>
+
+                        <!-- Grupo -->
+                        <div class="mb-3">
+                            <label asp-for="Grupo" class="form-label">
+                                <i class="fas fa-layer-group me-1"></i>Grupo
+                            </label>
+                            <select asp-for="Grupo" class="form-select">
+                                <option value="">-- Sin grupo --</option>
+                                <option value="Especificaciones">Especificaciones</option>
+                                <option value="Materiales">Materiales</option>
+                                <option value="Dimensiones">Dimensiones</option>
+                                <option value="Diseño">Diseño</option>
+                                <option value="Uso">Uso</option>
+                                <option value="Características">Características</option>
+                                <option value="Color">Color</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                Agrupa atributos relacionados para mejor organización
+                            </small>
+                        </div>
+
+                        <!-- Orden -->
+                        <div class="mb-3">
+                            <label asp-for="Orden" class="form-label">
+                                <i class="fas fa-sort-numeric-down me-1"></i>Orden
+                            </label>
+                            <input asp-for="Orden" type="number" class="form-control" min="0" value="0" />
+                            <small class="form-text text-muted">
+                                Orden de aparición (menor = primero)
+                            </small>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Checkboxes -->
+                        <h5 class="mb-3"><i class="fas fa-sliders-h me-2"></i>Configuración</h5>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Obligatorio" class="form-check-input" />
+                                    <label asp-for="Obligatorio" class="form-check-label">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Obligatorio
+                                    </label>
+                                    <small class="d-block text-muted">El usuario debe completar este campo</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Filtrable" class="form-check-input" />
+                                    <label asp-for="Filtrable" class="form-check-label">
+                                        <i class="fas fa-filter me-1"></i>Filtrable
+                                    </label>
+                                    <small class="d-block text-muted">Permite filtrar productos por este campo</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="MostrarEnFicha" class="form-check-input" checked />
+                                    <label asp-for="MostrarEnFicha" class="form-check-label">
+                                        <i class="fas fa-file-alt me-1"></i>Mostrar en Ficha
+                                    </label>
+                                    <small class="d-block text-muted">Aparece en la ficha de producto</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="MostrarEnTarjeta" class="form-check-input" />
+                                    <label asp-for="MostrarEnTarjeta" class="form-check-label">
+                                        <i class="fas fa-id-card me-1"></i>Mostrar en Tarjeta
+                                    </label>
+                                    <small class="d-block text-muted">Aparece en el listado de productos</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Activo" class="form-check-input" checked />
+                                    <label asp-for="Activo" class="form-check-label">
+                                        <i class="fas fa-check-circle me-1"></i>Activo
+                                    </label>
+                                    <small class="d-block text-muted">El atributo está habilitado</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Index" asp-route-categoriaId="@Model.CategoriaID" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Crear Atributo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de ayuda -->
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>Ayuda</h6>
+                    </div>
+                    <div class="card-body">
+                        <h6><i class="fas fa-lightbulb text-warning me-1"></i>Tipos de Campo</h6>
+                        <ul class="small mb-3">
+                            <li><strong>Texto:</strong> Campo de texto libre</li>
+                            <li><strong>Número:</strong> Solo números (con unidad opcional)</li>
+                            <li><strong>Select:</strong> Lista desplegable (1 opción)</li>
+                            <li><strong>Multiselect:</strong> Selección múltiple</li>
+                            <li><strong>Checkbox:</strong> Sí/No</li>
+                            <li><strong>Color:</strong> Selector de color</li>
+                            <li><strong>Fecha:</strong> Selector de fecha</li>
+                        </ul>
+
+                        <h6><i class="fas fa-info-circle text-info me-1"></i>Configuraciones</h6>
+                        <ul class="small mb-0">
+                            <li><strong>Obligatorio:</strong> El usuario debe llenarlo</li>
+                            <li><strong>Filtrable:</strong> Se puede filtrar por este campo</li>
+                            <li><strong>En Ficha:</strong> Aparece en el detalle del producto</li>
+                            <li><strong>En Tarjeta:</strong> Aparece en el listado</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-folder me-2"></i>Categoría</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1"><strong>@categoria?.Nombre</strong></p>
+                        <small class="text-muted">Path: <code>@categoria?.Path</code></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Generar nombre técnico automáticamente
+            $('#nombreInput').on('input', function() {
+                var nombre = $(this).val();
+                if (nombre && !$('#nombreTecnicoInput').val()) {
+                    generarNombreTecnico(nombre);
+                }
+            });
+
+            // Botón manual
+            $('#btnGenerarNombreTecnico').click(function() {
+                var nombre = $('#nombreInput').val();
+                if (nombre) {
+                    generarNombreTecnico(nombre);
+                } else {
+                    alert('Ingresa un nombre primero');
+                }
+            });
+
+            function generarNombreTecnico(nombre) {
+                $.get('@Url.Action("GenerarNombreTecnico")', { nombre: nombre }, function(data) {
+                    if (data.success) {
+                        $('#nombreTecnicoInput').val(data.nombreTecnico);
+                    }
+                });
+            }
+
+            // Mostrar/ocultar opciones según tipo de campo
+            $('#tipoCampoSelect').change(function() {
+                var tipo = $(this).val();
+
+                if (tipo === 'select' || tipo === 'multiselect') {
+                    $('#opcionesContainer').show();
+                    $('#opciones').prop('required', true);
+                } else {
+                    $('#opcionesContainer').hide();
+                    $('#opciones').prop('required', false);
+                }
+
+                if (tipo === 'number') {
+                    $('#unidadContainer').show();
+                } else {
+                    $('#unidadContainer').hide();
+                }
+            });
+
+            // Trigger inicial
+            $('#tipoCampoSelect').trigger('change');
+        });
+    </script>
+}

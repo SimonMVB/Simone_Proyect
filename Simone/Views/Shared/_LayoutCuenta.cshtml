@@ -1,32 +1,167 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- Meta tags esenciales -->
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Neo Agora</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-    <!-- Bootstrap -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <!-- SEO básico -->
+    <title>@ViewData["Title"] - Neo Agora</title>
+    <meta name="description" content="@(ViewData["Description"] ?? "Accede a tu cuenta de Neo Agora o crea una nueva para comenzar a comprar")" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="author" content="Neo Agora" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" />
+
+    <!-- Preconnect para CDNs -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM"
+          crossorigin="anonymous" />
 
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+          rel="stylesheet"
+          integrity="sha512-Avb2QiuDEEvB4bZJYdft2mNjVShBftLdPG8FJ0V7irTLQ8Uo0qcPxh4Plq7G5tGm0rU+1SPhVotteLpBERwTkw=="
+          crossorigin="anonymous"
+          referrerpolicy="no-referrer" />
 
-    <!-- Estilos personalizados -->
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <!-- Reset de estilos del layout - NO interferir con páginas hijas -->
+    <style>
+        /* ========================================
+                   LAYOUT BASE - MÍNIMO NECESARIO
+                   ======================================== */
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Body neutro - las páginas hijas definen su propio fondo */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #212529;
+            background: #f5f5f5;
+        }
+
+        /* Skip link accesibilidad */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #0d6efd;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0 0 8px 8px;
+            text-decoration: none;
+            font-weight: 600;
+            z-index: 100000;
+            transition: top 0.3s ease;
+        }
+
+            .skip-link:focus {
+                top: 0;
+                outline: none;
+            }
+
+        /* ========================================
+                   CONTENEDOR PRINCIPAL - FLEXBOX FULL
+                   ======================================== */
+
+        .auth-wrapper {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* El contenido ocupa todo el espacio disponible */
+        .auth-main {
+            flex: 1;
+            display: flex;
+            width: 100%;
+        }
+
+        /* ========================================
+                   UTILIDADES COMUNES
+                   ======================================== */
+
+        /* Screen reader only */
+        .sr-only {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+
+        /* Focus visible para accesibilidad */
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid #0d6efd;
+            outline-offset: 2px;
+        }
+
+        /* Reduced motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after
+
+        {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+
+        }
+    </style>
+
+    <!-- Estilos específicos de cada página -->
+    @await RenderSectionAsync("Styles", required: false)
 </head>
-<body class="bg-light">
+<body>
+    <!-- Skip to main content - Accesibilidad -->
+    <a href="#main-content" class="skip-link">
+        Saltar al contenido principal
+    </a>
 
-    <div class="container d-flex align-items-center justify-content-center" style="min-height: 100vh;">
-        <div class="w-100" style="max-width: 450px;">
+    <!-- Wrapper principal -->
+    <div class="auth-wrapper">
+        <!-- Contenido principal - SIN restricciones de ancho -->
+        <main class="auth-main" id="main-content">
             @RenderBody()
-        </div>
+        </main>
     </div>
 
-    <!-- Scripts necesarios -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Scripts base -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+            crossorigin="anonymous"></script>
 
-    <!-- Aquí se inyectan los scripts de cada vista -->
-    @RenderSection("Scripts", required: false)
+    <!-- Scripts específicos de cada página -->
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

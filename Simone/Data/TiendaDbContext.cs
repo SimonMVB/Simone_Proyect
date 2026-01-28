@@ -60,6 +60,23 @@ namespace Simone.Data
         // ✅ NUEVO: Variantes de producto (Color+Talla)
         public DbSet<ProductoVariante> ProductoVariantes { get; set; }
 
+        // ==================== ⭐ ENTERPRISE: NUEVOS DbSets ====================
+        /// <summary>
+        /// Nueva tabla de Categorías (sistema jerárquico enterprise)
+        /// </summary>
+        public DbSet<Categoria> CategoriasEnterprise { get; set; } = null!;
+
+        /// <summary>
+        /// Atributos personalizados por categoría
+        /// </summary>
+        public DbSet<CategoriaAtributo> CategoriaAtributos { get; set; } = null!;
+
+        /// <summary>
+        /// Valores de atributos en productos
+        /// </summary>
+        public DbSet<ProductoAtributoValor> ProductoAtributoValores { get; set; } = null!;
+        // ==================== FIN NUEVOS DbSets ====================
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -115,69 +132,40 @@ namespace Simone.Data
                       .WithMany()
                       .HasForeignKey(cu => cu.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
-            });
 
-            // ------------------------------------------------------------
-            // 2) Índices únicos de negocio
-            // ------------------------------------------------------------
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasIndex(cd => new { cd.CarritoID, cd.ProductoID, cd.ProductoVarianteID })
-                .IsUnique();
-
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Variante)
-                .WithMany(v => v.CarritoDetalles)
-                .HasForeignKey(cd => cd.ProductoVarianteID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Favorito>()
-                .HasIndex(f => new { f.UsuarioId, f.ProductoId })
-                .IsUnique();
-
-            // ------------------------------------------------------------
-            // 3) Relaciones + DeleteBehavior
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Carrito>(entity =>
-            {
-                entity.HasOne(c => c.Usuario)
+                entity.HasOne(cu => cu.Promocion)
                       .WithMany()
-                      .HasForeignKey(c => c.UsuarioId)
+                      .HasForeignKey(cu => cu.PromocionID)
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Producto)
-                .WithMany(p => p.CarritoDetalles)
-                .HasForeignKey(cd => cd.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Carrito)
-                .WithMany(c => c.CarritoDetalles)
-                .HasForeignKey(cd => cd.CarritoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Producto>()
-                .HasOne(p => p.Proveedor)
-                .WithMany(pr => pr.Productos)
-                .HasForeignKey(p => p.ProveedorID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Producto>()
-                .HasOne(p => p.Subcategoria)
-                .WithMany(s => s.Productos)
-                .HasForeignKey(p => p.SubcategoriaID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<ProductoImagen>(e =>
+            // ------------------------------------------------------------
+            // 2) Producto → índices básicos + navegación ampliada
+            // ------------------------------------------------------------
+            modelBuilder.Entity<Producto>(entity =>
             {
-                e.HasKey(pi => pi.ProductoImagenID);
-                e.Property(pi => pi.Path).IsRequired().HasMaxLength(300);
+                entity.HasIndex(p => new { p.CategoriaID, p.SubcategoriaID });
+                entity.HasIndex(p => p.VendedorID);
 
-                e.HasOne(pi => pi.Producto)
-                 .WithMany(p => p.Imagenes)
-                 .HasForeignKey(pi => pi.ProductoID)
-                 .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(p => p.Categoria)
+                      .WithMany(c => c.Productos)
+                      .HasForeignKey(p => p.CategoriaID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(p => p.Subcategoria)
+                      .WithMany(s => s.Productos)
+                      .HasForeignKey(p => p.SubcategoriaID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(p => p.Usuario)
+                      .WithMany()
+                      .HasForeignKey(p => p.VendedorID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(p => p.Proveedor)
+                      .WithMany()
+                      .HasForeignKey(p => p.ProveedorID)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // ===== Subcategorias (multi-vendedor) =====
@@ -218,95 +206,16 @@ namespace Simone.Data
                 .HasForeignKey(mi => mi.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<MovimientosInventario>()
-                .HasOne(mi => mi.Variante)
-                .WithMany(v => v.MovimientosInventario)
-                .HasForeignKey(mi => mi.ProductoVarianteID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Variante)
-                .WithMany(v => v.DetalleVentas)
-                .HasForeignKey(dv => dv.ProductoVarianteID)
-                .OnDelete(DeleteBehavior.Restrict);
-
             modelBuilder.Entity<DetalleVentas>()
                 .HasOne(dv => dv.Producto)
                 .WithMany(p => p.DetalleVentas)
                 .HasForeignKey(dv => dv.ProductoID)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Favorito>()
-                .HasOne(f => f.Usuario)
-                .WithMany()
-                .HasForeignKey(f => f.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Ventas>()
-                .HasOne(v => v.Usuario)
-                .WithMany()
-                .HasForeignKey(v => v.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Pedido>()
-                .HasOne(p => p.Usuario)
-                .WithMany()
-                .HasForeignKey(p => p.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // ------------------------------------------------------------
-            // 3.b) Multi-vendedor
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Vendedor>(entity =>
-            {
-                entity.HasKey(v => v.VendedorId);
-
-                entity.HasMany(v => v.Cuentas)
-                      .WithOne(c => c.Vendedor)
-                      .HasForeignKey(c => c.VendedorId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasMany(v => v.Contactos)
-                      .WithOne(c => c.Vendedor)
-                      .HasForeignKey(c => c.VendedorId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            modelBuilder.Entity<Banco>(entity =>
-            {
-                entity.HasKey(b => b.BancoId);
-                entity.HasIndex(b => b.Codigo).IsUnique();
-            });
-
-            modelBuilder.Entity<CuentaBancaria>(entity =>
-            {
-                entity.HasKey(c => c.CuentaBancariaId);
-
-                entity.HasOne(c => c.Banco)
-                      .WithMany(b => b.Cuentas)
-                      .HasForeignKey(c => c.BancoId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasIndex(c => new { c.VendedorId, c.BancoId, c.Numero })
-                      .IsUnique();
-            });
-
-            modelBuilder.Entity<ContactoTienda>(entity =>
-            {
-                entity.HasKey(c => c.ContactoTiendaId);
-            });
-
-            // ------------------------------------------------------------
-            // 3.c) Variantes de Producto
-            // ------------------------------------------------------------
+            // ===== ProductoVariante (nuevo) =====
             modelBuilder.Entity<ProductoVariante>(entity =>
             {
                 entity.HasKey(v => v.ProductoVarianteID);
-
-                entity.Property(v => v.Color).HasMaxLength(50).IsRequired();
-                entity.Property(v => v.Talla).HasMaxLength(20).IsRequired();
-                entity.Property(v => v.PrecioCompra).HasColumnType("decimal(18,2)");
-                entity.Property(v => v.PrecioVenta).HasColumnType("decimal(18,2)");
 
                 entity.HasOne(v => v.Producto)
                       .WithMany(p => p.Variantes)
@@ -314,39 +223,101 @@ namespace Simone.Data
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(v => new { v.ProductoID, v.Color, v.Talla })
-                      .IsUnique();
+                      .IsUnique()
+                      .HasDatabaseName("IX_ProductoVariante_Producto_Color_Talla_Unique");
+
+                entity.Property(v => v.Color).HasMaxLength(30);
+                entity.Property(v => v.Talla).HasMaxLength(20);
+                entity.Property(v => v.SKU).HasMaxLength(50);
+                entity.Property(v => v.ImagenPath).HasMaxLength(300);
+
+                entity.Property(v => v.PrecioCompra).HasColumnType("decimal(18,2)");
+                entity.Property(v => v.PrecioVenta).HasColumnType("decimal(18,2)");
+                entity.Property(v => v.Stock).HasDefaultValue(0);
+            });
+
+            // ===== ProductoImagen (galería moderna) =====
+            modelBuilder.Entity<ProductoImagen>(entity =>
+            {
+                entity.HasKey(i => i.ProductoImagenID);
+
+                entity.HasOne(i => i.Producto)
+                      .WithMany(p => p.Imagenes)
+                      .HasForeignKey(i => i.ProductoID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(i => new { i.ProductoID, i.Principal })
+                      .HasDatabaseName("IX_ProductoImagen_Producto_Principal");
+
+                entity.Property(i => i.Path).IsRequired().HasMaxLength(300);
+                entity.Property(i => i.Orden).HasDefaultValue(0);
             });
 
             // ------------------------------------------------------------
-            // 4) DECIMAL(18,2)
+            // 3) Ventas + Detalles
             // ------------------------------------------------------------
-            var decimalProps = new (Type entity, string[] props)[]
-            {
-                (typeof(Comisiones),            new[] { "MontoComision", "PorcentajeComision" }),
-                (typeof(Compras),               new[] { "Total" }),
-                (typeof(DetalleVentas),         new[] { "Descuento", "PrecioUnitario", "Subtotal" }),
-                (typeof(DetallesCompra),        new[] { "PrecioUnitario", "Subtotal" }),
-                (typeof(DetallesPedido),        new[] { "PrecioUnitario", "Subtotal" }),
-                (typeof(Empleados),             new[] { "Salario" }),
-                (typeof(Gastos),                new[] { "Monto" }),
-                (typeof(HistorialPrecios),      new[] { "PrecioAnterior", "PrecioNuevo" }),
-                (typeof(Pedido),                new[] { "Total" }),
-                (typeof(Producto),              new[] { "PrecioCompra", "PrecioVenta" }),
-                (typeof(ProgramasFidelizacion), new[] { "Descuento" }),
-                (typeof(Promocion),             new[] { "Descuento" }),
-                (typeof(Ventas),                new[] { "Total" }),
-                (typeof(ProductoVariante),      new[] { "PrecioCompra", "PrecioVenta" }),
-            };
+            modelBuilder.Entity<Ventas>()
+                .HasOne(v => v.Usuario)
+                .WithMany()
+                .HasForeignKey(v => v.UsuarioId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            foreach (var (entity, props) in decimalProps)
-                foreach (var prop in props)
-                    modelBuilder.Entity(entity).Property(prop).HasColumnType("decimal(18,2)");
+            modelBuilder.Entity<DetalleVentas>()
+                .HasOne(dv => dv.Venta)
+                .WithMany(v => v.DetalleVentas)
+                .HasForeignKey(dv => dv.VentaID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DetalleVentas>()
+                .HasOne(dv => dv.Producto)
+                .WithMany(p => p.DetalleVentas)
+                .HasForeignKey(dv => dv.ProductoID)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // ------------------------------------------------------------
-            // 5) Defaults
+            // 4) Compras + Detalles + Proveedores
             // ------------------------------------------------------------
-            modelBuilder.Entity<Favorito>()
-                .Property(f => f.FechaGuardado)
+            modelBuilder.Entity<Compras>()
+                .HasOne(c => c.Proveedor)
+                .WithMany()
+                .HasForeignKey(c => c.ProveedorID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DetallesCompra>()
+                .HasOne(dc => dc.Compra)
+                .WithMany(c => c.DetallesCompra)
+                .HasForeignKey(dc => dc.CompraID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<DetallesCompra>()
+                .HasOne(dc => dc.Producto)
+                .WithMany(p => p.DetallesCompra)
+                .HasForeignKey(dc => dc.ProductoID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ------------------------------------------------------------
+            // 5) Carrito
+            // ------------------------------------------------------------
+            modelBuilder.Entity<Carrito>()
+                .HasOne(c => c.Usuario)
+                .WithMany()
+                .HasForeignKey(c => c.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Carrito)
+                .WithMany(c => c.CarritoDetalles)
+                .HasForeignKey(cd => cd.CarritoID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<CarritoDetalle>()
+                .HasOne(cd => cd.Producto)
+                .WithMany(p => p.CarritoDetalles)
+                .HasForeignKey(cd => cd.ProductoID)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Carrito>()
+                .Property(c => c.FechaCreacion)
                 .HasDefaultValueSql("GETUTCDATE()");
 
             modelBuilder.Entity<CarritoDetalle>()
@@ -369,6 +340,112 @@ namespace Simone.Data
                 .WithMany(u => u.Actividades)
                 .HasForeignKey(a => a.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // ==================== ⭐ ENTERPRISE: CONFIGURACIÓN CATEGORÍAS ====================
+
+            // ------------------------------------------------------------
+            // CATEGORIA (Auto-referencial - Jerarquía infinita)
+            // ------------------------------------------------------------
+            modelBuilder.Entity<Categoria>(entity =>
+            {
+                entity.ToTable("Categorias_Enterprise");
+
+                entity.HasKey(e => e.CategoriaID);
+
+                // Auto-referencial: Una categoría puede tener padre y muchas hijas
+                entity.HasOne(e => e.CategoriaPadre)
+                    .WithMany(e => e.CategoriasHijas)
+                    .HasForeignKey(e => e.CategoriaPadreID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Índices para performance
+                entity.HasIndex(e => e.Slug)
+                    .HasDatabaseName("IX_Categoria_Slug");
+
+                entity.HasIndex(e => e.Path)
+                    .IsUnique()
+                    .HasDatabaseName("IX_Categoria_Path_Unique");
+
+                entity.HasIndex(e => new { e.CategoriaPadreID, e.Nivel, e.Orden })
+                    .HasDatabaseName("IX_Categoria_Padre_Nivel_Orden");
+
+                entity.HasIndex(e => e.Activa)
+                    .HasDatabaseName("IX_Categoria_Activa");
+
+                entity.HasIndex(e => e.Destacada)
+                    .HasDatabaseName("IX_Categoria_Destacada");
+
+                entity.HasIndex(e => e.Trending)
+                    .HasDatabaseName("IX_Categoria_Trending");
+
+                entity.HasIndex(e => e.TrendingScore)
+                    .HasDatabaseName("IX_Categoria_TrendingScore");
+
+                // Validación: Slug único dentro del mismo padre
+                entity.HasIndex(e => new { e.Slug, e.CategoriaPadreID })
+                    .IsUnique()
+                    .HasDatabaseName("IX_Categoria_Slug_Padre_Unique");
+            });
+
+            // ------------------------------------------------------------
+            // CATEGORIA ATRIBUTO
+            // ------------------------------------------------------------
+            modelBuilder.Entity<CategoriaAtributo>(entity =>
+            {
+                entity.ToTable("CategoriaAtributos");
+
+                entity.HasKey(e => e.AtributoID);
+
+                entity.HasOne(e => e.Categoria)
+                    .WithMany(e => e.Atributos)
+                    .HasForeignKey(e => e.CategoriaID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new { e.CategoriaID, e.Orden })
+                    .HasDatabaseName("IX_CategoriaAtributo_Categoria_Orden");
+
+                entity.HasIndex(e => new { e.CategoriaID, e.NombreTecnico })
+                    .IsUnique()
+                    .HasDatabaseName("IX_CategoriaAtributo_Categoria_NombreTecnico_Unique");
+
+                entity.HasIndex(e => e.Filtrable)
+                    .HasDatabaseName("IX_CategoriaAtributo_Filtrable");
+
+                entity.HasIndex(e => e.Activo)
+                    .HasDatabaseName("IX_CategoriaAtributo_Activo");
+            });
+
+            // ------------------------------------------------------------
+            // PRODUCTO ATRIBUTO VALOR
+            // ------------------------------------------------------------
+            modelBuilder.Entity<ProductoAtributoValor>(entity =>
+            {
+                entity.ToTable("ProductoAtributoValores");
+
+                entity.HasKey(e => e.ValorID);
+
+                entity.HasOne(e => e.Producto)
+                    .WithMany(e => e.AtributosValores)
+                    .HasForeignKey(e => e.ProductoID)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Atributo)
+                    .WithMany(e => e.ValoresProductos)
+                    .HasForeignKey(e => e.AtributoID)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => new { e.ProductoID, e.AtributoID })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ProductoAtributoValor_Producto_Atributo_Unique");
+
+                entity.HasIndex(e => new { e.AtributoID, e.Valor })
+                    .HasDatabaseName("IX_ProductoAtributoValor_Atributo_Valor");
+
+                entity.HasIndex(e => e.ValorNumerico)
+                    .HasDatabaseName("IX_ProductoAtributoValor_ValorNumerico");
+            });
+
+            // ==================== FIN CONFIGURACIÓN ENTERPRISE ====================
         }
     }
 }

@@ -1,0 +1,373 @@
+﻿@model Simone.Models.Categoria
+@{
+    ViewData["Title"] = "Detalles de Categoría";
+    var breadcrumbs = ViewBag.Breadcrumbs as List<Simone.Models.Categoria>;
+    var tieneHijas = Model.CategoriasHijas?.Any() == true;
+    var tieneAtributos = Model.Atributos?.Any() == true;
+}
+
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Categorías</a></li>
+                    @if (breadcrumbs != null)
+                    {
+                        foreach (var crumb in breadcrumbs.Take(breadcrumbs.Count - 1))
+                        {
+                            <li class="breadcrumb-item">
+                                <a asp-action="Details" asp-route-id="@crumb.CategoriaID">@crumb.Nombre</a>
+                            </li>
+                        }
+                    }
+                    <li class="breadcrumb-item active">@Model.Nombre</li>
+                </ol>
+            </nav>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    @if (!string.IsNullOrEmpty(Model.IconoClass))
+                    {
+                        <i class="@Model.IconoClass me-2"></i>
+                    }
+                    @Model.Nombre
+                    @if (Model.Destacada)
+                    {
+                        <span class="badge bg-warning text-dark ms-2">
+                            <i class="fas fa-star"></i> Destacada
+                        </span>
+                    }
+                </h2>
+                <div class="btn-group">
+                    <a asp-action="Edit" asp-route-id="@Model.CategoriaID" class="btn btn-warning">
+                        <i class="fas fa-edit me-2"></i>Editar
+                    </a>
+                    <a asp-action="Create" asp-route-padreId="@Model.CategoriaID" class="btn btn-success">
+                        <i class="fas fa-plus me-2"></i>Agregar Subcategoría
+                    </a>
+                    <a asp-action="Delete" asp-route-id="@Model.CategoriaID" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Eliminar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Información Principal -->
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información General</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">ID:</dt>
+                                <dd class="col-sm-8">@Model.CategoriaID</dd>
+
+                                <dt class="col-sm-4">Slug:</dt>
+                                <dd class="col-sm-8"><code>@Model.Slug</code></dd>
+
+                                <dt class="col-sm-4">Path:</dt>
+                                <dd class="col-sm-8"><code>@Model.Path</code></dd>
+
+                                <dt class="col-sm-4">Nivel:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-info">Nivel @Model.Nivel</span>
+                                </dd>
+
+                                <dt class="col-sm-4">Orden:</dt>
+                                <dd class="col-sm-8">@Model.Orden</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">Estado:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge @(Model.Activa ? "bg-success" : "bg-secondary")">
+                                        @(Model.Activa ? "Activa" : "Inactiva")
+                                    </span>
+                                </dd>
+
+                                <dt class="col-sm-4">En Menú:</dt>
+                                <dd class="col-sm-8">
+                                    @if (Model.MostrarEnMenu)
+                                    {
+                                        <i class="fas fa-check-circle text-success"></i> <span>Sí</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-times-circle text-danger"></i> <span>No</span>
+                                    }
+                                </dd>
+
+                                <dt class="col-sm-4">Creada:</dt>
+                                <dd class="col-sm-8">@Model.CreadoUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+
+                                @if (Model.ModificadoUtc.HasValue)
+                                {
+                                    <dt class="col-sm-4">Modificada:</dt>
+                                    <dd class="col-sm-8">@Model.ModificadoUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                                }
+                            </dl>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.Descripcion))
+                    {
+                        <hr />
+                        <h6><i class="fas fa-align-left me-2"></i>Descripción</h6>
+                        <p class="mb-0">@Model.Descripcion</p>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.MetaDescripcion) || !string.IsNullOrEmpty(Model.MetaKeywords))
+                    {
+                        <hr />
+                        <h6><i class="fas fa-search me-2"></i>SEO</h6>
+                        @if (!string.IsNullOrEmpty(Model.MetaDescripcion))
+                        {
+                            <p class="mb-1"><strong>Meta Descripción:</strong></p>
+                            <p class="text-muted small">@Model.MetaDescripcion</p>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.MetaKeywords))
+                        {
+                            <p class="mb-1"><strong>Meta Keywords:</strong></p>
+                            <p class="text-muted small mb-0">@Model.MetaKeywords</p>
+                        }
+                    }
+                </div>
+            </div>
+
+            <!-- Subcategorías -->
+            @if (tieneHijas)
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-folder-tree me-2"></i>
+                            Subcategorías (@Model.CategoriasHijas.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="list-group">
+                            @foreach (var hija in Model.CategoriasHijas.OrderBy(h => h.Orden))
+                            {
+                                <div class="list-group-item list-group-item-action">
+                                    <div class="d-flex w-100 justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                @if (!string.IsNullOrEmpty(hija.IconoClass))
+                                                {
+                                                    <i class="@hija.IconoClass text-warning me-2"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-folder text-warning me-2"></i>
+                                                }
+                                                <a asp-action="Details" asp-route-id="@hija.CategoriaID">
+                                                    @hija.Nombre
+                                                </a>
+                                                @if (hija.Destacada)
+                                                {
+                                                    <span class="badge bg-warning text-dark ms-1">
+                                                        <i class="fas fa-star"></i>
+                                                    </span>
+                                                }
+                                            </h6>
+                                            <small class="text-muted">
+                                                Path: <code>@hija.Path</code> | Orden: @hija.Orden
+                                            </small>
+                                            @if (!string.IsNullOrEmpty(hija.Descripcion))
+                                            {
+                                                <p class="mb-1 small">@hija.Descripcion</p>
+                                            }
+                                        </div>
+                                        <div>
+                                            <span class="badge @(hija.Activa ? "bg-success" : "bg-secondary")">
+                                                @(hija.Activa ? "Activa" : "Inactiva")
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Esta categoría no tiene subcategorías.
+                    <a asp-action="Create" asp-route-padreId="@Model.CategoriaID" class="alert-link">
+                        Agregar la primera
+                    </a>
+                </div>
+            }
+
+            <!-- Atributos -->
+            @if (tieneAtributos)
+            {
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-tags me-2"></i>
+                            Atributos (@Model.Atributos.Count)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Tipo</th>
+                                        <th class="text-center">Obligatorio</th>
+                                        <th class="text-center">Filtrable</th>
+                                        <th>Grupo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var atributo in Model.Atributos.OrderBy(a => a.Orden))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <strong>@atributo.Nombre</strong>
+                                                <br>
+                                                <small class="text-muted">@atributo.NombreTecnico</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">@atributo.TipoCampo</span>
+                                            </td>
+                                            <td class="text-center">
+                                                @if (atributo.Obligatorio)
+                                                {
+                                                    <i class="fas fa-check-circle text-success"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-times-circle text-muted"></i>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (atributo.Filtrable)
+                                                {
+                                                    <i class="fas fa-filter text-primary"></i>
+                                                }
+                                                else
+                                                {
+                                                    <i class="fas fa-times text-muted"></i>
+                                                }
+                                            </td>
+                                            <td>@atributo.Grupo</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-md-4">
+            <!-- Jerarquía -->
+            @if (breadcrumbs != null && breadcrumbs.Count > 1)
+            {
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-dark text-white">
+                        <h6 class="mb-0"><i class="fas fa-sitemap me-2"></i>Jerarquía</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var crumb in breadcrumbs)
+                            {
+                                var indent = new string(' ', crumb.Nivel * 2);
+                                var icon = crumb.CategoriaID == Model.CategoriaID ? "fas fa-arrow-right text-primary" : "fas fa-folder";
+                                
+                                <li class="mb-1">
+                                    <span style="margin-left: @(crumb.Nivel * 15)px">
+                                        <i class="@icon me-1"></i>
+                                        @if (crumb.CategoriaID == Model.CategoriaID)
+                                        {
+                                            <strong>@crumb.Nombre</strong>
+                                        }
+                                        else
+                                        {
+                                            <a asp-action="Details" asp-route-id="@crumb.CategoriaID">
+                                                @crumb.Nombre
+                                            </a>
+                                        }
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+
+            <!-- Estadísticas -->
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h6>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-7">Subcategorías:</dt>
+                        <dd class="col-5 text-end">
+                            <span class="badge bg-success">@(Model.CategoriasHijas?.Count ?? 0)</span>
+                        </dd>
+
+                        <dt class="col-7">Atributos:</dt>
+                        <dd class="col-5 text-end">
+                            <span class="badge bg-info">@(Model.Atributos?.Count ?? 0)</span>
+                        </dd>
+
+                        <dt class="col-7">Productos:</dt>
+                        <dd class="col-5 text-end">
+                            <span class="badge bg-primary">0</span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Acciones Rápidas -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a asp-action="Create" asp-route-padreId="@Model.CategoriaID" 
+                           class="btn btn-success btn-sm">
+                            <i class="fas fa-plus me-2"></i>Agregar Subcategoría
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@Model.CategoriaID" 
+                           class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit me-2"></i>Editar
+                        </a>
+                        <a asp-action="Index" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-list me-2"></i>Ver Todas
+                        </a>
+                        @if (Model.CategoriaPadreID.HasValue)
+                        {
+                            <a asp-action="Details" asp-route-id="@Model.CategoriaPadreID" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-arrow-up me-2"></i>Ir a Padre
+                            </a>
+                        }
+                        <hr />
+                        <a asp-action="Delete" asp-route-id="@Model.CategoriaID" 
+                           class="btn btn-danger btn-sm">
+                            <i class="fas fa-trash me-2"></i>Eliminar
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

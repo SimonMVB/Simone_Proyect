@@ -1,0 +1,244 @@
+﻿@model List<Simone.Models.CategoriaAtributo>
+@{
+    ViewData["Title"] = "Atributos";
+    var categoria = ViewBag.Categoria as Simone.Models.Categoria;
+    var breadcrumbs = ViewBag.Breadcrumbs as List<Simone.Models.Categoria>;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Index">Categorías</a>
+                    </li>
+                    @if (breadcrumbs != null)
+                    {
+                        foreach (var crumb in breadcrumbs.Take(breadcrumbs.Count - 1))
+                        {
+                            <li class="breadcrumb-item">
+                                <a asp-controller="CategoriasEnterprise" asp-action="Details" asp-route-id="@crumb.CategoriaID">
+                                    @crumb.Nombre
+                                </a>
+                            </li>
+                        }
+                    }
+                    <li class="breadcrumb-item active">Atributos</li>
+                </ol>
+            </nav>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>
+                    <i class="fas fa-tags me-2"></i>
+                    Atributos de: @categoria?.Nombre
+                </h2>
+                <div class="btn-group">
+                    <a asp-action="Create" asp-route-categoriaId="@categoria?.CategoriaID" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nuevo Atributo
+                    </a>
+                    <a asp-controller="CategoriasEnterprise" asp-action="Details" asp-route-id="@categoria?.CategoriaID"
+                       class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Categoría
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Información de Categoría -->
+    <div class="card mb-4">
+        <div class="card-body bg-light">
+            <div class="row">
+                <div class="col-md-8">
+                    <h6><i class="fas fa-folder me-2"></i>Categoría: <strong>@categoria?.Nombre</strong></h6>
+                    <p class="mb-0 text-muted">
+                        Path: <code>@categoria?.Path</code> | Nivel: <span class="badge bg-info">@categoria?.Nivel</span>
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <p class="mb-0">
+                        <i class="fas fa-tags text-primary"></i>
+                        <strong>@Model.Count</strong> atributo(s) total
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-check-circle text-success"></i>
+                        <strong>@Model.Count(a => a.Activo)</strong> activo(s)
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Atributos -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Atributos</h5>
+        </div>
+        <div class="card-body">
+            @if (!Model.Any())
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-tags fa-4x text-muted mb-3"></i>
+                    <p class="text-muted">No hay atributos definidos para esta categoría.</p>
+                    <a asp-action="Create" asp-route-categoriaId="@categoria?.CategoriaID" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Crear Primer Atributo
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 5%">Orden</th>
+                                <th style="width: 20%">Nombre</th>
+                                <th style="width: 15%">Nombre Técnico</th>
+                                <th style="width: 10%">Tipo</th>
+                                <th style="width: 10%">Grupo</th>
+                                <th style="width: 10%" class="text-center">Propiedades</th>
+                                <th style="width: 10%" class="text-center">Estado</th>
+                                <th style="width: 20%" class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var atributo in Model)
+                            {
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-secondary">@atributo.Orden</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(atributo.IconoClass))
+                                        {
+                                            <i class="@atributo.IconoClass me-2"></i>
+                                        }
+                                        <strong>@atributo.Nombre</strong>
+                                        @if (atributo.Obligatorio)
+                                        {
+                                            <span class="badge bg-danger ms-1">Obligatorio</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(atributo.Descripcion))
+                                        {
+                                            <br>
+                                
+                                            <small class="text-muted">@atributo.Descripcion</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <code>@atributo.NombreTecnico</code>
+                                        @if (!string.IsNullOrEmpty(atributo.Unidad))
+                                        {
+                                            <br>
+                                
+                                            <small class="text-muted">Unidad: @atributo.Unidad</small>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">@atributo.TipoCampo</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(atributo.Grupo))
+                                        {
+                                            <span class="badge bg-secondary">@atributo.Grupo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (atributo.Filtrable)
+                                        {
+                                            <i class="fas fa-filter text-primary" title="Filtrable"></i>
+                                        }
+                                        @if (atributo.MostrarEnFicha)
+                                        {
+                                            <i class="fas fa-file-alt text-success" title="En Ficha"></i>
+                                        }
+                                        @if (atributo.MostrarEnTarjeta)
+                                        {
+                                            <i class="fas fa-id-card text-info" title="En Tarjeta"></i>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge @(atributo.Activo ? "bg-success" : "bg-secondary")">
+                                            @(atributo.Activo ? "Activo" : "Inactivo")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <a asp-action="Edit" asp-route-id="@atributo.AtributoID"
+                                               class="btn btn-warning" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-info"
+                                                    onclick="duplicarAtributo(@atributo.AtributoID)" title="Duplicar">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                            <button type="button" class="btn @(atributo.Activo ? "btn-secondary" : "btn-success")"
+                                                    onclick="toggleActivo(@atributo.AtributoID)" title="Activar/Desactivar">
+                                                <i class="fas fa-toggle-@(atributo.Activo ? "on" : "off")"></i>
+                                            </button>
+                                            <a asp-action="Delete" asp-route-id="@atributo.AtributoID"
+                                               class="btn btn-danger" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Auto-ocultar alertas
+        setTimeout(() => $('.alert').fadeOut('slow'), 5000);
+
+        // Duplicar atributo
+        function duplicarAtributo(id) {
+            if (!confirm('¿Duplicar este atributo? Se creará una copia inactiva.')) return;
+
+            $.post('@Url.Action("Duplicar")/' + id, function(data) {
+                if (data.success) {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        }
+
+        // Toggle activo/inactivo
+        function toggleActivo(id) {
+            $.post('@Url.Action("ToggleActivo")/' + id, function(data) {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            });
+        }
+    </script>
+}

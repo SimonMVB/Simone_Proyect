@@ -1,0 +1,271 @@
+﻿@model Simone.Models.Categoria
+@{
+    ViewData["Title"] = "Crear Categoría";
+    var categorias = ViewBag.Categorias as List<Simone.Models.Categoria>;
+    var categoriaPadre = ViewBag.CategoriaPadre as Simone.Models.Categoria;
+}
+
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a asp-action="Index">Categorías</a></li>
+                    <li class="breadcrumb-item active">Nueva Categoría</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-plus-circle me-2"></i>Crear Nueva Categoría</h2>
+        </div>
+    </div>
+
+    @if (categoriaPadre != null)
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Se creará como subcategoría de: <strong>@categoriaPadre.Nombre</strong>
+            <small class="d-block mt-1">Path: <code>@categoriaPadre.Path</code></small>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form asp-action="Create" method="post">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <input type="hidden" asp-for="CategoriaPadreID" />
+
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label asp-for="Nombre" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Nombre <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Nombre" class="form-control" id="nombreInput"
+                                   placeholder="Ej: Vestidos, Zapatos, Maquillaje" required />
+                            <span asp-validation-for="Nombre" class="text-danger"></span>
+                        </div>
+
+                        <!-- Slug -->
+                        <div class="mb-3">
+                            <label asp-for="Slug" class="form-label">
+                                <i class="fas fa-link me-1"></i>Slug (URL amigable)
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="Slug" class="form-control" id="slugInput"
+                                       placeholder="Se generará automáticamente" />
+                                <button type="button" class="btn btn-outline-secondary" id="btnGenerarSlug">
+                                    <i class="fas fa-sync-alt"></i> Generar
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Deja vacío para generar automáticamente. Solo letras minúsculas, números y guiones.
+                            </small>
+                            <span asp-validation-for="Slug" class="text-danger"></span>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label asp-for="Descripcion" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Descripción
+                            </label>
+                            <textarea asp-for="Descripcion" class="form-control" rows="3"
+                                      placeholder="Descripción breve de la categoría"></textarea>
+                            <span asp-validation-for="Descripcion" class="text-danger"></span>
+                        </div>
+
+                        <!-- Categoría Padre -->
+                        <div class="mb-3">
+                            <label asp-for="CategoriaPadreID" class="form-label">
+                                <i class="fas fa-sitemap me-1"></i>Categoría Padre
+                            </label>
+                            <select asp-for="CategoriaPadreID" class="form-select">
+                                <option value="">-- Categoría Raíz (sin padre) --</option>
+                                @if (categorias != null)
+                                {
+                                    foreach (var cat in categorias)
+                                    {
+                                        var indent = new string('—', cat.Nivel);
+                                        <option value="@cat.CategoriaID" selected="@(Model.CategoriaPadreID == cat.CategoriaID)">
+                                            @indent @cat.Nombre (@cat.Path)
+                                        </option>
+                                    }
+                                }
+                            </select>
+                            <small class="form-text text-muted">
+                                Selecciona una categoría padre o déjalo vacío para crear una categoría raíz.
+                            </small>
+                        </div>
+
+                        <!-- Icono -->
+                        <div class="mb-3">
+                            <label asp-for="IconoClass" class="form-label">
+                                <i class="fas fa-icons me-1"></i>Clase de Icono (FontAwesome)
+                            </label>
+                            <input asp-for="IconoClass" class="form-control"
+                                   placeholder="Ej: fas fa-shirt, fas fa-shoe-prints" />
+                            <small class="form-text text-muted">
+                                Usa clases de <a href="https://fontawesome.com/icons" target="_blank">FontAwesome</a>.
+                                Ejemplo: <code>fas fa-shirt</code>
+                            </small>
+                            <span asp-validation-for="IconoClass" class="text-danger"></span>
+                        </div>
+
+                        <!-- Orden -->
+                        <div class="mb-3">
+                            <label asp-for="Orden" class="form-label">
+                                <i class="fas fa-sort-numeric-down me-1"></i>Orden
+                            </label>
+                            <input asp-for="Orden" type="number" class="form-control"
+                                   min="0" value="0" />
+                            <small class="form-text text-muted">
+                                Número para ordenar categorías del mismo nivel. Menor = aparece primero.
+                            </small>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Checkboxes -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Activa" class="form-check-input" checked />
+                                    <label asp-for="Activa" class="form-check-label">
+                                        <i class="fas fa-check-circle me-1"></i>Activa
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="MostrarEnMenu" class="form-check-input" checked />
+                                    <label asp-for="MostrarEnMenu" class="form-check-label">
+                                        <i class="fas fa-bars me-1"></i>Mostrar en Menú
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Destacada" class="form-check-input" />
+                                    <label asp-for="Destacada" class="form-check-label">
+                                        <i class="fas fa-star me-1"></i>Destacada
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Meta Tags (SEO) -->
+                        <h5 class="mb-3"><i class="fas fa-search me-2"></i>SEO (Opcional)</h5>
+
+                        <div class="mb-3">
+                            <label asp-for="MetaDescripcion" class="form-label">
+                                Meta Descripción
+                            </label>
+                            <textarea asp-for="MetaDescripcion" class="form-control" rows="2"
+                                      placeholder="Descripción para motores de búsqueda (máx. 160 caracteres)"></textarea>
+                            <span asp-validation-for="MetaDescripcion" class="text-danger"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="MetaKeywords" class="form-label">
+                                Meta Keywords
+                            </label>
+                            <input asp-for="MetaKeywords" class="form-control"
+                                   placeholder="Ej: ropa, mujer, vestidos, moda" />
+                            <small class="form-text text-muted">
+                                Palabras clave separadas por comas.
+                            </small>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Crear Categoría
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de ayuda -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-question-circle me-2"></i>Ayuda</h5>
+                </div>
+                <div class="card-body">
+                    <h6><i class="fas fa-lightbulb me-1 text-warning"></i>Consejos</h6>
+                    <ul class="small">
+                        <li><strong>Nombre:</strong> Debe ser claro y descriptivo</li>
+                        <li><strong>Slug:</strong> Se genera automáticamente del nombre</li>
+                        <li><strong>Categoría Padre:</strong> Define la jerarquía</li>
+                        <li><strong>Orden:</strong> 0 = primero, números mayores = después</li>
+                        <li><strong>Activa:</strong> Solo las activas aparecen en el sitio</li>
+                    </ul>
+
+                    <hr />
+
+                    <h6><i class="fas fa-info-circle me-1 text-info"></i>Jerarquía</h6>
+                    <p class="small mb-0">
+                        Puedes crear hasta <strong>infinitos niveles</strong> de categorías.
+                        Ejemplo: Mujer > Ropa > Vestidos > Vestidos de Noche
+                    </p>
+                </div>
+            </div>
+
+            @if (categoriaPadre != null)
+            {
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-folder me-2"></i>Categoría Padre</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-1"><strong>@categoriaPadre.Nombre</strong></p>
+                        <small class="text-muted">Nivel: @categoriaPadre.Nivel</small><br />
+                        <small class="text-muted">Path: <code>@categoriaPadre.Path</code></small>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Generar slug automáticamente al escribir nombre
+            $('#nombreInput').on('input', function() {
+                var nombre = $(this).val();
+                if (nombre && !$('#slugInput').val()) {
+                    generarSlug(nombre);
+                }
+            });
+
+            // Botón para generar slug manualmente
+            $('#btnGenerarSlug').click(function() {
+                var nombre = $('#nombreInput').val();
+                if (nombre) {
+                    generarSlug(nombre);
+                } else {
+                    alert('Ingresa un nombre primero');
+                }
+            });
+
+            function generarSlug(nombre) {
+                $.get('@Url.Action("GenerarSlug")', { nombre: nombre }, function(data) {
+                    if (data.success) {
+                        $('#slugInput').val(data.slug);
+                    }
+                });
+            }
+        });
+    </script>
+}

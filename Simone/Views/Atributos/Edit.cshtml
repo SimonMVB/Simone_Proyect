@@ -1,0 +1,381 @@
+﻿@model Simone.Models.CategoriaAtributo
+@{
+    ViewData["Title"] = "Editar Atributo";
+    var categoria = ViewBag.Categoria as Simone.Models.Categoria;
+    var opcionesTexto = ViewBag.OpcionesTexto as string;
+}
+
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Index">Categorías</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a asp-controller="CategoriasEnterprise" asp-action="Details" asp-route-id="@categoria?.CategoriaID">
+                            @categoria?.Nombre
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a asp-action="Index" asp-route-categoriaId="@categoria?.CategoriaID">Atributos</a>
+                    </li>
+                    <li class="breadcrumb-item active">Editar: @Model.Nombre</li>
+                </ol>
+            </nav>
+            <h2><i class="fas fa-edit me-2"></i>Editar Atributo</h2>
+            <p class="text-muted">Categoría: <strong>@categoria?.Nombre</strong></p>
+        </div>
+    </div>
+
+    <form asp-action="Edit" method="post">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <input type="hidden" asp-for="AtributoID" />
+                        <input type="hidden" asp-for="CategoriaID" />
+                        <input type="hidden" asp-for="CreadoUtc" />
+                        <input type="hidden" asp-for="UsageCount" />
+                        <input type="hidden" asp-for="FilterClickCount" />
+
+                        <!-- Nombre -->
+                        <div class="mb-3">
+                            <label asp-for="Nombre" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Nombre <span class="text-danger">*</span>
+                            </label>
+                            <input asp-for="Nombre" class="form-control" id="nombreInput" required />
+                            <span asp-validation-for="Nombre" class="text-danger"></span>
+                        </div>
+
+                        <!-- Nombre Técnico -->
+                        <div class="mb-3">
+                            <label asp-for="NombreTecnico" class="form-label">
+                                <i class="fas fa-code me-1"></i>Nombre Técnico <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="NombreTecnico" class="form-control" id="nombreTecnicoInput" required />
+                                <button type="button" class="btn btn-outline-secondary" id="btnGenerarNombreTecnico">
+                                    <i class="fas fa-sync-alt"></i> Generar
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Nombre para uso interno (sin espacios, minúsculas)
+                            </small>
+                            <span asp-validation-for="NombreTecnico" class="text-danger"></span>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label asp-for="Descripcion" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Descripción
+                            </label>
+                            <textarea asp-for="Descripcion" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Tipo de Campo -->
+                        <div class="mb-3">
+                            <label asp-for="TipoCampo" class="form-label">
+                                <i class="fas fa-list-alt me-1"></i>Tipo de Campo <span class="text-danger">*</span>
+                            </label>
+                            <select asp-for="TipoCampo" class="form-select" id="tipoCampoSelect" required>
+                                <option value="">-- Seleccionar --</option>
+                                <option value="text">Texto</option>
+                                <option value="number">Número</option>
+                                <option value="select">Lista desplegable (select)</option>
+                                <option value="multiselect">Selección múltiple</option>
+                                <option value="checkbox">Checkbox (Sí/No)</option>
+                                <option value="color">Color</option>
+                                <option value="date">Fecha</option>
+                            </select>
+                            <span asp-validation-for="TipoCampo" class="text-danger"></span>
+                        </div>
+
+                        <!-- Opciones (para select/multiselect) -->
+                        <div class="mb-3" id="opcionesContainer" style="display: none;">
+                            <label for="opciones" class="form-label">
+                                <i class="fas fa-list me-1"></i>Opciones <span class="text-danger">*</span>
+                            </label>
+                            <textarea name="opciones" id="opciones" class="form-control" rows="5">@opcionesTexto</textarea>
+                            <small class="form-text text-muted">
+                                Una opción por línea. Se usarán para el campo select o multiselect.
+                            </small>
+                        </div>
+
+                        <!-- Unidad (para número) -->
+                        <div class="mb-3" id="unidadContainer" style="display: none;">
+                            <label asp-for="Unidad" class="form-label">
+                                <i class="fas fa-ruler me-1"></i>Unidad de Medida
+                            </label>
+                            <input asp-for="Unidad" class="form-control" placeholder="Ej: cm, kg, ml" />
+                            <small class="form-text text-muted">
+                                Para campos numéricos. Ej: cm, kg, ml, pulgadas
+                            </small>
+                        </div>
+
+                        <!-- Icono -->
+                        <div class="mb-3">
+                            <label asp-for="IconoClass" class="form-label">
+                                <i class="fas fa-icons me-1"></i>Icono (FontAwesome)
+                            </label>
+                            <div class="input-group">
+                                <input asp-for="IconoClass" class="form-control" id="iconoInput"
+                                       placeholder="Ej: fas fa-ruler" />
+                                <span class="input-group-text" id="iconoPreview">
+                                    @if (!string.IsNullOrEmpty(Model.IconoClass))
+                                    {
+                                        <i class="@Model.IconoClass"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-question"></i>
+                                    }
+                                </span>
+                            </div>
+                            <small class="form-text text-muted">
+                                Vista previa del icono en tiempo real
+                            </small>
+                        </div>
+
+                        <!-- Grupo -->
+                        <div class="mb-3">
+                            <label asp-for="Grupo" class="form-label">
+                                <i class="fas fa-layer-group me-1"></i>Grupo
+                            </label>
+                            <select asp-for="Grupo" class="form-select">
+                                <option value="">-- Sin grupo --</option>
+                                <option value="Especificaciones">Especificaciones</option>
+                                <option value="Materiales">Materiales</option>
+                                <option value="Dimensiones">Dimensiones</option>
+                                <option value="Diseño">Diseño</option>
+                                <option value="Uso">Uso</option>
+                                <option value="Características">Características</option>
+                                <option value="Color">Color</option>
+                            </select>
+                        </div>
+
+                        <!-- Orden -->
+                        <div class="mb-3">
+                            <label asp-for="Orden" class="form-label">
+                                <i class="fas fa-sort-numeric-down me-1"></i>Orden
+                            </label>
+                            <input asp-for="Orden" type="number" class="form-control" min="0" />
+                            <small class="form-text text-muted">
+                                Orden de aparición (menor = primero)
+                            </small>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <!-- Checkboxes -->
+                        <h5 class="mb-3"><i class="fas fa-sliders-h me-2"></i>Configuración</h5>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Obligatorio" class="form-check-input" />
+                                    <label asp-for="Obligatorio" class="form-check-label">
+                                        <i class="fas fa-exclamation-circle me-1"></i>Obligatorio
+                                    </label>
+                                    <small class="d-block text-muted">El usuario debe completar este campo</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Filtrable" class="form-check-input" />
+                                    <label asp-for="Filtrable" class="form-check-label">
+                                        <i class="fas fa-filter me-1"></i>Filtrable
+                                    </label>
+                                    <small class="d-block text-muted">Permite filtrar productos</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="MostrarEnFicha" class="form-check-input" />
+                                    <label asp-for="MostrarEnFicha" class="form-check-label">
+                                        <i class="fas fa-file-alt me-1"></i>Mostrar en Ficha
+                                    </label>
+                                    <small class="d-block text-muted">Aparece en la ficha de producto</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="MostrarEnTarjeta" class="form-check-input" />
+                                    <label asp-for="MostrarEnTarjeta" class="form-check-label">
+                                        <i class="fas fa-id-card me-1"></i>Mostrar en Tarjeta
+                                    </label>
+                                    <small class="d-block text-muted">Aparece en el listado</small>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mb-3">
+                                    <input asp-for="Activo" class="form-check-input" />
+                                    <label asp-for="Activo" class="form-check-label">
+                                        <i class="fas fa-check-circle me-1"></i>Activo
+                                    </label>
+                                    <small class="d-block text-muted">El atributo está habilitado</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-between mt-4">
+                            <div>
+                                <a asp-action="Index" asp-route-categoriaId="@Model.CategoriaID"
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Cancelar
+                                </a>
+                                <a asp-action="Delete" asp-route-id="@Model.AtributoID"
+                                   class="btn btn-danger">
+                                    <i class="fas fa-trash me-2"></i>Eliminar
+                                </a>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Guardar Cambios
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel lateral -->
+            <div class="col-md-4">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
+                    </div>
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-5">ID:</dt>
+                            <dd class="col-7">@Model.AtributoID</dd>
+
+                            <dt class="col-5">Categoría:</dt>
+                            <dd class="col-7">@categoria?.Nombre</dd>
+
+                            <dt class="col-5">Creado:</dt>
+                            <dd class="col-7">@Model.CreadoUtc.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+
+                            @if (Model.ModificadoUtc.HasValue)
+                            {
+                                <dt class="col-5">Modificado:</dt>
+                                <dd class="col-7">@Model.ModificadoUtc.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</dd>
+                            }
+
+                            <dt class="col-5">Uso:</dt>
+                            <dd class="col-7">
+                                <span class="badge bg-info">@Model.UsageCount producto(s)</span>
+                            </dd>
+
+                            <dt class="col-5">Filtros:</dt>
+                            <dd class="col-7">
+                                <span class="badge bg-secondary">@Model.FilterClickCount click(s)</span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Advertencias</h6>
+                    </div>
+                    <div class="card-body">
+                        <ul class="small mb-0">
+                            <li>Cambiar el <strong>tipo de campo</strong> puede afectar productos existentes</li>
+                            <li>Modificar <strong>opciones</strong> de select puede invalidar valores guardados</li>
+                            @if (Model.UsageCount > 0)
+                            {
+                                <li class="text-warning">
+                                    <strong>@Model.UsageCount producto(s)</strong> usan este atributo
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-question-circle me-2"></i>Ayuda</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="small mb-2"><strong>Tipos de Campo:</strong></p>
+                        <ul class="small mb-0">
+                            <li><strong>Texto:</strong> Campo libre</li>
+                            <li><strong>Número:</strong> Solo números</li>
+                            <li><strong>Select:</strong> Una opción</li>
+                            <li><strong>Multiselect:</strong> Varias opciones</li>
+                            <li><strong>Checkbox:</strong> Sí/No</li>
+                            <li><strong>Color:</strong> Selector</li>
+                            <li><strong>Fecha:</strong> Calendario</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function() {
+            // Generar nombre técnico
+            $('#btnGenerarNombreTecnico').click(function() {
+                var nombre = $('#nombreInput').val();
+                if (nombre) {
+                    $.get('@Url.Action("GenerarNombreTecnico")', { nombre: nombre }, function(data) {
+                        if (data.success) {
+                            $('#nombreTecnicoInput').val(data.nombreTecnico);
+                        }
+                    });
+                } else {
+                    alert('Ingresa un nombre primero');
+                }
+            });
+
+            // Preview de icono en tiempo real
+            $('#iconoInput').on('input', function() {
+                var iconClass = $(this).val();
+                if (iconClass) {
+                    $('#iconoPreview').html('<i class="' + iconClass + '"></i>');
+                } else {
+                    $('#iconoPreview').html('<i class="fas fa-question"></i>');
+                }
+            });
+
+            // Mostrar/ocultar opciones según tipo
+            function actualizarCampos() {
+                var tipo = $('#tipoCampoSelect').val();
+
+                if (tipo === 'select' || tipo === 'multiselect') {
+                    $('#opcionesContainer').show();
+                    $('#opciones').prop('required', true);
+                } else {
+                    $('#opcionesContainer').hide();
+                    $('#opciones').prop('required', false);
+                }
+
+                if (tipo === 'number') {
+                    $('#unidadContainer').show();
+                } else {
+                    $('#unidadContainer').hide();
+                }
+            }
+
+            $('#tipoCampoSelect').change(actualizarCampos);
+
+            // Ejecutar al cargar
+            actualizarCampos();
+        });
+    </script>
+}

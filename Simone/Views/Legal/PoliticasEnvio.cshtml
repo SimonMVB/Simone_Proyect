@@ -1,142 +1,527 @@
 ﻿@{
     ViewData["Title"] = "Información General";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    var lastUpdated = new DateTime(2025, 10, 10); // <-- ajusta fecha cuando cambies el contenido
+    var lastUpdated = new DateTime(2026, 01, 10);
 }
 
-<div class="container my-5">
-    <div class="row g-4">
->
+<style>
+    :root {
+        --primary-color: #2c3e50;
+        --secondary-color: #f39c12;
+        --accent-color: #e74c3c;
+        --light-bg: #f8f9fa;
+        --border-radius: 8px;
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-        <!-- Contenido -->
-        <div class="col-12 col-lg-8">
-            <div class="card border-0 shadow-sm rounded-4">
-                <div class="card-header bg-dark text-white rounded-top-4">
-                    <h1 class="h4 mb-0">@ViewData["Title"]</h1>
-                    <small class="opacity-75 d-block">Última actualización: @lastUpdated:dd/MM/yyyy</small>
+    .info-container {
+        max-width: 1000px;
+        margin: 2rem auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+    }
+
+    .info-header {
+        background: linear-gradient(135deg, var(--primary-color), #e67e22);
+        color: white;
+        padding: 2rem;
+        border-radius: var(--border-radius) var(--border-radius) 0 0;
+        text-align: center;
+        margin-bottom: 0;
+    }
+
+        .info-header h1 {
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        .info-header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+    .info-content {
+        display: flex;
+        gap: 2rem;
+        margin-top: 0;
+    }
+
+    @@media (max-width: 768px) {
+        .info-content {
+            flex-direction: column;
+        }
+    }
+
+    .info-sidebar {
+        flex: 0 0 280px;
+        position: sticky;
+        top: 2rem;
+        height: fit-content;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+    }
+
+    .info-main {
+        flex: 1;
+        background-color: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 2rem;
+    }
+
+    .table-of-contents {
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .table-of-contents li {
+            margin-bottom: 0.75rem;
+        }
+
+        .table-of-contents a {
+            color: var(--primary-color);
+            text-decoration: none;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+            .table-of-contents a:hover,
+            .table-of-contents a.active {
+                background-color: var(--light-bg);
+                border-left-color: var(--secondary-color);
+                color: var(--secondary-color);
+            }
+
+    .section-title {
+        color: var(--primary-color);
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--light-bg);
+        font-weight: 600;
+    }
+
+        .section-title:first-of-type {
+            margin-top: 0;
+        }
+
+    .highlight-box {
+        background-color: var(--light-bg);
+        border-left: 4px solid var(--secondary-color);
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+    }
+
+    .info-category {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+        .info-category h4 {
+            color: var(--primary-color);
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+            .info-category h4 i {
+                color: var(--secondary-color);
+            }
+
+    .contact-info {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .contact-item {
+        flex: 1;
+        min-width: 200px;
+        background-color: var(--light-bg);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        text-align: center;
+    }
+
+        .contact-item i {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+    .progress-indicator {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 4px;
+        background-color: var(--secondary-color);
+        width: 0%;
+        z-index: 1000;
+        transition: width 0.3s ease;
+    }
+
+    .last-updated {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.9);
+        text-align: center;
+        margin-top: 1rem;
+    }
+
+    .info-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin: 1.5rem 0;
+    }
+
+    .info-card {
+        background-color: white;
+        border: 1px solid #e0e0e0;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.3s ease;
+    }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .info-card.shipping {
+            border-top: 4px solid #27ae60;
+        }
+
+        .info-card.delivery {
+            border-top: 4px solid #3498db;
+        }
+
+        .info-card.support {
+            border-top: 4px solid #9b59b6;
+        }
+
+        .info-card h4 {
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+    .duration-info {
+        display: flex;
+        justify-content: space-around;
+        margin: 1.5rem 0;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .duration-item {
+        text-align: center;
+        padding: 1rem;
+        flex: 1;
+        min-width: 150px;
+    }
+
+        .duration-item i {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.5rem;
+        }
+
+    .time-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin: 1rem 0;
+        padding: 1rem;
+        background-color: var(--light-bg);
+        border-radius: var(--border-radius);
+    }
+
+    .time-badge {
+        background-color: var(--secondary-color);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .status-list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+        .status-list li {
+            padding: 0.75rem;
+            border-left: 4px solid transparent;
+            margin-bottom: 0.5rem;
+            background-color: var(--light-bg);
+            border-radius: 4px;
+        }
+
+            .status-list li.success {
+                border-left-color: #27ae60;
+            }
+
+            .status-list li.warning {
+                border-left-color: #f39c12;
+            }
+
+            .status-list li.danger {
+                border-left-color: #e74c3c;
+            }
+
+    .quick-actions {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid #eee;
+    }
+
+    .btn-info {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background-color: var(--secondary-color);
+        color: white;
+        border: none;
+    }
+
+        .btn-primary:hover {
+            background-color: #e67e22;
+            transform: translateY(-2px);
+        }
+
+    .btn-secondary {
+        background-color: white;
+        color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+    }
+
+        .btn-secondary:hover {
+            background-color: var(--light-bg);
+        }
+</style>
+
+<div class="progress-indicator" id="readingProgress"></div>
+
+<div class="info-container">
+    <div class="info-header">
+        <h1>@ViewData["Title"]</h1>
+        <p>Esta sección resume aspectos operativos generales de Neo Ágora: cobertura, courier, tiempos de entrega, costos y comunicación de estados.</p>
+        <div class="last-updated">Última actualización: @lastUpdated.ToString("dd/MM/yyyy")</div>
+    </div>
+
+    <div class="info-content">
+        <aside class="info-sidebar">
+            <h3>Contenido</h3>
+            <ul class="table-of-contents" id="tableOfContents">
+                <!-- Los elementos se generarán con JavaScript -->
+            </ul>
+
+            <div class="highlight-box">
+                <h4>Información Rápida</h4>
+                <div class="time-indicator">
+                    <span>Tiempo de entrega:</span>
+                    <div class="time-badge">3 días laborables</div>
                 </div>
-
-                <div class="card-body p-4">
-                    <article>
-                        <p class="text-muted">
-                            Esta sección resume aspectos operativos generales de Neo Ágora: cobertura, courier,
-                            tiempos de entrega, costos y comunicación de estados.
-                        </p>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Cobertura</h2>
-                            <p>
-                                Neo Ágora realiza envíos exclusivamente dentro del Ecuador. Al entregar el paquete a
-                                Servientrega, recibirás el número de guía para rastrear tu envío en tiempo real a través de
-                                los canales del courier.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Courier y custodia</h2>
-                            <p>
-                                El transporte se gestiona con Servientrega. Una vez entregado el paquete al courier,
-                                la custodia y el riesgo de transporte corresponden a Servientrega. Neo Ágora realiza
-                                seguimiento y apoyo en caso de incidencias.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Tiempos de entrega</h2>
-                            <p>
-                                El tiempo estimado de entrega es de <strong>3 días laborables</strong> contados desde la
-                                verificación del pago. Zonas rurales o de difícil acceso pueden requerir plazos adicionales
-                                según la operación del courier.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Costos de envío</h2>
-                            <p>
-                                El costo se informa antes de pagar. El cliente debe ingresar dirección completa, referencias
-                                claras y número de contacto. Si por dirección incompleta, error del destinatario o reintentos
-                                fallidos se requiere redirección, el costo adicional será asumido por el cliente.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Entrega y persona autorizada</h2>
-                            <p>
-                                El paquete se entrega en la dirección indicada a la persona presente que acredite recepción.
-                                En edificios/urbanizaciones, la entrega puede realizarse en portería/garita si así lo establece
-                                el reglamento del lugar.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Intentos de entrega y ausencias</h2>
-                            <p>
-                                Si no hay quien reciba, Servientrega puede realizar nuevos intentos o derivar a punto de retiro.
-                                Si no se concreta la entrega en los plazos del courier, el paquete puede retornar a origen;
-                                el nuevo envío se coordina con el cliente y se cobra aparte.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Paquetes dañados o con señales de manipulación</h2>
-                            <p>
-                                Revisa visualmente el empaque al recibir. Ante daño, mojadura, sello abierto o manipulación,
-                                solicita al mensajero dejar constancia y no recibas o recibe “con novedad”. Reporta a Neo Ágora
-                                el mismo día con fotos del empaque y de la guía para gestionar el reclamo con el courier.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Contenido faltante o error de artículo/talla</h2>
-                            <p>
-                                Si el contenido recibido no coincide con tu pedido, avísanos dentro de 24 horas adjuntando fotos
-                                y número de pedido. Si es error de Neo Ágora, asumimos flete de retorno y reenvío; si es error del
-                                cliente, éste asume flete de retorno y reenvío y aplican reglas de cambios en 7 días con prenda impecable.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Pérdida o extravío</h2>
-                            <p>
-                                Ante reporte de pérdida por parte del courier, Neo Ágora abrirá el caso con Servientrega. Confirmado
-                                el extravío, coordinaremos reposición o nota de crédito por el valor pagado si no hubiera stock.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Pedidos múltiples y parcialidades</h2>
-                            <p>
-                                Si un pedido incluye varios artículos, se enviará en un solo despacho salvo acuerdo de envío parcial
-                                por disponibilidad u operatividad; te comunicaremos las guías correspondientes.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Alta demanda y fuerza mayor</h2>
-                            <p>
-                                En campañas especiales, picos de demanda, fenómenos climáticos, cierres viales u otros hechos de
-                                fuerza mayor, los tiempos de entrega pueden extenderse. Mantendremos la comunicación y el seguimiento.
-                            </p>
-                        </section>
-
-                        <section class="mb-4">
-                            <h2 class="h5">Comunicación de estados</h2>
-                            <p>
-                                Recibirás notificaciones de confirmación de pedido, entrega al courier y número de guía. Cualquier
-                                incidencia relevante será comunicada por correo o WhatsApp.
-                            </p>
-                        </section>
-
-                        <section>
-                            <h2 class="h5">Actualizaciones de esta política</h2>
-                            <p>
-                                Neo Ágora puede actualizar esta sección. La versión vigente se publica con su fecha de actualización.
-                                El uso del servicio tras un cambio implica aceptación de la versión actual.
-                            </p>
-                        </section>
-                    </article>
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i>📦</i>
+                        <div>Envíos en Ecuador</div>
+                    </div>
+                    <div class="contact-item">
+                        <i>🛡️</i>
+                        <div>Seguimiento activo</div>
+                    </div>
                 </div>
             </div>
-        </div>
+        </aside>
+
+        <main class="info-main">
+            <section id="cobertura">
+                <h2 class="section-title">Cobertura</h2>
+                <p>Neo Ágora realiza envíos exclusivamente dentro del Ecuador. Al entregar el paquete a Servientrega, recibirás el número de guía para rastrear tu envío en tiempo real a través de los canales del courier.</p>
+            </section>
+
+            <section id="courier">
+                <h2 class="section-title">Courier y custodia</h2>
+                <p>El transporte se gestiona con Servientrega. Una vez entregado el paquete al courier, la custodia y el riesgo de transporte corresponden a Servientrega.</p>
+            </section>
+
+            <section id="tiempos">
+                <h2 class="section-title">Tiempos de entrega</h2>
+                <p>El tiempo estimado de entrega es de <strong>3 días laborables</strong> contados desde la verificación del pago. Zonas rurales o de difícil acceso pueden requerir plazos adicionales según la operación del courier.</p>
+
+                <div class="highlight-box">
+                    <p><strong>Nota importante:</strong> En campañas especiales, picos de demanda, fenómenos climáticos, cierres viales u otros hechos de fuerza mayor, los tiempos de entrega pueden extenderse. Mantendremos la comunicación y el seguimiento.</p>
+                </div>
+            </section>
+
+            <section id="costos">
+                <h2 class="section-title">Costos de envío</h2>
+                <p>El costo se informa antes de pagar. El cliente debe ingresar dirección completa, referencias claras y número de contacto. Si por dirección incompleta, error del destinatario o reintentos fallidos se requiere redirección, el costo adicional será asumido por el cliente.</p>
+            </section>
+
+            <section id="entrega">
+                <h2 class="section-title">Entrega y persona autorizada</h2>
+                <p>El paquete se entrega en la dirección indicada a la persona presente que acredite recepción. En edificios/urbanizaciones, la entrega puede realizarse en portería/garita si así lo establece el reglamento del lugar.</p>
+            </section>
+
+            <div class="info-details">
+                <div class="info-card shipping">
+                    <h4><i>🚚</i> Intentos de entrega</h4>
+                    <p>Si no hay quien reciba, Servientrega puede realizar nuevos intentos o derivar a punto de retiro. Si no se concreta la entrega en los plazos del courier, el paquete puede retornar a origen; el nuevo envío se coordina con el cliente y se cobra aparte.</p>
+                </div>
+
+                <div class="info-card delivery">
+                    <h4><i>📦</i> Paquetes dañados</h4>
+                    <p>Revisa visualmente el empaque al recibir. Ante daño, mojadura, sello abierto o manipulación, solicita al mensajero dejar constancia y no recibas o recibe "con novedad". Reporta a Neo Ágora el mismo día con fotos del empaque y de la guía.</p>
+                </div>
+
+                <div class="info-card support">
+                    <h4><i>❓</i> Contenido faltante</h4>
+                    <p>Si el contenido recibido no coincide con tu pedido, avísanos dentro de 24 horas adjuntando fotos y número de pedido. Si es error de Neo Ágora, asumimos flete de retorno y reenvío.</p>
+                </div>
+            </div>
+
+            <section id="perdida">
+                <h2 class="section-title">Pérdida o extravío</h2>
+                <p>Ante reporte de pérdida por parte del courier, Neo Ágora abrirá el caso con Servientrega. Confirmado el extravío, coordinaremos reposición o nota de crédito por el valor pagado si no hubiera stock.</p>
+            </section>
+
+            <section id="pedidos">
+                <h2 class="section-title">Pedidos múltiples y parcialidades</h2>
+                <p>Si un pedido incluye varios artículos, se enviará en un solo despacho salvo acuerdo de envío parcial por disponibilidad u operatividad; te comunicaremos las guías correspondientes.</p>
+            </section>
+
+            <section id="comunicacion">
+                <h2 class="section-title">Comunicación de estados</h2>
+                <p>Recibirás notificaciones de confirmación de pedido, entrega al courier y número de guía. Cualquier incidencia relevante será comunicada por correo o WhatsApp.</p>
+
+                <ul class="status-list">
+                    <li class="success">Confirmación de pedido</li>
+                    <li class="warning">Entrega al courier</li>
+                    <li class="success">Número de guía y seguimiento</li>
+                    <li class="danger">Incidencia importante (si aplica)</li>
+                </ul>
+            </section>
+
+            <section id="actualizaciones">
+                <h2 class="section-title">Actualizaciones de esta política</h2>
+                <p>Neo Ágora puede actualizar esta sección. La versión vigente se publica con su fecha de actualización. El uso del servicio tras un cambio implica aceptación de la versión actual.</p>
+            </section>
+
+
+        </main>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Generar tabla de contenidos automáticamente
+        const sections = document.querySelectorAll('section');
+        const toc = document.getElementById('tableOfContents');
+
+        sections.forEach(section => {
+            const title = section.querySelector('.section-title');
+            if (title) {
+                const listItem = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = `#${section.id}`;
+                link.textContent = title.textContent;
+                listItem.appendChild(link);
+                toc.appendChild(listItem);
+            }
+        });
+
+        // Scroll suave para los enlaces de la tabla de contenidos
+        document.querySelectorAll('.table-of-contents a').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        });
+
+        // Actualizar la barra de progreso de lectura
+        window.addEventListener('scroll', function() {
+            const winHeight = window.innerHeight;
+            const docHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.pageYOffset;
+            const scrollPercent = (scrollTop / (docHeight - winHeight)) * 100;
+            document.getElementById('readingProgress').style.width = scrollPercent + '%';
+        });
+
+        // Resaltar sección activa en la tabla de contenidos
+        window.addEventListener('scroll', function() {
+            const scrollPos = window.scrollY + 100;
+
+            document.querySelectorAll('section').forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.offsetHeight;
+
+                if (scrollPos >= sectionTop && scrollPos < sectionTop + sectionHeight) {
+                    const currentId = section.getAttribute('id');
+                    document.querySelectorAll('.table-of-contents a').forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${currentId}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        });
+
+        // Manejar botones de acción
+        document.getElementById('contactSupport').addEventListener('click', function() {
+            alert('Redirigiendo al formulario de contacto...');
+            // En implementación real: window.location.href = '/contacto';
+        });
+
+        document.getElementById('trackOrder').addEventListener('click', function() {
+            const trackingNumber = prompt('Ingresa tu número de guía de seguimiento:');
+            if (trackingNumber) {
+                alert(`Buscando información para la guía: ${trackingNumber}`);
+                // En implementación real: window.open(`https://www.servientrega.com.ec/rastreo/${trackingNumber}`);
+            }
+        });
+
+        // Efectos visuales para las tarjetas de información
+        document.querySelectorAll('.info-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.boxShadow = '0 6px 12px rgba(0, 0, 0, 0.15)';
+            });
+
+            card.addEventListener('mouseleave', function() {
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            });
+        });
+    });
+</script>

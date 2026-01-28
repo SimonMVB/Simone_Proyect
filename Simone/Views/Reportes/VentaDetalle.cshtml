@@ -2,6 +2,7 @@
 @using System.Globalization
 @{
     ViewData["Title"] = $"Detalle de venta #{Model.VentaID}";
+    ViewData["Description"] = "Gestión completa de la venta - Panel administrativo Neo Ágora.";
     var culture = new CultureInfo("es-EC");
 
     // Helpers
@@ -26,6 +27,7 @@
             _ => CultureInfo.CurrentCulture.TextInfo.ToTitleCase(b)
         };
     }
+
     string BankIcon(string? b)
     {
         if (string.IsNullOrWhiteSpace(b)) return "fa-building-columns";
@@ -35,23 +37,17 @@
             "pichincha" => "fa-landmark",
             "guayaquil" => "fa-piggy-bank",
             "pacifico" => "fa-water",
-            "jep" => "fa-hand-holding-dollar",
-            "produbanco" => "fa-seedling",
-            "bolivariano" => "fa-university",
-            "austro" => "fa-city",
-            "machala" => "fa-bank",
             _ => "fa-building-columns"
         };
     }
 
-    // Perfil (fallback)
+    // Direcciones
     var dirPerfil = string.IsNullOrWhiteSpace(Model.Direccion) ? null : Model.Direccion;
     var telPerfil = string.IsNullOrWhiteSpace(Model.Telefono) ? null : Model.Telefono;
     var ciudadPerf = string.IsNullOrWhiteSpace(Model.PerfilCiudad) ? null : Model.PerfilCiudad;
     var provPerf = string.IsNullOrWhiteSpace(Model.PerfilProvincia) ? null : Model.PerfilProvincia;
     var refPerf = string.IsNullOrWhiteSpace(Model.PerfilReferencia) ? null : Model.PerfilReferencia;
 
-    // Dirección usada (la más cercana a la fecha de la venta; si no hay, la última)
     var dirUsada = (Model.Direcciones ?? Enumerable.Empty<Simone.ViewModels.Reportes.DireccionVM>())
                     .Where(d => d.FechaRegistro <= Model.Fecha)
                     .OrderByDescending(d => d.FechaRegistro)
@@ -65,42 +61,36 @@
     var estadoUsado = string.IsNullOrWhiteSpace(dirUsada?.EstadoProvincia) ? provPerf : dirUsada!.EstadoProvincia;
     var cpUsado = string.IsNullOrWhiteSpace(dirUsada?.CodigoPostal) ? null : dirUsada!.CodigoPostal;
     var telUsado = string.IsNullOrWhiteSpace(dirUsada?.TelefonoContacto) ? telPerfil : dirUsada!.TelefonoContacto;
-
-    // Mejora: si tenemos referencia de perfil, mostrarla aunque exista dirUsada
     var refUsada = string.IsNullOrWhiteSpace(refPerf) ? null : refPerf;
 
     var linea2Usada = JoinNonEmpty(ciudadUsada, estadoUsado) + (string.IsNullOrWhiteSpace(cpUsado) ? "" : $" ({cpUsado})");
 
-    // Etiqueta (se agrega CI si la tenemos)
+    // Etiqueta envío
     var etiquetaEnvio = string.Join("\n", new[]
     {
         Model?.Nombre,
         string.IsNullOrWhiteSpace(Model.Cedula) ? null : $"CI: {Model.Cedula}",
-        string.IsNullOrWhiteSpace(calleUsada)   ? null :  calleUsada,
-        string.IsNullOrWhiteSpace(linea2Usada)  ? null :  linea2Usada,
-        string.IsNullOrWhiteSpace(refUsada)     ? null : $"Ref: {refUsada}",
-        string.IsNullOrWhiteSpace(telUsado)     ? null : $"Tel.: {telUsado}"
+        string.IsNullOrWhiteSpace(calleUsada) ? null : calleUsada,
+        string.IsNullOrWhiteSpace(linea2Usada) ? null : linea2Usada,
+        string.IsNullOrWhiteSpace(refUsada) ? null : $"Ref: {refUsada}",
+        string.IsNullOrWhiteSpace(telUsado) ? null : $"Tel.: {telUsado}"
     }.Where(x => !string.IsNullOrWhiteSpace(x)));
 
-    // Estado → badge
+    // Estado
     var estadoNorm = (Model.Estado ?? "").Trim().ToLowerInvariant();
-    string estadoClase = estadoNorm.Contains("cancel") ? "status-cancel"
-                        : estadoNorm.Equals("enviado") ? "status-shipped"
-                        : "status-pending";
-    string estadoTexto = estadoNorm.Contains("cancel") ? "Cancelada"
-                        : estadoNorm.Equals("enviado") ? "Enviado"
-                        : "Pendiente";
+    string estadoClase = estadoNorm.Contains("cancel") ? "badge-cancelled"
+                        : estadoNorm.Equals("enviado") ? "badge-shipped"
+                        : "badge-pending";
 
     var bancoNice = BankPretty(Model.Banco);
     var bancoIcon = BankIcon(Model.Banco);
 
-    // Mostrar sección Pago si hay pista
     var showPago = !string.IsNullOrWhiteSpace(Model.Depositante)
                 || !string.IsNullOrWhiteSpace(Model.ComprobanteUrl)
                 || !string.IsNullOrWhiteSpace(Model.Banco)
                 || (!string.IsNullOrWhiteSpace(Model.MetodoPago) && Model.MetodoPago.Contains("dep", StringComparison.OrdinalIgnoreCase));
 
-    // Normaliza URL del comprobante
+    // Comprobante
     string? compUrl = null;
     if (!string.IsNullOrWhiteSpace(Model.ComprobanteUrl))
     {
@@ -109,124 +99,199 @@
             ? raw
             : Url.Content(raw.StartsWith("~/") || raw.StartsWith("/") ? raw : "~/" + raw);
     }
-    bool isPdf = !string.IsNullOrWhiteSpace(compUrl)
-                 && compUrl!.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+    bool isPdf = !string.IsNullOrWhiteSpace(compUrl) && compUrl!.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
 
-    // UI: depositante
     var hasDepos = !string.IsNullOrWhiteSpace(Model.Depositante);
     var deposText = hasDepos ? Model.Depositante!.Trim() : "—";
 
-    // Util para actions
+    // WhatsApp
     string TelSoloDigitos(string? t) => new string((t ?? "").Where(char.IsDigit).ToArray());
     var telDigits = TelSoloDigitos(telUsado);
     var hasTel = !string.IsNullOrWhiteSpace(telDigits) && telDigits.Length >= 8;
     var whatsUrl = hasTel ? $"https://wa.me/{telDigits}?text={Uri.EscapeDataString($"Hola {Model.Nombre}, sobre tu compra #{Model.VentaID}")}" : null;
 
-    // URL Maps
+    // Maps
     string fullAddrForMaps = string.Join(", ", new[] { calleUsada, ciudadUsada, estadoUsado }.Where(s => !string.IsNullOrWhiteSpace(s)));
     var mapsUrl = string.IsNullOrWhiteSpace(fullAddrForMaps) ? null : $"https://www.google.com/maps/search/?api=1&query={Uri.EscapeDataString(fullAddrForMaps)}";
+
+    // Back URL
+    var backHref = Url.Action("Index", "MisCompras");
+    if (User.IsInRole("Administrador"))
+        backHref = Url.Content("~/Panel/Reportes");
+    else if (User.IsInRole("Vendedor"))
+        backHref = Url.Content("~/Vendedor/Reportes");
+
+    var faltaCalle = string.IsNullOrWhiteSpace(calleUsada);
+    var faltaCiudad = string.IsNullOrWhiteSpace(ciudadUsada);
 }
 
-<div class="main-container">
-    <div class="header no-print">
-        <div class="logo">
-            <i class="fas fa-store"></i><span>SIMONE</span>
+
+<link rel="stylesheet" href="~/css/VentaDetalle.css" asp-append-version="true" />
+
+}
+
+<div class="admin-detail-page">
+    <div class="admin-container">
+        <!-- Breadcrumb -->
+        <nav class="admin-breadcrumb no-print" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li>
+                    <a href="@(User.IsInRole("Administrador") ? Url.Content("~/Panel") : Url.Content("~/Vendedor"))">
+                        <i class="fa-solid fa-house"></i>
+                        @(User.IsInRole("Administrador") ? "Panel Admin" : "Panel Vendedor")
+                    </a>
+                </li>
+                <li>
+                    <a href="@backHref">Compradores</a>
+                </li>
+                <li class="active" aria-current="page">Venta #@Model.VentaID</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <div class="page-header-top">
+                <div class="page-title-section">
+                    <h1>
+                        <i class="fa-solid fa-receipt"></i>
+                        Venta #@Model.VentaID
+                    </h1>
+                    <p class="page-subtitle">
+                        <i class="fa-solid fa-calendar-alt"></i>
+                        @Model.Fecha.ToString("dd/MM/yyyy HH:mm")
+                    </p>
+                </div>
+                <div class="header-actions no-print">
+                    <button class="btn-action btn-outline-action" id="copyOrder">
+                        <i class="fa-solid fa-copy"></i>
+                        <span>Copiar #</span>
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(mapsUrl))
+                    {
+                        <a class="btn-action btn-outline-action" href="@mapsUrl" target="_blank" rel="noopener">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            <span>Maps</span>
+                        </a>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(whatsUrl))
+                    {
+                        <a class="btn-action btn-success-action" href="@whatsUrl" target="_blank" rel="noopener">
+                            <i class="fa-brands fa-whatsapp"></i>
+                            <span>WhatsApp</span>
+                        </a>
+                    }
+                    <a class="btn-action btn-primary-action" href="@backHref">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Volver</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Status Badge -->
+            <div>
+                <span class="status-badge @estadoClase">
+                    <i class="fa-solid @(estadoClase == "badge-shipped" ? "fa-check-circle" : estadoClase == "badge-cancelled" ? "fa-times-circle" : "fa-clock")"></i>
+                    <span>@Safe(Model.Estado)</span>
+                </span>
+            </div>
         </div>
 
-        <div class="header-actions">
-            <button class="btn-action btn-outline" id="copyOrder"><i class="fas fa-copy"></i> Copiar #pedido</button>
-            @if (!string.IsNullOrWhiteSpace(mapsUrl))
-            {
-                <a class="btn-action btn-outline" href="@mapsUrl" target="_blank" rel="noopener"><i class="fas fa-map-location-dot"></i> Abrir en Maps</a>
-            }
-            @if (!string.IsNullOrWhiteSpace(whatsUrl))
-            {
-                <a class="btn-action btn-success" href="@whatsUrl" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> WhatsApp</a>
-            }
-            @{
-                // destino por defecto (cliente)
-                var backHref = Url.Action("Index", "MisCompras");
-
-                if (User.IsInRole("Administrador"))
-                    backHref = Url.Content("~/Panel/Reportes");          // listado admin
-                else if (User.IsInRole("Vendedor"))
-                    backHref = Url.Content("~/Vendedor/Reportes");       // listado vendedor
-            }
-
-            <a class="btn btn-primary-modern" href="@backHref">
-                <i class="fas fa-arrow-left"></i> Volver a compradores
-            </a>
-
-        </div>
-    </div>
-
-    <h1 class="page-title">Detalle de Venta #@Model.VentaID</h1>
-    <p class="page-subtitle">Venta del @Model.Fecha.ToString("dd/MM/yyyy HH:mm")</p>
-
-    <div class="row">
-        <!-- Izquierda -->
-        <div class="col-lg-4">
+        <div class="row g-4">
             <!-- Cliente -->
-            <div class="card">
-                <div class="card-header"><span><i class="fas fa-user-circle"></i> Información del cliente</span></div>
-                <div class="card-body">
+            <div class="col-lg-4">
+                <div class="info-card">
+                    <h2 class="info-card-title">
+                        <i class="fa-solid fa-user-circle"></i>
+                        Cliente
+                    </h2>
+
                     <div class="info-grid">
-                        <div class="info-item"><span class="info-label">Nombre</span>   <span class="info-value">@Safe(Model.Nombre)</span></div>
-                        <div class="info-item"><span class="info-label">Cédula</span>   <span class="info-value">@Safe(Model.Cedula)</span></div>
+                        <div class="info-item">
+                            <span class="info-label">Nombre</span>
+                            <span class="info-value">@Safe(Model.Nombre)</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">Cédula</span>
+                            <span class="info-value">@Safe(Model.Cedula)</span>
+                        </div>
+
                         <div class="info-item">
                             <span class="info-label">Email</span>
-                            <span class="info-value d-flex align-items-center gap-2">
-                                @Safe(Model.Email)
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="info-value">@Safe(Model.Email)</span>
                                 @if (!string.IsNullOrWhiteSpace(Model.Email))
                                 {
-                                    <a class="btn-chip no-print" href="mailto:@Model.Email" title="Enviar correo"><i class="fas fa-envelope"></i></a>
-                                    <button class="btn-chip no-print" data-copy="@Model.Email" title="Copiar email"><i class="fas fa-copy"></i></button>
+                                    <a class="btn-chip no-print" href="mailto:@Model.Email" title="Enviar email">
+                                        <i class="fa-solid fa-envelope"></i>
+                                    </a>
+                                    <button class="btn-chip no-print" data-copy="@Model.Email" title="Copiar">
+                                        <i class="fa-solid fa-copy"></i>
+                                    </button>
                                 }
-                            </span>
+                            </div>
                         </div>
+
                         <div class="info-item">
                             <span class="info-label">Teléfono</span>
-                            <span class="info-value d-flex align-items-center gap-2">
-                                @Safe(Model.Telefono)
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="info-value">@Safe(Model.Telefono)</span>
                                 @if (hasTel)
                                 {
-                                    <a class="btn-chip no-print" href="tel:@telDigits" title="Llamar"><i class="fas fa-phone"></i></a>
-                                    <button class="btn-chip no-print" data-copy="@telDigits" title="Copiar teléfono"><i class="fas fa-copy"></i></button>
+                                    <a class="btn-chip no-print" href="tel:@telDigits" title="Llamar">
+                                        <i class="fa-solid fa-phone"></i>
+                                    </a>
+                                    <button class="btn-chip no-print" data-copy="@telDigits" title="Copiar">
+                                        <i class="fa-solid fa-copy"></i>
+                                    </button>
                                 }
-                            </span>
+                            </div>
                         </div>
-                        <div class="info-item"><span class="info-label">Dirección (perfil)</span><span class="info-value">@Safe(Model.Direccion)</span></div>
-                        <div class="info-item"><span class="info-label">Venta #</span>  <span class="info-value">@Model.VentaID</span></div>
-                        <div class="info-item"><span class="info-label">Fecha</span>    <span class="info-value">@Model.Fecha.ToString("dd/MM/yyyy HH:mm")</span></div>
-                        <div class="info-item"><span class="info-label">Método de pago</span><span class="info-value">@Safe(Model.MetodoPago)</span></div>
+
                         <div class="info-item">
-                            <span class="info-label">Estado</span>
-                            <span class="status-badge @estadoClase">
-                                <i class="fas @(estadoClase == "status-shipped" ? "fa-check-circle" : estadoClase == "status-cancel" ? "fa-times-circle" : "fa-clock")"></i> @estadoTexto
+                            <span class="info-label">Método de Pago</span>
+                            <span class="info-value">@Safe(Model.MetodoPago)</span>
+                        </div>
+
+                        <div class="info-item">
+                            <span class="info-label">Total</span>
+                            <span class="info-value" style="color: var(--admin-primary); font-size: 1.5rem;">
+                                @Model.Total.ToString("C", culture)
                             </span>
                         </div>
                     </div>
 
                     <div class="mt-4 no-print">
-                        <form id="markShippedForm" method="post" asp-controller="Panel" asp-action="MarcarEnviada" class="d-inline">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="id" value="@Model.VentaID" />
-                            <button id="btnMarkShipped" type="submit" class="btn-action btn-success" @(estadoClase == "status-shipped" ? "disabled" : null)>
-                                <i class="fas fa-truck-fast"></i> Marcar como enviado
-                            </button>
-                        </form>
+                        <button type="button"
+                                class="btn-action btn-success-action w-100 mb-3"
+                                id="btnMarkShipped"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalMarcarEnviado"
+                                @(estadoClase == "badge-shipped" || estadoClase == "badge-cancelled" ? "disabled" : null)>
+                            <i class="fa-solid fa-truck-fast"></i>
+                            <span>Marcar como enviado</span>
+                        </button>
+
+                        <button type="button"
+                                class="btn-action btn-danger-action w-100"
+                                data-bs-toggle="modal"
+                                data-bs-target="#modalReportar"
+                                @(estadoClase == "badge-cancelled" ? "disabled" : null)>
+                            <i class="fa-solid fa-flag"></i>
+                            <span>Reportar Venta</span>
+                        </button>
                     </div>
                 </div>
-            </div>
 
-            <!-- Pago / Depósito -->
-            @if (showPago)
-            {
-                <div class="card">
-                    <div class="card-header">
-                        <span><i class="fas fa-receipt"></i> Pago / Depósito</span>
-                    </div>
-                    <div class="card-body">
+                <!-- Pago -->
+                @if (showPago)
+                {
+                    <div class="info-card">
+                        <h2 class="info-card-title">
+                            <i class="fa-solid fa-receipt"></i>
+                            Pago / Depósito
+                        </h2>
+
                         <div class="info-grid">
                             <div class="info-item">
                                 <span class="info-label">Depositante</span>
@@ -234,22 +299,25 @@
                                     <span class="info-value" id="depositanteText">@deposText</span>
                                     @if (hasDepos)
                                     {
-                                        <button type="button" class="btn-action btn-outline no-print" id="copyDepositante">
-                                            <i class="fas fa-copy"></i> Copiar
+                                        <button class="btn-chip no-print" id="copyDepositante" title="Copiar">
+                                            <i class="fa-solid fa-copy"></i>
                                         </button>
                                     }
                                 </div>
                             </div>
+
                             <div class="info-item">
                                 <span class="info-label">Banco</span>
-                                <span class="info-value d-flex align-items-center gap-2">
-                                    <i class="fas @bancoIcon" aria-hidden="true"></i>
-                                    <span>@Safe(bancoNice)</span>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fa-solid @bancoIcon" style="color: var(--admin-primary);"></i>
+                                    <span class="info-value">@Safe(bancoNice)</span>
                                     @if (!string.IsNullOrWhiteSpace(bancoNice))
                                     {
-                                        <button class="btn-chip no-print" data-copy="@bancoNice" title="Copiar banco"><i class="fas fa-copy"></i></button>
+                                        <button class="btn-chip no-print" data-copy="@bancoNice" title="Copiar">
+                                            <i class="fa-solid fa-copy"></i>
+                                        </button>
                                     }
-                                </span>
+                                </div>
                             </div>
                         </div>
 
@@ -259,23 +327,26 @@
                                 @if (isPdf)
                                 {
                                     <a class="file-pill" href="@compUrl" target="_blank" rel="noopener">
-                                        <i class="fas fa-file-pdf"></i> Ver comprobante (PDF)
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                        Ver comprobante PDF
                                     </a>
-                                    <div class="deposit-actions mt-2 no-print">
-                                        <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
-                                            <i class="fas fa-download"></i> Descargar
+                                    <div class="mt-3 no-print">
+                                        <a class="btn-action btn-outline-action" href="@compUrl" download>
+                                            <i class="fa-solid fa-download"></i>
+                                            Descargar
                                         </a>
                                     </div>
                                 }
                                 else
                                 {
                                     <a href="#" data-bs-toggle="modal" data-bs-target="#modalComprobante">
-                                        <img src="@compUrl" alt="Comprobante de depósito" class="deposit-proof" loading="lazy" />
+                                        <img src="@compUrl" alt="Comprobante" class="deposit-proof" />
                                     </a>
-                                    <div class="text-muted mt-2"><small>Clic para ver en grande</small></div>
-                                    <div class="deposit-actions mt-2 no-print">
-                                        <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
-                                            <i class="fas fa-download"></i> Descargar imagen
+                                    <div class="text-muted mt-2"><small>Click para ampliar</small></div>
+                                    <div class="mt-3 no-print">
+                                        <a class="btn-action btn-outline-action" href="@compUrl" download>
+                                            <i class="fa-solid fa-download"></i>
+                                            Descargar
                                         </a>
                                     </div>
                                 }
@@ -283,112 +354,143 @@
                         }
                         else
                         {
-                            <div class="alert-warning mt-2">
-                                <i class="fas fa-exclamation-circle"></i>
-                                No se adjuntó comprobante de depósito.
+                            <div class="alert-warning">
+                                <i class="fa-solid fa-exclamation-circle"></i>
+                                <span>No se adjuntó comprobante</span>
                             </div>
                         }
                     </div>
-                </div>
-            }
-        </div>
+                }
+            </div>
 
-        <!-- Centro: Dirección -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header"><span><i class="fas fa-truck"></i> Dirección de envío</span></div>
-                <div class="card-body">
+            <!-- Dirección -->
+            <div class="col-lg-4">
+                <div class="info-card">
+                    <h2 class="info-card-title">
+                        <i class="fa-solid fa-truck"></i>
+                        Dirección de Envío
+                    </h2>
+
                     <div class="address-box">
                         @if (dirUsada != null)
                         {
-                            <div class="address-line"><span class="address-label">Principal:</span><span>@Safe(dirUsada.Calle)</span></div>
+                            <div class="address-line">
+                                <span class="address-label">Principal:</span>
+                                <span>@Safe(dirUsada.Calle)</span>
+                            </div>
                             @if (!string.IsNullOrWhiteSpace(linea2Usada))
                             {
-                                <div class="address-line"><span>@linea2Usada</span></div>
+                                <div class="address-line">@linea2Usada</div>
                             }
                             @if (!string.IsNullOrWhiteSpace(refUsada))
                             {
-                                <div class="address-line"><span class="address-label">Ref:</span><span>@refUsada</span></div>
+                                <div class="address-line">
+                                    <span class="address-label">Ref:</span>
+                                    <span>@refUsada</span>
+                                </div>
                             }
                             @if (!string.IsNullOrWhiteSpace(telUsado))
                             {
-                                <div class="address-line"><span class="address-label">Tel:</span> <span>@telUsado</span></div>
+                                <div class="address-line">
+                                    <span class="address-label">Tel:</span>
+                                    <span>@telUsado</span>
+                                </div>
                             }
-                            <div class="address-line text-muted"><small>Registrada: @dirUsada.FechaRegistro.ToString("dd/MM/yyyy")</small></div>
+                            <div class="address-line text-muted">
+                                <small>Registrada: @dirUsada.FechaRegistro.ToString("dd/MM/yyyy")</small>
+                            </div>
                         }
                         else
                         {
-                            <div class="address-line"><span class="address-label">Principal:</span><span>Sin direcciones guardadas</span></div>
-                            <div class="address-line text-muted">Se usó la dirección del perfil en el momento de la compra.</div>
+                            <div class="address-line">
+                                <span class="address-label">Principal:</span>
+                                <span>Dirección del perfil</span>
+                            </div>
                             @if (!string.IsNullOrWhiteSpace(calleUsada))
                             {
-                                <div class="address-line"><span>@calleUsada</span></div>
+                                <div class="address-line">@calleUsada</div>
                             }
                             @if (!string.IsNullOrWhiteSpace(JoinNonEmpty(ciudadUsada, estadoUsado)))
                             {
-                                <div class="address-line"><span>@JoinNonEmpty(ciudadUsada, estadoUsado)</span></div>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(refUsada))
-                            {
-                                <div class="address-line"><span class="address-label">Ref:</span><span>@refUsada</span></div>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(telUsado))
-                            {
-                                <div class="address-line"><span class="address-label">Tel:</span><span>@telUsado</span></div>
+                                <div class="address-line">@JoinNonEmpty(ciudadUsada, estadoUsado)</div>
                             }
                         }
                     </div>
 
-                    @{
-                        var faltaCalle = string.IsNullOrWhiteSpace(calleUsada);
-                        var faltaCiudad = string.IsNullOrWhiteSpace(ciudadUsada);
-                    }
                     @if (faltaCalle || faltaCiudad)
                     {
                         <div class="alert-warning">
-                            <i class="fas fa-exclamation-circle"></i>
-                            <span>Falta información clave para el envío: @(faltaCalle ? "calle/dirección" : null) @((faltaCalle && faltaCiudad) ? " y " : null) @(faltaCiudad ? "ciudad" : null). Verifica antes de despachar.</span>
+                            <i class="fa-solid fa-exclamation-circle"></i>
+                            <span>Falta información: @(faltaCalle ? "calle" : "") @((faltaCalle && faltaCiudad) ? " y " : "") @(faltaCiudad ? "ciudad" : "")</span>
                         </div>
                     }
 
-                    <div class="section-title"><i class="fas fa-copy"></i><span>Etiqueta de envío</span></div>
+                    <h3 class="section-title">
+                        <i class="fa-solid fa-tag"></i>
+                        Etiqueta de Envío
+                    </h3>
+
                     <div class="copy-box">
                         <pre id="copyContent" class="copy-content">@etiquetaEnvio</pre>
                         <div class="d-flex gap-2">
-                            <button id="btnCopy" class="btn-action btn-outline copy-btn no-print"><i class="fas fa-copy"></i> Copiar</button>
-                            <button id="btnDownloadEtiqueta" class="btn-action btn-outline no-print"><i class="fas fa-file-arrow-down"></i> Descargar .txt</button>
+                            <button class="btn-action btn-outline-action" id="btnCopy">
+                                <i class="fa-solid fa-copy"></i>
+                                Copiar
+                            </button>
+                            <button class="btn-action btn-outline-action" id="btnDownload">
+                                <i class="fa-solid fa-download"></i>
+                                Descargar
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Derecha: Productos -->
-        <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header"><span><i class="fas fa-shopping-bag"></i> Productos</span></div>
-                <div class="card-body">
+            <!-- Productos -->
+            <div class="col-lg-4">
+                <div class="info-card">
+                    <h2 class="info-card-title">
+                        <i class="fa-solid fa-shopping-bag"></i>
+                        Productos
+                    </h2>
+
                     <table class="products-table">
-                        <thead><tr><th>Producto</th><th>Cantidad</th><th>Precio</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             @if (Model.Detalles == null || !Model.Detalles.Any())
                             {
-                                <tr><td colspan="3" class="text-muted">Sin detalles.</td></tr>
+                                <tr>
+                                    <td colspan="3" class="text-muted">Sin detalles</td>
+                                </tr>
                             }
                             else
                             {
                                 foreach (var d in Model.Detalles)
                                 {
-                                    <tr><td>@d.Producto</td><td>× @d.Cantidad</td><td>@d.Subtotal.ToString("C", culture)</td></tr>
+                                    <tr>
+                                        <td>@d.Producto</td>
+                                        <td>× @d.Cantidad</td>
+                                        <td>@d.Subtotal.ToString("C", culture)</td>
+                                    </tr>
                                 }
-                                <tr class="total-row"><td colspan="2">Total</td><td>@Model.Total.ToString("C", culture)</td></tr>
+                                <tr class="total-row">
+                                    <td colspan="2">Total</td>
+                                    <td>@Model.Total.ToString("C", culture)</td>
+                                </tr>
                             }
                         </tbody>
                     </table>
 
                     <div class="mt-4 no-print">
-                        <button class="btn-action btn-primary" onclick="window.print()">
-                            <i class="fas fa-print"></i> Imprimir comprobante
+                        <button class="btn-action btn-primary-action w-100" onclick="window.print()">
+                            <i class="fa-solid fa-print"></i>
+                            Imprimir
                         </button>
                     </div>
                 </div>
@@ -397,413 +499,30 @@
     </div>
 </div>
 
-<style>
-    :root {
-        --primary: #4a6cf7;
-        --secondary: #6c757d;
-        --success: #28a745;
-        --warning: #ffc107;
-        --danger: #dc3545;
-        --dark: #343a40;
-        --light: #f8f9fa;
-        --border-radius: 12px;
-        --box-shadow: 0 5px 15px rgba(0,0,0,.08);
-        --transition: all .3s ease
-    }
-
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box
-    }
-
-    body {
-        font-family: 'Poppins',sans-serif;
-        background: #f8fafc;
-        color: var(--dark);
-        line-height: 1.6
-    }
-
-    .main-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 20px
-    }
-
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 30px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #e2e8f0
-    }
-
-    .logo {
-        font-size: 28px;
-        font-weight: 700;
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        gap: 10px
-    }
-
-    .header-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px
-    }
-
-    .back-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 10px 20px;
-        background: #fff;
-        border-radius: var(--border-radius);
-        box-shadow: var(--box-shadow);
-        text-decoration: none;
-        color: var(--dark);
-        font-weight: 500;
-        transition: var(--transition)
-    }
-
-        .back-btn:hover {
-            background: var(--primary);
-            color: #fff;
-            transform: translateY(-2px)
-        }
-
-    .page-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: var(--dark);
-        margin-bottom: 5px
-    }
-
-    .page-subtitle {
-        color: var(--secondary);
-        margin-bottom: 25px
-    }
-
-    .card {
-        background: #fff;
-        border-radius: var(--border-radius);
-        box-shadow: var(--box-shadow);
-        margin-bottom: 25px;
-        border: none;
-        transition: var(--transition)
-    }
-
-        .card:hover {
-            box-shadow: 0 10px 25px rgba(0,0,0,.1)
-        }
-
-    .card-header {
-        background: #fff;
-        border-bottom: 1px solid #e2e8f0;
-        padding: 15px 20px;
-        font-weight: 600;
-        color: var(--dark);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        border-radius: var(--border-radius) var(--border-radius) 0 0 !important
-    }
-
-        .card-header i {
-            margin-right: 10px;
-            color: var(--primary)
-        }
-
-    .card-body {
-        padding: 20px
-    }
-
-    .info-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
-        gap: 20px
-    }
-
-    .info-item {
-        display: flex;
-        flex-direction: column
-    }
-
-    .info-label {
-        font-size: 13px;
-        color: var(--secondary);
-        margin-bottom: 5px
-    }
-
-    .info-value {
-        font-weight: 500;
-        color: var(--dark)
-    }
-
-    .status-badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 13px;
-        font-weight: 500;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px
-    }
-
-    .status-pending {
-        background: #fff8e1;
-        color: #f57c00
-    }
-
-    .status-shipped {
-        background: #e8f5e9;
-        color: var(--success)
-    }
-
-    .status-cancel {
-        background: #fdecea;
-        color: #b71c1c
-    }
-
-    .btn-action {
-        padding: 8px 16px;
-        border-radius: 8px;
-        font-weight: 500;
-        font-size: 14px;
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        transition: var(--transition);
-        text-decoration: none;
-        border: none;
-        cursor: pointer
-    }
-
-    .btn-primary {
-        background: var(--primary);
-        color: #fff
-    }
-
-        .btn-primary:hover {
-            background: #3a5ad9;
-            color: #fff
-        }
-
-    .btn-success {
-        background: var(--success);
-        color: #fff
-    }
-
-        .btn-success:hover {
-            background: #218838;
-            color: #fff
-        }
-
-    .btn-outline {
-        background: transparent;
-        border: 1px solid var(--primary);
-        color: var(--primary)
-    }
-
-        .btn-outline:hover {
-            background: var(--primary);
-            color: #fff
-        }
-
-    .btn-chip {
-        border: 1px solid #e2e8f0;
-        background: #fff;
-        border-radius: 999px;
-        padding: 4px 8px;
-        line-height: 1;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        cursor: pointer
-    }
-
-    .address-box {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-left: 4px solid var(--primary)
-    }
-
-    .address-line {
-        margin-bottom: 5px
-    }
-
-    .address-label {
-        font-weight: 600;
-        margin-right: 5px
-    }
-
-    .products-table {
-        width: 100%;
-        border-collapse: collapse
-    }
-
-        .products-table th {
-            text-align: left;
-            padding: 12px 15px;
-            background: #f8f9fa;
-            font-weight: 600;
-            color: var(--dark)
-        }
-
-        .products-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid #e2e8f0
-        }
-
-        .products-table tr:last-child td {
-            border-bottom: none
-        }
-
-    .total-row {
-        font-weight: 600;
-        background: #f8f9fa
-    }
-
-    .copy-box {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        margin-top: 20px;
-        position: relative
-    }
-
-    .copy-content {
-        font-family: monospace;
-        white-space: pre-wrap;
-        margin-bottom: 10px
-    }
-
-    .copy-btn {
-        position: absolute;
-        top: 15px;
-        right: 15px
-    }
-
-    .alert-warning {
-        background: #fff8e1;
-        border-left: 4px solid #ffc107;
-        padding: 12px 15px;
-        border-radius: 4px;
-        margin-top: 15px;
-        font-size: 14px
-    }
-
-    .section-title {
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 15px;
-        color: var(--dark);
-        display: flex;
-        align-items: center;
-        gap: 10px
-    }
-
-    .deposit-proof {
-        max-width: 100%;
-        max-height: 240px;
-        width: auto;
-        border-radius: 10px;
-        box-shadow: var(--box-shadow);
-        object-fit: contain
-    }
-
-    .file-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: #f3f4f6;
-        text-decoration: none;
-        color: #111827;
-        font-weight: 500;
-        box-shadow: var(--box-shadow)
-    }
-
-        .file-pill i {
-            color: #b91c1c
-        }
-
-    .deposit-actions {
-        display: flex;
-        justify-content: center
-    }
-
-    @@media (max-width:992px) {
-        .info-grid {
-            grid-template-columns: 1fr 1fr
-        }
-    }
-
-    @@media (max-width:768px) {
-        .info-grid {
-            grid-template-columns: 1fr
-        }
-
-        .header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 15px
-        }
-    }
-    /* Impresión */
-    @@media print {
-        .no-print, .no-print * {
-            display: none !important;
-        }
-
-        body {
-            background: #fff;
-        }
-
-        .main-container {
-            max-width: 100%;
-            padding: 0;
-        }
-
-        .card {
-            box-shadow: none !important;
-            border: 1px solid #e5e7eb;
-            page-break-inside: avoid;
-        }
-
-        .page-title, .page-subtitle {
-            margin-left: 10px;
-        }
-    }
-</style>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-
+<!-- Modal Comprobante -->
 @if (!string.IsNullOrWhiteSpace(compUrl) && !isPdf)
 {
-    <!-- Modal comprobante (imagen) -->
-    <div class="modal fade" id="modalComprobante" tabindex="-1" aria-labelledby="modalComprobanteLabel" aria-hidden="true">
+    <div class="modal fade" id="modalComprobante" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="modalComprobanteLabel"><i class="fas fa-image me-2"></i>Comprobante de depósito</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <h5 class="modal-title">
+                        <i class="fa-solid fa-image me-2"></i>
+                        Comprobante de Depósito
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center">
-                    <img src="@compUrl" alt="Comprobante de depósito" class="img-fluid" loading="lazy" />
+                    <img src="@compUrl" alt="Comprobante" class="img-fluid" />
                 </div>
                 <div class="modal-footer">
-                    <a class="btn-action btn-outline" href="@compUrl" target="_blank" rel="noopener" download>
-                        <i class="fas fa-download"></i> Descargar
+                    <a class="btn-action btn-outline-action" href="@compUrl" download>
+                        <i class="fa-solid fa-download"></i>
+                        Descargar
                     </a>
-                    <button type="button" class="btn-action btn-primary" data-bs-dismiss="modal">
-                        <i class="fas fa-check"></i> Cerrar
+                    <button type="button" class="btn-action btn-primary-action" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-check"></i>
+                        Cerrar
                     </button>
                 </div>
             </div>
@@ -811,105 +530,124 @@
     </div>
 }
 
+<!-- Modal Marcar como Enviado -->
+<div class="modal fade" id="modalMarcarEnviado" tabindex="-1" aria-labelledby="modalMarcarEnviadoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalMarcarEnviadoLabel">
+                    <i class="fa-solid fa-truck-fast"></i>
+                    Confirmar Envío
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formMarcarEnviado" method="post" asp-controller="Panel" asp-action="MarcarEnviada">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" value="@Model.VentaID" />
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <strong>Importante:</strong> Esta acción marcará la venta como <strong>Enviada</strong>.
+                    </div>
+
+                    <p class="mb-3">
+                        Venta: <strong>#@Model.VentaID - @Model.Nombre</strong>
+                    </p>
+
+                    <p class="text-muted mb-0">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        Una vez marcada como enviada, <strong>NO se podrá revertir</strong> a menos que uses la opción "Reportar Venta".
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fa-solid fa-check"></i>
+                        Sí, marcar como enviado
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reportar Venta -->
+<div class="modal fade" id="modalReportar" tabindex="-1" aria-labelledby="modalReportarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalReportarLabel">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Reportar Venta
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formReportar" method="post" asp-controller="Panel" asp-action="ReportarVenta">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ventaId" value="@Model.VentaID" />
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <strong>¡Atención!</strong> Esta acción:
+                        <ul class="mb-0 mt-2">
+                            <li>Repondrá el stock de los productos</li>
+                            <li>Marcará la venta como <strong>Cancelada (revertida)</strong></li>
+                            <li><strong>NO se puede deshacer</strong></li>
+                        </ul>
+                    </div>
+
+                    <p class="mb-3">
+                        Venta: <strong>#@Model.VentaID - @Model.Nombre</strong>
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="reportarMotivo" class="form-label">
+                            <i class="fa-solid fa-list"></i>
+                            Motivo de la reversión <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="reportarMotivo" name="motivo" required>
+                            <option value="">Selecciona un motivo...</option>
+                            <option value="devolucion">Devolución del cliente</option>
+                            <option value="deposito_falso">Depósito falso</option>
+                            <option value="otro">Otro</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reportarNota" class="form-label">
+                            <i class="fa-solid fa-note-sticky"></i>
+                            Nota adicional (opcional)
+                        </label>
+                        <textarea class="form-control" id="reportarNota" name="nota" rows="3"
+                                  placeholder="Explica brevemente el problema..."></textarea>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="reportarConfirm" required>
+                        <label class="form-check-label" for="reportarConfirm">
+                            <strong>Confirmo que quiero revertir esta venta</strong>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark"></i>
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fa-solid fa-flag"></i>
+                        Confirmar Reversión
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 @section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // genérico: copiar cualquier botón con data-copy
-            document.querySelectorAll('[data-copy]').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const text = btn.getAttribute('data-copy') || '';
-                    if (!text) return;
-                    navigator.clipboard.writeText(text).then(() => {
-                        const prev = btn.innerHTML;
-                        btn.innerHTML = '<i class="fas fa-check"></i>';
-                        setTimeout(() => btn.innerHTML = '<i class="fas fa-copy"></i>', 1200);
-                    });
-                });
-            });
-
-            // Copiar etiqueta envío
-            const btnCopy = document.getElementById('btnCopy');
-            if (btnCopy) {
-                btnCopy.addEventListener('click', () => {
-                    const textToCopy = document.getElementById('copyContent').innerText;
-                    navigator.clipboard.writeText(textToCopy).then(() => {
-                        const prev = btnCopy.innerHTML;
-                        btnCopy.innerHTML = '<i class="fas fa-check"></i> Copiado';
-                        setTimeout(() => btnCopy.innerHTML = '<i class="fas fa-copy"></i> Copiar', 1800);
-                    });
-                });
-            }
-
-                    // Descargar etiqueta como .txt
-        const btnDownload = document.getElementById('btnDownloadEtiqueta');
-        if (btnDownload) {
-          btnDownload.addEventListener('click', () => {
-            const text = document.getElementById('copyContent').innerText;
-            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-            const url  = URL.createObjectURL(blob);
-            const a    = document.createElement('a');
-            a.href     = url;
-
-            // ✅ usa backticks para interpolar
-            const ventaId = @Model.VentaID;
-            a.download = `etiqueta-venta-${ventaId}.txt`;
-
-            document.body.appendChild(a); a.click(); a.remove();
-            URL.revokeObjectURL(url);
-          });
-        }
-
-
-            // Copiar depositante (botón dedicado)
-            const btnDep = document.getElementById('copyDepositante');
-            if (btnDep) {
-                btnDep.addEventListener('click', () => {
-                    const name = document.getElementById('depositanteText').innerText.trim();
-                    if (!name || name === '—') return;
-                    navigator.clipboard.writeText(name).then(() => {
-                        const prev = btnDep.innerHTML;
-                        btnDep.innerHTML = '<i class="fas fa-check"></i> Copiado';
-                        setTimeout(() => btnDep.innerHTML = '<i class="fas fa-copy"></i> Copiar', 1400);
-                    });
-                });
-            }
-
-            // Copiar número de pedido
-            const btnOrder = document.getElementById('copyOrder');
-            if (btnOrder) {
-                btnOrder.addEventListener('click', () => {
-                    const text = '#@Model.VentaID';
-                    navigator.clipboard.writeText(text).then(() => {
-                        const prev = btnOrder.innerHTML;
-                        btnOrder.innerHTML = '<i class="fas fa-check"></i> Copiado';
-                        setTimeout(() => btnOrder.innerHTML = '<i class="fas fa-copy"></i> Copiar #pedido', 1500);
-                    });
-                });
-            }
-
-            // Marcar como enviado (AJAX)
-            const form = document.getElementById('markShippedForm');
-            const btn  = document.getElementById('btnMarkShipped');
-            if (form && btn) {
-                form.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    if (btn.disabled) return;
-                    btn.disabled = true;
-                    const prev = btn.innerHTML;
-                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
-                    try {
-                        const res = await fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With':'XMLHttpRequest' }});
-                        if (res.ok) {
-                            let data = null; try { data = await res.json(); } catch {}
-                            if (!data || data.ok) location.reload();
-                        } else {
-                            btn.disabled = false; btn.innerHTML = prev; alert('No se pudo marcar como enviado.');
-                        }
-                    } catch {
-                        btn.disabled = false; btn.innerHTML = prev; alert('Error de red al marcar como enviado.');
-                    }
-                });
-            }
-        });
-    </script>
+    <script src="~/js/VentaDetalle.js" asp-append-version="true"></script>
 }

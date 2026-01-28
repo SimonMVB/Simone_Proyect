@@ -2,20 +2,22 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Simone.Data;
 using Simone.Models;
 using Simone.Services;
+using Simone.ModelBinders;
+using System.Globalization;
 using System.Linq;
-// (opcional si no tienes las global usings)
-// using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1) Cadena de conexión
+// ============================================================================
+// 1) CONFIGURACIÓN DE BASE DE DATOS
+// ============================================================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' no está configurada.");
 
-// 2) DB + Identity
 builder.Services.AddDbContext<TiendaDbContext>(options =>
     options.UseSqlServer(
         connectionString,
@@ -23,24 +25,32 @@ builder.Services.AddDbContext<TiendaDbContext>(options =>
     )
 );
 
+// ============================================================================
+// 2) CONFIGURACIÓN DE IDENTITY
+// ============================================================================
 builder.Services.AddIdentity<Usuario, Roles>(options =>
 {
+    // Lockout configuration
     options.Lockout.MaxFailedAccessAttempts = 5;
     options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
     options.Lockout.AllowedForNewUsers = true;
 
+    // Password requirements
     options.Password.RequireDigit = true;
     options.Password.RequiredLength = 8;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = true;
     options.Password.RequireLowercase = true;
 
+    // Sign-in requirements
     options.SignIn.RequireConfirmedEmail = false;
 })
 .AddEntityFrameworkStores<TiendaDbContext>()
 .AddDefaultTokenProviders();
 
-// 3) Sesión, HttpContext y cookies
+// ============================================================================
+// 3) CONFIGURACIÓN DE SESIÓN Y COOKIES
+// ============================================================================
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -60,49 +70,132 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
 });
 
-// (Opcional) Límite de subida por encima de 5MB para el request completo
-builder.Services.Configure<FormOptions>(o =>
+// ============================================================================
+// 4) CONFIGURACIÓN DE CACHÉ
+// ============================================================================
+// ✅ AGREGADO: Memory Cache para optimizar consultas de categorías
+builder.Services.AddMemoryCache(options =>
 {
-    o.MultipartBodyLengthLimit = 10 * 1024 * 1024;  // 10MB request total
+    options.SizeLimit = 1024; // Límite de entradas en cache
+    options.CompactionPercentage = 0.25; // Liberar 25% cuando se alcanza el límite
 });
 
-// 4) Servicios de dominio
-builder.Services.AddScoped<PagosResolver>();     // Simone.Services.PagosResolver
+// ============================================================================
+// 5) CONFIGURACIÓN DE LÍMITES DE SUBIDA DE ARCHIVOS
+// ============================================================================
+const long maxFileSize = 64L * 1024 * 1024; // 64 MB
+
+// Configuración de FormOptions (para formularios multipart)
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = maxFileSize;
+    options.ValueLengthLimit = int.MaxValue;
+    options.MultipartHeadersLengthLimit = int.MaxValue;
+    options.MemoryBufferThreshold = int.MaxValue;
+});
+
+// Configuración de Kestrel (servidor web)
+builder.Services.Configure<KestrelServerOptions>(options =>
+{
+    options.Limits.MaxRequestBodySize = maxFileSize;
+});
+
+// Configuración de IIS (si se ejecuta en IIS)
+builder.Services.Configure<IISServerOptions>(options =>
+{
+    options.MaxRequestBodySize = maxFileSize;
+});
+
+// ============================================================================
+// 6) REGISTRO DE SERVICIOS DE DOMINIO
+// ============================================================================
+
+// ────────────────────────────────────────────────────────────────────────────
+// CATEGORÍAS Y PRODUCTOS
+// ────────────────────────────────────────────────────────────────────────────
+// ✅ Sistema viejo (mantener por compatibilidad)
 builder.Services.AddScoped<CategoriasService>();
 builder.Services.AddScoped<SubcategoriasService>();
-builder.Services.AddScoped<ProveedorService>();
+
+// ✅ NUEVO: Sistema Enterprise de Categorías
+builder.Services.AddScoped<CategoriaEnterpriseService>();
+builder.Services.AddScoped<CategoriaAtributoService>();
+builder.Services.AddScoped<ProductoAtributoService>();
+
+// Productos
 builder.Services.AddScoped<ProductosService>();
+
+// ────────────────────────────────────────────────────────────────────────────
+// CARRITO Y PAGOS
+// ────────────────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ICarritoService, CarritoService>();
 builder.Services.AddScoped<CarritoService>();
-builder.Services.AddScoped<DatabaseSeeder>();
-builder.Services.AddScoped<LogService>();
 builder.Services.AddScoped<CarritoActionFilter>();
+builder.Services.AddScoped<PagosResolver>();
 
-
-// 🔧 Bancos (IO a archivos)
-builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
-
-// 🔧 Envíos (IO a archivos + resolución + cálculo carrito)  👈 NUEVO
+// ────────────────────────────────────────────────────────────────────────────
+// ENVÍOS
+// ────────────────────────────────────────────────────────────────────────────
 builder.Services.AddSingleton<IEnviosConfigService, EnviosConfigService>();
 builder.Services.AddScoped<EnviosResolver>();
 builder.Services.AddScoped<EnviosCarritoService>();
 
+// ────────────────────────────────────────────────────────────────────────────
+// PROVEEDORES Y BANCOS
+// ────────────────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ProveedorService>();
+builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
 
-// ❌ No registrar resolvers duplicados bajo otros namespaces
-// builder.Services.AddScoped<Simone.ViewModels.Pagos.PagosResolver>();
+// ────────────────────────────────────────────────────────────────────────────
+// UTILIDADES Y LOGGING
+// ────────────────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<LogService>();
 
-// 5) MVC + filtro global
+// ============================================================================
+// 7) CONFIGURACIÓN DE MVC Y MODEL BINDERS
+// ============================================================================
 builder.Services.AddControllersWithViews(options =>
 {
+    // ✅ FIX PROBLEMA DE PRECIOS: Usar InvariantCulture para decimales
+    // Esto evita que 120000.00 se interprete como 120.000,00 (formato español)
+    options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
+
+    // Filtro global para el carrito
     options.Filters.Add<CarritoActionFilter>();
 });
 
+// ✅ Configurar cultura de la aplicación
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var supportedCultures = new[]
+    {
+        new CultureInfo("en-US"),  // Cultura por defecto
+        new CultureInfo("es-EC"),  // Cultura adicional
+    };
+
+    options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en-US");
+    options.SupportedCultures = supportedCultures;
+    options.SupportedUICultures = supportedCultures;
+});
+
+// ============================================================================
+// 8) CONSTRUCCIÓN DE LA APLICACIÓN
+// ============================================================================
 var app = builder.Build();
 
-// 6) Pipeline
+// ============================================================================
+// 9) CONFIGURACIÓN DEL PIPELINE DE MIDDLEWARE
+// ============================================================================
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
+}
+else
+{
+    // En desarrollo, mostrar página de excepciones detallada
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
@@ -110,17 +203,21 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// 🔧 Orden recomendado: Auth → Authorize → Session
+// ✅ Orden correcto: Authentication → Authorization → Session
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
+
+// ✅ Usar localización
+app.UseRequestLocalization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// ✅ PROBLEMA #2 CORREGIDO: Mejor manejo de errores en el proceso de inicialización
-// 7) Seed inicial (roles, admin, datos base) + asegurar carpetas
+// ============================================================================
+// 10) INICIALIZACIÓN DE LA BASE DE DATOS Y SEED
+// ============================================================================
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -128,107 +225,194 @@ using (var scope = app.Services.CreateScope())
 
     try
     {
-        logger.LogInformation("=== INICIANDO PROCESO DE INICIALIZACIÓN ===");
+        logger.LogInformation("╔══════════════════════════════════════════════════════════╗");
+        logger.LogInformation("║     INICIANDO CONFIGURACIÓN DE BASE DE DATOS            ║");
+        logger.LogInformation("╚══════════════════════════════════════════════════════════╝");
 
-        // Asegurar carpetas de trabajo (necesarias para bancos y comprobantes)
-        var env = services.GetRequiredService<IWebHostEnvironment>();
-        var appDataPath = Path.Combine(env.ContentRootPath, "App_Data");
-        var comprobantesPath = Path.Combine(env.WebRootPath, "uploads", "comprobantes");
-
-        Directory.CreateDirectory(appDataPath);
-        Directory.CreateDirectory(comprobantesPath);
-        logger.LogInformation("✅ Carpetas de trabajo verificadas");
-
-        // 1) Migrar primero
-        logger.LogInformation("🔄 Aplicando migraciones de base de datos...");
+        // ────────────────────────────────────────────────────────────────
+        // PASO 1: Verificar conexión a base de datos
+        // ────────────────────────────────────────────────────────────────
+        logger.LogInformation("🔌 Verificando conexión a base de datos...");
         var db = services.GetRequiredService<TiendaDbContext>();
-        await db.Database.MigrateAsync();
-        logger.LogInformation("✅ Migraciones aplicadas correctamente");
 
-        // 2) Seed de Identity (roles + admin)
-        logger.LogInformation("👥 Creando roles y usuario administrador...");
+        if (await db.Database.CanConnectAsync())
+        {
+            logger.LogInformation("✅ Conexión exitosa a la base de datos");
+            logger.LogInformation("  📊 Servidor: {Server}", db.Database.GetConnectionString()?.Split(';')[0]);
+        }
+        else
+        {
+            logger.LogError("❌ No se pudo conectar a la base de datos");
+            logger.LogError("  🔍 Verifica la cadena de conexión en appsettings.json");
+            throw new InvalidOperationException("No se puede conectar a la base de datos");
+        }
+
+        // ────────────────────────────────────────────────────────────────
+        // PASO 2: Aplicar migraciones
+        // ────────────────────────────────────────────────────────────────
+        logger.LogInformation("🔄 Aplicando migraciones de base de datos...");
+
+        var pendingMigrations = await db.Database.GetPendingMigrationsAsync();
+        var pendingCount = pendingMigrations.Count();
+
+        if (pendingCount > 0)
+        {
+            logger.LogInformation("  ℹ️ Migraciones pendientes: {Count}", pendingCount);
+            foreach (var migration in pendingMigrations)
+            {
+                logger.LogDebug("    • {Migration}", migration);
+            }
+
+            await db.Database.MigrateAsync();
+            logger.LogInformation("✅ Migraciones aplicadas correctamente");
+        }
+        else
+        {
+            logger.LogInformation("✅ Base de datos actualizada (sin migraciones pendientes)");
+        }
+
+        // ────────────────────────────────────────────────────────────────
+        // PASO 3: Crear roles y usuario administrador
+        // ────────────────────────────────────────────────────────────────
+        logger.LogInformation("👥 Verificando roles y usuario administrador...");
         await CrearRolesYAdmin(services, logger);
         logger.LogInformation("✅ Roles y administrador verificados");
 
-        // 3) Seed de dominio (CON TRANSACCIONES - Problema #2 resuelto)
+        // ────────────────────────────────────────────────────────────────
+        // PASO 4: Seed de datos del dominio
+        // ────────────────────────────────────────────────────────────────
         logger.LogInformation("📦 Inicializando datos del dominio...");
         var seeder = services.GetRequiredService<DatabaseSeeder>();
         await seeder.SeedCategoriesAndSubcategoriesAsync();
         logger.LogInformation("✅ Datos del dominio inicializados correctamente");
 
-        logger.LogInformation("=== INICIALIZACIÓN COMPLETADA EXITOSAMENTE ===");
+        // ────────────────────────────────────────────────────────────────
+        // PASO 5: Verificar sistema de categorías enterprise
+        // ────────────────────────────────────────────────────────────────
+        logger.LogInformation("🏢 Verificando sistema de categorías enterprise...");
+        var categoriaService = services.GetRequiredService<CategoriaEnterpriseService>();
+        var totalCategorias = (await categoriaService.ObtenerTodasAsync()).Count;
+        var categoriasActivas = (await categoriaService.ObtenerActivasAsync()).Count;
+
+        logger.LogInformation("  📊 Total categorías: {Total}", totalCategorias);
+        logger.LogInformation("  ✅ Categorías activas: {Activas}", categoriasActivas);
+
+        if (totalCategorias > 0)
+        {
+            logger.LogInformation("✅ Sistema de categorías enterprise operativo");
+        }
+        else
+        {
+            logger.LogWarning("⚠️ No hay categorías en el sistema. Considera ejecutar el script de seed.");
+        }
+
+        logger.LogInformation("╔══════════════════════════════════════════════════════════╗");
+        logger.LogInformation("║     ✅ INICIALIZACIÓN COMPLETADA EXITOSAMENTE           ║");
+        logger.LogInformation("╚══════════════════════════════════════════════════════════╝");
     }
     catch (DbUpdateException dbEx)
     {
-        // Error específico de base de datos
-        logger.LogError(dbEx, "❌ ERROR DE BASE DE DATOS durante la inicialización");
-        logger.LogError("Detalles: {Message}", dbEx.InnerException?.Message ?? dbEx.Message);
+        logger.LogError("╔══════════════════════════════════════════════════════════╗");
+        logger.LogError("║     ❌ ERROR DE BASE DE DATOS                            ║");
+        logger.LogError("╚══════════════════════════════════════════════════════════╝");
+        logger.LogError(dbEx, "Error durante la inicialización de la base de datos");
+        logger.LogError("📋 Detalles: {Message}", dbEx.InnerException?.Message ?? dbEx.Message);
 
-        // En desarrollo, mostrar el error completo
         if (app.Environment.IsDevelopment())
         {
-            logger.LogError("Stack trace: {StackTrace}", dbEx.StackTrace);
+            logger.LogError("🔍 Stack trace: {StackTrace}", dbEx.StackTrace);
         }
+
+        logger.LogError("💡 Sugerencias:");
+        logger.LogError("  • Verifica la cadena de conexión en appsettings.json");
+        logger.LogError("  • Verifica que SQL Server esté ejecutándose");
+        logger.LogError("  • Revisa los logs de SQL Server para más detalles");
+        logger.LogError("  • Ejecuta Update-Database manualmente en Package Manager Console");
     }
     catch (InvalidOperationException opEx)
     {
-        // Error de operación inválida (generalmente configuración)
-        logger.LogError(opEx, "❌ ERROR DE CONFIGURACIÓN durante la inicialización");
-        logger.LogError("Verifica tu cadena de conexión y configuración de servicios");
+        logger.LogError("╔══════════════════════════════════════════════════════════╗");
+        logger.LogError("║     ❌ ERROR DE CONFIGURACIÓN                            ║");
+        logger.LogError("╚══════════════════════════════════════════════════════════╝");
+        logger.LogError(opEx, "Error de configuración durante la inicialización");
+        logger.LogError("📋 Mensaje: {Message}", opEx.Message);
+
+        logger.LogError("💡 Sugerencias:");
+        logger.LogError("  • Verifica que todos los servicios estén registrados en Program.cs");
+        logger.LogError("  • Verifica las dependencias inyectadas en los constructores");
+        logger.LogError("  • Revisa que CategoriaEnterpriseService esté registrado");
+        logger.LogError("  • Revisa que CategoriaAtributoService esté registrado");
     }
     catch (Exception ex)
     {
-        // Cualquier otro error
-        logger.LogError(ex, "❌ ERROR INESPERADO durante la inicialización");
+        logger.LogError("╔══════════════════════════════════════════════════════════╗");
+        logger.LogError("║     ❌ ERROR INESPERADO                                  ║");
+        logger.LogError("╚══════════════════════════════════════════════════════════╝");
+        logger.LogError(ex, "Error inesperado durante la inicialización");
+        logger.LogError("📋 Tipo: {Type}", ex.GetType().Name);
+        logger.LogError("📋 Mensaje: {Message}", ex.Message);
 
-        // En desarrollo, mostrar el error completo
         if (app.Environment.IsDevelopment())
         {
-            logger.LogError("Tipo de error: {Type}", ex.GetType().Name);
-            logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+            logger.LogError("🔍 Stack trace completo:");
+            logger.LogError("{StackTrace}", ex.StackTrace);
         }
 
-        // ⚠️ IMPORTANTE: En producción, podrías querer que la app NO inicie si falla el seed
-        // Descomenta la siguiente línea si quieres que la aplicación se detenga al fallar:
+        // ⚠️ En producción, podrías querer detener la app si falla la inicialización
+        // Descomenta la siguiente línea si quieres que la aplicación se detenga:
         // throw;
     }
 }
 
+// ============================================================================
+// 11) INICIAR LA APLICACIÓN
+// ============================================================================
 app.Run();
 
-// ----- Helpers -----
+// ============================================================================
+// MÉTODOS AUXILIARES
+// ============================================================================
+
+/// <summary>
+/// Crea los roles del sistema y el usuario administrador inicial
+/// </summary>
 static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
 {
     var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
     var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();
 
+    // Definición de roles
     string[] roles = { "Administrador", "Vendedor", "Cliente" };
-    string[] descripcion = { "Administrador del sistema", "Vendedor del sistema", "Cliente del sistema" };
+    string[] descripcion =
+    {
+        "Administrador del sistema con acceso completo",
+        "Vendedor con acceso al panel de gestión",
+        "Cliente con acceso a la tienda"
+    };
 
+    // Crear roles si no existen
     for (var i = 0; i < roles.Length; i++)
     {
         if (!await roleManager.RoleExistsAsync(roles[i]))
         {
             var create = await roleManager.CreateAsync(new Roles(roles[i], descripcion[i]));
+
             if (!create.Succeeded)
             {
                 var errores = string.Join(", ", create.Errors.Select(e => e.Description));
-                logger.LogError("❌ Error al crear el rol {Rol}: {Err}", roles[i], errores);
-
-                // Lanzar excepción si no se pueden crear los roles (son críticos)
+                logger.LogError("  ❌ Error al crear el rol '{Rol}': {Errores}", roles[i], errores);
                 throw new InvalidOperationException($"No se pudo crear el rol {roles[i]}: {errores}");
             }
-            else
-            {
-                logger.LogInformation("✅ Rol '{Rol}' creado exitosamente", roles[i]);
-            }
+
+            logger.LogInformation("  ✓ Rol '{Rol}' creado exitosamente", roles[i]);
         }
         else
         {
-            logger.LogDebug("ℹ️ Rol '{Rol}' ya existe", roles[i]);
+            logger.LogDebug("  ℹ️ Rol '{Rol}' ya existe", roles[i]);
         }
     }
 
+    // Crear usuario administrador
     var adminEmail = "admin@tienda.com";
     var adminPassword = "Admin123!";
     var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
@@ -244,35 +428,46 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
             NombreCompleto = "Administrador General",
             EmailConfirmed = true,
             RolID = adminRole?.Id ?? string.Empty,
-            Direccion = "NAN",
-            Telefono = "NAN",
-            Referencia = "NAN",
+            Direccion = "Sistema",
+            Telefono = "N/A",
+            Referencia = "Usuario administrador por defecto",
+            Activo = true,
         };
 
         var result = await userManager.CreateAsync(adminUser, adminPassword);
+
         if (result.Succeeded)
         {
             await userManager.AddToRoleAsync(adminUser, "Administrador");
-            logger.LogInformation("✅ Usuario administrador '{Email}' creado con éxito", adminEmail);
+            logger.LogInformation("  ✓ Usuario administrador '{Email}' creado con éxito", adminEmail);
+            logger.LogWarning("  ⚠️ IMPORTANTE: Cambia la contraseña del admin en producción");
+            logger.LogInformation("  📧 Email: {Email}", adminEmail);
+            logger.LogInformation("  🔑 Password: {Password}", adminPassword);
         }
         else
         {
             var errores = string.Join(", ", result.Errors.Select(e => e.Description));
-            logger.LogError("❌ Error al crear el admin: {Err}", errores);
-
-            // Lanzar excepción si no se puede crear el admin (es crítico)
+            logger.LogError("  ❌ Error al crear el admin: {Errores}", errores);
             throw new InvalidOperationException($"No se pudo crear el usuario administrador: {errores}");
         }
     }
     else
     {
-        logger.LogDebug("ℹ️ Usuario administrador '{Email}' ya existe", adminEmail);
+        logger.LogDebug("  ℹ️ Usuario administrador '{Email}' ya existe", adminEmail);
 
-        // Garantizar que el admin tenga el rol, por si ya existía
+        // Garantizar que el admin tenga el rol
         if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
         {
             await userManager.AddToRoleAsync(existingAdmin, "Administrador");
-            logger.LogInformation("✅ Rol 'Administrador' asignado al usuario existente");
+            logger.LogInformation("  ✓ Rol 'Administrador' asignado al usuario existente");
+        }
+
+        // Asegurar que esté activo
+        if (!existingAdmin.Activo)
+        {
+            existingAdmin.Activo = true;
+            await userManager.UpdateAsync(existingAdmin);
+            logger.LogInformation("  ✓ Usuario administrador activado");
         }
     }
 }

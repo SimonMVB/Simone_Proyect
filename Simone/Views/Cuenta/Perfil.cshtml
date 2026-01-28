@@ -1,634 +1,1250 @@
 ﻿@model Simone.Models.Usuario
-
 @{
     ViewData["Title"] = "Mi Perfil";
+    ViewData["Description"] = "Administra tu información personal en Neo Ágora. Actualiza tus datos de forma segura.";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<style>
-    :root {
-        --peach: #FFC89C;
-        --peach-200: #ffe3c7;
-        --peach-50: #fff6ec;
-        --ink: #1a1a1a;
-        --muted: #6b7280;
-        --bg: #f7f7fa;
-    }
-
-    body, .profile-main-bg {
-        background: var(--bg);
-    }
-
-    .profile-card {
-        background: #fff;
-        border-radius: 1.2rem;
-        box-shadow: 0 2px 16px #1111,0 .5px 2px #6366f120;
-        padding: 2rem 2.3rem 1.4rem;
-        margin: 2rem auto;
-        max-width: 680px;
-        transition: box-shadow .3s
-    }
-
-        .profile-card:hover {
-            box-shadow: 0 8px 48px #3232462e
+@section Styles {
+    <style>
+        :root {
+            --profile-primary: #e91e63;
+            --profile-primary-light: #f48fb1;
+            --profile-primary-dark: #c2185b;
+            --profile-secondary: #9c27b0;
+            --profile-accent: #ff4081;
+            --profile-success: #4caf50;
+            --profile-warning: #ff9800;
+            --profile-danger: #f44336;
+            --profile-dark: #212121;
+            --profile-text: #424242;
+            --profile-light: #fafafa;
+            --profile-white: #ffffff;
+            --profile-border: #e0e0e0;
+            --profile-shadow: 0 8px 32px rgba(233, 30, 99, 0.15);
+            --profile-shadow-lg: 0 16px 48px rgba(233, 30, 99, 0.2);
         }
 
-    .profile-header h2 {
-        font-weight: 800;
-        color: var(--ink);
-        font-size: 2.1rem
-    }
-
-    .profile-header i {
-        color: #ffb88b
-    }
-
-    .profile-subtitle {
-        font-size: 1.02rem;
-        color: #a1a1aa;
-        margin-bottom: 1.1rem;
-        font-weight: 500
-    }
-
-    .profile-alert {
-        border-radius: 1rem;
-        font-size: 1.05rem;
-        margin-bottom: 1.2rem
-    }
-
-    .profile-avatar-container {
-        display: flex;
-        align-items: center;
-        gap: 1.4rem;
-        margin-bottom: 2.1rem
-    }
-
-    .avatar-wrapper {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        background: #fff5ee;
-        border: 2px solid #ffd5b2;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        position: relative
-    }
-
-    .profile-avatar {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 50%
-    }
-
-    .avatar-placeholder {
-        color: #ffd1b1;
-        font-size: 2.7rem;
-        text-align: center;
-        width: 100%
-    }
-
-    .avatar-upload {
-        display: flex;
-        flex-direction: column;
-        gap: .25rem;
-        align-items: flex-start;
-        flex: 1
-    }
-
-    .upload-btn, .btn-outline-primary {
-        font-weight: 600;
-        border-radius: 1.2rem;
-        padding: .35rem 1.2rem;
-        border: 1.5px solid var(--peach);
-        color: #d97706;
-        background: var(--peach-50);
-        transition: background .13s,color .13s
-    }
-
-        .upload-btn:hover, .btn-outline-primary:hover {
-            background: var(--peach);
-            color: #111
+        /* Page Layout */
+        .profile-page {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #f48fb1 100%);
+            padding: 2rem 0;
+            animation: fadeIn 0.6s ease;
         }
 
-    .btn-outline-danger {
-        border-radius: 1.2rem;
-        background: #fff;
-        color: #dc2626;
-        border-color: #fecaca;
-        padding: .35rem 1.2rem
-    }
+        @@keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
 
-        .btn-outline-danger:hover {
-            background: #fecaca;
-            color: #7f1d1d
+            to {
+                opacity: 1;
+            }
         }
 
-    .upload-hint {
-        font-size: .86rem;
-        color: #bca389;
-        margin-left: .2rem
-    }
-
-    .profile-form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.18rem 1.2rem;
-        margin-bottom: 1.45rem
-    }
-
-    .profile-tabs {
-        border-bottom: 1px solid #e5e7eb;
-        margin-bottom: 1.5rem
-    }
-
-    .profile-tab {
-        padding: .5rem 1rem;
-        border: none;
-        background: none;
-        color: #6b7280;
-        font-weight: 600;
-        border-radius: .5rem .5rem 0 0;
-        margin-right: .5rem;
-        transition: all .2s
-    }
-
-        .profile-tab.active {
-            color: #ea580c;
-            border-bottom: 2px solid #ea580c;
-            background: #fff7ed
+        .profile-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 1rem;
         }
 
-        .profile-tab:hover:not(.active) {
-            color: #9a3412;
-            background: #ffedd5
+        /* Breadcrumb */
+        .profile-breadcrumb {
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 2rem;
+            animation: slideDown 0.4s ease;
         }
 
-    .form-label {
-        font-weight: 600;
-        color: #e57736;
-        margin-bottom: .5rem
-    }
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
 
-    .input-group-text {
-        background: var(--peach-50);
-        color: #ffb87d;
-        border-radius: 1.1rem 0 0 1.1rem;
-        border-right: 0;
-        border: 1.5px solid var(--peach-200)
-    }
-
-    .form-control, .form-control:focus {
-        border-radius: 0 1.1rem 1.1rem 0;
-        box-shadow: none;
-        border: 1.5px solid var(--peach-200)
-    }
-
-        .form-control:focus, .btn:focus, .input-group-text:focus {
-            border-color: var(--peach) !important;
-            box-shadow: 0 0 0 .25rem rgba(255,200,156,.25) !important
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-    .form-error {
-        color: #dc2626;
-        font-size: .97rem;
-        margin-top: .25rem;
-        display: block
-    }
-
-    .status-icon.active i {
-        color: #16a34a !important
-    }
-
-    .status-icon.inactive i {
-        color: #ef4444 !important
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 1rem;
-        justify-content: flex-end;
-        margin-top: 1.5rem
-    }
-
-    .save-btn {
-        font-weight: 700;
-        border-radius: 1.3rem;
-        padding: .65rem 1.5rem;
-        background: var(--peach);
-        color: #1a1a1a;
-        border: none;
-        box-shadow: 0 1.5px 6px #FFD7AE33;
-        transition: background .16s,color .16s
-    }
-
-        .save-btn:disabled {
-            opacity: .7;
-            pointer-events: none
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
         }
 
-    .btn-outline-secondary {
-        border-radius: 1.3rem;
-        color: #888;
-        border: 1.5px solid #e5e7eb;
-        background: #fff
-    }
+            .breadcrumb li + li::before {
+                content: "›";
+                margin: 0 0.5rem;
+                color: #9e9e9e;
+                font-weight: bold;
+            }
 
-        .btn-outline-secondary:hover {
-            background: #f3f4f6;
-            color: #333
+            .breadcrumb a {
+                color: var(--profile-primary);
+                text-decoration: none;
+                font-weight: 500;
+                transition: color 0.3s;
+            }
+
+                .breadcrumb a:hover {
+                    color: var(--profile-primary-dark);
+                }
+
+            .breadcrumb .active {
+                color: var(--profile-text);
+                font-weight: 600;
+            }
+
+        /* Profile Completion */
+        .profile-completion {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 16px;
+            box-shadow: var(--profile-shadow);
+            margin-bottom: 2rem;
+            animation: slideDown 0.5s ease;
         }
 
-    .tab-content {
-        display: none
-    }
-
-        .tab-content.active {
-            display: block
+        .completion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
         }
 
-    .activity-item {
-        padding: .75rem 0;
-        border-bottom: 1px solid #e5e7eb;
-        display: flex;
-        gap: 1rem
-    }
+        .completion-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--profile-dark);
+        }
 
-    .activity-icon {
-        width: 2.5rem;
-        height: 2.5rem;
-        border-radius: 50%;
-        background: #ffedd5;
-        color: #ea580c;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0
-    }
+        .completion-percentage {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--profile-primary);
+        }
 
-    .activity-time {
-        font-size: .75rem;
-        color: #6b7280
-    }
+        .completion-bar-wrapper {
+            height: 8px;
+            background: var(--profile-light);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
 
-    .progress {
-        background: #f1f5f9
-    }
+        .completion-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--profile-primary), var(--profile-accent));
+            border-radius: 8px;
+            transition: width 0.6s ease;
+        }
 
-    /* Offcanvas UI */
-    #offProvinciaCiudad .list-group-item.active {
-        background-color: var(--peach);
-        border-color: var(--peach);
-        color: #1a1a1a;
-        font-weight: 700;
-    }
+        .completion-hint {
+            font-size: 0.875rem;
+            color: #757575;
+        }
 
-    #offProvinciaCiudad .form-control:focus {
-        border-color: var(--peach);
-        box-shadow: 0 0 0 .2rem rgba(255,200,156,.25);
-    }
-
-    @@media (max-width:680px) {
+        /* Main Card */
         .profile-card {
-            padding: 1.2rem 1rem;
-            margin: 1rem auto
+            background: white;
+            border-radius: 24px;
+            box-shadow: var(--profile-shadow-lg);
+            overflow: hidden;
+            animation: zoomIn 0.5s ease;
         }
 
-        .profile-form-grid {
-            grid-template-columns: 1fr
+        @@keyframes zoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
-        .profile-avatar-container {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 1rem
+        /* Card Header */
+        .profile-card-header {
+            background: linear-gradient(135deg, var(--profile-primary) 0%, var(--profile-secondary) 100%);
+            padding: 2.5rem 2rem;
+            text-align: center;
+            color: white;
+        }
+
+            .profile-card-header h1 {
+                font-size: 1.75rem;
+                font-weight: 700;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.75rem;
+            }
+
+        .profile-subtitle {
+            font-size: 0.95rem;
+            opacity: 0.9;
+            margin-top: 0.5rem;
+        }
+
+        /* Tabs */
+        .profile-tabs {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid var(--profile-border);
+            padding: 0 2rem;
+        }
+
+        .profile-tab {
+            padding: 1rem 1.5rem;
+            border: none;
+            background: none;
+            color: #757575;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+            .profile-tab:hover {
+                color: var(--profile-primary);
+                background: rgba(233, 30, 99, 0.05);
+            }
+
+            .profile-tab.active {
+                color: var(--profile-primary);
+                border-bottom-color: var(--profile-primary);
+            }
+
+        /* Tab Content */
+        .profile-body {
+            padding: 2.5rem;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+            .tab-content.active {
+                display: block;
+            }
+
+        /* Alerts */
+        .profile-alert {
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: start;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            border: none;
+            animation: slideDown 0.4s ease;
+        }
+
+            .profile-alert i {
+                font-size: 1.25rem;
+                margin-top: 0.125rem;
+            }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .alert-danger {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* Avatar Section */
+        .avatar-section {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+            padding: 2rem;
+            background: var(--profile-light);
+            border-radius: 16px;
         }
 
         .avatar-wrapper {
-            width: 84px;
-            height: 84px
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: white;
+            border: 4px solid var(--profile-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            flex-shrink: 0;
+            box-shadow: 0 8px 24px rgba(233, 30, 99, 0.3);
         }
-    }
-</style>
 
-<div class="profile-main-bg">
-    <div class="profile-card">
-        <div class="profile-header text-center mb-2">
-            <h2><i class="fas fa-user-circle me-1" aria-hidden="true"></i> Mi Perfil</h2>
-            <div class="profile-subtitle">Administra tu información personal</div>
-        </div>
+        .profile-avatar {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
 
-        <div class="profile-tabs" role="tablist" aria-label="Secciones de perfil">
-            <button class="profile-tab active" data-tab="personal" role="tab" aria-selected="true">Información Personal</button>
-            <button class="profile-tab" data-tab="security" role="tab" aria-selected="false">Seguridad</button>
-            <button class="profile-tab" data-tab="activity" role="tab" aria-selected="false">Actividad</button>
-        </div>
+        .avatar-placeholder {
+            color: var(--profile-primary-light);
+            font-size: 3.5rem;
+        }
 
-        <div class="profile-body">
-            @if (TempData["MensajeExito"] != null || TempData["MensajeError"] != null)
-            {
-                var alertClass = TempData["MensajeExito"] != null ? "alert-success" : "alert-danger";
-                var iconClass = TempData["MensajeExito"] != null ? "fa-circle-check" : "fa-circle-exclamation";
-                <div class="profile-alert alert @alertClass alert-dismissible fade show" role="alert">
-                    <i class="fas @iconClass me-2" aria-hidden="true"></i>
-                    <span>@(TempData["MensajeExito"] ?? TempData["MensajeError"])</span>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-                </div>
+        .avatar-controls {
+            flex: 1;
+        }
+
+            .avatar-controls h3 {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--profile-dark);
+                margin-bottom: 0.5rem;
             }
 
-            <!-- Pestaña: Información personal -->
-            <div id="personal-tab" class="tab-content active" role="tabpanel" aria-labelledby="personal">
-                <form asp-action="ActualizarPerfil" asp-controller="Cuenta" method="post" enctype="multipart/form-data" id="formPerfil" class="needs-validation" novalidate>
-                    @Html.AntiForgeryToken()
-                    <input asp-for="Id" type="hidden" />
+            .avatar-controls p {
+                color: #757575;
+                font-size: 0.875rem;
+                margin-bottom: 1rem;
+            }
 
-                    <div class="profile-avatar-container">
-                        <div class="avatar-wrapper">
-                            @if (!string.IsNullOrEmpty(Model.FotoPerfil))
-                            {
-                                <img src="@Model.FotoPerfil"
-                                     class="profile-avatar"
-                                     loading="lazy"
-                                     alt="Foto de perfil"
-                                     onerror="this.style.display='none'; this.closest('.avatar-wrapper').querySelector('.avatar-placeholder').classList.remove('d-none');" />
-                            }
-                            <div class="avatar-placeholder @(Model?.FotoPerfil == null ? "" : "d-none")" aria-hidden="true">
-                                <i class="fas fa-user"></i>
-                            </div>
-                        </div>
+        .avatar-buttons {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
 
-                        <div class="avatar-upload">
-                            <label for="ImagenPerfil" class="upload-btn mb-1" tabindex="0">
-                                <i class="fas fa-camera me-2" aria-hidden="true"></i> Cambiar foto
-                            </label>
-                            <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/jpeg,image/png,image/webp" class="d-none" aria-label="Seleccionar imagen de perfil" />
-                            <button type="button" id="btnEliminarFoto" class="btn btn-outline-danger btn-sm mb-1 @(string.IsNullOrEmpty(Model.FotoPerfil) ? "d-none" : "")">
-                                <i class="fas fa-trash me-2" aria-hidden="true"></i> Eliminar
-                            </button>
-                            <div class="upload-hint">Formatos: JPG, PNG, WEBP (máx 5MB)</div>
-                        </div>
-                    </div>
+        .btn-upload {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1.25rem;
+            background: linear-gradient(135deg, var(--profile-primary), var(--profile-accent));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
 
-                    <div class="profile-form-grid">
-                        <div class="form-group">
-                            <label asp-for="NombreCompleto" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user" aria-hidden="true"></i></span>
-                                <input asp-for="NombreCompleto" class="form-control" placeholder="Nombre completo" autocomplete="name" />
-                            </div>
-                            <span asp-validation-for="NombreCompleto" class="form-error"></span>
-                        </div>
+            .btn-upload:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(233, 30, 99, 0.35);
+            }
 
-                        <div class="form-group">
-                            <label asp-for="Email" class="form-label">Correo electrónico</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-envelope" aria-hidden="true"></i></span>
-                                <input asp-for="Email" class="form-control" placeholder="Correo electrónico" readonly />
-                            </div>
-                            <small class="text-muted">Para cambiar tu correo, contacta al administrador.</small>
-                        </div>
+        .btn-delete {
+            padding: 0.625rem 1.25rem;
+            background: white;
+            color: var(--profile-danger);
+            border: 2px solid #ffcdd2;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
 
-                        <!-- CÉDULA -->
-                        <div class="form-group">
-                            <label asp-for="Cedula" class="form-label">Cédula</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-id-card" aria-hidden="true"></i></span>
-                                <input asp-for="Cedula"
-                                       class="form-control"
-                                       placeholder="10 dígitos"
-                                       inputmode="numeric"
-                                       pattern="\d{10}"
-                                       maxlength="10"
-                                       aria-describedby="cedulaHelp" />
-                            </div>
-                            <small id="cedulaHelp" class="text-muted">Solo números, exactamente 10 dígitos.</small>
-                            <span asp-validation-for="Cedula" class="form-error"></span>
-                        </div>
+            .btn-delete:hover {
+                background: #ffebee;
+                border-color: var(--profile-danger);
+            }
 
-                        <div class="form-group">
-                            <label asp-for="Telefono" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-phone" aria-hidden="true"></i></span>
-                                <input asp-for="Telefono" class="form-control" placeholder="09xxxxxxxx" maxlength="15" inputmode="tel" autocomplete="tel" />
-                            </div>
-                            <span asp-validation-for="Telefono" class="form-error"></span>
-                        </div>
+        /* Form Grid */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
 
-                        <div class="form-group">
-                            <label asp-for="Direccion" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-map-marker-alt" aria-hidden="true"></i></span>
-                                <input asp-for="Direccion" class="form-control" placeholder="Dirección completa" autocomplete="street-address" />
-                            </div>
-                            <span asp-validation-for="Direccion" class="form-error"></span>
-                        </div>
+        .form-group-full {
+            grid-column: 1 / -1;
+        }
 
-                        <!-- Ciudad con selector -->
-                        <div class="form-group">
-                            <label asp-for="Ciudad" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-city" aria-hidden="true"></i></span>
-                                <input asp-for="Ciudad"
-                                       class="form-control"
-                                       placeholder="Selecciona tu ciudad"
-                                       autocomplete="address-level2"
-                                       readonly />
-                                <button class="btn btn-outline-secondary"
-                                        type="button"
-                                        data-bs-toggle="offcanvas"
-                                        data-bs-target="#offProvinciaCiudad"
-                                        title="Elegir provincia y ciudad">
-                                    <i class="fa-solid fa-magnifying-glass-location"></i>
-                                </button>
-                            </div>
-                            <span asp-validation-for="Ciudad" class="form-error"></span>
-                        </div>
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: var(--profile-dark);
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+        }
 
-                        <!-- Provincia con selector -->
-                        <div class="form-group">
-                            <label asp-for="Provincia" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-globe-americas" aria-hidden="true"></i></span>
-                                <input asp-for="Provincia"
-                                       class="form-control"
-                                       placeholder="Selecciona tu provincia"
-                                       autocomplete="address-level1"
-                                       readonly />
-                                <button class="btn btn-outline-secondary"
-                                        type="button"
-                                        data-bs-toggle="offcanvas"
-                                        data-bs-target="#offProvinciaCiudad"
-                                        title="Elegir provincia y ciudad">
-                                    <i class="fa-solid fa-list"></i>
-                                </button>
-                            </div>
-                            <span asp-validation-for="Provincia" class="form-error"></span>
-                        </div>
+            .form-group label i {
+                color: var(--profile-primary);
+                margin-right: 0.5rem;
+            }
 
-                        <div class="form-group">
-                            <label asp-for="Referencia" class="form-label"></label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-info-circle" aria-hidden="true"></i></span>
-                                <input asp-for="Referencia" class="form-control" placeholder="Punto de referencia" autocomplete="off" />
-                            </div>
-                            <span asp-validation-for="Referencia" class="form-error"></span>
-                        </div>
+        .form-control-custom {
+            width: 100%;
+            padding: 1rem 1.25rem;
+            border: 2px solid var(--profile-border);
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s;
+            background: var(--profile-light);
+        }
 
-                        <div class="form-group">
-                            <label class="form-label">Rol actual</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-user-tag" aria-hidden="true"></i></span>
-                                <input value="@ViewBag.RolUsuario" class="form-control" readonly />
-                            </div>
-                        </div>
+            .form-control-custom:focus {
+                outline: none;
+                border-color: var(--profile-primary);
+                background: white;
+                box-shadow: 0 0 0 4px rgba(233, 30, 99, 0.1);
+            }
 
-                        <div class="form-group">
-                            <label class="form-label">Fecha de registro</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-calendar-alt" aria-hidden="true"></i></span>
-                                <input value="@Model.FechaRegistro.ToString("dd/MM/yyyy")" class="form-control" readonly />
-                            </div>
-                        </div>
+            .form-control-custom:read-only {
+                background: #f5f5f5;
+                color: #757575;
+            }
 
-                        <div class="form-group">
-                            <label class="form-label">Estado</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-circle" aria-hidden="true"></i></span>
-                                <input value="@(Model.Activo ? "Activo" : "Inactivo")" class="form-control" readonly />
-                                <span class="input-group-text status-icon @(Model.Activo ? "active" : "inactive")" aria-hidden="true">
-                                    <i class="fas @(Model.Activo ? "fa-check" : "fa-times")"></i>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+        .input-with-button {
+            display: flex;
+            gap: 0.5rem;
+        }
 
-                    <div class="form-actions">
-                        <a asp-action="Index" asp-controller="Home" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-2" aria-hidden="true"></i> Cancelar
-                        </a>
-                        <button type="submit" class="save-btn" id="btnPerfil">
-                            <i class="fas fa-save me-2" aria-hidden="true"></i>
-                            <span class="btn-text">Guardar cambios</span>
-                        </button>
-                    </div>
-                </form>
+            .input-with-button .form-control-custom {
+                flex: 1;
+            }
+
+            .input-with-button .btn-icon {
+                padding: 1rem;
+                background: white;
+                border: 2px solid var(--profile-border);
+                border-radius: 12px;
+                color: var(--profile-primary);
+                cursor: pointer;
+                transition: all 0.3s;
+            }
+
+                .input-with-button .btn-icon:hover {
+                    background: var(--profile-primary);
+                    color: white;
+                    border-color: var(--profile-primary);
+                }
+
+        .form-help {
+            font-size: 0.875rem;
+            color: #757575;
+            margin-top: 0.5rem;
+        }
+
+        .form-error {
+            color: var(--profile-danger);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Status Badge */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+            .status-badge.active {
+                background: #e8f5e9;
+                color: #2e7d32;
+            }
+
+            .status-badge.inactive {
+                background: #ffebee;
+                color: #c62828;
+            }
+
+        /* Form Actions */
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid var(--profile-border);
+        }
+
+        .btn-save {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--profile-primary), var(--profile-accent));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+            .btn-save:hover:not(:disabled) {
+                transform: translateY(-2px);
+                box-shadow: 0 12px 28px rgba(233, 30, 99, 0.35);
+            }
+
+            .btn-save:disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+            }
+
+            .btn-save.loading {
+                position: relative;
+                color: transparent;
+            }
+
+                .btn-save.loading::after {
+                    content: '';
+                    position: absolute;
+                    width: 20px;
+                    height: 20px;
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    border-top-color: transparent;
+                    animation: spin 0.6s linear infinite;
+                }
+
+        @@keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-cancel {
+            padding: 1rem 2rem;
+            background: white;
+            color: #757575;
+            border: 2px solid var(--profile-border);
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .btn-cancel:hover {
+                background: var(--profile-light);
+                color: var(--profile-dark);
+            }
+
+        /* Security Section */
+        .security-card {
+            background: var(--profile-light);
+            padding: 2rem;
+            border-radius: 16px;
+            margin-bottom: 1.5rem;
+        }
+
+        .security-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .security-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--profile-dark);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .security-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .security-item-content h6 {
+            font-weight: 700;
+            color: var(--profile-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .security-item-content p {
+            color: #757575;
+            margin: 0;
+            font-size: 0.875rem;
+        }
+
+        .btn-change {
+            padding: 0.625rem 1.25rem;
+            background: white;
+            color: var(--profile-primary);
+            border: 2px solid var(--profile-primary);
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .btn-change:hover {
+                background: var(--profile-primary);
+                color: white;
+            }
+
+        /* Password Form */
+        .password-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 16px;
+            margin-top: 1.5rem;
+        }
+
+        .password-input-wrapper {
+            position: relative;
+        }
+
+        .password-toggle-btn {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #9e9e9e;
+            cursor: pointer;
+            padding: 0.5rem;
+            transition: color 0.3s;
+        }
+
+            .password-toggle-btn:hover {
+                color: var(--profile-primary);
+            }
+
+        .strength-meter {
+            height: 6px;
+            background: #f5f5f5;
+            border-radius: 6px;
+            margin-top: 0.75rem;
+            overflow: hidden;
+        }
+
+        .strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s;
+            border-radius: 6px;
+        }
+
+            .strength-bar.weak {
+                background: var(--profile-danger);
+                width: 33%;
+            }
+
+            .strength-bar.medium {
+                background: var(--profile-warning);
+                width: 66%;
+            }
+
+            .strength-bar.strong {
+                background: var(--profile-success);
+                width: 100%;
+            }
+
+        .strength-text {
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 600;
+        }
+
+            .strength-text.weak {
+                color: var(--profile-danger);
+            }
+
+            .strength-text.medium {
+                color: var(--profile-warning);
+            }
+
+            .strength-text.strong {
+                color: var(--profile-success);
+            }
+
+        .caps-warning {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            background: #fff3e0;
+            border: 2px solid #ff9800;
+            border-radius: 10px;
+            color: #e65100;
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            animation: slideDown 0.3s ease;
+        }
+
+        /* Activity Timeline */
+        .activity-timeline {
+            position: relative;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 1.5rem;
+            padding: 1.5rem 0;
+            border-bottom: 1px solid var(--profile-border);
+        }
+
+            .activity-item:last-child {
+                border-bottom: none;
+            }
+
+        .activity-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--profile-primary), var(--profile-accent));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 1.25rem;
+            box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+        }
+
+        .activity-content h6 {
+            font-weight: 700;
+            color: var(--profile-dark);
+            margin-bottom: 0.25rem;
+        }
+
+        .activity-content p {
+            color: #757575;
+            font-size: 0.875rem;
+            margin: 0;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+            .modal-overlay.active {
+                display: flex;
+            }
+
+        .modal-content {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 24px;
+            max-width: 500px;
+            width: 90%;
+            animation: zoomIn 0.4s ease;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--profile-warning), #fb8c00);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 2.5rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--profile-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-message {
+            color: #757575;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+            .modal-actions button {
+                flex: 1;
+            }
+
+        /* Responsive */
+        @@media (max-width: 991px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .avatar-section {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-tabs {
+                overflow-x: auto;
+                padding: 0 1rem;
+            }
+
+            .profile-body {
+                padding: 1.5rem;
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .profile-card-header {
+                padding: 2rem 1.5rem;
+            }
+
+            .form-actions {
+                flex-direction: column;
+            }
+
+                .form-actions button {
+                    width: 100%;
+                }
+        }
+
+        /* Animations */
+        @@keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .btn-save.success {
+            animation: pulse 0.6s ease;
+        }
+
+        /* Focus Visible */
+        button:focus-visible,
+        input:focus-visible {
+            outline: 3px solid var(--profile-primary);
+            outline-offset: 2px;
+        }
+
+        /* Reduced Motion */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+}
+
+<div class="profile-page">
+    <div class="profile-container">
+        <!-- Breadcrumb -->
+        <nav class="profile-breadcrumb" aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li>
+                    <a href="@Url.Action("Index", "Home")">
+                        <i class="fa-solid fa-house"></i>
+                        Inicio
+                    </a>
+                </li>
+                <li class="active" aria-current="page">Mi Perfil</li>
+            </ol>
+        </nav>
+
+        <!-- Profile Completion -->
+        <div class="profile-completion" id="profileCompletion">
+            <div class="completion-header">
+                <div class="completion-title">
+                    <i class="fa-solid fa-chart-line"></i>
+                    Completitud del perfil
+                </div>
+                <div class="completion-percentage" id="completionPercent">0%</div>
+            </div>
+            <div class="completion-bar-wrapper">
+                <div class="completion-bar" id="completionBar" style="width: 0%"></div>
+            </div>
+            <div class="completion-hint" id="completionHint">Cargando...</div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="profile-card">
+            <div class="profile-card-header">
+                <h1>
+                    <i class="fa-solid fa-user-circle"></i>
+                    Mi Perfil
+                </h1>
+                <div class="profile-subtitle">Administra tu información personal</div>
             </div>
 
-            <!-- Pestaña: Seguridad -->
-            <div id="security-tab" class="tab-content" role="tabpanel" aria-labelledby="security">
-                <div class="mb-4">
-                    <h5 class="mb-3"><i class="fas fa-shield-alt me-2" aria-hidden="true"></i> Seguridad de la cuenta</h5>
-                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 border rounded">
-                        <div>
-                            <h6 class="mb-1">Contraseña</h6>
-                            <p class="mb-0 text-muted">Mantén tu cuenta protegida</p>
-                        </div>
-                        <button class="btn btn-outline-primary" id="btnCambiarPassword">
-                            <i class="fas fa-key me-2" aria-hidden="true"></i> Cambiar
-                        </button>
-                    </div>
-                    <div class="alert alert-info mb-0">
-                        <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
-                        Te recomendamos una contraseña de al menos 12 caracteres con mayúsculas, minúsculas y números.
-                    </div>
-                </div>
+            <!-- Tabs -->
+            <div class="profile-tabs">
+                <button class="profile-tab active" data-tab="personal">
+                    <i class="fa-solid fa-user"></i>
+                    Información Personal
+                </button>
+                <button class="profile-tab" data-tab="security">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    Seguridad
+                </button>
+                <button class="profile-tab" data-tab="activity">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    Actividad
+                </button>
+            </div>
 
-                <div id="passwordForm" class="d-none">
-                    <h5 class="mb-3"><i class="fas fa-key me-2" aria-hidden="true"></i> Cambiar contraseña</h5>
-                    <form id="changePasswordForm" method="post" asp-action="CambiarPassword" asp-controller="Cuenta" novalidate>
+            <div class="profile-body">
+                <!-- Alerts -->
+                @if (TempData["MensajeExito"] != null || TempData["MensajeError"] != null)
+                {
+                    var alertClass = TempData["MensajeExito"] != null ? "alert-success" : "alert-danger";
+                    var iconClass = TempData["MensajeExito"] != null ? "fa-circle-check" : "fa-circle-exclamation";
+                    <div class="profile-alert @alertClass" role="alert">
+                        <i class="fa-solid @iconClass"></i>
+                        <div>@(TempData["MensajeExito"] ?? TempData["MensajeError"])</div>
+                    </div>
+                }
+
+                <!-- Tab: Personal -->
+                <div class="tab-content active" id="personal-tab">
+                    <form asp-action="ActualizarPerfil" method="post" enctype="multipart/form-data" id="formPerfil">
                         @Html.AntiForgeryToken()
+                        <input asp-for="Id" type="hidden" />
 
-                        <div class="form-group mb-3">
-                            <label for="CurrentPassword" class="form-label">Contraseña actual</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock" aria-hidden="true"></i></span>
-                                <input type="password" class="form-control" id="CurrentPassword" name="CurrentPassword" autocomplete="current-password" required />
-                                <button class="btn btn-outline-secondary toggle-password" type="button" aria-label="Mostrar/ocultar contraseña"><i class="fas fa-eye"></i></button>
+                        <!-- Avatar -->
+                        <div class="avatar-section">
+                            <div class="avatar-wrapper">
+                                @if (!string.IsNullOrEmpty(Model.FotoPerfil))
+                                {
+                                    <img src="@Model.FotoPerfil" class="profile-avatar" alt="Foto de perfil" />
+                                }
+                                <div class="avatar-placeholder @(Model?.FotoPerfil == null ? "" : "d-none")">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
                             </div>
-                            <div id="capsWarnCurrent" class="form-text text-warning d-none">
-                                <i class="fa-solid fa-unlock-keyhole me-1"></i> Bloq Mayús está activado.
+
+                            <div class="avatar-controls">
+                                <h3>Foto de perfil</h3>
+                                <p>JPG, PNG o WEBP (máx 5MB)</p>
+                                <div class="avatar-buttons">
+                                    <label for="ImagenPerfil" class="btn-upload">
+                                        <i class="fa-solid fa-camera"></i>
+                                        <span>Cambiar foto</span>
+                                    </label>
+                                    <input type="file" id="ImagenPerfil" name="ImagenPerfil" accept="image/*" class="d-none" />
+                                    <button type="button" id="btnEliminarFoto" class="btn-delete @(string.IsNullOrEmpty(Model.FotoPerfil) ? "d-none" : "")">
+                                        <i class="fa-solid fa-trash"></i>
+                                        <span>Eliminar</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="form-group mb-3">
-                            <label for="NewPassword" class="form-label">Nueva contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock" aria-hidden="true"></i></span>
-                                <input type="password" class="form-control" id="NewPassword" name="NewPassword" autocomplete="new-password" required />
-                                <button class="btn btn-outline-secondary toggle-password" type="button" aria-label="Mostrar/ocultar contraseña"><i class="fas fa-eye"></i></button>
+                        <!-- Form Grid -->
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label asp-for="NombreCompleto">
+                                    <i class="fa-solid fa-user"></i>
+                                    Nombre completo
+                                </label>
+                                <input asp-for="NombreCompleto" class="form-control-custom" placeholder="Tu nombre completo" />
+                                <span asp-validation-for="NombreCompleto" class="form-error"></span>
                             </div>
 
-                            <div class="progress mt-2" role="progressbar" aria-label="Fuerza de contraseña" aria-valuemin="0" aria-valuemax="100" style="height:8px;">
-                                <div id="pwdStrengthBar" class="progress-bar" style="width:0%"></div>
+                            <div class="form-group">
+                                <label asp-for="Email">
+                                    <i class="fa-solid fa-envelope"></i>
+                                    Correo electrónico
+                                </label>
+                                <input asp-for="Email" class="form-control-custom" readonly />
+                                <div class="form-help">Para cambiar tu correo, contacta al administrador</div>
                             </div>
-                            <small id="pwdStrengthText" class="text-muted">Fuerza: —</small>
 
-                            <div id="capsWarnNew" class="form-text text-warning d-none">
-                                <i class="fa-solid fa-unlock-keyhole me-1"></i> Bloq Mayús está activado.
+                            <div class="form-group">
+                                <label asp-for="Cedula">
+                                    <i class="fa-solid fa-id-card"></i>
+                                    Cédula
+                                </label>
+                                <input asp-for="Cedula" class="form-control-custom" readonly />
+                                <div class="form-help">Para cambiar tu cédula, contacta al administrador</div>
+                                <span asp-validation-for="Cedula" class="form-error"></span>
                             </div>
-                        </div>
 
-                        <div class="form-group mb-4">
-                            <label for="ConfirmPassword" class="form-label">Confirmar nueva contraseña</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-lock" aria-hidden="true"></i></span>
-                                <input type="password" class="form-control" id="ConfirmPassword" name="ConfirmPassword" autocomplete="new-password" required />
-                                <button class="btn btn-outline-secondary toggle-password" type="button" aria-label="Mostrar/ocultar contraseña"><i class="fas fa-eye"></i></button>
+                            <div class="form-group">
+                                <label asp-for="Telefono">
+                                    <i class="fa-solid fa-phone"></i>
+                                    Teléfono
+                                </label>
+                                <input asp-for="Telefono" class="form-control-custom" placeholder="09xxxxxxxx" maxlength="15" />
+                                <span asp-validation-for="Telefono" class="form-error"></span>
+                            </div>
+
+                            <div class="form-group form-group-full">
+                                <label asp-for="Direccion">
+                                    <i class="fa-solid fa-map-marker-alt"></i>
+                                    Dirección
+                                </label>
+                                <input asp-for="Direccion" class="form-control-custom" placeholder="Dirección completa" />
+                                <span asp-validation-for="Direccion" class="form-error"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label asp-for="Provincia">
+                                    <i class="fa-solid fa-globe-americas"></i>
+                                    Provincia
+                                </label>
+                                <div class="input-with-button">
+                                    <input asp-for="Provincia" class="form-control-custom" placeholder="Selecciona provincia" readonly />
+                                    <button type="button" class="btn-icon" data-bs-toggle="offcanvas" data-bs-target="#offProvinciaCiudad">
+                                        <i class="fa-solid fa-list"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Provincia" class="form-error"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label asp-for="Ciudad">
+                                    <i class="fa-solid fa-city"></i>
+                                    Ciudad
+                                </label>
+                                <div class="input-with-button">
+                                    <input asp-for="Ciudad" class="form-control-custom" placeholder="Selecciona ciudad" readonly />
+                                    <button type="button" class="btn-icon" data-bs-toggle="offcanvas" data-bs-target="#offProvinciaCiudad">
+                                        <i class="fa-solid fa-magnifying-glass-location"></i>
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Ciudad" class="form-error"></span>
+                            </div>
+
+                            <div class="form-group form-group-full">
+                                <label asp-for="Referencia">
+                                    <i class="fa-solid fa-info-circle"></i>
+                                    Referencia
+                                </label>
+                                <input asp-for="Referencia" class="form-control-custom" placeholder="Punto de referencia" />
+                                <span asp-validation-for="Referencia" class="form-error"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <i class="fa-solid fa-user-tag"></i>
+                                    Rol
+                                </label>
+                                <input value="@ViewBag.RolUsuario" class="form-control-custom" readonly />
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <i class="fa-solid fa-calendar-alt"></i>
+                                    Fecha de registro
+                                </label>
+                                <input value="@Model.FechaRegistro.ToString("dd/MM/yyyy")" class="form-control-custom" readonly />
+                            </div>
+
+                            <div class="form-group form-group-full">
+                                <label>
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    Estado
+                                </label>
+                                <span class="status-badge @(Model.Activo ? "active" : "inactive")">
+                                    <i class="fa-solid @(Model.Activo ? "fa-check-circle" : "fa-times-circle")"></i>
+                                    <span>@(Model.Activo ? "Activo" : "Inactivo")</span>
+                                </span>
                             </div>
                         </div>
 
                         <div class="form-actions">
-                            <button type="button" class="btn btn-outline-secondary" id="cancelPasswordChange">Cancelar</button>
-                            <button type="submit" class="save-btn" id="btnSavePassword">
-                                <i class="fas fa-save me-2" aria-hidden="true"></i> Actualizar contraseña
+                            <a href="@Url.Action("Index", "Home")" class="btn-cancel">
+                                <i class="fa-solid fa-times"></i>
+                                Cancelar
+                            </a>
+                            <button type="submit" class="btn-save" id="btnSave">
+                                <i class="fa-solid fa-save"></i>
+                                <span>Guardar cambios</span>
                             </button>
                         </div>
                     </form>
                 </div>
-            </div>
 
-            <!-- Pestaña: Actividad (placeholder) -->
-            <div id="activity-tab" class="tab-content" role="tabpanel" aria-labelledby="activity">
-                <h5 class="mb-3"><i class="fas fa-history me-2" aria-hidden="true"></i> Actividad reciente</h5>
+                <!-- Tab: Security -->
+                <div class="tab-content" id="security-tab">
+                    <div class="security-card">
+                        <div class="security-title">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            Seguridad de la cuenta
+                        </div>
+                    </div>
 
-                <div class="activity-item">
-                    <div class="activity-icon"><i class="fas fa-sign-in-alt" aria-hidden="true"></i></div>
-                    <div class="activity-content">
-                        <div>Inicio de sesión exitoso</div>
-                        <div class="activity-time">Hoy a las @DateTime.Now.ToString("HH:mm")</div>
+                    <div class="security-item">
+                        <div class="security-item-content">
+                            <h6>Contraseña</h6>
+                            <p>Mantén tu cuenta protegida con una contraseña fuerte</p>
+                        </div>
+                        <button type="button" class="btn-change" id="btnChangePassword">
+                            <i class="fa-solid fa-key"></i>
+                            Cambiar
+                        </button>
+                    </div>
+
+                    <div id="passwordFormWrapper" class="d-none">
+                        <div class="password-form">
+                            <h5 style="margin-bottom: 1.5rem; font-weight: 700;">
+                                <i class="fa-solid fa-key"></i>
+                                Cambiar contraseña
+                            </h5>
+
+                            <form id="changePasswordForm" method="post" asp-action="CambiarPassword">
+                                @Html.AntiForgeryToken()
+
+                                <div class="form-group" style="margin-bottom: 1.5rem;">
+                                    <label>Contraseña actual</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" class="form-control-custom" id="CurrentPassword" name="CurrentPassword" />
+                                        <button type="button" class="password-toggle-btn" data-target="CurrentPassword">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div id="capsWarnCurrent" class="caps-warning d-none">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        Bloq Mayús activado
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 1.5rem;">
+                                    <label>Nueva contraseña</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" class="form-control-custom" id="NewPassword" name="NewPassword" />
+                                        <button type="button" class="password-toggle-btn" data-target="NewPassword">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="strength-meter">
+                                        <div class="strength-bar" id="strengthBar"></div>
+                                    </div>
+                                    <div class="strength-text" id="strengthText">Fuerza: —</div>
+                                    <div id="capsWarnNew" class="caps-warning d-none">
+                                        <i class="fa-solid fa-triangle-exclamation"></i>
+                                        Bloq Mayús activado
+                                    </div>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 2rem;">
+                                    <label>Confirmar contraseña</label>
+                                    <div class="password-input-wrapper">
+                                        <input type="password" class="form-control-custom" id="ConfirmPassword" name="ConfirmPassword" />
+                                        <button type="button" class="password-toggle-btn" data-target="ConfirmPassword">
+                                            <i class="fa-regular fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions" style="margin-top: 0; padding-top: 0; border-top: none;">
+                                    <button type="button" class="btn-cancel" id="btnCancelPassword">Cancelar</button>
+                                    <button type="submit" class="btn-save" id="btnSavePassword">
+                                        <i class="fa-solid fa-save"></i>
+                                        Actualizar contraseña
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
 
-                <div class="activity-item">
-                    <div class="activity-icon"><i class="fas fa-user-edit" aria-hidden="true"></i></div>
-                    <div class="activity-content">
-                        <div>Actualizaste tu información de perfil</div>
-                        <div class="activity-time">Ayer a las 15:42</div>
+                <!-- Tab: Activity -->
+                <div class="tab-content" id="activity-tab">
+                    <div class="security-card">
+                        <div class="security-title">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            Actividad reciente
+                        </div>
                     </div>
-                </div>
 
-                <div class="activity-item">
-                    <div class="activity-icon"><i class="fas fa-shopping-cart" aria-hidden="true"></i></div>
-                    <div class="activity-content">
-                        <div>Realizaste una compra reciente</div>
-                        <div class="activity-time">Hace 3 días</div>
+                    <div class="activity-timeline">
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fa-solid fa-right-to-bracket"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h6>Inicio de sesión</h6>
+                                <p>Hoy a las @DateTime.Now.ToString("HH:mm")</p>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fa-solid fa-user-pen"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h6>Perfil actualizado</h6>
+                                <p>Ayer a las 15:42</p>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fa-solid fa-shopping-cart"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h6>Compra realizada</h6>
+                                <p>Hace 3 días</p>
+                            </div>
+                        </div>
+
+                        <div class="activity-item">
+                            <div class="activity-icon">
+                                <i class="fa-solid fa-key"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h6>Contraseña actualizada</h6>
+                                <p>Hace 2 semanas</p>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="activity-item">
-                    <div class="activity-icon"><i class="fas fa-key" aria-hidden="true"></i></div>
-                    <div class="activity-content">
-                        <div>Cambiaste tu contraseña</div>
-                        <div class="activity-time">Hace 2 semanas</div>
+                    <div style="text-align: center; margin-top: 2rem;">
+                        <button class="btn-cancel" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                            Ver historial completo
+                        </button>
                     </div>
-                </div>
-
-                <div class="text-center mt-3">
-                    <button class="btn btn-outline-secondary btn-sm">
-                        <i class="fas fa-history me-2" aria-hidden="true"></i> Ver historial completo
-                    </button>
                 </div>
             </div>
         </div>
@@ -636,557 +1252,389 @@
 </div>
 
 <!-- Offcanvas Provincia/Ciudad -->
-<div class="offcanvas offcanvas-end" tabindex="-1" id="offProvinciaCiudad" aria-labelledby="offProvinciaCiudadLabel">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offProvinciaCiudad">
     <div class="offcanvas-header">
-        <h5 id="offProvinciaCiudadLabel" class="mb-0">
-            <i class="fa-solid fa-location-dot me-2"></i> Selecciona provincia y ciudad
+        <h5>
+            <i class="fa-solid fa-location-dot"></i>
+            Selecciona provincia y ciudad
         </h5>
-        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
     </div>
     <div class="offcanvas-body">
         <div class="row g-3">
             <div class="col-12 col-md-5">
-                <div class="mb-2 d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-map text-muted"></i>
-                    <input type="text" class="form-control form-control-sm" id="searchProv" placeholder="Filtrar provincias..." />
-                </div>
-                <div class="list-group small" id="provList" style="max-height: 60vh; overflow:auto;"></div>
+                <input type="text" class="form-control mb-2" id="searchProv" placeholder="Buscar provincia..." />
+                <div class="list-group" id="provList" style="max-height: 60vh; overflow: auto;"></div>
             </div>
             <div class="col-12 col-md-7">
-                <div class="mb-2 d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-city text-muted"></i>
-                    <input type="text" class="form-control form-control-sm" id="searchCity" placeholder="Filtrar ciudades..." disabled />
-                </div>
-                <div class="list-group small" id="cityList" style="max-height: 60vh; overflow:auto;">
-                    <div class="text-muted ps-2">Elige primero una provincia.</div>
+                <input type="text" class="form-control mb-2" id="searchCity" placeholder="Buscar ciudad..." disabled />
+                <div class="list-group" id="cityList" style="max-height: 60vh; overflow: auto;">
+                    <div class="text-muted p-2">Selecciona una provincia primero</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Modal Confirmación -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <div class="modal-icon">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="modal-title">¿Estás seguro?</h3>
+        </div>
+        <p class="modal-message" id="modalMessage">Esta acción no se puede deshacer</p>
+        <div class="modal-actions">
+            <button class="btn-cancel" id="modalCancel">Cancelar</button>
+            <button class="btn-save" id="modalConfirm">Confirmar</button>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/profile-ecuador-data.js"></script>
     <script>
-        (function(){
-            // Tabs
-            const tabs=document.querySelectorAll('.profile-tab');
-            tabs.forEach(tab=>{
-                tab.addEventListener('click',()=>{
-                    tabs.forEach(t=>{t.classList.remove('active'); t.setAttribute('aria-selected','false');});
-                    tab.classList.add('active'); tab.setAttribute('aria-selected','true');
-                    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-                    document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+        (function() {
+            'use strict';
+
+            // ===== PROFILE COMPLETION =====
+            function calculateCompletion() {
+                const fields = {
+                    nombre: document.getElementById('@Html.IdFor(m => m.NombreCompleto)')?.value,
+                    cedula: document.getElementById('@Html.IdFor(m => m.Cedula)')?.value,
+                    telefono: document.getElementById('@Html.IdFor(m => m.Telefono)')?.value,
+                    direccion: document.getElementById('@Html.IdFor(m => m.Direccion)')?.value,
+                    provincia: document.getElementById('@Html.IdFor(m => m.Provincia)')?.value,
+                    ciudad: document.getElementById('@Html.IdFor(m => m.Ciudad)')?.value,
+                    referencia: document.getElementById('@Html.IdFor(m => m.Referencia)')?.value,
+                    foto: '@Model.FotoPerfil'
+                };
+
+                let filled = 0;
+                const total = Object.keys(fields).length;
+
+                Object.values(fields).forEach(val => {
+                    if (val && val.trim()) filled++;
+                });
+
+                const percent = Math.round((filled / total) * 100);
+
+                document.getElementById('completionPercent').textContent = percent + '%';
+                document.getElementById('completionBar').style.width = percent + '%';
+
+                if (percent === 100) {
+                    document.getElementById('completionHint').textContent = '¡Perfil completo! 🎉';
+                } else {
+                    const missing = total - filled;
+                    document.getElementById('completionHint').textContent = `Completa ${missing} campo${missing > 1 ? 's' : ''} más para alcanzar el 100%`;
+                }
+            }
+
+            // ===== TABS =====
+            const tabs = document.querySelectorAll('.profile-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    document.getElementById(tab.dataset.tab + '-tab').classList.add('active');
                 });
             });
 
-            // Avatar: selección/preview/validación
-            const imgInput=document.getElementById('ImagenPerfil');
-            const delBtn=document.getElementById('btnEliminarFoto');
-            const MAX=5*1024*1024;
-            imgInput?.addEventListener('change',()=>{
-                if(!imgInput.files?.length) return;
-                const f=imgInput.files[0];
-                const okType=['image/jpeg','image/png','image/webp'].includes(f.type);
-                if(!okType){ toast('danger','Solo JPG, PNG o WEBP.'); imgInput.value=''; return; }
-                if(f.size>MAX){ toast('danger','La imagen supera 5MB.'); imgInput.value=''; return; }
-                const reader=new FileReader();
-                reader.onload=e=>{
-                    const wrap=document.querySelector('.avatar-wrapper');
-                    let avatar=wrap.querySelector('.profile-avatar');
-                    if(!avatar){
-                        avatar=document.createElement('img');
-                        avatar.className='profile-avatar'; avatar.alt='Foto de perfil';
-                        wrap.prepend(avatar);
+            // ===== AVATAR =====
+            const imgInput = document.getElementById('ImagenPerfil');
+            const delBtn = document.getElementById('btnEliminarFoto');
+
+            imgInput?.addEventListener('change', () => {
+                if (!imgInput.files?.length) return;
+                const file = imgInput.files[0];
+
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('La imagen no debe superar 5MB');
+                    imgInput.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const wrapper = document.querySelector('.avatar-wrapper');
+                    let img = wrapper.querySelector('.profile-avatar');
+                    if (!img) {
+                        img = document.createElement('img');
+                        img.className = 'profile-avatar';
+                        wrapper.prepend(img);
                     }
-                    avatar.src=e.target.result; avatar.style.display='block';
-                    wrap.querySelector('.avatar-placeholder')?.classList.add('d-none');
-                    const hidden=document.getElementById('EliminarFoto'); if(hidden) hidden.remove();
+                    img.src = e.target.result;
+                    wrapper.querySelector('.avatar-placeholder')?.classList.add('d-none');
                     delBtn?.classList.remove('d-none');
                 };
-                reader.readAsDataURL(f);
+                reader.readAsDataURL(file);
             });
 
-            // Eliminar foto
-            delBtn?.addEventListener('click',()=>{
-                const wrap=document.querySelector('.avatar-wrapper');
-                const avatar=wrap.querySelector('.profile-avatar'); if(avatar) avatar.style.display='none';
-                wrap.querySelector('.avatar-placeholder')?.classList.remove('d-none');
-                imgInput.value=''; delBtn.classList.add('d-none');
-                if(!document.getElementById('EliminarFoto')){
-                    const input=document.createElement('input');
-                    input.type='hidden'; input.name='EliminarFoto'; input.id='EliminarFoto'; input.value='true';
-                    document.getElementById('formPerfil').appendChild(input);
-                }
+            delBtn?.addEventListener('click', () => {
+                const wrapper = document.querySelector('.avatar-wrapper');
+                wrapper.querySelector('.profile-avatar')?.remove();
+                wrapper.querySelector('.avatar-placeholder')?.classList.remove('d-none');
+                imgInput.value = '';
+                delBtn.classList.add('d-none');
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'EliminarFoto';
+                input.value = 'true';
+                document.getElementById('formPerfil').appendChild(input);
             });
 
-            // CÉDULA: fuerza solo dígitos y longitud 10
-            const ced=document.getElementById('Cedula');
-            ced?.addEventListener('input',()=>{
-                const digits=(ced.value||'').replace(/\D+/g,'').slice(0,10);
-                if(ced.value!==digits) ced.value=digits;
-                ced.setCustomValidity(digits.length===0 || digits.length===10 ? '' : 'La cédula debe tener 10 dígitos.');
+            // ===== PASSWORD =====
+            const btnChangePassword = document.getElementById('btnChangePassword');
+            const passwordFormWrapper = document.getElementById('passwordFormWrapper');
+            const btnCancelPassword = document.getElementById('btnCancelPassword');
+
+            btnChangePassword?.addEventListener('click', () => {
+                passwordFormWrapper.classList.remove('d-none');
+                btnChangePassword.classList.add('d-none');
             });
 
-            // Guardar perfil (feedback)
-            const formPerfil=document.getElementById('formPerfil');
-            const btnPerfil=document.getElementById('btnPerfil');
-            formPerfil?.addEventListener('submit',(e)=>{
-                if(!formPerfil.checkValidity()){
-                    e.preventDefault(); e.stopPropagation();
-                    formPerfil.classList.add('was-validated'); return;
-                }
-                btnPerfil.disabled=true;
-                const txt=btnPerfil.querySelector('.btn-text');
-                txt.textContent='Guardando...';
-                btnPerfil.insertAdjacentHTML('afterbegin','<span class="spinner-border spinner-border-sm me-2"></span>');
+            btnCancelPassword?.addEventListener('click', () => {
+                passwordFormWrapper.classList.add('d-none');
+                btnChangePassword.classList.remove('d-none');
+                document.getElementById('changePasswordForm').reset();
+                document.getElementById('strengthBar').className = 'strength-bar';
+                document.getElementById('strengthText').textContent = 'Fuerza: —';
             });
 
-            // Seguridad: mostrar/ocultar formulario
-            const btnCambiar=document.getElementById('btnCambiarPassword');
-            const formPwdWrap=document.getElementById('passwordForm');
-            const cancelPwd=document.getElementById('cancelPasswordChange');
-            btnCambiar?.addEventListener('click',()=>{formPwdWrap.classList.remove('d-none'); btnCambiar.classList.add('d-none');});
-            cancelPwd?.addEventListener('click',()=>{
-                formPwdWrap.classList.add('d-none'); btnCambiar.classList.remove('d-none');
-                document.getElementById('changePasswordForm').reset(); resetStrength();
-            });
+            // Password toggle
+            document.querySelectorAll('.password-toggle-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.dataset.target;
+                    const input = document.getElementById(targetId);
+                    const icon = btn.querySelector('i');
 
-            // Mostrar/ocultar contraseñas
-            document.querySelectorAll('.toggle-password').forEach(btn=>{
-                btn.addEventListener('click',()=>{
-                    const input=btn.parentElement.querySelector('input');
-                    const icon=btn.querySelector('i');
-                    const isPwd=input.type==='password';
-                    input.type=isPwd?'text':'password';
-                    icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash');
+                    if (input.type === 'password') {
+                        input.type = 'text';
+                        icon.classList.remove('fa-eye');
+                        icon.classList.add('fa-eye-slash');
+                    } else {
+                        input.type = 'password';
+                        icon.classList.remove('fa-eye-slash');
+                        icon.classList.add('fa-eye');
+                    }
                 });
             });
 
-            // Aviso CapsLock
-            function capsFor(inputId,warnId){
-                const input=document.getElementById(inputId);
-                const warn=document.getElementById(warnId);
-                if(!input||!warn) return;
-                ['keyup','keydown'].forEach(ev=>input.addEventListener(ev,(e)=>{
-                    const caps=e.getModifierState&&e.getModifierState('CapsLock');
-                    warn.classList.toggle('d-none',!caps);
-                }));
-            }
-            capsFor('CurrentPassword','capsWarnCurrent');
-            capsFor('NewPassword','capsWarnNew');
+            // Caps Lock
+            function setupCapsLock(inputId, warnId) {
+                const input = document.getElementById(inputId);
+                const warn = document.getElementById(warnId);
+                if (!input || !warn) return;
 
-            // Medidor de fuerza
-            const newPwd=document.getElementById('NewPassword');
-            const bar=document.getElementById('pwdStrengthBar');
-            const txt=document.getElementById('pwdStrengthText');
-            function score(p){ if(!p) return 0; let s=0;
-                if(p.length>=8) s+=25; if(p.length>=12) s+=15;
-                if(/[A-Z]/.test(p)) s+=20; if(/[a-z]/.test(p)) s+=15;
-                if(/\d/.test(p)) s+=15; if(/[^A-Za-z0-9]/.test(p)) s+=10; return Math.min(s,100);
+                ['keyup', 'keydown'].forEach(ev => {
+                    input.addEventListener(ev, (e) => {
+                        const caps = e.getModifierState?.('CapsLock');
+                        warn.classList.toggle('d-none', !caps);
+                    });
+                });
             }
-            function paint(n){ bar.style.width=n+'%'; bar.classList.remove('bg-danger','bg-warning','bg-success'); let l='—';
-                if(n<40){bar.classList.add('bg-danger'); l='Débil';}
-                else if(n<75){bar.classList.add('bg-warning'); l='Media';}
-                else {bar.classList.add('bg-success'); l='Fuerte';}
-                txt.textContent='Fuerza: '+l;
-            }
-            function resetStrength(){ paint(0); }
-            newPwd?.addEventListener('input',()=>paint(score(newPwd.value)));
-            resetStrength();
+            setupCapsLock('CurrentPassword', 'capsWarnCurrent');
+            setupCapsLock('NewPassword', 'capsWarnNew');
 
-            // Toast helper
-            function toast(type,msg){
-                const id='t'+Date.now();
-                const el=document.createElement('div');
-                el.id=id; el.className=`toast align-items-center text-bg-${type} border-0 position-fixed top-0 end-0 m-3`;
-                el.role='alert'; el.ariaLive='assertive'; el.ariaAtomic='true';
-                el.innerHTML=`<div class="d-flex"><div class="toast-body">${msg}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>`;
-                document.body.appendChild(el);
-                const t=new bootstrap.Toast(el,{delay:3500}); t.show(); setTimeout(()=>el.remove(),4000);
+            // Password strength
+            const newPassword = document.getElementById('NewPassword');
+            const strengthBar = document.getElementById('strengthBar');
+            const strengthText = document.getElementById('strengthText');
+
+            function calculateStrength(pwd) {
+                if (!pwd) return 0;
+                let score = 0;
+                if (pwd.length >= 8) score += 25;
+                if (pwd.length >= 12) score += 15;
+                if (/[A-Z]/.test(pwd)) score += 20;
+                if (/[a-z]/.test(pwd)) score += 15;
+                if (/\d/.test(pwd)) score += 15;
+                if (/[^A-Za-z0-9]/.test(pwd)) score += 10;
+                return Math.min(score, 100);
             }
 
-            // Cambiar contraseña vía AJAX
-            const formPwd=document.getElementById('changePasswordForm');
-            const btnSave=document.getElementById('btnSavePassword');
-            formPwd?.addEventListener('submit',async (e)=>{
-                e.preventDefault();
-                const cur=document.getElementById('CurrentPassword').value.trim();
-                const np=document.getElementById('NewPassword').value.trim();
-                const cp=document.getElementById('ConfirmPassword').value.trim();
-                if(!cur||!np||!cp){ toast('danger','Completa todos los campos.'); return; }
-                if(np!==cp){ toast('danger','Las contraseñas no coinciden.'); return; }
+            newPassword?.addEventListener('input', () => {
+                const score = calculateStrength(newPassword.value);
+                strengthBar.className = 'strength-bar';
 
-                btnSave.disabled=true; const prev=btnSave.innerHTML;
-                btnSave.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
-                try{
-                    const fd=new FormData(formPwd);
-                    const res=await fetch(formPwd.action,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}});
-                    if(res.ok){
-                        toast('success','Contraseña actualizada correctamente.');
-                        formPwd.reset(); resetStrength();
-                        formPwdWrap.classList.add('d-none'); btnCambiar.classList.remove('d-none');
-                    }else{
-                        let msg='No se pudo actualizar la contraseña.';
-                        try{const j=await res.json(); if(j?.error) msg=j.error; else if(Array.isArray(j?.errors)) msg=j.errors.join('<br>');}catch{}
-                        toast('danger',msg);
-                    }
-                }catch{ toast('danger','Error de red.'); }
-                finally{ btnSave.disabled=false; btnSave.innerHTML=prev; }
+                if (score < 40) {
+                    strengthBar.classList.add('weak');
+                    strengthText.textContent = 'Fuerza: Débil';
+                    strengthText.className = 'strength-text weak';
+                } else if (score < 75) {
+                    strengthBar.classList.add('medium');
+                    strengthText.textContent = 'Fuerza: Media';
+                    strengthText.className = 'strength-text medium';
+                } else {
+                    strengthBar.classList.add('strong');
+                    strengthText.textContent = 'Fuerza: Fuerte';
+                    strengthText.className = 'strength-text strong';
+                }
             });
 
-            // ====== Provincia / Ciudad (Offcanvas) ======
-            const inProv  = document.getElementById('@Html.IdFor(m => m.Provincia)');
-            const inCity  = document.getElementById('@Html.IdFor(m => m.Ciudad)');
-            const provList= document.getElementById('provList');
-            const cityList= document.getElementById('cityList');
-            const sProv   = document.getElementById('searchProv');
-            const sCity   = document.getElementById('searchCity');
-            let selectedProv = null;
-
-            // Catálogo Ecuador (mismo que en Registrar)
-                  const EC_PROVINCIAS = {
-        "Azuay": [
-          "Camilo Ponce Enríquez",
-          "Chordeleg",
-          "Cuenca",
-          "El Pan",
-          "Girón",
-          "Gualaceo",
-          "Guachapala",
-          "Nabón",
-          "Oña",
-          "Paute",
-          "Pucará",
-          "San Fernando",
-          "Santa Isabel",
-          "Sevilla de Oro",
-          "Sígsig"
-        ],
-        "Bolívar": [
-          "Caluma",
-          "Chillanes",
-          "Chimbo",
-          "Echeandía",
-          "Guaranda",
-          "Las Naves",
-          "San Miguel"
-        ],
-        "Cañar": [
-          "Azogues",
-          "Biblián",
-          "Cañar",
-          "Déleg",
-          "El Tambo",
-          "La Troncal",
-          "Suscal"
-        ],
-        "Carchi": [
-          "Bolívar",
-          "Espejo",
-          "Huaca",
-          "Mira",
-          "Montúfar",
-          "Tulcán"
-        ],
-        "Chimborazo": [
-          "Alausí",
-          "Chambo",
-          "Chunchi",
-          "Colta",
-          "Cumandá",
-          "Guamote",
-          "Guano",
-          "Pallatanga",
-          "Penipe",
-          "Riobamba"
-        ],
-        "Cotopaxi": [
-          "La Maná",
-          "Latacunga",
-          "Pangua",
-          "Pujilí",
-          "Salcedo",
-          "Saquisilí",
-          "Sigchos"
-        ],
-        "El Oro": [
-          "Arenillas",
-          "Atahualpa",
-          "Balsas",
-          "Chilla",
-          "El Guabo",
-          "Huaquillas",
-          "Las Lajas",
-          "Machala",
-          "Marcabelí",
-          "Pasaje",
-          "Piñas",
-          "Portovelo",
-          "Santa Rosa",
-          "Zaruma"
-        ],
-        "Esmeraldas": [
-          "Atacames",
-          "Eloy Alfaro",
-          "Esmeraldas",
-          "Muisne",
-          "Quinindé",
-          "Rioverde",
-          "San Lorenzo"
-        ],
-        "Galápagos": [
-          "Isabela",
-          "San Cristóbal",
-          "Santa Cruz"
-        ],
-        "Guayas": [
-          "Alfredo Baquerizo Moreno (Jujan)",
-          "Balao",
-          "Balzar",
-          "Colimes",
-          "Daule",
-          "Durán",
-          "El Empalme",
-          "El Triunfo",
-          "General Antonio Elizalde (Bucay)",
-          "Guayaquil",
-          "Isidro Ayora",
-          "Lomas de Sargentillo",
-          "Marcelino Maridueña",
-          "Milagro",
-          "Naranjal",
-          "Naranjito",
-          "Nobol",
-          "Palestina",
-          "Pedro Carbo",
-          "Playas",
-          "Salitre",
-          "Samborondón",
-          "Santa Lucía",
-          "Simón Bolívar",
-          "Yaguachi"
-        ],
-        "Imbabura": [
-          "Antonio Ante",
-          "Cotacachi",
-          "Ibarra",
-          "Otavalo",
-          "Pimampiro",
-          "San Miguel de Urcuquí"
-        ],
-        "Loja": [
-          "Calvas",
-          "Catamayo",
-          "Celica",
-          "Chaguarpamba",
-          "Espíndola",
-          "Gonzanamá",
-          "Loja",
-          "Macará",
-          "Olmedo",
-          "Paltas",
-          "Pindal",
-          "Puyango",
-          "Quilanga",
-          "Saraguro",
-          "Sozoranga",
-          "Zapotillo"
-        ],
-        "Los Ríos": [
-          "Baba",
-          "Babahoyo",
-          "Buena Fe",
-          "Mocache",
-          "Montalvo",
-          "Palenque",
-          "Puebloviejo",
-          "Quevedo",
-          "Quinsaloma",
-          "Urdaneta",
-          "Valencia",
-          "Ventanas",
-          "Vinces"
-        ],
-        "Manabí": [
-          "24 de Mayo",
-          "Bolívar",
-          "Chone",
-          "El Carmen",
-          "Flavio Alfaro",
-          "Jama",
-          "Jaramijó",
-          "Jipijapa",
-          "Junín",
-          "Manta",
-          "Montecristi",
-          "Olmedo",
-          "Paján",
-          "Pedernales",
-          "Pichincha",
-          "Portoviejo",
-          "Puerto López",
-          "Rocafuerte",
-          "San Vicente",
-          "Santa Ana",
-          "Sucre",
-          "Tosagua"
-        ],
-        "Morona Santiago": [
-          "Gualaquiza",
-          "Huamboya",
-          "Limón Indanza",
-          "Logroño",
-          "Morona",
-          "Pablo Sexto",
-          "Palora",
-          "San Juan Bosco",
-          "Santiago",
-          "Sucúa",
-          "Taisha",
-          "Tiwintza"
-        ],
-        "Napo": [
-          "Archidona",
-          "Carlos Julio Arosemena Tola",
-          "El Chaco",
-          "Quijos",
-          "Tena"
-        ],
-        "Orellana": [
-          "Aguarico",
-          "Francisco de Orellana",
-          "Joya de los Sachas",
-          "Loreto"
-        ],
-        "Pastaza": [
-          "Arajuno",
-          "Mera",
-          "Pastaza",
-          "Santa Clara"
-        ],
-        "Pichincha": [
-          "Cayambe",
-          "Mejía",
-          "Pedro Moncayo",
-          "Pedro Vicente Maldonado",
-          "Puerto Quito",
-          "Quito",
-          "Rumiñahui",
-          "San Miguel de los Bancos"
-        ],
-        "Santa Elena": [
-          "La Libertad",
-          "Salinas",
-          "Santa Elena"
-        ],
-        "Santo Domingo de los Tsáchilas": [
-          "La Concordia",
-          "Santo Domingo"
-        ],
-        "Sucumbíos": [
-          "Cascales",
-          "Cuyabeno",
-          "Gonzalo Pizarro",
-          "Lago Agrio",
-          "Putumayo",
-          "Shushufindi",
-          "Sucumbíos"
-        ],
-        "Tungurahua": [
-          "Ambato",
-          "Baños de Agua Santa",
-          "Cevallos",
-          "Mocha",
-          "Patate",
-          "Quero",
-          "San Pedro de Pelileo",
-          "Santiago de Píllaro",
-          "Tisaleo"
-        ],
-        "Zamora Chinchipe": [
-          "Centinela del Cóndor",
-          "Chinchipe",
-          "El Pangui",
-          "Nangaritza",
-          "Palanda",
-          "Paquisha",
-          "Yacuambi",
-          "Yantzaza",
-          "Zamora"
-        ]
+            // ===== PROVINCIA/CIUDAD =====
+            const EC_PROVINCIAS = window.EC_PROVINCIAS || {
+                "Guayas": ["Guayaquil", "Daule", "Samborondón", "Durán", "Milagro"],
+                "Pichincha": ["Quito", "Sangolquí", "Cayambe"],
+                // ... añadir más provincias
             };
 
+            let selectedProv = null;
+            const provInput = document.getElementById('@Html.IdFor(m => m.Provincia)');
+            const cityInput = document.getElementById('@Html.IdFor(m => m.Ciudad)');
+            const provList = document.getElementById('provList');
+            const cityList = document.getElementById('cityList');
+            const searchProv = document.getElementById('searchProv');
+            const searchCity = document.getElementById('searchCity');
+
             function renderProvinces(filter = '') {
-                const q = (filter || '').toLowerCase();
+                const q = filter.toLowerCase();
                 provList.innerHTML = '';
-                Object.keys(EC_PROVINCIAS).sort().forEach(p => {
-                    if (q && !p.toLowerCase().includes(q)) return;
+
+                Object.keys(EC_PROVINCIAS).sort().forEach(prov => {
+                    if (q && !prov.toLowerCase().includes(q)) return;
+
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'list-group-item list-group-item-action';
-                    btn.textContent = p;
-                    btn.dataset.prov = p;
-                    if (selectedProv === p) btn.classList.add('active');
+                    btn.textContent = prov;
+                    if (selectedProv === prov) btn.classList.add('active');
+
                     btn.addEventListener('click', () => {
-                        selectedProv = p;
-                        renderProvinces(sProv.value);
-                        renderCities('', p);
-                        sCity.disabled = false;
-                        sCity.focus();
+                        selectedProv = prov;
+                        renderProvinces(searchProv.value);
+                        renderCities('');
+                        searchCity.disabled = false;
                     });
+
                     provList.appendChild(btn);
                 });
-                if (!provList.children.length) {
-                    provList.innerHTML = '<div class="text-muted ps-2">Sin resultados.</div>';
-                }
             }
-            function renderCities(filter = '', prov = selectedProv) {
+
+            function renderCities(filter = '') {
                 cityList.innerHTML = '';
-                if (!prov) {
-                    cityList.innerHTML = '<div class="text-muted ps-2">Elige primero una provincia.</div>';
+                if (!selectedProv) {
+                    cityList.innerHTML = '<div class="text-muted p-2">Selecciona una provincia</div>';
                     return;
                 }
-                const q = (filter || '').toLowerCase();
-                const cities = (EC_PROVINCIAS[prov] || []).filter(c => !q || c.toLowerCase().includes(q));
-                if (!cities.length) {
-                    cityList.innerHTML = '<div class="text-muted ps-2">Sin resultados en ' + prov + '.</div>';
-                    return;
-                }
-                cities.forEach(c => {
+
+                const q = filter.toLowerCase();
+                const cities = EC_PROVINCIAS[selectedProv] || [];
+
+                cities.filter(c => !q || c.toLowerCase().includes(q)).forEach(city => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'list-group-item list-group-item-action';
-                    btn.textContent = c;
+                    btn.textContent = city;
+
                     btn.addEventListener('click', () => {
-                        setUbicacion(prov, c);
-                        closeOffcanvas();
+                        provInput.value = selectedProv;
+                        cityInput.value = city;
+                        bootstrap.Offcanvas.getInstance(document.getElementById('offProvinciaCiudad')).hide();
+                        calculateCompletion();
                     });
+
                     cityList.appendChild(btn);
                 });
             }
-            function setUbicacion(prov, city) {
-                if (inProv) inProv.value = prov || '';
-                if (inCity) inCity.value = city || '';
-            }
-            function closeOffcanvas() {
-                const el = document.getElementById('offProvinciaCiudad');
-                if (!el) return;
-                const inst = bootstrap.Offcanvas.getOrCreateInstance(el);
-                inst.hide();
-            }
 
-            sProv?.addEventListener('input', () => renderProvinces(sProv.value));
-            sCity?.addEventListener('input', () => renderCities(sCity.value));
+            searchProv?.addEventListener('input', () => renderProvinces(searchProv.value));
+            searchCity?.addEventListener('input', () => renderCities(searchCity.value));
 
-            // Abrir slide: precargar con valores actuales
-            document.querySelectorAll('[data-bs-target="#offProvinciaCiudad"]').forEach(btnOpen => {
-                btnOpen.addEventListener('click', () => {
-                    selectedProv = (inProv?.value || '') || null;
-                    renderProvinces(sProv?.value || '');
-                    renderCities(sCity?.value || '');
+            document.querySelectorAll('[data-bs-target="#offProvinciaCiudad"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    selectedProv = provInput?.value || null;
+                    renderProvinces();
+                    renderCities();
                 });
             });
+
+            // ===== FORM SUBMIT =====
+            const formPerfil = document.getElementById('formPerfil');
+            const btnSave = document.getElementById('btnSave');
+
+            formPerfil?.addEventListener('submit', () => {
+                btnSave.classList.add('loading');
+                btnSave.disabled = true;
+            });
+
+            // ===== CAMBIAR CONTRASEÑA (AJAX) =====
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            const btnSavePassword = document.getElementById('btnSavePassword');
+
+            if (changePasswordForm && btnSavePassword) {
+                changePasswordForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+
+                    btnSavePassword.disabled = true;
+                    btnSavePassword.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Actualizando...';
+
+                    const formData = new FormData(changePasswordForm);
+
+                    try {
+                        const response = await fetch('/Cuenta/CambiarPassword', {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok && data.ok) {
+                            showToast(data.message || 'Contraseña actualizada correctamente', 'success');
+                            changePasswordForm.reset();
+                            document.getElementById('passwordFormWrapper').classList.add('d-none');
+                            document.getElementById('btnChangePassword').classList.remove('d-none');
+
+                            const strengthBar = document.getElementById('strengthBar');
+                            const strengthText = document.getElementById('strengthText');
+                            if (strengthBar) strengthBar.style.width = '0%';
+                            if (strengthText) strengthText.textContent = 'Fuerza: —';
+                        } else {
+                            let errorMsg = 'Error al cambiar la contraseña';
+                            if (data.error) errorMsg = data.error;
+                            else if (data.errors && Array.isArray(data.errors)) errorMsg = data.errors.join('. ');
+                            showToast(errorMsg, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showToast('Error de conexión. Intenta nuevamente.', 'error');
+                    } finally {
+                        btnSavePassword.disabled = false;
+                        btnSavePassword.innerHTML = '<i class="fa-solid fa-save"></i> Actualizar contraseña';
+                    }
+                });
+            }
+
+            function showToast(message, type = 'info') {
+                const toast = document.createElement('div');
+                Object.assign(toast.style, {
+                    position: 'fixed', top: '20px', right: '20px',
+                    minWidth: '300px', maxWidth: '500px', padding: '16px 20px',
+                    backgroundColor: type === 'success' ? '#4caf50' : '#f44336',
+                    color: 'white', borderRadius: '12px',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)', zIndex: '10000',
+                    opacity: '0', transform: 'translateX(400px)',
+                    transition: 'all 0.3s ease', fontSize: '15px', fontWeight: '500'
+                });
+                toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${message}`;
+                document.body.appendChild(toast);
+                setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(0)'; }, 100);
+                setTimeout(() => {
+                    toast.style.opacity = '0'; toast.style.transform = 'translateX(400px)';
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            }
+
+            // ===== INIT =====
+            calculateCompletion();
+            console.log('✓ Profile initialized');
         })();
     </script>
 }

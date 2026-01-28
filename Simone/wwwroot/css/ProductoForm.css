@@ -973,4 +973,37 @@ input:focus + .toggle-slider {
         break-inside: avoid;
         page-break-inside: avoid;
     }
+
+    /* ============================================ */
+    /* Estilos para Campo Opcional (Proveedor)     */
+    /* Agregar al final de ProductoForm.css        */
+    /* ============================================ */
+
+    /* Etiqueta "(Opcional)" */
+    .optional-label {
+        font-weight: 400;
+        color: #6c757d;
+        font-size: 0.875rem;
+        font-style: italic;
+        margin-left: 0.25rem;
+    }
+
+    /* Texto de ayuda debajo del campo */
+    .form-text {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+
+    .text-muted {
+        color: #6c757d;
+    }
+
+    /* Hover effect para el select opcional */
+    #Proveedor:focus + .form-text {
+        color: #495057;
+    }
+
+
 }

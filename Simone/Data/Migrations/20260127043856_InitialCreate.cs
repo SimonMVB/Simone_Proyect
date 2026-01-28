@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class Inicial : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,7 +32,7 @@ namespace Simone.Migrations
                 {
                     BancoId = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Codigo = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Codigo = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LogoUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Activo = table.Column<bool>(type: "bit", nullable: false)
@@ -66,6 +66,47 @@ namespace Simone.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Categorias", x => x.CategoriaID);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Categorias_Enterprise",
+                columns: table => new
+                {
+                    CategoriaID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Slug = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    CategoriaPadreID = table.Column<int>(type: "int", nullable: true),
+                    Path = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Nivel = table.Column<int>(type: "int", nullable: false),
+                    Descripcion = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    MetaDescripcion = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    MetaKeywords = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IconoClass = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ImagenPath = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    ImagenThumbnail = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    Orden = table.Column<int>(type: "int", nullable: false),
+                    Activa = table.Column<bool>(type: "bit", nullable: false),
+                    MostrarEnMenu = table.Column<bool>(type: "bit", nullable: false),
+                    Destacada = table.Column<bool>(type: "bit", nullable: false),
+                    CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ViewCount = table.Column<long>(type: "bigint", nullable: false),
+                    ConversionRate = table.Column<decimal>(type: "decimal(5,4)", nullable: false),
+                    Trending = table.Column<bool>(type: "bit", nullable: false),
+                    TrendingScore = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    SearchCount = table.Column<long>(type: "bigint", nullable: false),
+                    LastIndexedUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Categorias_Enterprise", x => x.CategoriaID);
+                    table.ForeignKey(
+                        name: "FK_Categorias_Enterprise_Categorias_Enterprise_CategoriaPadreID",
+                        column: x => x.CategoriaPadreID,
+                        principalTable: "Categorias_Enterprise",
+                        principalColumn: "CategoriaID",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -178,6 +219,48 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "CategoriaAtributos",
+                columns: table => new
+                {
+                    AtributoID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CategoriaID = table.Column<int>(type: "int", nullable: false),
+                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    NombreTecnico = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Descripcion = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    TipoCampo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OpcionesJson = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: true),
+                    Unidad = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Obligatorio = table.Column<bool>(type: "bit", nullable: false),
+                    Filtrable = table.Column<bool>(type: "bit", nullable: false),
+                    MostrarEnFicha = table.Column<bool>(type: "bit", nullable: false),
+                    MostrarEnTarjeta = table.Column<bool>(type: "bit", nullable: false),
+                    ValorMinimo = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ValorMaximo = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    PatronValidacion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    MensajeError = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Orden = table.Column<int>(type: "int", nullable: false),
+                    Icono = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Grupo = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Activo = table.Column<bool>(type: "bit", nullable: false),
+                    CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UsageCount = table.Column<long>(type: "bigint", nullable: false),
+                    FilterClickCount = table.Column<long>(type: "bigint", nullable: false),
+                    AISuggested = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CategoriaAtributos", x => x.AtributoID);
+                    table.ForeignKey(
+                        name: "FK_CategoriaAtributos_Categorias_Enterprise_CategoriaID",
+                        column: x => x.CategoriaID,
+                        principalTable: "Categorias_Enterprise",
+                        principalColumn: "CategoriaID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Compras",
                 columns: table => new
                 {
@@ -185,7 +268,8 @@ namespace Simone.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProveedorID = table.Column<int>(type: "int", nullable: false),
                     FechaCompra = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
+                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ProveedoresProveedorID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -195,7 +279,12 @@ namespace Simone.Migrations
                         column: x => x.ProveedorID,
                         principalTable: "Proveedores",
                         principalColumn: "ProveedorID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Compras_Proveedores_ProveedoresProveedorID",
+                        column: x => x.ProveedoresProveedorID,
+                        principalTable: "Proveedores",
+                        principalColumn: "ProveedorID");
                 });
 
             migrationBuilder.CreateTable(
@@ -276,7 +365,7 @@ namespace Simone.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     VendedorId = table.Column<int>(type: "int", nullable: false),
                     BancoId = table.Column<int>(type: "int", nullable: false),
-                    Numero = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Numero = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Tipo = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Titular = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Ruc = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -292,7 +381,7 @@ namespace Simone.Migrations
                         column: x => x.BancoId,
                         principalTable: "Bancos",
                         principalColumn: "BancoId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CuentasBancarias_Vendedores_VendedorId",
                         column: x => x.VendedorId,
@@ -460,7 +549,7 @@ namespace Simone.Migrations
                     CarritoID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ClienteID = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     EstadoCarrito = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false)
                 },
                 constraints: table =>
@@ -511,7 +600,8 @@ namespace Simone.Migrations
                 {
                     UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     PromocionID = table.Column<int>(type: "int", nullable: false),
-                    FechaUso = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    FechaUso = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PromocionID1 = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -528,6 +618,11 @@ namespace Simone.Migrations
                         principalTable: "Promociones",
                         principalColumn: "PromocionID",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_CuponesUsados_Promociones_PromocionID1",
+                        column: x => x.PromocionID1,
+                        principalTable: "Promociones",
+                        principalColumn: "PromocionID");
                 });
 
             migrationBuilder.CreateTable(
@@ -597,7 +692,7 @@ namespace Simone.Migrations
                         column: x => x.UsuarioId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -638,7 +733,10 @@ namespace Simone.Migrations
                     Estado = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
                     FechaVenta = table.Column<DateTime>(type: "datetime2", nullable: false),
                     MetodoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Depositante = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Banco = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ComprobanteUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -672,10 +770,12 @@ namespace Simone.Migrations
                     PrecioCompra = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     PrecioVenta = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Stock = table.Column<int>(type: "int", nullable: false),
-                    ProveedorID = table.Column<int>(type: "int", nullable: false),
-                    SubcategoriaID = table.Column<int>(type: "int", nullable: false),
+                    ProveedorID = table.Column<int>(type: "int", nullable: true),
                     CategoriaID = table.Column<int>(type: "int", nullable: false),
-                    VendedorID = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false)
+                    SubcategoriaID = table.Column<int>(type: "int", nullable: true),
+                    VendedorID = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    CategoriasCategoriaID = table.Column<int>(type: "int", nullable: true),
+                    ProveedoresProveedorID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -685,19 +785,29 @@ namespace Simone.Migrations
                         column: x => x.VendedorID,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Productos_Categorias_CategoriaID",
-                        column: x => x.CategoriaID,
+                        name: "FK_Productos_Categorias_CategoriasCategoriaID",
+                        column: x => x.CategoriasCategoriaID,
                         principalTable: "Categorias",
+                        principalColumn: "CategoriaID");
+                    table.ForeignKey(
+                        name: "FK_Productos_Categorias_Enterprise_CategoriaID",
+                        column: x => x.CategoriaID,
+                        principalTable: "Categorias_Enterprise",
                         principalColumn: "CategoriaID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Productos_Proveedores_ProveedorID",
                         column: x => x.ProveedorID,
                         principalTable: "Proveedores",
                         principalColumn: "ProveedorID",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Productos_Proveedores_ProveedoresProveedorID",
+                        column: x => x.ProveedoresProveedorID,
+                        principalTable: "Proveedores",
+                        principalColumn: "ProveedorID");
                     table.ForeignKey(
                         name: "FK_Productos_Subcategorias_SubcategoriaID",
                         column: x => x.SubcategoriaID,
@@ -811,7 +921,7 @@ namespace Simone.Migrations
                         column: x => x.ProductoID,
                         principalTable: "Productos",
                         principalColumn: "ProductoID",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -851,7 +961,7 @@ namespace Simone.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     ProductoId = table.Column<int>(type: "int", nullable: false),
-                    FechaGuardado = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+                    FechaGuardado = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -861,7 +971,7 @@ namespace Simone.Migrations
                         column: x => x.UsuarioId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Favoritos_Productos_ProductoId",
                         column: x => x.ProductoId,
@@ -914,6 +1024,38 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ProductoAtributoValores",
+                columns: table => new
+                {
+                    ValorID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ProductoID = table.Column<int>(type: "int", nullable: false),
+                    AtributoID = table.Column<int>(type: "int", nullable: false),
+                    Valor = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    ValorAdicional = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ValorNumerico = table.Column<decimal>(type: "decimal(18,4)", nullable: true),
+                    Unidad = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ProductoAtributoValores", x => x.ValorID);
+                    table.ForeignKey(
+                        name: "FK_ProductoAtributoValores_CategoriaAtributos_AtributoID",
+                        column: x => x.AtributoID,
+                        principalTable: "CategoriaAtributos",
+                        principalColumn: "AtributoID",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ProductoAtributoValores_Productos_ProductoID",
+                        column: x => x.ProductoID,
+                        principalTable: "Productos",
+                        principalColumn: "ProductoID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ProductoImagenes",
                 columns: table => new
                 {
@@ -922,7 +1064,7 @@ namespace Simone.Migrations
                     ProductoID = table.Column<int>(type: "int", nullable: false),
                     Path = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     Principal = table.Column<bool>(type: "bit", nullable: false),
-                    Orden = table.Column<int>(type: "int", nullable: false),
+                    Orden = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
                     CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -943,13 +1085,13 @@ namespace Simone.Migrations
                     ProductoVarianteID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductoID = table.Column<int>(type: "int", nullable: false),
-                    Color = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Color = table.Column<string>(type: "nvarchar(30)", maxLength: 30, nullable: false),
                     Talla = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     PrecioCompra = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     PrecioVenta = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
-                    Stock = table.Column<int>(type: "int", nullable: false),
-                    SKU = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ImagenPath = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Stock = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    SKU = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ImagenPath = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1012,13 +1154,12 @@ namespace Simone.Migrations
                         column: x => x.CarritoID,
                         principalTable: "Carrito",
                         principalColumn: "CarritoID",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_CarritoDetalle_ProductoVariantes_ProductoVarianteID",
                         column: x => x.ProductoVarianteID,
                         principalTable: "ProductoVariantes",
-                        principalColumn: "ProductoVarianteID",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "ProductoVarianteID");
                     table.ForeignKey(
                         name: "FK_CarritoDetalle_Productos_ProductoID",
                         column: x => x.ProductoID,
@@ -1049,8 +1190,7 @@ namespace Simone.Migrations
                         name: "FK_DetalleVentas_ProductoVariantes_ProductoVarianteID",
                         column: x => x.ProductoVarianteID,
                         principalTable: "ProductoVariantes",
-                        principalColumn: "ProductoVarianteID",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "ProductoVarianteID");
                     table.ForeignKey(
                         name: "FK_DetalleVentas_Productos_ProductoID",
                         column: x => x.ProductoID,
@@ -1085,8 +1225,7 @@ namespace Simone.Migrations
                         name: "FK_MovimientosInventario_ProductoVariantes_ProductoVarianteID",
                         column: x => x.ProductoVarianteID,
                         principalTable: "ProductoVariantes",
-                        principalColumn: "ProductoVarianteID",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "ProductoVarianteID");
                     table.ForeignKey(
                         name: "FK_MovimientosInventario_Productos_ProductoID",
                         column: x => x.ProductoID,
@@ -1185,22 +1324,14 @@ namespace Simone.Migrations
                 column: "ProductoID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Bancos_Codigo",
-                table: "Bancos",
-                column: "Codigo",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Carrito_ClienteID",
                 table: "Carrito",
                 column: "ClienteID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CarritoDetalle_CarritoID_ProductoID_ProductoVarianteID",
+                name: "IX_CarritoDetalle_CarritoID",
                 table: "CarritoDetalle",
-                columns: new[] { "CarritoID", "ProductoID", "ProductoVarianteID" },
-                unique: true,
-                filter: "[ProductoVarianteID] IS NOT NULL");
+                column: "CarritoID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CarritoDetalle_ProductoID",
@@ -1211,6 +1342,70 @@ namespace Simone.Migrations
                 name: "IX_CarritoDetalle_ProductoVarianteID",
                 table: "CarritoDetalle",
                 column: "ProductoVarianteID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CategoriaAtributo_Activo",
+                table: "CategoriaAtributos",
+                column: "Activo");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CategoriaAtributo_Categoria_NombreTecnico_Unique",
+                table: "CategoriaAtributos",
+                columns: new[] { "CategoriaID", "NombreTecnico" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CategoriaAtributo_Categoria_Orden",
+                table: "CategoriaAtributos",
+                columns: new[] { "CategoriaID", "Orden" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CategoriaAtributo_Filtrable",
+                table: "CategoriaAtributos",
+                column: "Filtrable");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Activa",
+                table: "Categorias_Enterprise",
+                column: "Activa");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Destacada",
+                table: "Categorias_Enterprise",
+                column: "Destacada");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Padre_Nivel_Orden",
+                table: "Categorias_Enterprise",
+                columns: new[] { "CategoriaPadreID", "Nivel", "Orden" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Path_Unique",
+                table: "Categorias_Enterprise",
+                column: "Path",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Slug",
+                table: "Categorias_Enterprise",
+                column: "Slug");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Slug_Padre_Unique",
+                table: "Categorias_Enterprise",
+                columns: new[] { "Slug", "CategoriaPadreID" },
+                unique: true,
+                filter: "[CategoriaPadreID] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_Trending",
+                table: "Categorias_Enterprise",
+                column: "Trending");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Categoria_TrendingScore",
+                table: "Categorias_Enterprise",
+                column: "TrendingScore");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ClientesProgramas_ProgramaID",
@@ -1233,6 +1428,11 @@ namespace Simone.Migrations
                 column: "VentaID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Compras_ProveedoresProveedorID",
+                table: "Compras",
+                column: "ProveedoresProveedorID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Compras_ProveedorID",
                 table: "Compras",
                 column: "ProveedorID");
@@ -1248,15 +1448,19 @@ namespace Simone.Migrations
                 column: "BancoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CuentasBancarias_VendedorId_BancoId_Numero",
+                name: "IX_CuentasBancarias_VendedorId",
                 table: "CuentasBancarias",
-                columns: new[] { "VendedorId", "BancoId", "Numero" },
-                unique: true);
+                column: "VendedorId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CuponesUsados_PromocionID",
                 table: "CuponesUsados",
                 column: "PromocionID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CuponesUsados_PromocionID1",
+                table: "CuponesUsados",
+                column: "PromocionID1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DetallesCompra_CompraID",
@@ -1309,10 +1513,9 @@ namespace Simone.Migrations
                 column: "ProductoId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Favoritos_UsuarioId_ProductoId",
+                name: "IX_Favoritos_UsuarioId",
                 table: "Favoritos",
-                columns: new[] { "UsuarioId", "ProductoId" },
-                unique: true);
+                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Gastos_EmpleadoID",
@@ -1355,14 +1558,40 @@ namespace Simone.Migrations
                 column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductoImagenes_ProductoID",
-                table: "ProductoImagenes",
-                column: "ProductoID");
+                name: "IX_ProductoAtributoValor_Atributo_Valor",
+                table: "ProductoAtributoValores",
+                columns: new[] { "AtributoID", "Valor" });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Productos_CategoriaID",
+                name: "IX_ProductoAtributoValor_Producto_Atributo_Unique",
+                table: "ProductoAtributoValores",
+                columns: new[] { "ProductoID", "AtributoID" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductoAtributoValor_ValorNumerico",
+                table: "ProductoAtributoValores",
+                column: "ValorNumerico");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ProductoImagen_Producto_Principal",
+                table: "ProductoImagenes",
+                columns: new[] { "ProductoID", "Principal" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Productos_CategoriaID_SubcategoriaID",
                 table: "Productos",
-                column: "CategoriaID");
+                columns: new[] { "CategoriaID", "SubcategoriaID" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Productos_CategoriasCategoriaID",
+                table: "Productos",
+                column: "CategoriasCategoriaID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Productos_ProveedoresProveedorID",
+                table: "Productos",
+                column: "ProveedoresProveedorID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Productos_ProveedorID",
@@ -1380,7 +1609,7 @@ namespace Simone.Migrations
                 column: "VendedorID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductoVariantes_ProductoID_Color_Talla",
+                name: "IX_ProductoVariante_Producto_Color_Talla_Unique",
                 table: "ProductoVariantes",
                 columns: new[] { "ProductoID", "Color", "Talla" },
                 unique: true);
@@ -1506,6 +1735,9 @@ namespace Simone.Migrations
                 name: "MovimientosInventario");
 
             migrationBuilder.DropTable(
+                name: "ProductoAtributoValores");
+
+            migrationBuilder.DropTable(
                 name: "ProductoImagenes");
 
             migrationBuilder.DropTable(
@@ -1539,6 +1771,9 @@ namespace Simone.Migrations
                 name: "Empleados");
 
             migrationBuilder.DropTable(
+                name: "CategoriaAtributos");
+
+            migrationBuilder.DropTable(
                 name: "ProductoVariantes");
 
             migrationBuilder.DropTable(
@@ -1549,6 +1784,9 @@ namespace Simone.Migrations
 
             migrationBuilder.DropTable(
                 name: "Productos");
+
+            migrationBuilder.DropTable(
+                name: "Categorias_Enterprise");
 
             migrationBuilder.DropTable(
                 name: "Proveedores");
