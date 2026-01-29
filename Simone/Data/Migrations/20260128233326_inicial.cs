@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Simone.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class inicial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -240,7 +240,7 @@ namespace Simone.Migrations
                     PatronValidacion = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     MensajeError = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     Orden = table.Column<int>(type: "int", nullable: false),
-                    Icono = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    IconoClass = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Grupo = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Activo = table.Column<bool>(type: "bit", nullable: false),
                     CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1031,10 +1031,9 @@ namespace Simone.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ProductoID = table.Column<int>(type: "int", nullable: false),
                     AtributoID = table.Column<int>(type: "int", nullable: false),
-                    Valor = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    ValorAdicional = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ValorNumerico = table.Column<decimal>(type: "decimal(18,4)", nullable: true),
-                    Unidad = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Valor = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ValorMostrable = table.Column<string>(type: "nvarchar(500)", nullable: true),
+                    Orden = table.Column<int>(type: "int", nullable: false),
                     CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
                     ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -1558,20 +1557,15 @@ namespace Simone.Migrations
                 column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductoAtributoValor_Atributo_Valor",
+                name: "IX_ProductoAtributoValores_AtributoID",
                 table: "ProductoAtributoValores",
-                columns: new[] { "AtributoID", "Valor" });
+                column: "AtributoID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductoAtributoValor_Producto_Atributo_Unique",
+                name: "IX_ProductoAtributoValores_ProductoID_AtributoID",
                 table: "ProductoAtributoValores",
                 columns: new[] { "ProductoID", "AtributoID" },
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductoAtributoValor_ValorNumerico",
-                table: "ProductoAtributoValores",
-                column: "ValorNumerico");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductoImagen_Producto_Principal",

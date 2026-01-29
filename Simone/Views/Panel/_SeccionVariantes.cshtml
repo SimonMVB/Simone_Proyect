@@ -1,0 +1,362 @@
+@using Simone.Models
+@using System.Globalization
+@{
+    // ═══════════════════════════════════════════════════════════════════════
+    // PARTIAL: SECCIÓN DE VARIANTES
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    var tieneVariantes = (bool)(ViewData["TieneVariantes"] ?? false);
+    var variantes = ViewData["Variantes"] as List<ProductoVariante> ?? new List<ProductoVariante>();
+    var coloresDistintos = ViewData["ColoresDistintos"] as List<string> ?? new List<string>();
+    var tallasDistintas = ViewData["TallasDistintas"] as List<string> ?? new List<string>();
+    var precioMinVariante = (decimal)(ViewData["PrecioMinVariante"] ?? 0m);
+    var precioMaxVariante = (decimal)(ViewData["PrecioMaxVariante"] ?? 0m);
+    var stockTotalVariantes = (int)(ViewData["StockTotalVariantes"] ?? 0);
+    var cultura = ViewData["Cultura"] as CultureInfo ?? CultureInfo.CreateSpecificCulture("es-EC");
+    
+    string FormatearPrecio(decimal precio)
+    {
+        return precio.ToString("0.00", CultureInfo.InvariantCulture);
+    }
+}
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN: VARIANTES -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section class="form-section" aria-labelledby="sec-variants">
+    
+    <!-- ─────── Header de la sección ─────── -->
+    <header class="section-header">
+        <h2 class="section-title" id="sec-variants">
+            <i class="fas fa-layer-group" aria-hidden="true"></i>
+            Variantes del Producto
+        </h2>
+        <span class="section-badge" id="variantCountBadge" aria-live="polite">
+            @(tieneVariantes ? $"{variantes.Count} variantes" : "0 variantes")
+        </span>
+    </header>
+
+    <div class="section-content">
+        
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <!-- TOGGLE PARA ACTIVAR VARIANTES -->
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <div class="toggle-section">
+            <label class="toggle-switch" for="chkVariantes">
+                <input type="checkbox"
+                       id="chkVariantes"
+                       @(tieneVariantes ? "checked" : "")
+                       aria-label="Activar sistema de variantes" />
+                <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+            <span class="toggle-label">Activar variantes (Color × Talla)</span>
+            <span class="form-note">
+                Con variantes, ingresa el <strong>precio final</strong> por combinación.
+            </span>
+        </div>
+
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <!-- CONTENEDOR DE VARIANTES -->
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <div id="boxVariantes" style="display:@(tieneVariantes ? "block" : "none");">
+            
+            @* ─────────────────────────────────────────────── *@
+            @* INPUTS: COLORES Y TALLAS *@
+            @* ─────────────────────────────────────────────── *@
+            <div class="form-grid">
+                
+                @* ─────── Campo de Colores ─────── *@
+                <div class="form-group">
+                    <label class="form-label" for="inpColores">Colores</label>
+                    <input class="form-input"
+                           id="inpColores"
+                           type="text"
+                           autocomplete="off"
+                           placeholder="Negro, Vino, Marrón"
+                           aria-describedby="coloresNote" />
+                    <div class="form-note" id="coloresNote">
+                        Separa con comas o Enter.
+                    </div>
+                    
+                    @* Contenedor de tags de colores *@
+                    <div class="tags-container" 
+                         id="tagsColores" 
+                         role="list" 
+                         aria-label="Colores agregados">
+                        @if (tieneVariantes && coloresDistintos.Any())
+                        {
+                            foreach (var color in coloresDistintos)
+                            {
+                                <span class="tag" role="listitem">
+                                    @color
+                                    <button type="button"
+                                            class="tag-remove"
+                                            data-tag-type="color"
+                                            aria-label="Eliminar color @color">
+                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                    </button>
+                                    <input type="hidden" name="Colores" value="@color" />
+                                </span>
+                            }
+                        }
+                    </div>
+                </div>
+
+                @* ─────── Campo de Tallas ─────── *@
+                <div class="form-group">
+                    <label class="form-label" for="inpTallas">Tallas</label>
+                    <input class="form-input"
+                           id="inpTallas"
+                           type="text"
+                           autocomplete="off"
+                           placeholder="S, M, L, XL"
+                           aria-describedby="tallasNote" />
+                    <div class="form-note" id="tallasNote">
+                        Separa con comas o Enter.
+                    </div>
+                    
+                    @* Contenedor de tags de tallas *@
+                    <div class="tags-container" 
+                         id="tagsTallas" 
+                         role="list" 
+                         aria-label="Tallas agregadas">
+                        @if (tieneVariantes && tallasDistintas.Any())
+                        {
+                            foreach (var talla in tallasDistintas)
+                            {
+                                <span class="tag" role="listitem">
+                                    @talla
+                                    <button type="button"
+                                            class="tag-remove"
+                                            data-tag-type="talla"
+                                            aria-label="Eliminar talla @talla">
+                                        <i class="fas fa-times" aria-hidden="true"></i>
+                                    </button>
+                                    <input type="hidden" name="Tallas" value="@talla" />
+                                </span>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @* ─────────────────────────────────────────────── *@
+            @* REGLAS DE PRECIO *@
+            @* ─────────────────────────────────────────────── *@
+            <div class="price-rules">
+                
+                @* ─── Precio global (un solo precio para todas) ─── *@
+                <div class="price-rule">
+                    <label class="toggle-switch" for="chkPrecioGlobal">
+                        <input type="checkbox" 
+                               id="chkPrecioGlobal" 
+                               aria-label="Aplicar un solo precio a todas las variantes" />
+                        <span class="toggle-slider" aria-hidden="true"></span>
+                    </label>
+                    <span class="toggle-label">Un solo precio para todas</span>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <input class="form-input price-rule-input"
+                               id="inpPrecioGlobal"
+                               type="number"
+                               step="0.01"
+                               min="0"
+                               lang="en"
+                               placeholder="0.00"
+                               disabled
+                               inputmode="decimal"
+                               aria-label="Precio global para todas las variantes" />
+                        <button type="button"
+                                class="btn btn-success"
+                                id="btnApplyGlobal"
+                                disabled
+                                aria-label="Aplicar precio global">
+                            Aplicar
+                        </button>
+                    </div>
+                </div>
+
+                @* ─── Precio por talla (mismo precio por cada talla) ─── *@
+                <div class="price-rule">
+                    <label class="toggle-switch" for="chkPrecioPorTalla">
+                        <input type="checkbox" 
+                               id="chkPrecioPorTalla" 
+                               aria-label="Aplicar mismo precio por talla" />
+                        <span class="toggle-slider" aria-hidden="true"></span>
+                    </label>
+                    <span class="toggle-label">Mismo precio por talla</span>
+                </div>
+                <div id="boxPrecioPorTalla" 
+                     style="display:none;margin-top:8px;" 
+                     role="group" 
+                     aria-label="Precios por talla">
+                </div>
+            </div>
+
+            @* ─────────────────────────────────────────────── *@
+            @* BOTONES DE ACCIÓN *@
+            @* ─────────────────────────────────────────────── *@
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+                <button type="button"
+                        class="btn btn-primary"
+                        id="btnGen"
+                        aria-label="Generar tabla de combinaciones">
+                    <i class="fas fa-table" aria-hidden="true"></i> Generar combinaciones
+                </button>
+                <button type="button"
+                        class="btn btn-secondary"
+                        id="btnClearVars"
+                        title="Limpiar todas las variantes"
+                        aria-label="Limpiar todas las variantes">
+                    <i class="fas fa-eraser" aria-hidden="true"></i> Limpiar
+                </button>
+            </div>
+
+            @* ─────────────────────────────────────────────── *@
+            @* TABLA DE VARIANTES *@
+            @* ─────────────────────────────────────────────── *@
+            <div class="variants-table-container" 
+                 role="region" 
+                 aria-label="Tabla de variantes">
+                <table class="variants-table" 
+                       id="tblVars" 
+                       aria-live="polite">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="min-width:120px">Color</th>
+                            <th scope="col" style="min-width:120px">Talla</th>
+                            <th scope="col" style="min-width:130px">Precio (USD)</th>
+                            <th scope="col" style="min-width:120px">Stock</th>
+                            <th scope="col" style="width:80px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (tieneVariantes && variantes.Any())
+                        {
+                            foreach (var variante in variantes)
+                            {
+                                <tr>
+                                    @* ─── Color ─── *@
+                                    <td>
+                                        <input type="hidden" 
+                                               name="VarColor" 
+                                               value="@variante.Color" />
+                                        <span>@variante.Color</span>
+                                    </td>
+                                    
+                                    @* ─── Talla ─── *@
+                                    <td>
+                                        <input type="hidden" 
+                                               name="VarTalla" 
+                                               value="@variante.Talla" />
+                                        <span>@variante.Talla</span>
+                                    </td>
+                                    
+                                    @* ─── Precio ─── *@
+                                    <td>
+                                        <input class="variant-input"
+                                               name="VarPrecio"
+                                               type="number"
+                                               step="0.01"
+                                               min="0.01"
+                                               lang="en"
+                                               inputmode="decimal"
+                                               value="@FormatearPrecio(variante.PrecioVenta ?? 0m)"
+                                               required
+                                               aria-label="Precio para @variante.Color @variante.Talla" />
+                                    </td>
+                                    
+                                    @* ─── Stock ─── *@
+                                    <td>
+                                        <input class="variant-input"
+                                               name="VarStock"
+                                               type="number"
+                                               step="1"
+                                               min="0"
+                                               inputmode="numeric"
+                                               value="@variante.Stock"
+                                               required
+                                               aria-label="Stock para @variante.Color @variante.Talla" />
+                                    </td>
+                                    
+                                    @* ─── Acciones ─── *@
+                                    <td>
+                                        <div class="variant-actions">
+                                            <button type="button"
+                                                    class="image-btn"
+                                                    data-action="remove-variant"
+                                                    title="Eliminar variante"
+                                                    aria-label="Eliminar variante @variante.Color @variante.Talla">
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+                
+                @* ─── Mensaje cuando no hay variantes ─── *@
+                <div class="form-note"
+                     id="noteVars"
+                     style="padding:16px;text-align:center;@(tieneVariantes ? "display:none" : "")">
+                    No hay variantes generadas.
+                </div>
+            </div>
+
+            @* ─────────────────────────────────────────────── *@
+            @* RESUMEN DE VARIANTES *@
+            @* ─────────────────────────────────────────────── *@
+            <div id="variantSummary"
+                 style="display:@(tieneVariantes ? "block" : "none");margin-top:16px;padding:16px;background:#f8fafc;border-radius:var(--radius-sm);"
+                 role="region"
+                 aria-label="Resumen de variantes">
+                <h3 style="margin-bottom:12px;font-size:14px;font-weight:600;">
+                    Resumen de Variantes
+                </h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+                    
+                    @* ─── Total de combinaciones ─── *@
+                    <div class="summary-item">
+                        <span>Total de combinaciones:</span>
+                        <span class="summary-value" 
+                              id="summaryTotal" 
+                              aria-live="polite">
+                            @variantes.Count
+                        </span>
+                    </div>
+                    
+                    @* ─── Stock total ─── *@
+                    <div class="summary-item">
+                        <span>Stock total:</span>
+                        <span class="summary-value" 
+                              id="summaryStock" 
+                              aria-live="polite">
+                            @stockTotalVariantes
+                        </span>
+                    </div>
+                    
+                    @* ─── Precio mínimo ─── *@
+                    <div class="summary-item">
+                        <span>Precio mínimo:</span>
+                        <span class="summary-value" 
+                              id="summaryMinPrice" 
+                              aria-live="polite">
+                            @precioMinVariante.ToString("C2", cultura)
+                        </span>
+                    </div>
+                    
+                    @* ─── Precio máximo ─── *@
+                    <div class="summary-item">
+                        <span>Precio máximo:</span>
+                        <span class="summary-value" 
+                              id="summaryMaxPrice" 
+                              aria-live="polite">
+                            @precioMaxVariante.ToString("C2", cultura)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>

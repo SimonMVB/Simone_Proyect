@@ -9,6 +9,8 @@ namespace Simone.Models
     /// <summary>
     /// Valor de un atributo para un producto específico
     /// Ejemplo: Producto "Vestido Rojo" tiene Largo="Midi", Escote="V", etc.
+    /// 
+    /// VERSIÓN CORREGIDA con propiedades adicionales para compatibilidad
     /// </summary>
     [Table("ProductoAtributoValores")]
     public class ProductoAtributoValor
@@ -83,6 +85,26 @@ namespace Simone.Models
         public DateTime? ModificadoUtc { get; set; }
 
         // ==================== PROPIEDADES CALCULADAS ====================
+
+        /// <summary>
+        /// ✅ NUEVO: Alias para compatibilidad
+        /// Retorna el valor formateado para mostrar
+        /// </summary>
+        [NotMapped]
+        public string ValorFormateado
+        {
+            get => ObtenerValorFormateado();
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Alias para compatibilidad
+        /// Retorna el valor como número
+        /// </summary>
+        [NotMapped]
+        public decimal? ValorNumerico
+        {
+            get => ValorComoNumero;
+        }
 
         /// <summary>
         /// Obtener valor como lista (para multiselect)
@@ -228,7 +250,7 @@ namespace Simone.Models
         public void EstablecerValorDesdeNumero(decimal numero)
         {
             Valor = numero.ToString();
-            
+
             if (Atributo != null && !string.IsNullOrWhiteSpace(Atributo.Unidad))
                 ValorMostrable = $"{numero} {Atributo.Unidad}";
             else

@@ -84,6 +84,7 @@ namespace Simone.Models
         [ForeignKey(nameof(CategoriaID))]
         public virtual Categoria Categoria { get; set; } = null!;
 
+
         /// <summary>
         /// Proveedor (opcional)
         /// </summary>

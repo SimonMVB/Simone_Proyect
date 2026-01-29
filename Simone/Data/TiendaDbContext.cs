@@ -420,30 +420,32 @@ namespace Simone.Data
             // ------------------------------------------------------------
             modelBuilder.Entity<ProductoAtributoValor>(entity =>
             {
-                entity.ToTable("ProductoAtributoValores");
+                // Ignorar propiedades calculadas (no son columnas de BD)
+                entity.Ignore(e => e.ValorFormateado);
+                entity.Ignore(e => e.ValorNumerico);
+                entity.Ignore(e => e.ValorComoLista);
+                entity.Ignore(e => e.ValorComoNumero);
+                entity.Ignore(e => e.ValorComoBooleano);
+                entity.Ignore(e => e.ValorComoFecha);
 
-                entity.HasKey(e => e.ValorID);
+                // Índice único: Un producto solo puede tener UN valor por atributo
+                entity.HasIndex(e => new { e.ProductoID, e.AtributoID })
+                    .IsUnique()
+                    .HasDatabaseName("IX_ProductoAtributoValores_ProductoID_AtributoID");
 
+                // Relación con Producto (CASCADE delete)
                 entity.HasOne(e => e.Producto)
-                    .WithMany(e => e.AtributosValores)
+                    .WithMany(p => p.AtributosValores)
                     .HasForeignKey(e => e.ProductoID)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                // Relación con CategoriaAtributo (RESTRICT delete)
                 entity.HasOne(e => e.Atributo)
-                    .WithMany(e => e.ValoresProductos)
+                    .WithMany(a => a.ValoresProductos)
                     .HasForeignKey(e => e.AtributoID)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasIndex(e => new { e.ProductoID, e.AtributoID })
-                    .IsUnique()
-                    .HasDatabaseName("IX_ProductoAtributoValor_Producto_Atributo_Unique");
-
-                entity.HasIndex(e => new { e.AtributoID, e.Valor })
-                    .HasDatabaseName("IX_ProductoAtributoValor_Atributo_Valor");
-
-                entity.HasIndex(e => e.ValorNumerico)
-                    .HasDatabaseName("IX_ProductoAtributoValor_ValorNumerico");
             });
+
 
             // ==================== FIN CONFIGURACIÓN ENTERPRISE ====================
         }

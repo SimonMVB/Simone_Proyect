@@ -3,7 +3,13 @@
 @{
     ViewData["Title"] = ViewBag.Producto != null ? "Editar Producto" : "Añadir Producto";
 
+    // ══════════════════════════════════════════════════════════════════
+    // INICIALIZACIÓN DE VARIABLES
+    // ══════════════════════════════════════════════════════════════════
     var producto = ViewBag.Producto as Producto;
+    var esEdicion = producto != null;
+    
+    // Catálogos
     var categorias = ViewBag.Categorias as IEnumerable<Categorias> ?? Enumerable.Empty<Categorias>();
     var proveedores = ViewBag.Proveedores as IEnumerable<Proveedores> ?? Enumerable.Empty<Proveedores>();
     var subcatsSrc = (IEnumerable<Subcategorias>)(
@@ -12,14 +18,16 @@
         new List<Subcategorias>()
     );
 
+    // Variantes
     var variantesInit = (ViewBag.Variantes as IEnumerable<ProductoVariante>)?.ToList() ?? new List<ProductoVariante>();
     var hasVariantesInit = variantesInit.Any();
 
+    // Imágenes
     var galListTop = ViewBag.Galeria as IEnumerable<string>;
     int imgCountInit = galListTop?.Count() ?? (string.IsNullOrWhiteSpace(producto?.ImagenPath) ? 0 : 1);
 
+    // Cultura y precios
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
-
     decimal minVarPrice = 0m, maxVarPrice = 0m;
     if (hasVariantesInit && variantesInit.Any())
     {
@@ -32,8 +40,12 @@
     <link rel="stylesheet" href="~/css/ProductoForm.css" asp-append-version="true" />
 }
 
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- CONTENEDOR PRINCIPAL -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
 <div class="container" id="productoFormContainer">
-    <!-- Header -->
+    
+    <!-- ═════ HEADER ═════ -->
     <div class="page-header">
         <div class="page-title">
             <i class="fas fa-box-open" aria-hidden="true"></i>
@@ -44,7 +56,7 @@
         </a>
     </div>
 
-    <!-- Alertas -->
+    <!-- ═════ ALERTAS ═════ -->
     @if (TempData["Ok"] != null)
     {
         <div class="alert alert-success" role="alert">
@@ -60,23 +72,29 @@
         </div>
     }
 
+    <!-- ═════ CONTENEDOR FORM + SIDEBAR ═════ -->
     <div class="product-form-container">
-        <!-- MAIN FORM -->
+        
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!-- FORMULARIO PRINCIPAL -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
         <div class="form-main">
             <form method="post"
                   asp-controller="Panel"
-                  asp-action="@(producto != null ? "EditarProducto" : "AnadirProducto")"
+                  asp-action="@(esEdicion ? "EditarProducto" : "AnadirProducto")"
                   enctype="multipart/form-data"
                   id="productoForm"
                   novalidate>
 
                 @Html.AntiForgeryToken()
-                @if (producto != null)
+                @if (esEdicion)
                 {
                     <input type="hidden" name="productoID" value="@producto.ProductoID" />
                 }
 
-                <!-- Información Básica -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN 1: INFORMACIÓN BÁSICA -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
                 <section class="form-section" aria-labelledby="sec-basic">
                     <header class="section-header">
                         <h2 class="section-title" id="sec-basic">
@@ -87,9 +105,11 @@
                             @(hasVariantesInit ? "Con Variantes" : "Producto Simple")
                         </span>
                     </header>
+                    
                     <div class="section-content">
                         <div class="form-grid">
-                            <!-- Nombre -->
+                            
+                            <!-- ───── Nombre ───── -->
                             <div class="form-group">
                                 <label class="form-label required" for="Nombre">Nombre del Producto</label>
                                 <input class="form-input"
@@ -106,7 +126,7 @@
                                 <div class="form-error" id="NombreError" role="alert"></div>
                             </div>
 
-                            <!-- Marca -->
+                            <!-- ───── Marca ───── -->
                             <div class="form-group">
                                 <label class="form-label required" for="Marca">Marca</label>
                                 <input class="form-input"
@@ -123,11 +143,11 @@
                                 <div class="form-error" id="MarcaError" role="alert"></div>
                             </div>
 
-                            <!-- Categoría -->
+                            <!-- ───── Categoría ───── -->
                             <div class="form-group">
-                                <label class="form-label required" for="Categoria">Categoría</label>
+                                <label class="form-label required" for="categoriaID">Categoría</label>
                                 <select class="form-select"
-                                        id="Categoria"
+                                        id="categoriaID"
                                         name="categoriaID"
                                         required
                                         aria-required="true"
@@ -136,7 +156,7 @@
                                     @foreach (var c in categorias)
                                     {
                                         <option value="@c.CategoriaID"
-                                                selected="@(producto != null && producto.CategoriaID == c.CategoriaID ? "selected" : null)">
+                                                selected="@(esEdicion && producto.CategoriaID == c.CategoriaID)">
                                             @c.Nombre
                                         </option>
                                     }
@@ -144,7 +164,7 @@
                                 <div class="form-error" id="CategoriaError" role="alert"></div>
                             </div>
 
-                            <!-- Subcategoría -->
+                            <!-- ───── Subcategoría ───── -->
                             <div class="form-group">
                                 <label class="form-label required" for="Subcategoria">Subcategoría</label>
                                 <select class="form-select"
@@ -154,12 +174,12 @@
                                         aria-required="true"
                                         aria-describedby="SubcategoriaError subcategoriaNote">
                                     <option value="">Seleccione una subcategoría</option>
-                                    @if (producto != null)
+                                    @if (esEdicion)
                                     {
                                         foreach (var s in subcatsSrc.Where(x => x.CategoriaID == producto.CategoriaID))
                                         {
                                             <option value="@s.SubcategoriaID"
-                                                    selected="@(producto.SubcategoriaID == s.SubcategoriaID ? "selected" : null)">
+                                                    selected="@(producto.SubcategoriaID == s.SubcategoriaID)">
                                                 @s.NombreSubcategoria
                                             </option>
                                         }
@@ -169,9 +189,11 @@
                                 <div class="form-error" id="SubcategoriaError" role="alert"></div>
                             </div>
 
-                            <!-- Proveedor -->
+                            <!-- ───── Proveedor ───── -->
                             <div class="form-group">
-                                <label class="form-label" for="Proveedor">Proveedor <span class="optional-label">(Opcional)</span></label>
+                                <label class="form-label" for="Proveedor">
+                                    Proveedor <span class="optional-label">(Opcional)</span>
+                                </label>
                                 <select class="form-select"
                                         id="Proveedor"
                                         name="proveedorID"
@@ -180,7 +202,7 @@
                                     @foreach (var p in proveedores)
                                     {
                                         <option value="@p.ProveedorID"
-                                                selected="@(producto != null && producto.ProveedorID == p.ProveedorID ? "selected" : null)">
+                                                selected="@(esEdicion && producto.ProveedorID == p.ProveedorID)">
                                             @p.NombreProveedor
                                         </option>
                                     }
@@ -190,7 +212,7 @@
                                 </small>
                             </div>
 
-                            <!-- Precio Compra -->
+                            <!-- ───── Precio Compra ───── -->
                             <div class="form-group">
                                 <label class="form-label required" for="PrecioCompra">Precio de Compra (USD)</label>
                                 <input class="form-input"
@@ -202,13 +224,13 @@
                                        required
                                        lang="en"
                                        inputmode="decimal"
-                                       value="@(producto != null ? producto.PrecioCompra.ToString("0.00", CultureInfo.InvariantCulture) : "")"
+                                       value="@(esEdicion ? producto.PrecioCompra.ToString("0.00", CultureInfo.InvariantCulture) : "")"
                                        aria-required="true"
                                        aria-describedby="PrecioCompraError" />
                                 <div class="form-error" id="PrecioCompraError" role="alert"></div>
                             </div>
 
-                            <!-- Precio Venta -->
+                            <!-- ───── Precio Venta ───── -->
                             <div class="form-group">
                                 <label class="form-label required" for="PrecioVenta">Precio de Venta (USD)</label>
                                 <input class="form-input"
@@ -220,14 +242,14 @@
                                        required
                                        lang="en"
                                        inputmode="decimal"
-                                       value="@(producto != null ? producto.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture) : "")"
+                                       value="@(esEdicion ? producto.PrecioVenta.ToString("0.00", CultureInfo.InvariantCulture) : "")"
                                        aria-required="true"
                                        aria-describedby="pvMargin PrecioVentaError" />
                                 <div class="form-note" id="pvMargin" aria-live="polite"></div>
                                 <div class="form-error" id="PrecioVentaError" role="alert"></div>
                             </div>
 
-                            <!-- Color (solo sin variantes) -->
+                            <!-- ───── Color (sin variantes) ───── -->
                             <div class="form-group base-only">
                                 <label class="form-label" for="Color">Color</label>
                                 <input class="form-input"
@@ -240,7 +262,7 @@
                                        value="@(producto?.Color ?? "")" />
                             </div>
 
-                            <!-- Talla (solo sin variantes) -->
+                            <!-- ───── Talla (sin variantes) ───── -->
                             <div class="form-group base-only">
                                 <label class="form-label" for="Talla">Talla</label>
                                 <input class="form-input"
@@ -253,7 +275,7 @@
                                        value="@(producto?.Talla ?? "")" />
                             </div>
 
-                            <!-- Stock (solo sin variantes) -->
+                            <!-- ───── Stock (sin variantes) ───── -->
                             <div class="form-group base-only">
                                 <label class="form-label required" for="Stock">Stock</label>
                                 <input class="form-input"
@@ -270,7 +292,7 @@
                                 <div class="form-error" id="StockError" role="alert"></div>
                             </div>
 
-                            <!-- Descripción -->
+                            <!-- ───── Descripción ───── -->
                             <div class="form-group form-grid-full">
                                 <label class="form-label required" for="Descripcion">Descripción</label>
                                 <textarea class="form-textarea"
@@ -286,11 +308,19 @@
                                     <span id="charCount">@(producto?.Descripcion?.Length ?? 0)</span>/500 caracteres
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 </section>
 
-                <!-- Imágenes -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN 2: ATRIBUTOS DINÁMICOS -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                @await Html.PartialAsync("_AtributosDinamicos")
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN 3: IMÁGENES -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
                 <section class="form-section" aria-labelledby="sec-images">
                     <header class="section-header">
                         <h2 class="section-title" id="sec-images">
@@ -301,7 +331,9 @@
                             @imgCountInit/8 imágenes
                         </span>
                     </header>
+                    
                     <div class="section-content">
+                        <!-- Área de carga -->
                         <div class="image-upload-area"
                              id="imageUploadArea"
                              role="button"
@@ -342,6 +374,7 @@
                             </div>
                         </div>
 
+                        <!-- Galería de imágenes -->
                         <div id="galeria" class="gallery-preview" role="list" aria-live="polite" aria-label="Galería de imágenes del producto">
                             @if (galListTop != null && galListTop.Any())
                             {
@@ -405,7 +438,9 @@
                     </div>
                 </section>
 
-                <!-- Variantes -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN 4: VARIANTES -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
                 <section class="form-section" aria-labelledby="sec-variants">
                     <header class="section-header">
                         <h2 class="section-title" id="sec-variants">
@@ -413,10 +448,12 @@
                             Variantes del Producto
                         </h2>
                         <span class="section-badge" id="variantCountBadge" aria-live="polite">
-                            @(hasVariantesInit? variantesInit.Count + " variantes" : "0 variantes")
+                            @(hasVariantesInit ? $"{variantesInit.Count} variantes" : "0 variantes")
                         </span>
                     </header>
+                    
                     <div class="section-content">
+                        <!-- Toggle variantes -->
                         <div class="toggle-section">
                             <label class="toggle-switch" for="chkVariantes">
                                 <input type="checkbox"
@@ -429,6 +466,7 @@
                             <span class="form-note">Con variantes, ingresa el <strong>precio final</strong> por combinación.</span>
                         </div>
 
+                        <!-- Contenedor de variantes -->
                         <div id="boxVariantes" style="display:@(hasVariantesInit ? "block" : "none");">
                             <div class="form-grid">
                                 <!-- Colores -->
@@ -531,6 +569,7 @@
                                 <div id="boxPrecioPorTalla" style="display:none;margin-top:8px;" role="group" aria-label="Precios por talla"></div>
                             </div>
 
+                            <!-- Botones de acción -->
                             <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:16px;flex-wrap:wrap;">
                                 <button type="button"
                                         class="btn btn-primary"
@@ -581,7 +620,7 @@
                                                                min="0.01"
                                                                lang="en"
                                                                inputmode="decimal"
-                                                               value="@((variante.PrecioVenta ?? 0m).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
+                                                               value="@((variante.PrecioVenta ?? 0m).ToString("0.00", CultureInfo.InvariantCulture))"
                                                                required
                                                                aria-label="Precio para @variante.Color @variante.Talla" />
                                                     </td>
@@ -628,11 +667,11 @@
                                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
                                     <div class="summary-item">
                                         <span>Total de combinaciones:</span>
-                                        <span class="summary-value" id="summaryTotal" aria-live="polite">@(hasVariantesInit? variantesInit.Count: 0)</span>
+                                        <span class="summary-value" id="summaryTotal" aria-live="polite">@(hasVariantesInit ? variantesInit.Count : 0)</span>
                                     </div>
                                     <div class="summary-item">
                                         <span>Stock total:</span>
-                                        <span class="summary-value" id="summaryStock" aria-live="polite">@(hasVariantesInit? variantesInit.Sum(v => v.Stock) : 0)</span>
+                                        <span class="summary-value" id="summaryStock" aria-live="polite">@(hasVariantesInit ? variantesInit.Sum(v => v.Stock) : 0)</span>
                                     </div>
                                     <div class="summary-item">
                                         <span>Precio mínimo:</span>
@@ -651,9 +690,12 @@
             </form>
         </div>
 
+        <!-- ══════════════════════════════════════════════════════════════════ -->
         <!-- SIDEBAR -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
         <aside class="form-sidebar" aria-label="Panel de acciones">
-            <!-- Acciones -->
+            
+            <!-- ═══ Acciones ═══ -->
             <div class="action-card">
                 <h3 class="action-title">Acciones</h3>
                 <div class="form-actions">
@@ -679,7 +721,7 @@
                 </div>
             </div>
 
-            <!-- Vista Previa -->
+            <!-- ═══ Vista Previa ═══ -->
             <div class="action-card">
                 <h3 class="action-title">Vista Previa</h3>
                 <div class="form-note">
@@ -710,7 +752,7 @@
                 </div>
             </div>
 
-            <!-- Errores de validación -->
+            <!-- ═══ Errores de validación ═══ -->
             <div class="action-card" id="validationCard" style="display:none;" role="alert" aria-live="assertive">
                 <h3 class="action-title" style="color:var(--error);">
                     <i class="fas fa-exclamation-triangle" aria-hidden="true"></i>
@@ -724,13 +766,15 @@
     </div>
 </div>
 
-<!-- Data para JavaScript -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- DATA PARA JAVASCRIPT -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
 <script id="formData" type="application/json">
     @Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
         hasVariants = hasVariantesInit,
-                                subcategorias = subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID }),
-                                imageCount = imgCountInit
-                }))
+        subcategorias = subcatsSrc.Select(s => new { s.SubcategoriaID, s.NombreSubcategoria, s.CategoriaID }),
+        imageCount = imgCountInit
+    }))
 </script>
 
 @section Scripts {

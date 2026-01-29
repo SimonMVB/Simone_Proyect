@@ -12,8 +12,8 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20260127231850_AgregarIconoClassAAtributos")]
-    partial class AgregarIconoClassAAtributos
+    [Migration("20260128233326_inicial")]
+    partial class inicial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1313,38 +1313,28 @@ namespace Simone.Migrations
                     b.Property<DateTime?>("ModificadoUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
-                    b.Property<string>("Unidad")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<string>("Valor")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ValorAdicional")
-                        .HasMaxLength(500)
+                    b.Property<string>("ValorMostrable")
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<decimal?>("ValorNumerico")
-                        .HasColumnType("decimal(18,4)");
 
                     b.HasKey("ValorID");
 
-                    b.HasIndex("ValorNumerico")
-                        .HasDatabaseName("IX_ProductoAtributoValor_ValorNumerico");
-
-                    b.HasIndex("AtributoID", "Valor")
-                        .HasDatabaseName("IX_ProductoAtributoValor_Atributo_Valor");
+                    b.HasIndex("AtributoID");
 
                     b.HasIndex("ProductoID", "AtributoID")
                         .IsUnique()
-                        .HasDatabaseName("IX_ProductoAtributoValor_Producto_Atributo_Unique");
+                        .HasDatabaseName("IX_ProductoAtributoValores_ProductoID_AtributoID");
 
-                    b.ToTable("ProductoAtributoValores", (string)null);
+                    b.ToTable("ProductoAtributoValores");
                 });
 
             modelBuilder.Entity("Simone.Models.ProductoImagen", b =>

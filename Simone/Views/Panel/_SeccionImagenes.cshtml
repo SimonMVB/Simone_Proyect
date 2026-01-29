@@ -1,0 +1,199 @@
+@using Simone.Models
+@{
+    // ═══════════════════════════════════════════════════════════════════════
+    // PARTIAL: SECCIÓN DE IMÁGENES
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    var producto = ViewData["Producto"] as Producto;
+    var galeriaImagenes = ViewData["GaleriaImagenes"] as IEnumerable<string>;
+    var imagenPortada = ViewData["ImagenPortada"] as string ?? "";
+    var cantidadImagenes = ViewData["CantidadImagenes"] as int? ?? 0;
+    
+    bool EsImagenPortada(string url)
+    {
+        return string.Equals(imagenPortada, url, StringComparison.OrdinalIgnoreCase);
+    }
+}
+
+<!-- ════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN: GALERÍA DE IMÁGENES -->
+<!-- ════════════════════════════════════════════════════════════════ -->
+<section class="form-section" aria-labelledby="sec-images">
+    
+    <!-- ─────── Header de la sección ─────── -->
+    <header class="section-header">
+        <h2 class="section-title" id="sec-images">
+            <i class="fas fa-images" aria-hidden="true"></i>
+            Imágenes del Producto
+        </h2>
+        <span class="section-badge" id="imageCountBadge" aria-live="polite">
+            @cantidadImagenes/8 imágenes
+        </span>
+    </header>
+
+    <div class="section-content">
+        
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <!-- ÁREA DE CARGA DE IMÁGENES -->
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <div class="image-upload-area"
+             id="imageUploadArea"
+             role="button"
+             tabindex="0"
+             aria-label="Área para subir imágenes. Haga clic o arrastre archivos aquí.">
+            
+            <i class="fas fa-cloud-arrow-up" aria-hidden="true"></i>
+            <p>Arrastra y suelta las imágenes aquí</p>
+            <span>o haz clic para seleccionar archivos</span>
+
+            @* ─── Input de múltiples imágenes (moderno) ─── *@
+            <input type="file"
+                   id="Imagenes"
+                   name="Imagenes"
+                   accept="image/jpeg,image/png,image/webp,image/gif"
+                   multiple
+                   style="display:none"
+                   aria-label="Seleccionar archivos de imagen" />
+
+            @* ─── Input de imagen única (legacy) ─── *@
+            <input type="file"
+                   id="ImagenLegacy"
+                   name="imagen"
+                   accept="image/jpeg,image/png,image/webp,image/gif"
+                   style="display:none"
+                   aria-label="Imagen principal (legacy)" />
+
+            @* ─── Campos hidden para control de imágenes ─── *@
+            <input type="hidden" 
+                   id="ImagenPrincipalIndex" 
+                   name="ImagenPrincipalIndex" 
+                   value="0" />
+            
+            <input type="hidden" 
+                   id="ExistingImagenPath" 
+                   name="existingImagenPath" 
+                   value="@(imagenPortada ?? "")" />
+            
+            <input type="hidden" 
+                   id="ImagenesIgnore" 
+                   name="ImagenesIgnore" />
+
+            @* ─── Nota informativa ─── *@
+            <div class="image-hint">
+                <i class="fas fa-circle-info" aria-hidden="true"></i>
+                Hasta 8 imágenes (.jpg, .jpeg, .png, .webp, .gif · máx 8MB c/u). La portada se marca con ★.
+            </div>
+
+            @* ─── Área de alertas ─── *@
+            <div id="imgAlert" 
+                 class="form-error" 
+                 style="display:none" 
+                 role="alert" 
+                 aria-live="assertive">
+            </div>
+
+            @* ─── Barra de progreso ─── *@
+            <div class="progress-bar" 
+                 id="uploadProgress" 
+                 style="display:none;" 
+                 role="progressbar" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+                <div class="progress-fill" 
+                     id="progressFill" 
+                     aria-valuenow="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <!-- GALERÍA DE PREVIEW -->
+        <!-- ═════════════════════════════════════════════════════════ -->
+        <div id="galeria" 
+             class="gallery-preview" 
+             role="list" 
+             aria-live="polite" 
+             aria-label="Galería de imágenes del producto">
+            
+            @if (galeriaImagenes != null && galeriaImagenes.Any())
+            {
+                @* ─── Galería completa desde ViewBag ─── *@
+                foreach (var urlImagen in galeriaImagenes)
+                {
+                    var esPortada = EsImagenPortada(urlImagen);
+                    
+                    <div class="image-thumbnail" 
+                         data-existing="1" 
+                         data-url="@urlImagen" 
+                         role="listitem">
+                        
+                        @* Badge de imagen principal *@
+                        @if (esPortada)
+                        {
+                            <span class="image-badge">Principal</span>
+                        }
+                        
+                        @* Imagen *@
+                        <img src="@urlImagen" 
+                             alt="Imagen del producto" 
+                             loading="lazy" />
+                        
+                        @* Acciones (marcar como principal / eliminar) *@
+                        <div class="image-actions">
+                            <button type="button"
+                                    class="image-btn @(esPortada ? "active" : "")"
+                                    data-action="cover"
+                                    data-url="@urlImagen"
+                                    title="Marcar como principal"
+                                    aria-label="Marcar imagen como principal">
+                                <i class="fas fa-star" aria-hidden="true"></i>
+                            </button>
+                            <button type="button"
+                                    class="image-btn"
+                                    data-action="delete"
+                                    data-url="@urlImagen"
+                                    title="Eliminar imagen"
+                                    aria-label="Eliminar imagen">
+                                <i class="fas fa-trash" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            }
+            else if (producto != null && !string.IsNullOrWhiteSpace(producto.ImagenPath))
+            {
+                @* ─── Imagen legacy (producto con 1 sola imagen) ─── *@
+                <div class="image-thumbnail" 
+                     data-existing="1" 
+                     data-url="@producto.ImagenPath" 
+                     role="listitem">
+                    
+                    <span class="image-badge">Principal</span>
+                    
+                    <img src="@producto.ImagenPath" 
+                         alt="Imagen actual del producto" 
+                         loading="lazy" />
+                    
+                    <div class="image-actions">
+                        <button type="button"
+                                class="image-btn active"
+                                data-action="cover"
+                                data-url="@producto.ImagenPath"
+                                title="Marcar como principal"
+                                aria-label="Marcar imagen como principal">
+                            <i class="fas fa-star" aria-hidden="true"></i>
+                        </button>
+                        <button type="button"
+                                class="image-btn"
+                                data-action="delete"
+                                data-url="@producto.ImagenPath"
+                                title="Eliminar imagen"
+                                aria-label="Eliminar imagen">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>

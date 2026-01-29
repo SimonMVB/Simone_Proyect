@@ -76,7 +76,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 // ✅ AGREGADO: Memory Cache para optimizar consultas de categorías
 builder.Services.AddMemoryCache(options =>
 {
-    options.SizeLimit = 1024; // Límite de entradas en cache
+    //options.SizeLimit = 1024; // Límite de entradas en cache
     options.CompactionPercentage = 0.25; // Liberar 25% cuando se alcanza el límite
 });
 

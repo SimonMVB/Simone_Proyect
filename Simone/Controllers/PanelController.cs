@@ -41,6 +41,8 @@ namespace Simone.Controllers
         private readonly ProveedorService _proveedoresManager;
         private readonly IWebHostEnvironment _env;
         private readonly IMemoryCache _cache;
+        private readonly CategoriaAtributoService _categoriaAtributoService;
+        private readonly ProductoAtributoService _productoAtributoService;
 
         #endregion
 
@@ -102,21 +104,25 @@ namespace Simone.Controllers
         private const string HEADER_AJAX = "X-Requested-With";
         private const string HEADER_AJAX_VALUE = "XMLHttpRequest";
 
+
+
         #endregion
 
         #region Constructor
 
         public PanelController(
-            ILogger<PanelController> logger,
-            TiendaDbContext context,
-            UserManager<Usuario> user,
-            RoleManager<Roles> rol,
-            CategoriasService categorias,
-            SubcategoriasService subcategorias,
-            ProductosService productos,
-            ProveedorService proveedores,
-            IWebHostEnvironment env,
-            IMemoryCache cache)
+    ILogger<PanelController> logger,
+    TiendaDbContext context,
+    UserManager<Usuario> user,
+    RoleManager<Roles> rol,
+    CategoriasService categorias,
+    SubcategoriasService subcategorias,
+    ProductosService productos,
+    ProveedorService proveedores,
+    IWebHostEnvironment env,
+    IMemoryCache cache,
+    CategoriaAtributoService categoriaAtributoService,      // ✅ NUEVO
+    ProductoAtributoService productoAtributoService)         // ✅ NUEVO
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -128,6 +134,8 @@ namespace Simone.Controllers
             _proveedoresManager = proveedores ?? throw new ArgumentNullException(nameof(proveedores));
             _env = env ?? throw new ArgumentNullException(nameof(env));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _categoriaAtributoService = categoriaAtributoService ?? throw new ArgumentNullException(nameof(categoriaAtributoService));     // ✅ NUEVO
+            _productoAtributoService = productoAtributoService ?? throw new ArgumentNullException(nameof(productoAtributoService));         // ✅ NUEVO
         }
 
         #endregion
@@ -1150,6 +1158,8 @@ namespace Simone.Controllers
 
                     await trx.CommitAsync();
 
+                    await ProcesarAtributosDinamicos(producto.ProductoID, Request.Form);
+
                     _logger.LogInformation("Producto creado. ProductoId: {ProductoId}, Variantes: {VarianteCount}",
                         producto.ProductoID, hasVariants ? normVariants.Count : 0);
 
@@ -1207,6 +1217,7 @@ namespace Simone.Controllers
                 await LoadGalleryData(producto);
                 await FillProductoFormBags();
                 ViewBag.Producto = producto;
+                ViewBag.ProductoID = producto.ProductoID;  
                 return View("ProductoForm");
             }
             catch (Exception ex)
@@ -1336,6 +1347,7 @@ namespace Simone.Controllers
                     }
 
                     await _context.SaveChangesAsync(ct);
+                    await ProcesarAtributosDinamicos(producto.ProductoID, Request.Form);
                     await trx.CommitAsync(ct);
 
                     _logger.LogInformation("Producto actualizado. ProductoId: {ProductoId}, Variantes: {VarianteCount}",
@@ -1876,6 +1888,142 @@ namespace Simone.Controllers
             catch { }
             return false;
         }
+
+
+        /// <summary>
+        /// ✅ NUEVO: Obtener atributos de una categoría vía AJAX
+        /// GET: /Panel/ObtenerAtributosPorCategoria?categoriaId=8
+        /// Usado por JavaScript para cargar campos dinámicamente
+        /// </summary>
+        [HttpGet]
+        public async Task<JsonResult> ObtenerAtributosPorCategoria(int categoriaId)
+        {
+            try
+            {
+                _logger.LogDebug("Obteniendo atributos para categoría {CategoriaId}", categoriaId);
+
+                var atributos = await _categoriaAtributoService.ObtenerActivosPorCategoriaAsync(categoriaId);
+
+                // Transformar a formato JSON simple para JavaScript
+                var resultado = atributos.Select(a => new
+                {
+                    atributoId = a.AtributoID,
+                    nombre = a.Nombre,
+                    nombreTecnico = a.NombreTecnico,
+                    descripcion = a.Descripcion,
+                    tipoCampo = a.TipoCampo,
+                    opciones = a.OpcionesLista,
+                    unidad = a.Unidad,
+                    iconoClass = a.IconoClass,
+                    grupo = a.Grupo,
+                    orden = a.Orden,
+                    obligatorio = a.Obligatorio,
+                    valorMinimo = a.ValorMinimo,
+                    valorMaximo = a.ValorMaximo
+                }).OrderBy(a => a.orden).ToList();
+
+                _logger.LogDebug("Retornando {Count} atributos para categoría {CategoriaId}", resultado.Count, categoriaId);
+                return Json(new { success = true, atributos = resultado });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener atributos de categoría {CategoriaId}", categoriaId);
+                return Json(new { success = false, mensaje = "Error al cargar atributos" });
+            }
+        }
+
+        /// <summary>
+        /// ✅ NUEVO: Obtener valores de atributos de un producto vía AJAX
+        /// GET: /Panel/ObtenerValoresAtributos?productoId=5
+        /// Usado en modo edición para pre-llenar valores
+        /// </summary>
+        [HttpGet]
+        public async Task<JsonResult> ObtenerValoresAtributos(int productoId)
+        {
+            try
+            {
+                _logger.LogDebug("Obteniendo valores de atributos para producto {ProductoId}", productoId);
+
+                var valores = await _productoAtributoService.ObtenerValoresPorProductoAsync(productoId);
+
+                // Transformar a diccionario simple: {atributoId: valor}
+                var resultado = valores.ToDictionary(
+                    v => v.AtributoID,
+                    v => v.Valor
+                );
+
+                _logger.LogDebug("Retornando {Count} valores para producto {ProductoId}", resultado.Count, productoId);
+                return Json(new { success = true, valores = resultado });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener valores de producto {ProductoId}", productoId);
+                return Json(new { success = false, mensaje = "Error al cargar valores" });
+            }
+        }
+
+        #endregion
+
+        #region Atributos Dinámicos - Helper
+
+        /// <summary>
+        /// ✅ NUEVO: Procesar atributos dinámicos del formulario
+        /// Extrae los campos "atributo_X" del formulario y los guarda en BD
+        /// </summary>
+        private async Task ProcesarAtributosDinamicos(int productoId, IFormCollection form)
+        {
+            try
+            {
+                var valores = new Dictionary<int, string>();
+
+                // Extraer todos los campos que empiezan con "atributo_"
+                foreach (var key in form.Keys)
+                {
+                    if (key.StartsWith("atributo_"))
+                    {
+                        var atributoIdStr = key.Replace("atributo_", "").Replace("[]", "");
+
+                        if (int.TryParse(atributoIdStr, out var atributoId))
+                        {
+                            var valor = form[key].ToString();
+
+                            if (!string.IsNullOrWhiteSpace(valor))
+                            {
+                                valores[atributoId] = valor;
+                            }
+                        }
+                    }
+                }
+
+                // Guardar valores usando el servicio
+                if (valores.Any())
+                {
+                    var (exito, mensaje, errores) = await _productoAtributoService
+                        .GuardarValoresAsync(productoId, valores);
+
+                    if (exito)
+                    {
+                        _logger.LogInformation("Atributos guardados para producto {ProductoId}. Total: {Count}",
+                            productoId, valores.Count);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Errores al guardar atributos del producto {ProductoId}: {Errores}",
+                            productoId, string.Join(", ", errores));
+                    }
+                }
+                else
+                {
+                    _logger.LogDebug("No se encontraron atributos para guardar en producto {ProductoId}", productoId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al procesar atributos dinámicos para producto {ProductoId}", productoId);
+                // No lanzamos excepción para no bloquear el guardado del producto
+            }
+        }
+
 
         /// <summary>
         /// Verifica si la solicitud actual es AJAX
