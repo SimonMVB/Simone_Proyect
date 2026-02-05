@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Simone.Data;
 using Simone.Models;
 using Simone.Services;
 using System;
@@ -11,21 +13,22 @@ namespace Simone.Controllers
 {
     /// <summary>
     /// Controller para administración de atributos de categorías
+    /// ACTUALIZADO: Ya no usa CategoriaEnterpriseService (eliminado)
     /// </summary>
-    [Authorize] // Cambiar por [Authorize(Roles = "Admin")] si tienes roles
+    [Authorize(Roles = "Administrador")]
     public class AtributosController : Controller
     {
         private readonly CategoriaAtributoService _atributoService;
-        private readonly CategoriaEnterpriseService _categoriaService;
+        private readonly TiendaDbContext _context;
         private readonly ILogger<AtributosController> _logger;
 
         public AtributosController(
             CategoriaAtributoService atributoService,
-            CategoriaEnterpriseService categoriaService,
+            TiendaDbContext context,
             ILogger<AtributosController> logger)
         {
             _atributoService = atributoService;
-            _categoriaService = categoriaService;
+            _context = context;
             _logger = logger;
         }
 
@@ -43,20 +46,22 @@ namespace Simone.Controllers
                 if (!categoriaId.HasValue)
                 {
                     TempData["Error"] = "Debe especificar una categoría";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
-                var categoria = await _categoriaService.ObtenerPorIdAsync(categoriaId.Value);
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == categoriaId.Value);
+
                 if (categoria == null)
                 {
                     TempData["Error"] = "Categoría no encontrada";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
                 var atributos = await _atributoService.ObtenerPorCategoriaAsync(categoriaId.Value);
 
                 ViewBag.Categoria = categoria;
-                ViewBag.Breadcrumbs = await _categoriaService.ObtenerBreadcrumbsAsync(categoriaId.Value);
+                ViewBag.Breadcrumbs = categoria.Breadcrumbs;
 
                 return View(atributos);
             }
@@ -64,7 +69,7 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al cargar atributos de categoría {ID}", categoriaId);
                 TempData["Error"] = "Error al cargar los atributos";
-                return RedirectToAction("Index", "CategoriasEnterprise");
+                return RedirectToAction("Categorias", "Panel");
             }
         }
 
@@ -80,14 +85,16 @@ namespace Simone.Controllers
                 if (!categoriaId.HasValue)
                 {
                     TempData["Error"] = "Debe especificar una categoría";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
-                var categoria = await _categoriaService.ObtenerPorIdAsync(categoriaId.Value);
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == categoriaId.Value);
+
                 if (categoria == null)
                 {
                     TempData["Error"] = "Categoría no encontrada";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
                 ViewBag.Categoria = categoria;
@@ -97,6 +104,7 @@ namespace Simone.Controllers
                     CategoriaID = categoriaId.Value,
                     Activo = true,
                     MostrarEnFicha = true,
+                    Filtrable = true,
                     Orden = 0
                 });
             }
@@ -132,7 +140,8 @@ namespace Simone.Controllers
 
                 if (!ModelState.IsValid)
                 {
-                    var categoria = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                    var categoria = await _context.Categorias
+                        .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                     ViewBag.Categoria = categoria;
                     return View(atributo);
                 }
@@ -146,7 +155,8 @@ namespace Simone.Controllers
                 }
 
                 ModelState.AddModelError("", mensaje);
-                var cat = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                var cat = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                 ViewBag.Categoria = cat;
                 return View(atributo);
             }
@@ -154,7 +164,8 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al crear atributo");
                 ModelState.AddModelError("", "Error al crear el atributo");
-                var categoria = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                 ViewBag.Categoria = categoria;
                 return View(atributo);
             }
@@ -173,10 +184,11 @@ namespace Simone.Controllers
                 if (atributo == null)
                 {
                     TempData["Error"] = "Atributo no encontrado";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
-                var categoria = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                 ViewBag.Categoria = categoria;
 
                 // Convertir opciones JSON a texto para el textarea
@@ -189,7 +201,7 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al cargar edición ID: {ID}", id);
                 TempData["Error"] = "Error al cargar el atributo";
-                return RedirectToAction("Index", "CategoriasEnterprise");
+                return RedirectToAction("Categorias", "Panel");
             }
         }
 
@@ -220,7 +232,8 @@ namespace Simone.Controllers
 
                 if (!ModelState.IsValid)
                 {
-                    var cat = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                    var cat = await _context.Categorias
+                        .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                     ViewBag.Categoria = cat;
                     ViewBag.OpcionesTexto = opciones;
                     return View(atributo);
@@ -235,7 +248,8 @@ namespace Simone.Controllers
                 }
 
                 ModelState.AddModelError("", mensaje);
-                var categoria = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                 ViewBag.Categoria = categoria;
                 ViewBag.OpcionesTexto = opciones;
                 return View(atributo);
@@ -261,10 +275,11 @@ namespace Simone.Controllers
                 if (atributo == null)
                 {
                     TempData["Error"] = "Atributo no encontrado";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
-                var categoria = await _categoriaService.ObtenerPorIdAsync(atributo.CategoriaID);
+                var categoria = await _context.Categorias
+                    .FirstOrDefaultAsync(c => c.CategoriaID == atributo.CategoriaID);
                 ViewBag.Categoria = categoria;
 
                 return View(atributo);
@@ -273,7 +288,7 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al cargar eliminación ID: {ID}", id);
                 TempData["Error"] = "Error al cargar el atributo";
-                return RedirectToAction("Index", "CategoriasEnterprise");
+                return RedirectToAction("Categorias", "Panel");
             }
         }
 
@@ -291,7 +306,7 @@ namespace Simone.Controllers
                 if (atributo == null)
                 {
                     TempData["Error"] = "Atributo no encontrado";
-                    return RedirectToAction("Index", "CategoriasEnterprise");
+                    return RedirectToAction("Categorias", "Panel");
                 }
 
                 var categoriaId = atributo.CategoriaID;
@@ -308,7 +323,7 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al eliminar atributo ID: {ID}", id);
                 TempData["Error"] = "Error al eliminar el atributo";
-                return RedirectToAction("Index", "CategoriasEnterprise");
+                return RedirectToAction("Categorias", "Panel");
             }
         }
 
@@ -391,15 +406,10 @@ namespace Simone.Controllers
         {
             try
             {
-                var atributo = await _atributoService.ObtenerPorIdAsync(id);
-                if (atributo == null)
-                    return Json(new { success = false, error = "Atributo no encontrado" });
-
-                atributo.Activo = !atributo.Activo;
-                var (exito, mensaje) = await _atributoService.ActualizarAsync(atributo);
+                var (exito, mensaje, nuevoEstado) = await _atributoService.ToggleActivoAsync(id);
 
                 if (exito)
-                    return Json(new { success = true, activo = atributo.Activo });
+                    return Json(new { success = true, activo = nuevoEstado, message = mensaje });
 
                 return Json(new { success = false, error = mensaje });
             }
@@ -407,6 +417,93 @@ namespace Simone.Controllers
             {
                 _logger.LogError(ex, "Error al cambiar estado");
                 return Json(new { success = false, error = "Error al cambiar el estado" });
+            }
+        }
+
+        /// <summary>
+        /// GET: /Atributos/PorCategoria/5
+        /// Obtener atributos de una categoría (AJAX)
+        /// </summary>
+        [HttpGet]
+        [AllowAnonymous] // Permitir para formulario de productos
+        public async Task<IActionResult> PorCategoria(int id)
+        {
+            try
+            {
+                var atributos = await _atributoService.ObtenerActivosPorCategoriaAsync(id);
+
+                var resultado = atributos.Select(a => new
+                {
+                    atributoId = a.AtributoID,
+                    nombre = a.Nombre,
+                    nombreTecnico = a.NombreTecnico,
+                    descripcion = a.Descripcion,
+                    tipoCampo = a.TipoCampo,
+                    opciones = a.OpcionesLista,
+                    unidad = a.Unidad,
+                    iconoClass = a.IconoClass,
+                    grupo = a.Grupo,
+                    orden = a.Orden,
+                    obligatorio = a.Obligatorio,
+                    valorMinimo = a.ValorMinimo,
+                    valorMaximo = a.ValorMaximo
+                }).ToList();
+
+                return Json(new { success = true, atributos = resultado });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener atributos de categoría {ID}", id);
+                return Json(new { success = false, error = "Error al cargar atributos" });
+            }
+        }
+
+        /// <summary>
+        /// POST: /Atributos/CopiarACategoria
+        /// Copiar atributos de una categoría a otra (AJAX)
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> CopiarACategoria(int categoriaOrigenId, int categoriaDestinoId)
+        {
+            try
+            {
+                var (exito, mensaje, copiados) = await _atributoService.CopiarAtributosAsync(
+                    categoriaOrigenId, categoriaDestinoId);
+
+                return Json(new { success = exito, message = mensaje, count = copiados });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al copiar atributos");
+                return Json(new { success = false, error = "Error al copiar los atributos" });
+            }
+        }
+
+        /// <summary>
+        /// GET: /Atributos/Estadisticas/5
+        /// Estadísticas de atributos de una categoría (AJAX)
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Estadisticas(int id)
+        {
+            try
+            {
+                var (total, activos, obligatorios, filtrables) =
+                    await _atributoService.ObtenerEstadisticasAsync(id);
+
+                return Json(new
+                {
+                    success = true,
+                    total,
+                    activos,
+                    obligatorios,
+                    filtrables
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener estadísticas de categoría {ID}", id);
+                return Json(new { success = false, error = "Error al cargar estadísticas" });
             }
         }
     }

@@ -176,7 +176,7 @@
     // ========== MÓDULO: SUBCATEGORÍAS ==========
     const SubcategoriesModule = {
         init() {
-            const selCat = Helpers.$('Categoria');
+            const selCat = Helpers.$('categoriaID');
             const selSub = Helpers.$('Subcategoria');
 
             if (!selCat || !selSub) {

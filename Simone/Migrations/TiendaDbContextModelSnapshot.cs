@@ -375,127 +375,6 @@ namespace Simone.Migrations
                     b.ToTable("CatalogoEstados");
                 });
 
-            modelBuilder.Entity("Simone.Models.Categoria", b =>
-                {
-                    b.Property<int>("CategoriaID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoriaID"));
-
-                    b.Property<bool>("Activa")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("CategoriaPadreID")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("ConversionRate")
-                        .HasColumnType("decimal(5,4)");
-
-                    b.Property<DateTime>("CreadoUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Descripcion")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<bool>("Destacada")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("IconoClass")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ImagenPath")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("ImagenThumbnail")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<DateTime?>("LastIndexedUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("MetaDescripcion")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<string>("MetaKeywords")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("ModificadoUtc")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("MostrarEnMenu")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Nivel")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Orden")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Path")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<long>("SearchCount")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<bool>("Trending")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("TrendingScore")
-                        .HasColumnType("decimal(10,2)");
-
-                    b.Property<long>("ViewCount")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("CategoriaID");
-
-                    b.HasIndex("Activa")
-                        .HasDatabaseName("IX_Categoria_Activa");
-
-                    b.HasIndex("Destacada")
-                        .HasDatabaseName("IX_Categoria_Destacada");
-
-                    b.HasIndex("Path")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Categoria_Path_Unique");
-
-                    b.HasIndex("Slug")
-                        .HasDatabaseName("IX_Categoria_Slug");
-
-                    b.HasIndex("Trending")
-                        .HasDatabaseName("IX_Categoria_Trending");
-
-                    b.HasIndex("TrendingScore")
-                        .HasDatabaseName("IX_Categoria_TrendingScore");
-
-                    b.HasIndex("Slug", "CategoriaPadreID")
-                        .IsUnique()
-                        .HasDatabaseName("IX_Categoria_Slug_Padre_Unique")
-                        .HasFilter("[CategoriaPadreID] IS NOT NULL");
-
-                    b.HasIndex("CategoriaPadreID", "Nivel", "Orden")
-                        .HasDatabaseName("IX_Categoria_Padre_Nivel_Orden");
-
-                    b.ToTable("Categorias_Enterprise", (string)null);
-                });
-
             modelBuilder.Entity("Simone.Models.CategoriaAtributo", b =>
                 {
                     b.Property<int>("AtributoID")
@@ -615,14 +494,103 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CategoriaID"));
 
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("CategoriaPadreID")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("ConversionRate")
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime?>("CreadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<bool>("Destacada")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("IconoClass")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ImagenPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("ImagenThumbnail")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("LastIndexedUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MetaDescripcion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("MetaKeywords")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ModificadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("MostrarEnMenu")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Nivel")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Path")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<long>("SearchCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("Trending")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("TrendingScore")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<long>("ViewCount")
+                        .HasColumnType("bigint");
+
                     b.HasKey("CategoriaID");
 
-                    b.ToTable("Categorias");
+                    b.HasIndex("Activo")
+                        .HasDatabaseName("IX_Categorias_Activo");
+
+                    b.HasIndex("Destacada")
+                        .HasDatabaseName("IX_Categorias_Destacada");
+
+                    b.HasIndex("MostrarEnMenu")
+                        .HasDatabaseName("IX_Categorias_MostrarEnMenu");
+
+                    b.HasIndex("Slug")
+                        .HasDatabaseName("IX_Categorias_Slug");
+
+                    b.HasIndex("CategoriaPadreID", "Orden")
+                        .HasDatabaseName("IX_Categorias_Padre_Orden");
+
+                    b.ToTable("Categorias", (string)null);
                 });
 
             modelBuilder.Entity("Simone.Models.ClientesProgramas", b =>
@@ -1222,9 +1190,6 @@ namespace Simone.Migrations
                     b.Property<int>("CategoriaID")
                         .HasColumnType("int");
 
-                    b.Property<int?>("CategoriasCategoriaID")
-                        .HasColumnType("int");
-
                     b.Property<string>("Color")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -1278,8 +1243,6 @@ namespace Simone.Migrations
 
                     b.HasKey("ProductoID");
 
-                    b.HasIndex("CategoriasCategoriaID");
-
                     b.HasIndex("ProveedorID");
 
                     b.HasIndex("ProveedoresProveedorID");
@@ -1325,13 +1288,14 @@ namespace Simone.Migrations
 
                     b.HasKey("ValorID");
 
-                    b.HasIndex("AtributoID");
+                    b.HasIndex("AtributoID")
+                        .HasDatabaseName("IX_ProductoAtributoValores_Atributo");
 
                     b.HasIndex("ProductoID", "AtributoID")
                         .IsUnique()
-                        .HasDatabaseName("IX_ProductoAtributoValores_ProductoID_AtributoID");
+                        .HasDatabaseName("IX_ProductoAtributoValores_Producto_Atributo_Unique");
 
-                    b.ToTable("ProductoAtributoValores");
+                    b.ToTable("ProductoAtributoValores", (string)null);
                 });
 
             modelBuilder.Entity("Simone.Models.ProductoImagen", b =>
@@ -1579,27 +1543,79 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("SubcategoriaID"));
 
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
                     b.Property<int>("CategoriaID")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("CreadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("Destacada")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("IconoClass")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ImagenPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("MetaDescripcion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("MetaKeywords")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("ModificadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("MostrarEnMenu")
+                        .HasColumnType("bit");
 
                     b.Property<string>("NombreSubcategoria")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<string>("VendedorID")
-                        .IsRequired()
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<long>("ViewCount")
+                        .HasColumnType("bigint");
+
                     b.HasKey("SubcategoriaID");
+
+                    b.HasIndex("Activo")
+                        .HasDatabaseName("IX_Subcategorias_Activo");
 
                     b.HasIndex("CategoriaID");
 
-                    b.HasIndex("VendedorID", "CategoriaID", "NombreSubcategoria")
-                        .IsUnique();
+                    b.HasIndex("Slug")
+                        .HasDatabaseName("IX_Subcategorias_Slug");
 
-                    b.ToTable("Subcategorias");
+                    b.HasIndex("VendedorID", "CategoriaID", "NombreSubcategoria")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Subcategorias_Vendedor_Categoria_Nombre")
+                        .HasFilter("[VendedorID] IS NOT NULL");
+
+                    b.ToTable("Subcategorias", (string)null);
                 });
 
             modelBuilder.Entity("Simone.Models.Usuario", b =>
@@ -1986,25 +2002,25 @@ namespace Simone.Migrations
                     b.Navigation("Variante");
                 });
 
-            modelBuilder.Entity("Simone.Models.Categoria", b =>
-                {
-                    b.HasOne("Simone.Models.Categoria", "CategoriaPadre")
-                        .WithMany("CategoriasHijas")
-                        .HasForeignKey("CategoriaPadreID")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CategoriaPadre");
-                });
-
             modelBuilder.Entity("Simone.Models.CategoriaAtributo", b =>
                 {
-                    b.HasOne("Simone.Models.Categoria", "Categoria")
+                    b.HasOne("Simone.Models.Categorias", "Categoria")
                         .WithMany("Atributos")
                         .HasForeignKey("CategoriaID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Categoria");
+                });
+
+            modelBuilder.Entity("Simone.Models.Categorias", b =>
+                {
+                    b.HasOne("Simone.Models.Categorias", "CategoriaPadre")
+                        .WithMany("CategoriasHijas")
+                        .HasForeignKey("CategoriaPadreID")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CategoriaPadre");
                 });
 
             modelBuilder.Entity("Simone.Models.ClientesProgramas", b =>
@@ -2275,15 +2291,11 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Producto", b =>
                 {
-                    b.HasOne("Simone.Models.Categoria", "Categoria")
+                    b.HasOne("Simone.Models.Categorias", "Categoria")
                         .WithMany("Productos")
                         .HasForeignKey("CategoriaID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("Simone.Models.Categorias", null)
-                        .WithMany("Productos")
-                        .HasForeignKey("CategoriasCategoriaID");
 
                     b.HasOne("Simone.Models.Proveedores", "Proveedor")
                         .WithMany()
@@ -2385,8 +2397,7 @@ namespace Simone.Migrations
                     b.HasOne("Simone.Models.Usuario", "Usuario")
                         .WithMany()
                         .HasForeignKey("VendedorID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Categoria");
 
@@ -2452,15 +2463,6 @@ namespace Simone.Migrations
                     b.Navigation("CarritoDetalles");
                 });
 
-            modelBuilder.Entity("Simone.Models.Categoria", b =>
-                {
-                    b.Navigation("Atributos");
-
-                    b.Navigation("CategoriasHijas");
-
-                    b.Navigation("Productos");
-                });
-
             modelBuilder.Entity("Simone.Models.CategoriaAtributo", b =>
                 {
                     b.Navigation("ValoresProductos");
@@ -2468,6 +2470,10 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Categorias", b =>
                 {
+                    b.Navigation("Atributos");
+
+                    b.Navigation("CategoriasHijas");
+
                     b.Navigation("Productos");
 
                     b.Navigation("Subcategoria");

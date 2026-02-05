@@ -1,7 +1,7 @@
 ﻿@model Simone.Models.CategoriaAtributo
 @{
     ViewData["Title"] = "Eliminar Atributo";
-    var categoria = ViewBag.Categoria as Simone.Models.Categoria;
+    var categoria = ViewBag.Categoria as Simone.Models.Categorias;
     var tieneProductos = Model.ValoresProductos?.Any() == true;
     var cantidadProductos = Model.ValoresProductos?.Count ?? 0;
 }

@@ -6,6 +6,10 @@ using System.Linq;
 
 namespace Simone.Models
 {
+    /// <summary>
+    /// Modelo principal de Producto
+    /// ACTUALIZADO: Ahora usa Categorias (modelo fusionado) en lugar de Categoria (enterprise)
+    /// </summary>
     public class Producto
     {
         // ==================== CLAVE ====================
@@ -23,7 +27,6 @@ namespace Simone.Models
         [StringLength(2000)]
         public string? Descripcion { get; set; }
 
-        // ⚠️ Compatibilidad con vistas/lógica antigua (mantener por ahora)
         [StringLength(30)]
         public string? Talla { get; set; }
 
@@ -33,7 +36,6 @@ namespace Simone.Models
         [StringLength(120)]
         public string? Marca { get; set; }
 
-        // Imagen principal heredada (fallback)
         [StringLength(300)]
         public string? ImagenPath { get; set; }
 
@@ -45,7 +47,6 @@ namespace Simone.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal PrecioVenta { get; set; }
 
-        // Stock simple (si usas variantes mira StockDisponible)
         [Required]
         public int Stock { get; set; }
 
@@ -57,16 +58,14 @@ namespace Simone.Models
         public int? ProveedorID { get; set; }
 
         /// <summary>
-        /// Categoría (nuevo sistema jerárquico)
+        /// Categoría (modelo fusionado)
         /// </summary>
         [Required]
         public int CategoriaID { get; set; }
 
         /// <summary>
-        /// Subcategoría (legacy, nullable para compatibilidad)
-        /// ⚠️ DEPRECADO: Usar solo CategoriaID con nuevo sistema
+        /// Subcategoría
         /// </summary>
-        [Obsolete("Usar solo CategoriaID con nueva jerarquía infinita")]
         public int? SubcategoriaID { get; set; }
 
         /// <summary>
@@ -79,11 +78,10 @@ namespace Simone.Models
         // ==================== NAVEGACIÓN ====================
 
         /// <summary>
-        /// Categoría (nuevo sistema jerárquico enterprise)
+        /// ✅ ACTUALIZADO: Ahora usa Categorias (modelo fusionado)
         /// </summary>
         [ForeignKey(nameof(CategoriaID))]
-        public virtual Categoria Categoria { get; set; } = null!;
-
+        public virtual Categorias? Categoria { get; set; }
 
         /// <summary>
         /// Proveedor (opcional)
@@ -92,10 +90,8 @@ namespace Simone.Models
         public virtual Proveedores? Proveedor { get; set; }
 
         /// <summary>
-        /// Subcategoría (legacy, nullable para compatibilidad)
-        /// ⚠️ DEPRECADO: Mantener solo durante migración
+        /// Subcategoría
         /// </summary>
-        [Obsolete("Usar Categoria con nueva jerarquía")]
         [ForeignKey(nameof(SubcategoriaID))]
         public virtual Subcategorias? Subcategoria { get; set; }
 
@@ -103,9 +99,10 @@ namespace Simone.Models
         /// Vendedor/Usuario dueño
         /// </summary>
         [ForeignKey(nameof(VendedorID))]
-        public virtual Usuario Usuario { get; set; } = null!;
+        public virtual Usuario? Usuario { get; set; }
 
-        // ==================== COLECCIONES LEGACY (NO ELIMINAR) ====================
+        // ==================== COLECCIONES ====================
+
         public virtual ICollection<ImagenesProductos> ImagenesProductos { get; set; }
             = new List<ImagenesProductos>();
 
@@ -127,22 +124,20 @@ namespace Simone.Models
         public virtual ICollection<CarritoDetalle> CarritoDetalles { get; set; }
             = new List<CarritoDetalle>();
 
-        // ==================== NUEVO ESQUEMA MODERNO ====================
-
         /// <summary>
-        /// Galería de imágenes moderna (múltiples imágenes)
+        /// Galería de imágenes moderna
         /// </summary>
         public virtual ICollection<ProductoImagen> Imagenes { get; set; }
             = new List<ProductoImagen>();
 
         /// <summary>
-        /// Variantes (Color + Talla + stock/precio opcional)
+        /// Variantes (Color + Talla + stock/precio)
         /// </summary>
         public virtual ICollection<ProductoVariante> Variantes { get; set; }
             = new List<ProductoVariante>();
 
         /// <summary>
-        /// ⭐ NUEVO: Valores de atributos dinámicos
+        /// Valores de atributos dinámicos
         /// Ejemplo: Largo: "Maxi", Escote: "V", Material: "Seda"
         /// </summary>
         public virtual ICollection<ProductoAtributoValor> AtributosValores { get; set; }
@@ -200,14 +195,14 @@ namespace Simone.Models
             ?? ImagenPath;
 
         /// <summary>
-        /// Imagen principal con placeholder seguro (útil para UI)
+        /// Imagen principal con placeholder seguro
         /// </summary>
         [NotMapped]
         public string ImagenPrincipalOrPlaceholder =>
             ImagenPrincipalPath ?? "/images/product-placeholder.png";
 
         /// <summary>
-        /// Galería ordenada (paths) para la vista
+        /// Galería ordenada (paths)
         /// </summary>
         [NotMapped]
         public IEnumerable<string> GaleriaPaths =>
@@ -228,35 +223,46 @@ namespace Simone.Models
         [NotMapped]
         public bool TieneImagenes => Imagenes != null && Imagenes.Count > 0;
 
-        // ==================== PROPIEDADES CALCULADAS - CATEGORÍAS ENTERPRISE ====================
+        // ==================== PROPIEDADES CALCULADAS - CATEGORÍAS ====================
 
         /// <summary>
-        /// Breadcrumbs completos de la categoría
-        /// Ejemplo: "Mujer > Ropa > Vestidos > Vestidos de Noche"
+        /// Nombre completo de la categoría (breadcrumbs)
+        /// Ejemplo: "Mujer > Ropa > Vestidos"
         /// </summary>
         [NotMapped]
         public string RutaCategorias =>
             Categoria?.NombreCompleto ?? "Sin categoría";
 
         /// <summary>
+        /// Nombre de la categoría
+        /// </summary>
+        [NotMapped]
+        public string NombreCategoria =>
+            Categoria?.Nombre ?? "Sin categoría";
+
+        /// <summary>
+        /// Nombre de la subcategoría
+        /// </summary>
+        [NotMapped]
+        public string NombreSubcategoria =>
+            Subcategoria?.NombreSubcategoria ?? "";
+
+        /// <summary>
         /// Slug completo para URL
-        /// Ejemplo: "mujer/ropa/vestidos/vestidos-de-noche"
         /// </summary>
         [NotMapped]
         public string SlugCompleto =>
-            Categoria?.Path ?? "sin-categoria";
+            Categoria?.Path ?? Categoria?.Slug ?? "sin-categoria";
 
         /// <summary>
         /// URL simple del producto
-        /// Ejemplo: "/p/vestido-rojo-de-noche-12345"
         /// </summary>
         [NotMapped]
         public string UrlProducto =>
             $"/p/{NormalizarParaUrl(Nombre)}-{ProductoID}";
 
         /// <summary>
-        /// URL canónica con categoría completa (mejor SEO)
-        /// Ejemplo: "/c/mujer/ropa/vestidos/p/vestido-rojo-12345"
+        /// URL canónica con categoría (mejor SEO)
         /// </summary>
         [NotMapped]
         public string UrlCanonica =>
@@ -266,30 +272,29 @@ namespace Simone.Models
 
         /// <summary>
         /// Obtener todos los atributos como diccionario
-        /// Útil para mostrar especificaciones
         /// Ejemplo: { "Largo": "Maxi", "Escote": "V", "Material": "Seda" }
         /// </summary>
         [NotMapped]
         public Dictionary<string, string> AtributosDiccionario =>
             AtributosValores?
                 .Where(av => av.Atributo != null)
-                .OrderBy(av => av.Atributo.Orden)
+                .OrderBy(av => av.Atributo!.Orden)
                 .ToDictionary(
-                    av => av.Atributo.Nombre,
+                    av => av.Atributo!.Nombre,
                     av => av.ValorFormateado
                 ) ?? new Dictionary<string, string>();
 
         /// <summary>
-        /// Atributos filtrables para mostrar en tarjeta (listado)
+        /// Atributos para mostrar en tarjeta (listado)
         /// Solo atributos marcados como MostrarEnTarjeta
         /// </summary>
         [NotMapped]
         public Dictionary<string, string> AtributosTarjeta =>
             AtributosValores?
                 .Where(av => av.Atributo != null && av.Atributo.MostrarEnTarjeta)
-                .OrderBy(av => av.Atributo.Orden)
+                .OrderBy(av => av.Atributo!.Orden)
                 .ToDictionary(
-                    av => av.Atributo.Nombre,
+                    av => av.Atributo!.Nombre,
                     av => av.ValorFormateado
                 ) ?? new Dictionary<string, string>();
 
@@ -301,17 +306,17 @@ namespace Simone.Models
         public Dictionary<string, Dictionary<string, string>> AtributosAgrupados =>
             AtributosValores?
                 .Where(av => av.Atributo != null && av.Atributo.MostrarEnFicha)
-                .OrderBy(av => av.Atributo.Orden)
-                .GroupBy(av => av.Atributo.Grupo ?? "General")
+                .OrderBy(av => av.Atributo!.Orden)
+                .GroupBy(av => av.Atributo!.Grupo ?? "General")
                 .ToDictionary(
                     g => g.Key,
                     g => g.ToDictionary(
-                        av => av.Atributo.Nombre,
+                        av => av.Atributo!.Nombre,
                         av => av.ValorFormateado
                     )
                 ) ?? new Dictionary<string, Dictionary<string, string>>();
 
-        // ==================== MÉTODOS AUXILIARES - ATRIBUTOS ====================
+        // ==================== MÉTODOS - ATRIBUTOS ====================
 
         /// <summary>
         /// Obtener valor de un atributo específico por nombre técnico
@@ -344,41 +349,34 @@ namespace Simone.Models
         }
 
         /// <summary>
-        /// Obtener atributos filtrables (para búsqueda/filtrado)
+        /// Obtener atributos filtrables
         /// </summary>
         [NotMapped]
         public IEnumerable<ProductoAtributoValor> AtributosFiltrables =>
             AtributosValores?
                 .Where(av => av.Atributo != null && av.Atributo.Filtrable)
-                .OrderBy(av => av.Atributo.Orden)
+                .OrderBy(av => av.Atributo!.Orden)
             ?? Enumerable.Empty<ProductoAtributoValor>();
 
-        // ==================== MÉTODOS AUXILIARES - HELPERS ====================
+        // ==================== MÉTODOS - HELPERS ====================
 
         /// <summary>
-        /// Normalizar texto para URL (quitar acentos, espacios, etc)
+        /// Normalizar texto para URL
         /// </summary>
-        private string NormalizarParaUrl(string texto)
+        private static string NormalizarParaUrl(string texto)
         {
             if (string.IsNullOrWhiteSpace(texto))
                 return "producto";
 
-            // Convertir a lowercase
             texto = texto.ToLowerInvariant();
 
-            // Reemplazar caracteres especiales comunes
             texto = texto
                 .Replace("á", "a").Replace("é", "e").Replace("í", "i")
                 .Replace("ó", "o").Replace("ú", "u").Replace("ñ", "n")
                 .Replace(" ", "-").Replace("_", "-");
 
-            // Eliminar caracteres no válidos
             texto = System.Text.RegularExpressions.Regex.Replace(texto, @"[^a-z0-9\-]", "");
-
-            // Eliminar guiones múltiples
             texto = System.Text.RegularExpressions.Regex.Replace(texto, @"-+", "-");
-
-            // Trim guiones al inicio/final
             texto = texto.Trim('-');
 
             return string.IsNullOrEmpty(texto) ? "producto" : texto;
@@ -391,7 +389,7 @@ namespace Simone.Models
         public bool EstaDisponible => StockDisponible > 0;
 
         /// <summary>
-        /// ¿Producto en oferta? (si hay variantes con descuento)
+        /// ¿Producto en oferta?
         /// </summary>
         [NotMapped]
         public bool EstaEnOferta =>
@@ -399,7 +397,7 @@ namespace Simone.Models
             PrecioVentaMinVariante.Value < PrecioVenta;
 
         /// <summary>
-        /// Porcentaje de descuento (si aplica)
+        /// Porcentaje de descuento
         /// </summary>
         [NotMapped]
         public decimal? PorcentajeDescuento
@@ -428,5 +426,18 @@ namespace Simone.Models
         /// </summary>
         [NotMapped]
         public int CantidadReseñas => Reseñas?.Count ?? 0;
+
+        /// <summary>
+        /// ¿Tiene atributos dinámicos?
+        /// </summary>
+        [NotMapped]
+        public bool TieneAtributosDinamicos =>
+            AtributosValores != null && AtributosValores.Any();
+
+        /// <summary>
+        /// Cantidad de atributos
+        /// </summary>
+        [NotMapped]
+        public int CantidadAtributos => AtributosValores?.Count ?? 0;
     }
 }

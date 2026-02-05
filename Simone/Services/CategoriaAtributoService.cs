@@ -12,6 +12,7 @@ namespace Simone.Services
 {
     /// <summary>
     /// Servicio para gestionar atributos de categorías
+    /// ACTUALIZADO: Ahora usa Categorias (modelo fusionado)
     /// </summary>
     public class CategoriaAtributoService
     {
@@ -36,7 +37,8 @@ namespace Simone.Services
             return await _context.CategoriaAtributos
                 .Include(a => a.Categoria)
                 .Where(a => a.CategoriaID == categoriaId)
-                .OrderBy(a => a.Orden)
+                .OrderBy(a => a.Grupo)
+                .ThenBy(a => a.Orden)
                 .ToListAsync();
         }
 
@@ -57,7 +59,8 @@ namespace Simone.Services
         {
             return await _context.CategoriaAtributos
                 .Where(a => a.CategoriaID == categoriaId && a.Activo)
-                .OrderBy(a => a.Orden)
+                .OrderBy(a => a.Grupo)
+                .ThenBy(a => a.Orden)
                 .ToListAsync();
         }
 
@@ -68,8 +71,55 @@ namespace Simone.Services
         {
             return await _context.CategoriaAtributos
                 .Where(a => a.CategoriaID == categoriaId && a.Activo && a.Filtrable)
+                .OrderBy(a => a.Grupo)
+                .ThenBy(a => a.Orden)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Obtener atributos obligatorios de una categoría
+        /// </summary>
+        public async Task<List<CategoriaAtributo>> ObtenerObligatoriosAsync(int categoriaId)
+        {
+            return await _context.CategoriaAtributos
+                .Where(a => a.CategoriaID == categoriaId && a.Activo && a.Obligatorio)
                 .OrderBy(a => a.Orden)
                 .ToListAsync();
+        }
+
+        /// <summary>
+        /// Obtener atributos para mostrar en ficha de producto
+        /// </summary>
+        public async Task<List<CategoriaAtributo>> ObtenerParaFichaAsync(int categoriaId)
+        {
+            return await _context.CategoriaAtributos
+                .Where(a => a.CategoriaID == categoriaId && a.Activo && a.MostrarEnFicha)
+                .OrderBy(a => a.Grupo)
+                .ThenBy(a => a.Orden)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Obtener atributos para mostrar en tarjeta de producto
+        /// </summary>
+        public async Task<List<CategoriaAtributo>> ObtenerParaTarjetaAsync(int categoriaId)
+        {
+            return await _context.CategoriaAtributos
+                .Where(a => a.CategoriaID == categoriaId && a.Activo && a.MostrarEnTarjeta)
+                .OrderBy(a => a.Orden)
+                .ToListAsync();
+        }
+
+        /// <summary>
+        /// Obtener atributos agrupados por Grupo
+        /// </summary>
+        public async Task<Dictionary<string, List<CategoriaAtributo>>> ObtenerAgrupadosAsync(int categoriaId)
+        {
+            var atributos = await ObtenerActivosPorCategoriaAsync(categoriaId);
+
+            return atributos
+                .GroupBy(a => a.Grupo ?? "General")
+                .ToDictionary(g => g.Key, g => g.ToList());
         }
 
         // ==================== CREAR / ACTUALIZAR / ELIMINAR ====================
@@ -86,8 +136,8 @@ namespace Simone.Services
                 if (!esValido)
                     return (false, error!, null);
 
-                // Verificar que la categoría existe
-                var categoria = await _context.CategoriasEnterprise
+                // ✅ CAMBIO: Ahora usa Categorias en lugar de CategoriasEnterprise
+                var categoria = await _context.Categorias
                     .FindAsync(atributo.CategoriaID);
 
                 if (categoria == null)
@@ -117,12 +167,15 @@ namespace Simone.Services
                     atributo.Orden = maxOrden + 1;
                 }
 
+                // Establecer fecha de creación
+                atributo.CreadoUtc = DateTime.UtcNow;
+
                 // Guardar
                 _context.CategoriaAtributos.Add(atributo);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Atributo creado: {Nombre} para categoría {CategoriaID}",
-                    atributo.Nombre, atributo.CategoriaID);
+                _logger.LogInformation("Atributo creado: {Nombre} para categoría {CategoriaID} ({CategoriaNombre})",
+                    atributo.Nombre, atributo.CategoriaID, categoria.Nombre);
 
                 return (true, "Atributo creado exitosamente", atributo);
             }
@@ -174,7 +227,12 @@ namespace Simone.Services
                 existente.Filtrable = atributo.Filtrable;
                 existente.MostrarEnFicha = atributo.MostrarEnFicha;
                 existente.MostrarEnTarjeta = atributo.MostrarEnTarjeta;
+                existente.ValorMinimo = atributo.ValorMinimo;
+                existente.ValorMaximo = atributo.ValorMaximo;
+                existente.PatronValidacion = atributo.PatronValidacion;
+                existente.MensajeError = atributo.MensajeError;
                 existente.Activo = atributo.Activo;
+                existente.ModificadoUtc = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
 
@@ -207,18 +265,53 @@ namespace Simone.Services
                 // Verificar si tiene valores en productos
                 if (atributo.ValoresProductos.Any())
                 {
-                    return (false, $"No se puede eliminar. Tiene {atributo.ValoresProductos.Count} valor(es) en productos");
+                    return (false, $"No se puede eliminar. Tiene {atributo.ValoresProductos.Count} valor(es) asignado(s) a productos. Primero elimine esos valores.");
                 }
 
                 _context.CategoriaAtributos.Remove(atributo);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Atributo eliminado: ID {ID}", id);
+                _logger.LogInformation("Atributo eliminado: {Nombre} (ID: {ID})", atributo.Nombre, id);
                 return (true, "Atributo eliminado exitosamente");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al eliminar atributo ID: {ID}", id);
+                return (false, "Error al eliminar el atributo");
+            }
+        }
+
+        /// <summary>
+        /// Eliminar atributo forzando (elimina también valores en productos)
+        /// </summary>
+        public async Task<(bool Exito, string Mensaje)> EliminarForzadoAsync(int id)
+        {
+            try
+            {
+                var atributo = await _context.CategoriaAtributos
+                    .Include(a => a.ValoresProductos)
+                    .FirstOrDefaultAsync(a => a.AtributoID == id);
+
+                if (atributo == null)
+                    return (false, "Atributo no encontrado");
+
+                // Eliminar valores primero
+                if (atributo.ValoresProductos.Any())
+                {
+                    _context.ProductoAtributoValores.RemoveRange(atributo.ValoresProductos);
+                    _logger.LogWarning("Eliminando {Count} valores de productos para atributo {ID}",
+                        atributo.ValoresProductos.Count, id);
+                }
+
+                _context.CategoriaAtributos.Remove(atributo);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Atributo eliminado (forzado): {Nombre} (ID: {ID})", atributo.Nombre, id);
+                return (true, "Atributo y sus valores eliminados exitosamente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar forzado atributo ID: {ID}", id);
                 return (false, "Error al eliminar el atributo");
             }
         }
@@ -239,7 +332,8 @@ namespace Simone.Services
             }
             catch
             {
-                return new List<string>();
+                // Intentar split por coma como fallback
+                return opcionesJson.Split(',').Select(o => o.Trim()).Where(o => !string.IsNullOrEmpty(o)).ToList();
             }
         }
 
@@ -261,24 +355,28 @@ namespace Simone.Services
         {
             try
             {
+                if (string.IsNullOrWhiteSpace(opcion))
+                    return (false, "La opción no puede estar vacía");
+
                 var atributo = await ObtenerPorIdAsync(atributoId);
                 if (atributo == null)
                     return (false, "Atributo no encontrado");
 
                 var opciones = ParsearOpciones(atributo.OpcionesJson);
 
-                if (opciones.Contains(opcion))
+                if (opciones.Contains(opcion.Trim(), StringComparer.OrdinalIgnoreCase))
                     return (false, "La opción ya existe");
 
-                opciones.Add(opcion);
+                opciones.Add(opcion.Trim());
                 atributo.OpcionesJson = SerializarOpciones(opciones);
+                atributo.ModificadoUtc = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
                 return (true, "Opción agregada exitosamente");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al agregar opción");
+                _logger.LogError(ex, "Error al agregar opción al atributo {ID}", atributoId);
                 return (false, "Error al agregar la opción");
             }
         }
@@ -300,14 +398,39 @@ namespace Simone.Services
                     return (false, "Opción no encontrada");
 
                 atributo.OpcionesJson = SerializarOpciones(opciones);
+                atributo.ModificadoUtc = DateTime.UtcNow;
 
                 await _context.SaveChangesAsync();
                 return (true, "Opción eliminada exitosamente");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al remover opción");
+                _logger.LogError(ex, "Error al remover opción del atributo {ID}", atributoId);
                 return (false, "Error al eliminar la opción");
+            }
+        }
+
+        /// <summary>
+        /// Reemplazar todas las opciones
+        /// </summary>
+        public async Task<(bool Exito, string Mensaje)> ReemplazarOpcionesAsync(int atributoId, List<string> nuevasOpciones)
+        {
+            try
+            {
+                var atributo = await ObtenerPorIdAsync(atributoId);
+                if (atributo == null)
+                    return (false, "Atributo no encontrado");
+
+                atributo.OpcionesJson = SerializarOpciones(nuevasOpciones);
+                atributo.ModificadoUtc = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                return (true, "Opciones actualizadas exitosamente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al reemplazar opciones del atributo {ID}", atributoId);
+                return (false, "Error al actualizar las opciones");
             }
         }
 
@@ -321,12 +444,18 @@ namespace Simone.Services
             if (string.IsNullOrWhiteSpace(nombre))
                 return "";
 
-            return nombre
+            var resultado = nombre
                 .ToLowerInvariant()
+                .Trim()
                 .Replace(" ", "_")
                 .Replace("á", "a").Replace("é", "e").Replace("í", "i")
                 .Replace("ó", "o").Replace("ú", "u").Replace("ñ", "n")
-                .Replace("ü", "u");
+                .Replace("ü", "u").Replace("Á", "a").Replace("É", "e")
+                .Replace("Í", "i").Replace("Ó", "o").Replace("Ú", "u")
+                .Replace("Ñ", "n");
+
+            // Eliminar caracteres especiales
+            return System.Text.RegularExpressions.Regex.Replace(resultado, @"[^a-z0-9_]", "");
         }
 
         /// <summary>
@@ -347,16 +476,26 @@ namespace Simone.Services
                 return (false, "El tipo de campo es obligatorio");
 
             // Validar tipos de campo válidos
-            var tiposValidos = new[] { "text", "number", "select", "multiselect", "checkbox", "color", "date" };
+            var tiposValidos = new[] { "text", "textarea", "number", "range", "select", "multiselect", "checkbox", "color", "date" };
             if (!tiposValidos.Contains(atributo.TipoCampo.ToLower()))
-                return (false, "Tipo de campo no válido");
+                return (false, $"Tipo de campo no válido. Tipos permitidos: {string.Join(", ", tiposValidos)}");
+
+            // Normalizar tipo de campo
+            atributo.TipoCampo = atributo.TipoCampo.ToLower();
 
             // Para select y multiselect, debe tener opciones
-            if ((atributo.TipoCampo == "select" || atributo.TipoCampo == "multiselect"))
+            if (atributo.TipoCampo == "select" || atributo.TipoCampo == "multiselect")
             {
                 var opciones = ParsearOpciones(atributo.OpcionesJson);
                 if (opciones.Count == 0)
-                    return (false, "Los campos select/multiselect deben tener opciones");
+                    return (false, "Los campos select/multiselect deben tener al menos una opción");
+            }
+
+            // Validar rango numérico
+            if (atributo.ValorMinimo.HasValue && atributo.ValorMaximo.HasValue)
+            {
+                if (atributo.ValorMinimo > atributo.ValorMaximo)
+                    return (false, "El valor mínimo no puede ser mayor que el máximo");
             }
 
             return (true, null);
@@ -381,10 +520,15 @@ namespace Simone.Services
                 termino = termino.ToLower();
                 query = query.Where(a =>
                     a.Nombre.ToLower().Contains(termino) ||
-                    a.NombreTecnico.ToLower().Contains(termino));
+                    a.NombreTecnico.ToLower().Contains(termino) ||
+                    (a.Descripcion != null && a.Descripcion.ToLower().Contains(termino)));
             }
 
-            return await query.OrderBy(a => a.Categoria.Nombre).ThenBy(a => a.Orden).ToListAsync();
+            return await query
+                .OrderBy(a => a.Categoria!.Nombre)
+                .ThenBy(a => a.Grupo)
+                .ThenBy(a => a.Orden)
+                .ToListAsync();
         }
 
         /// <summary>
@@ -399,14 +543,46 @@ namespace Simone.Services
                     return (false, "Atributo no encontrado");
 
                 atributo.Orden = nuevoOrden;
+                atributo.ModificadoUtc = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
 
                 return (true, "Orden actualizado");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al cambiar orden");
+                _logger.LogError(ex, "Error al cambiar orden del atributo {ID}", atributoId);
                 return (false, "Error al cambiar el orden");
+            }
+        }
+
+        /// <summary>
+        /// Reordenar todos los atributos de una categoría
+        /// </summary>
+        public async Task<(bool Exito, string Mensaje)> ReordenarAtributosAsync(int categoriaId, List<int> ordenIds)
+        {
+            try
+            {
+                var atributos = await _context.CategoriaAtributos
+                    .Where(a => a.CategoriaID == categoriaId)
+                    .ToListAsync();
+
+                for (int i = 0; i < ordenIds.Count; i++)
+                {
+                    var atributo = atributos.FirstOrDefault(a => a.AtributoID == ordenIds[i]);
+                    if (atributo != null)
+                    {
+                        atributo.Orden = i + 1;
+                        atributo.ModificadoUtc = DateTime.UtcNow;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return (true, "Orden actualizado exitosamente");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al reordenar atributos de categoría {ID}", categoriaId);
+                return (false, "Error al reordenar los atributos");
             }
         }
 
@@ -421,31 +597,123 @@ namespace Simone.Services
                 if (original == null)
                     return (false, "Atributo no encontrado", null);
 
-                var duplicado = new CategoriaAtributo
-                {
-                    CategoriaID = original.CategoriaID,
-                    Nombre = $"{original.Nombre} (Copia)",
-                    NombreTecnico = $"{original.NombreTecnico}_copia",
-                    Descripcion = original.Descripcion,
-                    TipoCampo = original.TipoCampo,
-                    OpcionesJson = original.OpcionesJson,
-                    Unidad = original.Unidad,
-                    IconoClass = original.IconoClass,
-                    Grupo = original.Grupo,
-                    Orden = original.Orden + 1,
-                    Obligatorio = original.Obligatorio,
-                    Filtrable = original.Filtrable,
-                    MostrarEnFicha = original.MostrarEnFicha,
-                    MostrarEnTarjeta = original.MostrarEnTarjeta,
-                    Activo = false // Duplicados inician inactivos
-                };
+                var duplicado = original.Clonar(original.CategoriaID);
 
-                return await CrearAsync(duplicado);
+                // Asegurar nombre técnico único
+                var baseNombreTecnico = duplicado.NombreTecnico;
+                var contador = 1;
+                while (await _context.CategoriaAtributos.AnyAsync(a =>
+                    a.CategoriaID == duplicado.CategoriaID &&
+                    a.NombreTecnico == duplicado.NombreTecnico))
+                {
+                    duplicado.NombreTecnico = $"{baseNombreTecnico}_{contador++}";
+                }
+
+                _context.CategoriaAtributos.Add(duplicado);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Atributo duplicado: {Original} → {Nuevo}",
+                    original.Nombre, duplicado.Nombre);
+
+                return (true, "Atributo duplicado exitosamente", duplicado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al duplicar atributo");
+                _logger.LogError(ex, "Error al duplicar atributo {ID}", atributoId);
                 return (false, "Error al duplicar el atributo", null);
+            }
+        }
+
+        /// <summary>
+        /// Copiar atributos de una categoría a otra
+        /// </summary>
+        public async Task<(bool Exito, string Mensaje, int Copiados)> CopiarAtributosAsync(int categoriaOrigenId, int categoriaDestinoId)
+        {
+            try
+            {
+                // Verificar categoría destino existe
+                var categoriaDestino = await _context.Categorias.FindAsync(categoriaDestinoId);
+                if (categoriaDestino == null)
+                    return (false, "Categoría destino no encontrada", 0);
+
+                var atributosOrigen = await ObtenerPorCategoriaAsync(categoriaOrigenId);
+                if (!atributosOrigen.Any())
+                    return (false, "La categoría origen no tiene atributos", 0);
+
+                var copiados = 0;
+                foreach (var original in atributosOrigen)
+                {
+                    var copia = original.Clonar(categoriaDestinoId);
+                    copia.Activo = true; // Activar copias
+
+                    // Verificar nombre técnico único
+                    var baseNombreTecnico = copia.NombreTecnico;
+                    var contador = 1;
+                    while (await _context.CategoriaAtributos.AnyAsync(a =>
+                        a.CategoriaID == categoriaDestinoId &&
+                        a.NombreTecnico == copia.NombreTecnico))
+                    {
+                        copia.NombreTecnico = $"{baseNombreTecnico}_{contador++}";
+                    }
+
+                    _context.CategoriaAtributos.Add(copia);
+                    copiados++;
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Copiados {Count} atributos de categoría {Origen} a {Destino}",
+                    copiados, categoriaOrigenId, categoriaDestinoId);
+
+                return (true, $"{copiados} atributo(s) copiado(s) exitosamente", copiados);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al copiar atributos de {Origen} a {Destino}",
+                    categoriaOrigenId, categoriaDestinoId);
+                return (false, "Error al copiar los atributos", 0);
+            }
+        }
+
+        /// <summary>
+        /// Obtener estadísticas de atributos por categoría
+        /// </summary>
+        public async Task<(int Total, int Activos, int Obligatorios, int Filtrables)> ObtenerEstadisticasAsync(int categoriaId)
+        {
+            var atributos = await _context.CategoriaAtributos
+                .Where(a => a.CategoriaID == categoriaId)
+                .ToListAsync();
+
+            return (
+                Total: atributos.Count,
+                Activos: atributos.Count(a => a.Activo),
+                Obligatorios: atributos.Count(a => a.Obligatorio),
+                Filtrables: atributos.Count(a => a.Filtrable)
+            );
+        }
+
+        /// <summary>
+        /// Toggle estado activo
+        /// </summary>
+        public async Task<(bool Exito, string Mensaje, bool NuevoEstado)> ToggleActivoAsync(int atributoId)
+        {
+            try
+            {
+                var atributo = await _context.CategoriaAtributos.FindAsync(atributoId);
+                if (atributo == null)
+                    return (false, "Atributo no encontrado", false);
+
+                atributo.Activo = !atributo.Activo;
+                atributo.ModificadoUtc = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                var estado = atributo.Activo ? "activado" : "desactivado";
+                return (true, $"Atributo {estado}", atributo.Activo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al toggle activo del atributo {ID}", atributoId);
+                return (false, "Error al cambiar el estado", false);
             }
         }
     }

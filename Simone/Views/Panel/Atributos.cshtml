@@ -1,0 +1,386 @@
+@using Simone.Models
+@{
+    ViewData["Title"] = "Gestión de Atributos";
+    var categorias = ViewBag.Categorias as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var categoriaSeleccionada = ViewBag.CategoriaSeleccionada as int? ?? 0;
+    var categoriaNombre = ViewBag.CategoriaNombre as string ?? "";
+    var atributos = ViewBag.Atributos as IEnumerable<CategoriaAtributo> ?? Enumerable.Empty<CategoriaAtributo>();
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        :root {
+            --primary: #4B0082;
+            --primary-light: #7B3FA0;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --border: #dee2e6;
+            --shadow: 0 4px 12px rgba(0,0,0,0.1);
+            --radius: 12px;
+        }
+        .atributos-page { max-width: 1400px; margin: 0 auto; padding: 2rem 1rem; }
+        .page-header { background: white; padding: 1.5rem 2rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .page-title { font-size: 1.75rem; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 0.75rem; margin: 0; }
+        .categoria-selector { background: white; padding: 1.5rem; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 1.5rem; }
+        .categoria-selector label { font-weight: 600; margin-bottom: 0.5rem; display: block; }
+        .categoria-select { width: 100%; max-width: 400px; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; }
+        .categoria-select:focus { outline: none; border-color: var(--primary); }
+        .alert { padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-info { background: #d1ecf1; color: #0c5460; }
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; padding: 1.25rem; border-radius: var(--radius); box-shadow: var(--shadow); text-align: center; border-left: 4px solid var(--primary); }
+        .stat-number { font-size: 2rem; font-weight: 700; color: var(--primary); }
+        .stat-label { font-size: 0.8rem; color: #6c757d; text-transform: uppercase; }
+        .table-container { background: white; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+        .atributos-table { width: 100%; border-collapse: collapse; }
+        .atributos-table th { background: var(--primary); color: white; padding: 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; }
+        .atributos-table td { padding: 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .atributos-table tr:hover td { background: rgba(75, 0, 130, 0.03); }
+        .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.6rem; border-radius: 50px; font-size: 0.7rem; font-weight: 600; margin: 0.1rem; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+        .badge-primary { background: #e7dcf5; color: var(--primary); }
+        .tipo-badge { background: var(--light); color: var(--dark); padding: 0.375rem 0.75rem; border-radius: 6px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .opciones-tags { display: flex; flex-wrap: wrap; gap: 0.25rem; max-width: 200px; }
+        .opcion-tag { background: var(--light); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.7rem; }
+        .btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600; font-size: 0.875rem; text-decoration: none; border: none; cursor: pointer; transition: all 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(75, 0, 130, 0.3); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--border); color: var(--dark); }
+        .btn-info { background: var(--info); color: white; }
+        .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8rem; }
+        .btn-icon { width: 32px; height: 32px; padding: 0; justify-content: center; border-radius: 6px; }
+        .action-buttons { display: flex; gap: 0.5rem; }
+        .status-toggle { position: relative; width: 44px; height: 24px; }
+        .status-toggle input { opacity: 0; width: 0; height: 0; }
+        .status-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: 0.3s; border-radius: 24px; }
+        .status-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background: white; transition: 0.3s; border-radius: 50%; }
+        input:checked + .status-slider { background-color: var(--success); }
+        input:checked + .status-slider:before { transform: translateX(20px); }
+        .empty-state { text-align: center; padding: 4rem 2rem; color: #6c757d; }
+        .empty-state i { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: var(--radius); max-width: 700px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 1.25rem; font-weight: 700; color: var(--primary); margin: 0; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6c757d; }
+        .modal-body { padding: 1.5rem; }
+        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+        .form-label.required::after { content: " *"; color: var(--danger); }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border); border-radius: 8px; font-size: 1rem; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); }
+        .form-textarea { min-height: 80px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .form-note { font-size: 0.8rem; color: #6c757d; margin-top: 0.25rem; }
+        .form-check { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .form-check input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); }
+        .opciones-editor { border: 2px solid var(--border); border-radius: 8px; padding: 1rem; }
+        .opciones-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; min-height: 30px; }
+        .opcion-item { display: flex; align-items: center; gap: 0.5rem; background: var(--primary); color: white; padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+        .opcion-item button { background: none; border: none; color: white; cursor: pointer; padding: 0; opacity: 0.8; }
+        .opcion-item button:hover { opacity: 1; }
+        .opciones-add { display: flex; gap: 0.5rem; }
+        .opciones-add input { flex: 1; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 6px; }
+        @@media (max-width: 768px) { .form-row { grid-template-columns: 1fr; } .atributos-table { display: block; overflow-x: auto; } }
+    </style>
+}
+
+<div class="atributos-page">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-sliders-h"></i> Gestión de Atributos</h1>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+            <a href="@Url.Action("Index", "Panel")" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Volver</a>
+            @if (categoriaSeleccionada > 0)
+            {
+                <button type="button" class="btn btn-primary" onclick="abrirModalCrear()"><i class="fas fa-plus"></i> Nuevo Atributo</button>
+            }
+        </div>
+    </div>
+
+    @if (TempData["Ok"] != null) { <div class="alert alert-success"><i class="fas fa-check-circle"></i> @TempData["Ok"]</div> }
+    @if (TempData["Err"] != null) { <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> @TempData["Err"]</div> }
+
+    <div class="categoria-selector">
+        <label><i class="fas fa-folder"></i> Seleccionar Categoría</label>
+        <select class="categoria-select" onchange="location.href='@Url.Action("Atributos","Panel")?categoriaId='+this.value">
+            <option value="0">-- Seleccione una categoría --</option>
+            @foreach (var cat in categorias)
+{
+                <option value="@cat.CategoriaID" selected="@(cat.CategoriaID == categoriaSeleccionada)">@cat.Nombre</option>
+}
+        </select>
+    </div>
+
+    @if (categoriaSeleccionada > 0)
+    {
+        var listaAttr = atributos.Where(a => a.CategoriaID == categoriaSeleccionada).ToList();
+        <div class="stats-row">
+            <div class="stat-card"><div class="stat-number">@listaAttr.Count</div><div class="stat-label">Total</div></div>
+            <div class="stat-card"><div class="stat-number">@listaAttr.Count(a => a.Activo)</div><div class="stat-label">Activos</div></div>
+            <div class="stat-card"><div class="stat-number">@listaAttr.Count(a => a.Obligatorio)</div><div class="stat-label">Obligatorios</div></div>
+            <div class="stat-card"><div class="stat-number">@listaAttr.Count(a => a.Filtrable)</div><div class="stat-label">Filtrables</div></div>
+        </div>
+
+        <div class="table-container">
+            @if (listaAttr.Any())
+            {
+                <table class="atributos-table">
+                    <thead><tr><th>#</th><th>Nombre</th><th>Tipo</th><th>Opciones</th><th>Config</th><th>Activo</th><th>Acciones</th></tr></thead>
+                    <tbody>
+                        @foreach (var attr in listaAttr.OrderBy(a => a.Orden))
+                        {
+                            var ops = attr.OpcionesLista ?? new List<string>();
+                            <tr>
+                                <td><span class="badge badge-secondary">@attr.Orden</span></td>
+                                <td>
+                                    <div style="font-weight:600;">
+                                        @if (!string.IsNullOrEmpty(attr.IconoClass)) { <i class="@attr.IconoClass" style="margin-right:0.5rem;color:var(--primary);"></i> }
+                                        @attr.Nombre
+                                    </div>
+                                    <div style="font-size:0.75rem;color:#6c757d;">@attr.NombreTecnico</div>
+                                    @if (!string.IsNullOrEmpty(attr.Grupo)) { <span class="badge badge-info">@attr.Grupo</span> }
+                                </td>
+                                <td>
+                                    <span class="tipo-badge">
+                                        @switch (attr.TipoCampo) {
+                                            case "select": <i class="fas fa-list"></i> break;
+                                            case "multiselect": <i class="fas fa-check-double"></i> break;
+                                            case "text": <i class="fas fa-font"></i> break;
+                                            case "number": <i class="fas fa-hashtag"></i> break;
+                                            case "checkbox": <i class="fas fa-toggle-on"></i> break;
+                                            case "color": <i class="fas fa-palette"></i> break;
+                                            case "date": <i class="fas fa-calendar"></i> break;
+                                            default: <i class="fas fa-question"></i> break;
+                                        }
+                                        @attr.TipoCampo
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(attr.Unidad)) { <div style="font-size:0.7rem;color:#6c757d;">(@attr.Unidad)</div> }
+                                </td>
+                                <td>
+                                    @if (ops.Any()) {
+                                        <div class="opciones-tags">
+                                            @foreach (var op in ops.Take(3)) { <span class="opcion-tag">@op</span> }
+                                            @if (ops.Count > 3) { <span class="opcion-tag">+@(ops.Count - 3)</span> }
+                                        </div>
+                                    } else { <span style="color:#999;">—</span> }
+                                </td>
+                                <td>
+                                    @if (attr.Obligatorio) { <span class="badge badge-warning"><i class="fas fa-asterisk"></i></span> }
+                                    @if (attr.Filtrable) { <span class="badge badge-primary"><i class="fas fa-filter"></i></span> }
+                                    @if (attr.MostrarEnFicha) { <span class="badge badge-success"><i class="fas fa-eye"></i></span> }
+                                </td>
+                                <td>
+                                    <label class="status-toggle">
+                                        <input type="checkbox" @(attr.Activo ? "checked" : "") onchange="toggleActivo(@attr.AtributoID, this.checked)" />
+                                        <span class="status-slider"></span>
+                                    </label>
+                                </td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <button class="btn btn-info btn-icon" title="Editar" onclick="abrirModalEditar(@attr.AtributoID)"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-secondary btn-icon" title="Duplicar" onclick="duplicarAtributo(@attr.AtributoID)"><i class="fas fa-copy"></i></button>
+                                        <button class="btn btn-danger btn-icon" title="Eliminar" onclick="eliminarAtributo(@attr.AtributoID, '@attr.Nombre.Replace("'","\\'")' )"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="fas fa-tags"></i>
+                    <h3>Sin atributos</h3>
+                    <p>Esta categoría no tiene atributos configurados.</p>
+                    <button type="button" class="btn btn-primary" onclick="abrirModalCrear()"><i class="fas fa-plus"></i> Crear Primer Atributo</button>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-info"><i class="fas fa-info-circle"></i> Selecciona una categoría para gestionar sus atributos.</div>
+    }
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalAtributo">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Nuevo Atributo</h2>
+            <button type="button" class="modal-close" onclick="cerrarModal()">&times;</button>
+        </div>
+        <form id="formAtributo" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="atributoId" id="atributoId" value="0" />
+            <input type="hidden" name="categoriaId" id="categoriaId" value="@categoriaSeleccionada" />
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label required">Nombre</label>
+                        <input type="text" class="form-input" name="nombre" id="inputNombre" required maxlength="100" placeholder="Ej: Largo, Material" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre Técnico</label>
+                        <input type="text" class="form-input" name="nombreTecnico" id="inputNombreTecnico" maxlength="100" placeholder="Auto-generado" />
+                        <div class="form-note">Sin espacios ni acentos</div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Descripción</label>
+                    <textarea class="form-textarea" name="descripcion" id="inputDescripcion" maxlength="300" placeholder="Ayuda para el vendedor"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label required">Tipo de Campo</label>
+                        <select class="form-select" name="tipoCampo" id="inputTipoCampo" required onchange="onTipoCampoChange()">
+                            <option value="select">Lista desplegable</option>
+                            <option value="multiselect">Selección múltiple</option>
+                            <option value="text">Texto libre</option>
+                            <option value="number">Número</option>
+                            <option value="checkbox">Sí/No</option>
+                            <option value="color">Color</option>
+                            <option value="date">Fecha</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Grupo</label>
+                        <input type="text" class="form-input" name="grupo" id="inputGrupo" maxlength="100" placeholder="Ej: Especificaciones" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Ícono (FontAwesome)</label>
+                        <input type="text" class="form-input" name="iconoClass" id="inputIcono" maxlength="100" placeholder="fas fa-ruler" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Unidad</label>
+                        <input type="text" class="form-input" name="unidad" id="inputUnidad" maxlength="20" placeholder="cm, kg, ml" />
+                    </div>
+                </div>
+                <div class="form-group" id="opcionesContainer" style="display:none;">
+                    <label class="form-label required">Opciones</label>
+                    <div class="opciones-editor">
+                        <div class="opciones-list" id="opcionesList"></div>
+                        <div class="opciones-add">
+                            <input type="text" id="nuevaOpcion" placeholder="Nueva opción..." onkeypress="if(event.key==='Enter'){event.preventDefault();agregarOpcion();}" />
+                            <button type="button" class="btn btn-success btn-sm" onclick="agregarOpcion()"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <input type="hidden" name="opcionesJson" id="opcionesJson" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Orden</label>
+                    <input type="number" class="form-input" name="orden" id="inputOrden" value="0" min="0" style="max-width:100px;" />
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;">
+                    <div class="form-check"><input type="checkbox" name="obligatorio" id="chkObligatorio" value="true" /><label for="chkObligatorio">Obligatorio</label></div>
+                    <div class="form-check"><input type="checkbox" name="filtrable" id="chkFiltrable" value="true" checked /><label for="chkFiltrable">Filtrable</label></div>
+                    <div class="form-check"><input type="checkbox" name="mostrarEnFicha" id="chkFicha" value="true" checked /><label for="chkFicha">Mostrar en ficha</label></div>
+                    <div class="form-check"><input type="checkbox" name="activo" id="chkActivo" value="true" checked /><label for="chkActivo">Activo</label></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script id="atributosData" type="application/json">@Html.Raw(System.Text.Json.JsonSerializer.Serialize(atributos.Select(a => new { a.AtributoID, a.Nombre, a.NombreTecnico, a.Descripcion, a.TipoCampo, a.OpcionesJson, a.Unidad, a.IconoClass, a.Grupo, a.Orden, a.Obligatorio, a.Filtrable, a.MostrarEnFicha, a.Activo })))</script>
+
+@section Scripts {
+<script>
+let opcionesActuales = [];
+let atributosData = [];
+document.addEventListener('DOMContentLoaded', function() {
+    try { atributosData = JSON.parse(document.getElementById('atributosData').textContent || '[]'); } catch(e) {}
+    document.getElementById('inputNombre').addEventListener('input', function() {
+        const t = document.getElementById('inputNombreTecnico');
+        if (!t.dataset.manual) t.value = this.value.toLowerCase().trim().replace(/\s+/g,'_').replace(/[áà]/g,'a').replace(/[éè]/g,'e').replace(/[íì]/g,'i').replace(/[óò]/g,'o').replace(/[úù]/g,'u').replace(/ñ/g,'n').replace(/[^a-z0-9_]/g,'');
+    });
+    document.getElementById('inputNombreTecnico').addEventListener('input', function() { this.dataset.manual = 'true'; });
+});
+function abrirModalCrear() {
+    document.getElementById('modalTitle').textContent = 'Nuevo Atributo';
+    document.getElementById('formAtributo').action = '@Url.Action("CrearAtributo", "Panel")';
+    document.getElementById('formAtributo').reset();
+    document.getElementById('atributoId').value = '0';
+    document.getElementById('inputNombreTecnico').dataset.manual = '';
+    opcionesActuales = [];
+    renderOpciones();
+    onTipoCampoChange();
+    document.getElementById('modalAtributo').classList.add('active');
+}
+function abrirModalEditar(id) {
+    const attr = atributosData.find(a => a.AtributoID === id);
+    if (!attr) return;
+    document.getElementById('modalTitle').textContent = 'Editar Atributo';
+    document.getElementById('formAtributo').action = '@Url.Action("EditarAtributo", "Panel")';
+    document.getElementById('atributoId').value = attr.AtributoID;
+    document.getElementById('inputNombre').value = attr.Nombre || '';
+    document.getElementById('inputNombreTecnico').value = attr.NombreTecnico || '';
+    document.getElementById('inputNombreTecnico').dataset.manual = 'true';
+    document.getElementById('inputDescripcion').value = attr.Descripcion || '';
+    document.getElementById('inputTipoCampo').value = attr.TipoCampo || 'select';
+    document.getElementById('inputGrupo').value = attr.Grupo || '';
+    document.getElementById('inputIcono').value = attr.IconoClass || '';
+    document.getElementById('inputUnidad').value = attr.Unidad || '';
+    document.getElementById('inputOrden').value = attr.Orden || 0;
+    document.getElementById('chkObligatorio').checked = attr.Obligatorio;
+    document.getElementById('chkFiltrable').checked = attr.Filtrable;
+    document.getElementById('chkFicha').checked = attr.MostrarEnFicha;
+    document.getElementById('chkActivo').checked = attr.Activo;
+    try { opcionesActuales = attr.OpcionesJson ? JSON.parse(attr.OpcionesJson) : []; } catch { opcionesActuales = []; }
+    renderOpciones();
+    onTipoCampoChange();
+    document.getElementById('modalAtributo').classList.add('active');
+}
+function cerrarModal() { document.getElementById('modalAtributo').classList.remove('active'); }
+function onTipoCampoChange() {
+    const tipo = document.getElementById('inputTipoCampo').value;
+    document.getElementById('opcionesContainer').style.display = (tipo === 'select' || tipo === 'multiselect') ? 'block' : 'none';
+}
+function agregarOpcion() {
+    const input = document.getElementById('nuevaOpcion');
+    const val = input.value.trim();
+    if (!val || opcionesActuales.includes(val)) return;
+    opcionesActuales.push(val);
+    input.value = '';
+    renderOpciones();
+}
+function eliminarOpcionLocal(i) { opcionesActuales.splice(i, 1); renderOpciones(); }
+function renderOpciones() {
+    const c = document.getElementById('opcionesList');
+    c.innerHTML = opcionesActuales.map((op, i) => `<div class="opcion-item"><span>${op}</span><button type="button" onclick="eliminarOpcionLocal(${i})"><i class="fas fa-times"></i></button></div>`).join('');
+    document.getElementById('opcionesJson').value = JSON.stringify(opcionesActuales);
+}
+function toggleActivo(id, activo) {
+    fetch('@Url.Action("ToggleAtributoActivo", "Panel")', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value },
+        body: JSON.stringify({ id: id, activo: activo })
+    }).then(r => r.json()).then(d => { if (!d.success) location.reload(); }).catch(() => location.reload());
+}
+function duplicarAtributo(id) { if (confirm('¿Duplicar este atributo?')) location.href = '@Url.Action("DuplicarAtributo", "Panel")?id=' + id + '&categoriaId=@categoriaSeleccionada'; }
+function eliminarAtributo(id, nombre) { if (confirm('¿Eliminar "' + nombre + '"?')) location.href = '@Url.Action("EliminarAtributo", "Panel")?id=' + id + '&categoriaId=@categoriaSeleccionada'; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarModal(); });
+document.getElementById('modalAtributo').addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) cerrarModal(); });
+</script>
+}

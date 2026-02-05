@@ -1006,8 +1006,8 @@ namespace Simone.Controllers
                 IQueryable<Producto> query = _context.Productos.AsNoTracking()
                     .Include(p => p.Categoria).Include(p => p.Variantes);
 
-                if (!IsAdmin())
-                    query = query.Where(p => p.VendedorID == CurrentUserId());
+                //if (!IsAdmin())
+                //    query = query.Where(p => p.VendedorID == CurrentUserId());
 
                 var productos = await query.OrderBy(p => p.Nombre).ToListAsync(ct);
                 _logger.LogDebug("Productos cargados: {Count}", productos.Count);
@@ -1037,6 +1037,233 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(Productos));
             }
         }
+
+
+        #region GESTIÓN DE ATRIBUTOS DE CATEGORÍA
+
+        /// <summary>
+        /// GET: /Panel/Atributos - Vista principal
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> Atributos(int? categoriaId = null)
+        {
+            try
+            {
+                // Cargar todas las categorías
+                var categorias = await _context.Categorias
+    .OrderBy(c => c.Nombre)
+    .ToListAsync();
+
+                ViewBag.Categorias = categorias;
+                ViewBag.CategoriaSeleccionada = categoriaId ?? 0;
+
+                if (categoriaId.HasValue && categoriaId.Value > 0)
+                {
+                    var categoria = categorias.FirstOrDefault(c => c.CategoriaID == categoriaId.Value);
+                    ViewBag.CategoriaNombre = categoria?.Nombre ?? "";
+
+                    var atributos = await _categoriaAtributoService.ObtenerPorCategoriaAsync(categoriaId.Value);
+                    ViewBag.Atributos = atributos;
+                }
+                else
+                {
+                    ViewBag.CategoriaNombre = "";
+                    ViewBag.Atributos = new List<CategoriaAtributo>();
+                }
+
+                return View();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar vista de atributos");
+                TempData["Err"] = "Error al cargar los atributos.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        /// <summary>
+        /// POST: /Panel/CrearAtributo
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearAtributo(
+            int categoriaId,
+            string nombre,
+            string? nombreTecnico,
+            string tipoCampo,
+            string? opcionesJson,
+            string? unidad,
+            string? descripcion,
+            string? grupo,
+            string? iconoClass,
+            int orden = 0,
+            bool obligatorio = false,
+            bool filtrable = true,
+            bool mostrarEnFicha = true,
+            bool activo = true)
+        {
+            try
+            {
+                var atributo = new CategoriaAtributo
+                {
+                    CategoriaID = categoriaId,
+                    Nombre = nombre?.Trim() ?? "",
+                    NombreTecnico = nombreTecnico?.Trim() ?? "",
+                    TipoCampo = tipoCampo ?? "text",
+                    OpcionesJson = opcionesJson,
+                    Unidad = unidad?.Trim(),
+                    Descripcion = descripcion?.Trim(),
+                    Grupo = grupo?.Trim(),
+                    IconoClass = iconoClass?.Trim(),
+                    Orden = orden,
+                    Obligatorio = obligatorio,
+                    Filtrable = filtrable,
+                    MostrarEnFicha = mostrarEnFicha,
+                    Activo = activo
+                };
+
+                var (exito, mensaje, _) = await _categoriaAtributoService.CrearAsync(atributo);
+                TempData[exito ? "Ok" : "Err"] = mensaje;
+
+                return RedirectToAction(nameof(Atributos), new { categoriaId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear atributo");
+                TempData["Err"] = "Error al crear el atributo.";
+                return RedirectToAction(nameof(Atributos), new { categoriaId });
+            }
+        }
+
+        /// <summary>
+        /// POST: /Panel/EditarAtributo
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarAtributo(
+            int atributoId,
+            int categoriaId,
+            string nombre,
+            string? nombreTecnico,
+            string tipoCampo,
+            string? opcionesJson,
+            string? unidad,
+            string? descripcion,
+            string? grupo,
+            string? iconoClass,
+            int orden = 0,
+            bool obligatorio = false,
+            bool filtrable = true,
+            bool mostrarEnFicha = true,
+            bool activo = true)
+        {
+            try
+            {
+                var atributo = new CategoriaAtributo
+                {
+                    AtributoID = atributoId,
+                    CategoriaID = categoriaId,
+                    Nombre = nombre?.Trim() ?? "",
+                    NombreTecnico = nombreTecnico?.Trim() ?? "",
+                    TipoCampo = tipoCampo ?? "text",
+                    OpcionesJson = opcionesJson,
+                    Unidad = unidad?.Trim(),
+                    Descripcion = descripcion?.Trim(),
+                    Grupo = grupo?.Trim(),
+                    IconoClass = iconoClass?.Trim(),
+                    Orden = orden,
+                    Obligatorio = obligatorio,
+                    Filtrable = filtrable,
+                    MostrarEnFicha = mostrarEnFicha,
+                    Activo = activo
+                };
+
+                var (exito, mensaje) = await _categoriaAtributoService.ActualizarAsync(atributo);
+                TempData[exito ? "Ok" : "Err"] = mensaje;
+
+                return RedirectToAction(nameof(Atributos), new { categoriaId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar atributo ID: {Id}", atributoId);
+                TempData["Err"] = "Error al actualizar el atributo.";
+                return RedirectToAction(nameof(Atributos), new { categoriaId });
+            }
+        }
+
+        /// <summary>
+        /// GET: /Panel/EliminarAtributo
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> EliminarAtributo(int id, int categoriaId)
+        {
+            try
+            {
+                var (exito, mensaje) = await _categoriaAtributoService.EliminarAsync(id);
+                TempData[exito ? "Ok" : "Err"] = mensaje;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar atributo ID: {Id}", id);
+                TempData["Err"] = "Error al eliminar el atributo.";
+            }
+
+            return RedirectToAction(nameof(Atributos), new { categoriaId });
+        }
+
+        /// <summary>
+        /// GET: /Panel/DuplicarAtributo
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> DuplicarAtributo(int id, int categoriaId)
+        {
+            try
+            {
+                var (exito, mensaje, _) = await _categoriaAtributoService.DuplicarAsync(id);
+                TempData[exito ? "Ok" : "Err"] = mensaje;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al duplicar atributo ID: {Id}", id);
+                TempData["Err"] = "Error al duplicar el atributo.";
+            }
+
+            return RedirectToAction(nameof(Atributos), new { categoriaId });
+        }
+
+        /// <summary>
+        /// POST: /Panel/ToggleAtributoActivo (AJAX)
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> ToggleAtributoActivo([FromBody] ToggleAtributoRequest request)
+        {
+            try
+            {
+                var atributo = await _categoriaAtributoService.ObtenerPorIdAsync(request.Id);
+                if (atributo == null)
+                    return Json(new { success = false, message = "Atributo no encontrado" });
+
+                atributo.Activo = request.Activo;
+                var (exito, mensaje) = await _categoriaAtributoService.ActualizarAsync(atributo);
+
+                return Json(new { success = exito, message = mensaje });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar estado de atributo ID: {Id}", request.Id);
+                return Json(new { success = false, message = "Error al cambiar estado" });
+            }
+        }
+
+        // DTO para AJAX
+        public class ToggleAtributoRequest
+        {
+            public int Id { get; set; }
+            public bool Activo { get; set; }
+        }
+
+        #endregion
+
 
         [HttpPost, ValidateAntiForgeryToken, RequestFormLimits(MultipartBodyLengthLimit = 64L * 1024 * 1024)]
         public async Task<IActionResult> AnadirProducto(

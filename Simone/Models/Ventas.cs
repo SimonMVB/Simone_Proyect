@@ -6,67 +6,79 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Simone.Models
 {
     /// <summary>
-    /// Modelo de Ventas con campos de pago por transferencia
-    /// ACTUALIZADO: Agregados Depositante, Banco, ComprobanteUrl para persistir datos de pago
+    /// Modelo de Ventas con soporte completo para pagos por transferencia/depósito.
+    /// Incluye campos para persistir datos de pago directamente en la BD.
     /// </summary>
     public class Ventas
     {
         [Key]
         public int VentaID { get; set; }
 
-        // --- Vendedor/Empleado (opcional) ---
+        #region Vendedor/Empleado (opcional)
+
         public string? EmpleadoID { get; set; }
 
         [ForeignKey(nameof(EmpleadoID))]
         public virtual Usuario? Empleado { get; set; }
 
-        // --- Comprador: ahora centralizado en Usuario (reemplaza ClienteID/Cliente) ---
+        #endregion
+
+        #region Comprador
+
         [Required]
         public string UsuarioId { get; set; } = default!;
 
         [ForeignKey(nameof(UsuarioId))]
         public virtual Usuario Usuario { get; set; } = default!;
 
-        // --- Datos de la venta ---
-        [Required, StringLength(30)]
+        #endregion
+
+        #region Datos de la Venta
+
+        [Required]
+        [StringLength(30)]
         public string Estado { get; set; } = "Pendiente";
 
         public DateTime FechaVenta { get; set; } = DateTime.UtcNow;
 
-        [Required, StringLength(50)]
+        [Required]
+        [StringLength(50)]
         public string MetodoPago { get; set; } = string.Empty;
 
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         public decimal Total { get; set; }
 
-        // =====================================================================
-        // NUEVOS CAMPOS - Datos de pago por transferencia/depósito
-        // =====================================================================
+        #endregion
+
+        #region Datos de Pago por Transferencia/Depósito
 
         /// <summary>
-        /// Nombre del depositante (quien realizó la transferencia)
+        /// Nombre completo de quien realizó la transferencia/depósito.
         /// </summary>
         [StringLength(200)]
         public string? Depositante { get; set; }
 
         /// <summary>
-        /// Banco/entidad donde se realizó el depósito
-        /// Puede ser código o nombre del banco
+        /// Nombre o código del banco donde se realizó el depósito.
+        /// Ejemplo: "Banco Pichincha", "BP", etc.
         /// </summary>
         [StringLength(100)]
         public string? Banco { get; set; }
 
         /// <summary>
-        /// URL relativa del comprobante de pago (imagen o PDF)
+        /// URL relativa del comprobante de pago subido (imagen o PDF).
         /// Ejemplo: /uploads/comprobantes/venta-123.jpg
         /// </summary>
         [StringLength(500)]
         public string? ComprobanteUrl { get; set; }
 
-        // =====================================================================
+        #endregion
 
-        // Detalle
-        public ICollection<DetalleVentas> DetalleVentas { get; set; } = new List<DetalleVentas>();
+        #region Navegación
+
+        public virtual ICollection<DetalleVentas> DetalleVentas { get; set; } = new List<DetalleVentas>();
+
+        #endregion
     }
 }

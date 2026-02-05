@@ -73,11 +73,9 @@ builder.Services.ConfigureApplicationCookie(options =>
 // ============================================================================
 // 4) CONFIGURACIÓN DE CACHÉ
 // ============================================================================
-// ✅ AGREGADO: Memory Cache para optimizar consultas de categorías
 builder.Services.AddMemoryCache(options =>
 {
-    //options.SizeLimit = 1024; // Límite de entradas en cache
-    options.CompactionPercentage = 0.25; // Liberar 25% cuando se alcanza el límite
+    options.CompactionPercentage = 0.25;
 });
 
 // ============================================================================
@@ -85,7 +83,6 @@ builder.Services.AddMemoryCache(options =>
 // ============================================================================
 const long maxFileSize = 64L * 1024 * 1024; // 64 MB
 
-// Configuración de FormOptions (para formularios multipart)
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = maxFileSize;
@@ -94,13 +91,11 @@ builder.Services.Configure<FormOptions>(options =>
     options.MemoryBufferThreshold = int.MaxValue;
 });
 
-// Configuración de Kestrel (servidor web)
 builder.Services.Configure<KestrelServerOptions>(options =>
 {
     options.Limits.MaxRequestBodySize = maxFileSize;
 });
 
-// Configuración de IIS (si se ejecuta en IIS)
 builder.Services.Configure<IISServerOptions>(options =>
 {
     options.MaxRequestBodySize = maxFileSize;
@@ -111,14 +106,12 @@ builder.Services.Configure<IISServerOptions>(options =>
 // ============================================================================
 
 // ────────────────────────────────────────────────────────────────────────────
-// CATEGORÍAS Y PRODUCTOS
+// CATEGORÍAS Y PRODUCTOS (Sistema Fusionado)
 // ────────────────────────────────────────────────────────────────────────────
-// ✅ Sistema viejo (mantener por compatibilidad)
 builder.Services.AddScoped<CategoriasService>();
 builder.Services.AddScoped<SubcategoriasService>();
 
-// ✅ NUEVO: Sistema Enterprise de Categorías
-builder.Services.AddScoped<CategoriaEnterpriseService>();
+// ✅ Atributos dinámicos (fusionado - usa Categorias directamente)
 builder.Services.AddScoped<CategoriaAtributoService>();
 builder.Services.AddScoped<ProductoAtributoService>();
 
@@ -157,21 +150,16 @@ builder.Services.AddScoped<LogService>();
 // ============================================================================
 builder.Services.AddControllersWithViews(options =>
 {
-    // ✅ FIX PROBLEMA DE PRECIOS: Usar InvariantCulture para decimales
-    // Esto evita que 120000.00 se interprete como 120.000,00 (formato español)
     options.ModelBinderProviders.Insert(0, new InvariantDecimalModelBinderProvider());
-
-    // Filtro global para el carrito
     options.Filters.Add<CarritoActionFilter>();
 });
 
-// ✅ Configurar cultura de la aplicación
 builder.Services.Configure<RequestLocalizationOptions>(options =>
 {
     var supportedCultures = new[]
     {
-        new CultureInfo("en-US"),  // Cultura por defecto
-        new CultureInfo("es-EC"),  // Cultura adicional
+        new CultureInfo("en-US"),
+        new CultureInfo("es-EC"),
     };
 
     options.DefaultRequestCulture = new Microsoft.AspNetCore.Localization.RequestCulture("en-US");
@@ -194,7 +182,6 @@ if (!app.Environment.IsDevelopment())
 }
 else
 {
-    // En desarrollo, mostrar página de excepciones detallada
     app.UseDeveloperExceptionPage();
 }
 
@@ -203,12 +190,10 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-// ✅ Orden correcto: Authentication → Authorization → Session
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseSession();
 
-// ✅ Usar localización
 app.UseRequestLocalization();
 
 app.MapControllerRoute(
@@ -238,12 +223,10 @@ using (var scope = app.Services.CreateScope())
         if (await db.Database.CanConnectAsync())
         {
             logger.LogInformation("✅ Conexión exitosa a la base de datos");
-            logger.LogInformation("  📊 Servidor: {Server}", db.Database.GetConnectionString()?.Split(';')[0]);
         }
         else
         {
             logger.LogError("❌ No se pudo conectar a la base de datos");
-            logger.LogError("  🔍 Verifica la cadena de conexión en appsettings.json");
             throw new InvalidOperationException("No se puede conectar a la base de datos");
         }
 
@@ -287,23 +270,26 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("✅ Datos del dominio inicializados correctamente");
 
         // ────────────────────────────────────────────────────────────────
-        // PASO 5: Verificar sistema de categorías enterprise
+        // PASO 5: Verificar sistema de categorías (fusionado)
         // ────────────────────────────────────────────────────────────────
-        logger.LogInformation("🏢 Verificando sistema de categorías enterprise...");
-        var categoriaService = services.GetRequiredService<CategoriaEnterpriseService>();
-        var totalCategorias = (await categoriaService.ObtenerTodasAsync()).Count;
-        var categoriasActivas = (await categoriaService.ObtenerActivasAsync()).Count;
+        logger.LogInformation("🏢 Verificando sistema de categorías...");
 
-        logger.LogInformation("  📊 Total categorías: {Total}", totalCategorias);
-        logger.LogInformation("  ✅ Categorías activas: {Activas}", categoriasActivas);
+        // ✅ CORREGIDO: Usar DbContext directamente en lugar de CategoriaEnterpriseService
+        var totalCategorias = await db.Categorias.CountAsync();
+        var categoriasActivas = await db.Categorias.CountAsync(c => c.Activo);
+        var totalAtributos = await db.CategoriaAtributos.CountAsync();
+        var atributosActivos = await db.CategoriaAtributos.CountAsync(a => a.Activo);
+
+        logger.LogInformation("  📊 Categorías: {Total} total, {Activas} activas", totalCategorias, categoriasActivas);
+        logger.LogInformation("  📊 Atributos: {Total} total, {Activos} activos", totalAtributos, atributosActivos);
 
         if (totalCategorias > 0)
         {
-            logger.LogInformation("✅ Sistema de categorías enterprise operativo");
+            logger.LogInformation("✅ Sistema de categorías operativo");
         }
         else
         {
-            logger.LogWarning("⚠️ No hay categorías en el sistema. Considera ejecutar el script de seed.");
+            logger.LogWarning("⚠️ No hay categorías. El seeder debería haberlas creado.");
         }
 
         logger.LogInformation("╔══════════════════════════════════════════════════════════╗");
@@ -326,8 +312,8 @@ using (var scope = app.Services.CreateScope())
         logger.LogError("💡 Sugerencias:");
         logger.LogError("  • Verifica la cadena de conexión en appsettings.json");
         logger.LogError("  • Verifica que SQL Server esté ejecutándose");
-        logger.LogError("  • Revisa los logs de SQL Server para más detalles");
-        logger.LogError("  • Ejecuta Update-Database manualmente en Package Manager Console");
+        logger.LogError("  • Ejecuta: dotnet ef migrations add FusionCategoriasAtributos");
+        logger.LogError("  • Ejecuta: dotnet ef database update");
     }
     catch (InvalidOperationException opEx)
     {
@@ -340,8 +326,6 @@ using (var scope = app.Services.CreateScope())
         logger.LogError("💡 Sugerencias:");
         logger.LogError("  • Verifica que todos los servicios estén registrados en Program.cs");
         logger.LogError("  • Verifica las dependencias inyectadas en los constructores");
-        logger.LogError("  • Revisa que CategoriaEnterpriseService esté registrado");
-        logger.LogError("  • Revisa que CategoriaAtributoService esté registrado");
     }
     catch (Exception ex)
     {
@@ -354,13 +338,8 @@ using (var scope = app.Services.CreateScope())
 
         if (app.Environment.IsDevelopment())
         {
-            logger.LogError("🔍 Stack trace completo:");
-            logger.LogError("{StackTrace}", ex.StackTrace);
+            logger.LogError("🔍 Stack trace: {StackTrace}", ex.StackTrace);
         }
-
-        // ⚠️ En producción, podrías querer detener la app si falla la inicialización
-        // Descomenta la siguiente línea si quieres que la aplicación se detenga:
-        // throw;
     }
 }
 
@@ -381,7 +360,6 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
     var roleManager = serviceProvider.GetRequiredService<RoleManager<Roles>>();
     var userManager = serviceProvider.GetRequiredService<UserManager<Usuario>>();
 
-    // Definición de roles
     string[] roles = { "Administrador", "Vendedor", "Cliente" };
     string[] descripcion =
     {
@@ -390,7 +368,6 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
         "Cliente con acceso a la tienda"
     };
 
-    // Crear roles si no existen
     for (var i = 0; i < roles.Length; i++)
     {
         if (!await roleManager.RoleExistsAsync(roles[i]))
@@ -412,7 +389,6 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
         }
     }
 
-    // Crear usuario administrador
     var adminEmail = "admin@tienda.com";
     var adminPassword = "Admin123!";
     var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
@@ -455,14 +431,12 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
     {
         logger.LogDebug("  ℹ️ Usuario administrador '{Email}' ya existe", adminEmail);
 
-        // Garantizar que el admin tenga el rol
         if (!await userManager.IsInRoleAsync(existingAdmin, "Administrador"))
         {
             await userManager.AddToRoleAsync(existingAdmin, "Administrador");
             logger.LogInformation("  ✓ Rol 'Administrador' asignado al usuario existente");
         }
 
-        // Asegurar que esté activo
         if (!existingAdmin.Activo)
         {
             existingAdmin.Activo = true;
