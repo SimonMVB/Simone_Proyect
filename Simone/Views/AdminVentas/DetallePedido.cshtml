@@ -1,0 +1,498 @@
+@using System.Globalization
+@{
+    ViewData["Title"] = "Detalle de Pedido";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var pedido = ViewBag.Pedido as Simone.Models.Pedido;
+    var productosPorVendedor = ViewBag.ProductosPorVendedor as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+    var culture = new CultureInfo("es-EC");
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.5rem;
+        color: #4B0082;
+        margin: 0;
+    }
+
+    .order-number {
+        font-size: 0.9rem;
+        color: #888;
+        font-weight: normal;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .btn-outline {
+        background: #fff;
+        border: 1px solid #ddd;
+        color: #333;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: #fff;
+    }
+
+    .btn-info {
+        background: #17a2b8;
+        color: #fff;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    .btn-sm {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.8rem;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 768px) {
+        .grid-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1rem;
+        color: #4B0082;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+    .info-label {
+        color: #888;
+        font-size: 0.85rem;
+    }
+
+    .info-value {
+        font-weight: 500;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.35rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+
+    .badge-lg {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .badge-success {
+        background: rgba(40,167,69,0.1);
+        color: #28a745;
+    }
+
+    .badge-warning {
+        background: rgba(255,193,7,0.15);
+        color: #856404;
+    }
+
+    .badge-info {
+        background: rgba(23,162,184,0.1);
+        color: #17a2b8;
+    }
+
+    .badge-danger {
+        background: rgba(220,53,69,0.1);
+        color: #dc3545;
+    }
+
+    .badge-primary {
+        background: rgba(75,0,130,0.1);
+        color: #4B0082;
+    }
+
+    .product-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .product-item {
+        display: flex;
+        gap: 1rem;
+        padding: 1rem 0;
+        border-bottom: 1px solid #f0f0f0;
+        align-items: center;
+    }
+
+        .product-item:last-child {
+            border-bottom: none;
+        }
+
+    .product-img {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        object-fit: cover;
+        background: #f5f5f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-info {
+        flex: 1;
+    }
+
+    .product-name {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .product-meta {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .product-price {
+        text-align: right;
+    }
+
+    .product-total {
+        font-weight: 600;
+        color: #4B0082;
+    }
+
+    .vendor-section {
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .vendor-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    .vendor-name {
+        font-weight: 600;
+        color: #4B0082;
+    }
+
+    .vendor-subtotal {
+        font-weight: 700;
+        color: #D4AF37;
+    }
+
+    .timeline {
+        padding-left: 1.5rem;
+        border-left: 2px solid #eee;
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1rem;
+        padding-left: 1rem;
+    }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -1.6rem;
+            top: 0.25rem;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4B0082;
+        }
+
+    .timeline-date {
+        font-size: 0.75rem;
+        color: #888;
+    }
+
+    .timeline-text {
+        font-size: 0.9rem;
+    }
+
+    .totals-section {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .total-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+    }
+
+        .total-row.final {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #4B0082;
+            border-top: 2px solid #4B0082;
+            padding-top: 0.75rem;
+            margin-top: 0.5rem;
+        }
+</style>
+
+<div class="page-container">
+    @if (pedido == null)
+    {
+        <div style="text-align: center; padding: 3rem;">
+            <p>Pedido no encontrado</p>
+            <a href="@Url.Action("Pedidos")" class="btn btn-outline">Volver a pedidos</a>
+        </div>
+    }
+    else
+    {
+        <div class="page-header">
+            <h1 class="page-title">
+                <i class="fas fa-receipt"></i> Pedido @(pedido.NumeroOrden ?? $"#{pedido.PedidoID}")
+                <span class="order-number">· @pedido.FechaPedido.ToString("dd/MM/yyyy HH:mm")</span>
+            </h1>
+            <a href="@Url.Action("Pedidos")" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Volver</a>
+        </div>
+
+        <div class="card">
+            <div class="card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <span class="badge badge-lg badge-@pedido.EstadoPedidoClase"><i class="@pedido.EstadoPedidoIcono"></i> @pedido.EstadoPedido</span>
+                    <span class="badge badge-lg badge-@pedido.EstadoPagoClase" style="margin-left: 0.5rem;">@pedido.EstadoPago</span>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    @if (pedido.EstadoPedido == "Pendiente")
+                    {
+                        <button class="btn btn-success btn-sm btn-estado" data-estado="Confirmado"><i class="fas fa-check"></i> Confirmar</button>
+                    }
+                    @if (pedido.EstadoPedido == "Confirmado" || pedido.EstadoPedido == "EnProceso")
+                    {
+                        <button class="btn btn-info btn-sm btn-estado" data-estado="Enviado"><i class="fas fa-truck"></i> Enviado</button>
+                    }
+                    @if (pedido.EstadoPedido == "Enviado")
+                    {
+                        <button class="btn btn-success btn-sm btn-estado" data-estado="Entregado"><i class="fas fa-check-double"></i> Entregado</button>
+                    }
+                    @if (pedido.PuedeCancelarse)
+                    {
+                        <button class="btn btn-danger btn-sm btn-estado" data-estado="Cancelado"><i class="fas fa-times"></i> Cancelar</button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-user"></i> Cliente</h3></div>
+                <div class="card-body">
+                    <div class="info-row"><span class="info-label">Nombre</span><span class="info-value">@(pedido.NombreCliente ?? pedido.Usuario?.NombreCompleto ?? "—")</span></div>
+                    <div class="info-row"><span class="info-label">Email</span><span class="info-value">@(pedido.EmailCliente ?? pedido.Usuario?.Email ?? "—")</span></div>
+                    <div class="info-row"><span class="info-label">Teléfono</span><span class="info-value">@(pedido.TelefonoCliente ?? pedido.Usuario?.PhoneNumber ?? "—")</span></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-truck"></i> Envío</h3></div>
+                <div class="card-body">
+                    <div class="info-row"><span class="info-label">Método</span><span class="info-value">@(pedido.MetodoEnvio ?? "—")</span></div>
+                    <div class="info-row"><span class="info-label">Dirección</span><span class="info-value">@(pedido.DireccionEnvio ?? "—")</span></div>
+                    @if (!string.IsNullOrEmpty(pedido.CiudadEnvio))
+                    {
+                        <div class="info-row"><span class="info-label">Ciudad</span><span class="info-value">@pedido.CiudadEnvio, @pedido.ProvinciaEnvio</span></div>
+                    }
+                    @if (!string.IsNullOrEmpty(pedido.NumeroGuia))
+                    {
+                        <div class="info-row"><span class="info-label">N° Guía</span><span class="info-value">@pedido.NumeroGuia</span></div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title"><i class="fas fa-box"></i> Productos</h3>
+                <span class="badge badge-primary">@pedido.CantidadItems items</span>
+            </div>
+            <div class="card-body">
+                @foreach (var grupo in productosPorVendedor)
+                {
+                    <div class="vendor-section">
+                        <div class="vendor-header">
+                            <span class="vendor-name"><i class="fas fa-store"></i> @grupo.NombreVendedor</span>
+                            <span class="vendor-subtotal">@((decimal)grupo.Subtotal).ToString("C2", culture)</span>
+                        </div>
+                        <ul class="product-list">
+                            @foreach (var d in (IEnumerable<Simone.Models.DetallesPedido>)grupo.Productos)
+                            {
+                                <li class="product-item">
+                                    <div class="product-img"><i class="fas fa-image" style="color: #ccc;"></i></div>
+                                    <div class="product-info">
+                                        <div class="product-name">@(d.NombreProducto ?? d.Producto?.Nombre ?? $"Producto #{d.ProductoID}")</div>
+                                        <div class="product-meta">
+                                            @if (!string.IsNullOrEmpty(d.Color))
+                                            {
+                                                <span>Color: @d.Color</span>
+                                            }
+                                            @if (!string.IsNullOrEmpty(d.Talla))
+                                            {
+                                                <span> · Talla: @d.Talla</span>
+                                            }
+                                        </div>
+                                    </div>
+                                    <div class="product-price">
+                                        <div>@d.Cantidad x @d.PrecioUnitario.ToString("C2", culture)</div>
+                                        <div class="product-total">@d.Subtotal.ToString("C2", culture)</div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="totals-section">
+                    <div class="total-row"><span>Subtotal</span><span>@pedido.Subtotal.ToString("C2", culture)</span></div>
+                    @if (pedido.Descuento > 0)
+                    {
+                        <div class="total-row" style="color: #28a745;"><span>Descuento</span><span>-@pedido.Descuento.ToString("C2", culture)</span></div>
+                    }
+                    <div class="total-row"><span>Envío</span><span>@pedido.CostoEnvio.ToString("C2", culture)</span></div>
+                    <div class="total-row final"><span>TOTAL</span><span>@pedido.Total.ToString("C2", culture)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-credit-card"></i> Pago</h3></div>
+                <div class="card-body">
+                    <div class="info-row"><span class="info-label">Método</span><span class="info-value">@(pedido.MetodoPago ?? "—")</span></div>
+                    <div class="info-row"><span class="info-label">Referencia</span><span class="info-value">@(pedido.ReferenciaPago ?? "—")</span></div>
+                    @if (pedido.FechaPago.HasValue)
+                    {
+                        <div class="info-row"><span class="info-label">Fecha pago</span><span class="info-value">@pedido.FechaPago.Value.ToString("dd/MM/yyyy HH:mm")</span></div>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><h3 class="card-title"><i class="fas fa-history"></i> Historial</h3></div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-date">@pedido.FechaPedido.ToString("dd/MM/yyyy HH:mm")</div>
+                            <div class="timeline-text">Pedido creado</div>
+                        </div>
+                        @if (pedido.Historial != null)
+                        {
+                            @foreach (var h in pedido.Historial.OrderBy(x => x.FechaCambio))
+                            {
+                                <div class="timeline-item">
+                                    <div class="timeline-date">@h.FechaCambio.ToString("dd/MM/yyyy HH:mm")</div>
+                                    <div class="timeline-text">@h.EstadoAnterior → @h.EstadoNuevo</div>
+                                </div>
+                            }
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (pedido != null)
+{
+    <script>
+        document.querySelectorAll('.btn-estado').forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+                var nuevoEstado = this.dataset.estado;
+                var comentario = '';
+                if (nuevoEstado === 'Cancelado') {
+                    comentario = prompt('Motivo de cancelación:');
+                    if (!comentario) return;
+                } else if (!confirm('¿Cambiar estado a "' + nuevoEstado + '"?')) {
+                    return;
+                }
+                var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '@Html.AntiForgeryToken()'.match(/value="([^"]+)"/)?.[1];
+                var resp = await fetch('@Url.Action("CambiarEstadoPedido")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'pedidoId=@pedido.PedidoID&nuevoEstado=' + nuevoEstado + '&comentario=' + encodeURIComponent(comentario) + '&__RequestVerificationToken=' + encodeURIComponent(token || '')
+                });
+                var data = await resp.json();
+                alert(data.message);
+                if (data.success) location.reload();
+            });
+        });
+    </script>
+    @Html.AntiForgeryToken()
+}
+    

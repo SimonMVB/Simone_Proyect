@@ -1,0 +1,345 @@
+@{
+    ViewData["Title"] = "Configuración de Comisiones";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var configuraciones = ViewBag.Configuraciones as List<Simone.Models.ConfiguracionComision> ?? new();
+    var vendedores = ViewBag.Vendedores as IList<Simone.Models.Usuario> ?? new List<Simone.Models.Usuario>();
+    var categorias = ViewBag.Categorias as List<Simone.Models.Categorias> ?? new();
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .page-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .page-title {
+        font-size: 1.6rem;
+        color: #4B0082;
+        margin: 0;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .btn-outline {
+        background: #fff;
+        border: 1px solid #ddd;
+        color: #333;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: #fff;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    .btn-sm {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .grid-2 {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 900px) {
+        .grid-2 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #eee;
+        background: #f8f9fa;
+    }
+
+    .card-title {
+        font-size: 1rem;
+        color: #4B0082;
+        margin: 0;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .form-help {
+        font-size: 0.75rem;
+        color: #888;
+        margin-top: 0.25rem;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background: #4B0082;
+        color: #fff;
+        padding: 0.75rem 1rem;
+        text-align: left;
+        font-size: 0.8rem;
+    }
+
+    td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    tr:hover td {
+        background: #fafafa;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+
+    .badge-global {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+
+    .badge-vendedor {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+
+    .badge-categoria {
+        background: #e8f5e9;
+        color: #388e3c;
+    }
+
+    .badge-escalonado {
+        background: #fff3e0;
+        color: #f57c00;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: #888;
+    }
+</style>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-cog"></i> Configuración de Comisiones</h1>
+        <a href="@Url.Action("Comisiones")" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Volver</a>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-plus"></i> Nueva Configuración</h3></div>
+            <div class="card-body">
+                <form method="post" asp-action="GuardarConfiguracionComision">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label>Tipo de Comisión *</label>
+                        <select name="TipoComision" id="tipoComision" required>
+                            <option value="Global">Global (aplica a todos)</option>
+                            <option value="PorVendedor">Por Vendedor específico</option>
+                            <option value="PorCategoria">Por Categoría de producto</option>
+                            <option value="Escalonado">Escalonado (por volumen)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="grupoVendedor" style="display: none;">
+                        <label>Vendedor *</label>
+                        <select name="VendedorId">
+                            <option value="">Seleccionar vendedor...</option>
+                            @foreach (var v in vendedores)
+                            {
+                                <option value="@v.Id">@v.NombreCompleto</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="grupoCategoria" style="display: none;">
+                        <label>Categoría *</label>
+                        <select name="CategoriaId">
+                            <option value="">Seleccionar categoría...</option>
+                            @foreach (var c in categorias)
+                            {
+                                <option value="@c.CategoriaID">@c.Nombre</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Porcentaje de Comisión (%) *</label>
+                        <input type="number" name="Porcentaje" step="0.01" min="0" max="100" value="10" required />
+                        <div class="form-help">Ej: 10 = 10% de comisión</div>
+                    </div>
+
+                    <div id="grupoEscalonado" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Monto Mínimo ($)</label>
+                                <input type="number" name="MontoMinimo" step="0.01" min="0" placeholder="0" />
+                            </div>
+                            <div class="form-group">
+                                <label>Monto Máximo ($)</label>
+                                <input type="number" name="MontoMaximo" step="0.01" min="0" placeholder="Sin límite" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descripción (opcional)</label>
+                        <input type="text" name="Descripcion" placeholder="Nota sobre esta configuración" />
+                    </div>
+
+                    <input type="hidden" name="Activo" value="true" />
+
+                    <button type="submit" class="btn btn-success" style="width: 100%;"><i class="fas fa-save"></i> Guardar Configuración</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><h3 class="card-title"><i class="fas fa-list"></i> Configuraciones Activas</h3></div>
+            @if (configuraciones.Any(c => c.Activo))
+            {
+                <table>
+                    <thead><tr><th>Tipo</th><th>Aplica a</th><th>%</th><th>Desde</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var c in configuraciones.Where(x => x.Activo))
+                        {
+                            var badgeClass = c.TipoComision switch
+                            {
+                                "Global" => "badge-global",
+                                "PorVendedor" => "badge-vendedor",
+                                "PorCategoria" => "badge-categoria",
+                                "Escalonado" => "badge-escalonado",
+                                _ => ""
+                            };
+                            var aplicaA = c.TipoComision switch
+                            {
+                                "Global" => "Todos",
+                                "PorVendedor" => c.Vendedor?.NombreCompleto ?? "—",
+                                "PorCategoria" => c.Categoria?.Nombre ?? "—",
+                                "Escalonado" => $"${c.MontoMinimo:N0} - ${c.MontoMaximo:N0}",
+                                _ => "—"
+                            };
+                            <tr>
+                                <td><span class="badge @badgeClass">@c.TipoComision</span></td>
+                                <td>@aplicaA</td>
+                                <td style="font-weight: 600;">@c.Porcentaje%</td>
+                                <td style="font-size: 0.8rem; color: #888;">@c.FechaInicio.ToString("dd/MM/yy")</td>
+                                <td>
+                                    <form method="post" asp-action="EliminarConfiguracionComision" style="display: inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@c.ConfiguracionId" />
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar esta configuración?')"><i class="fas fa-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="empty-state"><i class="fas fa-cog" style="font-size: 2rem; opacity: 0.3;"></i><p>No hay configuraciones activas</p><p style="font-size: 0.85rem;">Se usará 10% por defecto</p></div>
+            }
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 1.5rem;">
+        <div class="card-header"><h3 class="card-title"><i class="fas fa-info-circle"></i> Prioridad de Comisiones</h3></div>
+        <div class="card-body">
+            <ol style="margin: 1rem 0; padding-left: 1.5rem; line-height: 2;">
+                <li><span class="badge badge-vendedor">Por Vendedor</span> — Si el vendedor tiene configuración específica</li>
+                <li><span class="badge badge-categoria">Por Categoría</span> — Si la categoría del producto tiene configuración</li>
+                <li><span class="badge badge-escalonado">Escalonado</span> — Según el volumen de ventas del vendedor</li>
+                <li><span class="badge badge-global">Global</span> — Configuración por defecto para todos</li>
+                <li>Si no hay ninguna configuración, se usa <strong>10%</strong> por defecto</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
+<script>
+    var tipoSelect = document.getElementById('tipoComision');
+    var grupoVendedor = document.getElementById('grupoVendedor');
+    var grupoCategoria = document.getElementById('grupoCategoria');
+    var grupoEscalonado = document.getElementById('grupoEscalonado');
+
+    tipoSelect.addEventListener('change', function() {
+        grupoVendedor.style.display = this.value === 'PorVendedor' ? 'block' : 'none';
+        grupoCategoria.style.display = this.value === 'PorCategoria' ? 'block' : 'none';
+        grupoEscalonado.style.display = this.value === 'Escalonado' ? 'block' : 'none';
+    });
+</script>
+
+@if (TempData["Success"] != null)
+{
+    <script>alert('@TempData["Success"]');</script>
+}
+@if (TempData["Error"] != null)
+{
+    <script>alert('Error: @TempData["Error"]');</script>
+}

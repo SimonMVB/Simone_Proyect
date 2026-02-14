@@ -1,0 +1,513 @@
+@using System.Globalization
+@{
+    ViewData["Title"] = "Gestión de Comisiones";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var pagos = ViewBag.Pagos as List<Simone.Models.PagoComision> ?? new();
+    var totales = ViewBag.Totales as Dictionary<string, decimal> ?? new();
+    var filtroEstado = ViewBag.FiltroEstado as string ?? "";
+    var filtroAnio = (int)(ViewBag.FiltroAnio ?? DateTime.Now.Year);
+    var culture = new CultureInfo("es-EC");
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .page-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-title {
+        font-size: 1.6rem;
+        color: #4B0082;
+        margin: 0;
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .summary-card {
+        background: #fff;
+        padding: 1.25rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        text-align: center;
+        border-left: 4px solid #4B0082;
+    }
+
+        .summary-card.warning {
+            border-color: #ffc107;
+        }
+
+        .summary-card.success {
+            border-color: #28a745;
+        }
+
+        .summary-card.info {
+            border-color: #17a2b8;
+        }
+
+    .summary-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #333;
+    }
+
+    .summary-label {
+        font-size: 0.8rem;
+        color: #888;
+        text-transform: uppercase;
+    }
+
+    .filters-bar {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        align-items: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+        .filters-bar select {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .btn-primary {
+        background: #4B0082;
+        color: #fff;
+    }
+
+    .btn-outline {
+        background: #fff;
+        border: 1px solid #ddd;
+        color: #333;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: #fff;
+    }
+
+    .btn-danger {
+        background: #dc3545;
+        color: #fff;
+    }
+
+    .btn-sm {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+    }
+
+    .table-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background: #4B0082;
+        color: #fff;
+        padding: 0.85rem 1rem;
+        text-align: left;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    td {
+        padding: 0.85rem 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+    }
+
+    tr:hover td {
+        background: #fafafa;
+    }
+
+    .vendor-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .vendor-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4B0082, #8B5CF6);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .amount {
+        font-weight: 600;
+    }
+
+    .commission {
+        font-weight: 700;
+        color: #D4AF37;
+    }
+
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: rgba(40,167,69,0.1);
+        color: #28a745;
+    }
+
+    .badge-warning {
+        background: rgba(255,193,7,0.15);
+        color: #856404;
+    }
+
+    .badge-info {
+        background: rgba(23,162,184,0.1);
+        color: #17a2b8;
+    }
+
+    .badge-danger {
+        background: rgba(220,53,69,0.1);
+        color: #dc3545;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.35rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #888;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .modal.active {
+            display: flex;
+        }
+
+    .modal-content {
+        background: #fff;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 450px;
+        padding: 1.5rem;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .modal-title {
+        font-size: 1.2rem;
+        color: #4B0082;
+        margin: 0;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #888;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.6rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+</style>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-hand-holding-usd"></i> Gestión de Comisiones</h1>
+        <div style="display: flex; gap: 0.5rem;">
+            <a href="@Url.Action("ExportarComisiones", new { anio = filtroAnio })" class="btn btn-outline"><i class="fas fa-file-csv"></i> Exportar</a>
+            <a href="@Url.Action("ConfiguracionComisiones")" class="btn btn-outline"><i class="fas fa-cog"></i> Configurar %</a>
+            <a href="@Url.Action("Index")" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </div>
+
+    <div class="summary-cards">
+        <div class="summary-card warning">
+            <div class="summary-value">@((totales.GetValueOrDefault("Pendiente", 0) + totales.GetValueOrDefault("Aprobado", 0)).ToString("C0", culture))</div>
+            <div class="summary-label">Pendientes</div>
+        </div>
+        <div class="summary-card success">
+            <div class="summary-value">@totales.GetValueOrDefault("Pagado", 0).ToString("C0", culture)</div>
+            <div class="summary-label">Pagadas</div>
+        </div>
+        <div class="summary-card info">
+            <div class="summary-value">@pagos.Count</div>
+            <div class="summary-label">Total Liquidaciones</div>
+        </div>
+    </div>
+
+    <form method="get" class="filters-bar">
+        <select name="estado" onchange="this.form.submit()">
+            <option value="">Todos los estados</option>
+            @{
+                var estados = new[] { "Pendiente", "Aprobado", "Pagado", "Cancelado" };
+            }
+            @foreach (var e in estados)
+            {
+                if (filtroEstado == e)
+                {
+                    <option value="@e" selected>@e</option>
+                }
+                else
+                {
+                    <option value="@e">@e</option>
+                }
+            }
+        </select>
+        <select name="anio" onchange="this.form.submit()">
+            @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 2; y--)
+            {
+                if (y == filtroAnio)
+                {
+                    <option value="@y" selected>@y</option>
+                }
+                else
+                {
+                    <option value="@y">@y</option>
+                }
+            }
+        </select>
+    </form>
+
+    <div class="table-card">
+        @if (pagos.Any())
+        {
+            <table>
+                <thead>
+                    <tr><th>Vendedor</th><th>Período</th><th>Ventas</th><th>%</th><th>Comisión</th><th>Final</th><th>Estado</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in pagos)
+                    {
+                        var iniciales = p.Vendedor != null ? string.Join("", p.Vendedor.NombreCompleto.Split(' ').Take(2).Select(x => x[0])) : "??";
+                        <tr data-pago-id="@p.PagoId">
+                            <td>
+                                <div class="vendor-info">
+                                    <div class="vendor-avatar">@iniciales</div>
+                                    <div>
+                                        <div style="font-weight: 600;">@(p.Vendedor?.NombreCompleto ?? "—")</div>
+                                        <div style="font-size: 0.75rem; color: #888;">@(p.Vendedor?.Email)</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div style="font-weight: 500;">@p.PeriodoNombre</div>
+                                <div style="font-size: 0.75rem; color: #888;">@p.RangoFechas</div>
+                            </td>
+                            <td class="amount">@p.MontoVentas.ToString("C0", culture)</td>
+                            <td>@p.PorcentajeAplicado%</td>
+                            <td>@p.MontoComision.ToString("C2", culture)</td>
+                            <td class="commission">@p.MontoFinal.ToString("C2", culture)</td>
+                            <td>
+                                <span class="badge badge-@p.EstadoClase"><i class="@p.EstadoIcono"></i> @p.Estado</span>
+                                @if (p.FechaPago.HasValue)
+                                {
+                                    <div style="font-size: 0.7rem; color: #888; margin-top: 0.25rem;">@p.FechaPago.Value.ToString("dd/MM/yy")</div>
+                                }
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    @if (p.Estado == "Pendiente")
+                                    {
+                                        <button class="btn btn-success btn-sm btn-aprobar" data-id="@p.PagoId"><i class="fas fa-check"></i></button>
+                                    }
+                                    @if (p.Estado == "Pendiente" || p.Estado == "Aprobado")
+                                    {
+                                        <button class="btn btn-primary btn-sm btn-pagar" data-id="@p.PagoId" data-monto="@p.MontoFinal"><i class="fas fa-dollar-sign"></i></button>
+                                        <button class="btn btn-danger btn-sm btn-cancelar" data-id="@p.PagoId"><i class="fas fa-times"></i></button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state"><i class="fas fa-file-invoice-dollar" style="font-size: 3rem; opacity: 0.3;"></i><h3>No hay liquidaciones</h3></div>
+        }
+    </div>
+</div>
+
+<div id="modalPagar" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title"><i class="fas fa-dollar-sign"></i> Registrar Pago</h3>
+            <button class="modal-close" onclick="cerrarModal()">&times;</button>
+        </div>
+        <form id="formPagar">
+            <input type="hidden" name="pagoId" id="pagoIdInput" />
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label>Monto a pagar</label>
+                <input type="text" id="montoDisplay" readonly style="background: #f5f5f5; font-weight: bold;" />
+            </div>
+            <div class="form-group">
+                <label>Método de pago *</label>
+                <select name="metodoPago" required>
+                    <option value="">Seleccionar...</option>
+                    <option value="Transferencia">Transferencia Bancaria</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="PayPal">PayPal</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Banco/Entidad</label>
+                <input type="text" name="banco" placeholder="Banco Pichincha, etc." />
+            </div>
+            <div class="form-group">
+                <label>Número de comprobante</label>
+                <input type="text" name="comprobante" placeholder="Referencia de transacción" />
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-outline" onclick="cerrarModal()">Cancelar</button>
+                <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Confirmar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.btn-aprobar').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            if (!confirm('¿Aprobar esta liquidación?')) return;
+            var id = this.dataset.id;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var resp = await fetch('@Url.Action("AprobarPago")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'pagoId=' + id + '&__RequestVerificationToken=' + encodeURIComponent(token)
+            });
+            var data = await resp.json();
+            alert(data.message);
+            if (data.success) location.reload();
+        });
+    });
+
+    document.querySelectorAll('.btn-cancelar').forEach(function(btn) {
+        btn.addEventListener('click', async function() {
+            var motivo = prompt('Motivo de cancelación:');
+            if (!motivo) return;
+            var id = this.dataset.id;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            var resp = await fetch('@Url.Action("CancelarPago")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'pagoId=' + id + '&motivo=' + encodeURIComponent(motivo) + '&__RequestVerificationToken=' + encodeURIComponent(token)
+            });
+            var data = await resp.json();
+            alert(data.message);
+            if (data.success) location.reload();
+        });
+    });
+
+    document.querySelectorAll('.btn-pagar').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            document.getElementById('pagoIdInput').value = this.dataset.id;
+            document.getElementById('montoDisplay').value = '$' + parseFloat(this.dataset.monto).toFixed(2);
+            document.getElementById('modalPagar').classList.add('active');
+        });
+    });
+
+    function cerrarModal() { document.getElementById('modalPagar').classList.remove('active'); }
+
+    document.getElementById('formPagar').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var formData = new FormData(this);
+        var params = new URLSearchParams(formData).toString();
+        var resp = await fetch('@Url.Action("MarcarPagado")', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: params
+        });
+        var data = await resp.json();
+        alert(data.message);
+        if (data.success) location.reload();
+    });
+</script>

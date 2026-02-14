@@ -60,6 +60,12 @@ namespace Simone.Data
         // ✅ Variantes de producto (Color+Talla)
         public DbSet<ProductoVariante> ProductoVariantes { get; set; }
 
+        // ==================== VENTAS Y COMISIONES ====================
+        public DbSet<ConfiguracionComision> ConfiguracionesComision { get; set; } = null!;
+        public DbSet<PagoComision> PagosComision { get; set; } = null!;
+        public DbSet<PagoComisionDetalle> PagosComisionDetalle { get; set; } = null!;
+        public DbSet<PedidoHistorial> PedidosHistorial { get; set; } = null!;
+
         // ==================== ATRIBUTOS DINÁMICOS (Fusionado) ====================
         // ❌ ELIMINADO: DbSet<Categoria> CategoriasEnterprise (ahora todo está en Categorias)
 
@@ -597,7 +603,142 @@ namespace Simone.Data
                 entity.Ignore(e => e.EstaVacio);
                 entity.Ignore(e => e.EsObligatorio);
             });
+            // ------------------------------------------------------------
+            // ⭐ CONFIGURACIÓN COMISIONES
+            // ------------------------------------------------------------
+            modelBuilder.Entity<ConfiguracionComision>(entity =>
+            {
+                entity.ToTable("ConfiguracionesComision");
+                entity.HasKey(e => e.ConfiguracionId);
 
+                entity.HasOne(e => e.Vendedor)
+                      .WithMany()
+                      .HasForeignKey(e => e.VendedorId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Categoria)
+                      .WithMany()
+                      .HasForeignKey(e => e.CategoriaId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(e => e.Porcentaje).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.MontoMinimo).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.MontoMaximo).HasColumnType("decimal(18,2)");
+
+                entity.Ignore(e => e.EstaVigente);
+                entity.Ignore(e => e.TipoDescripcion);
+                entity.Ignore(e => e.PorcentajeTexto);
+            });
+
+            // ------------------------------------------------------------
+            // ⭐ PAGO COMISIONES
+            // ------------------------------------------------------------
+            modelBuilder.Entity<PagoComision>(entity =>
+            {
+                entity.ToTable("PagosComision");
+                entity.HasKey(e => e.PagoId);
+
+                entity.HasOne(e => e.Vendedor)
+                      .WithMany()
+                      .HasForeignKey(e => e.VendedorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.MontoVentas).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.MontoComision).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PorcentajeAplicado).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.Deducciones).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Bonificaciones).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.MontoFinal).HasColumnType("decimal(18,2)");
+
+                entity.Ignore(e => e.PeriodoNombre);
+                entity.Ignore(e => e.RangoFechas);
+                entity.Ignore(e => e.EstaPendiente);
+                entity.Ignore(e => e.EstaPagado);
+                entity.Ignore(e => e.EstadoClase);
+                entity.Ignore(e => e.EstadoIcono);
+            });
+
+            modelBuilder.Entity<PagoComisionDetalle>(entity =>
+            {
+                entity.ToTable("PagosComisionDetalle");
+                entity.HasKey(e => e.DetalleId);
+
+                entity.HasOne(e => e.Pago)
+                      .WithMany(p => p.Detalles)
+                      .HasForeignKey(e => e.PagoId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Pedido)
+                      .WithMany()
+                      .HasForeignKey(e => e.PedidoId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.MontoPedido).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ComisionPedido).HasColumnType("decimal(18,2)");
+            });
+
+            // ------------------------------------------------------------
+            // ⭐ PEDIDO HISTORIAL
+            // ------------------------------------------------------------
+            modelBuilder.Entity<PedidoHistorial>(entity =>
+            {
+                entity.ToTable("PedidosHistorial");
+                entity.HasKey(e => e.HistorialId);
+
+                entity.HasOne(e => e.Pedido)
+                      .WithMany(p => p.Historial)
+                      .HasForeignKey(e => e.PedidoID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Usuario)
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ------------------------------------------------------------
+            // ⭐ PEDIDO (Mejorado)
+            // ------------------------------------------------------------
+            modelBuilder.Entity<Pedido>(entity =>
+            {
+                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CostoEnvio).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Descuento).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Impuestos).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Total).HasColumnType("decimal(18,2)");
+
+                entity.Ignore(e => e.CantidadProductos);
+                entity.Ignore(e => e.CantidadItems);
+                entity.Ignore(e => e.EstaPagado);
+                entity.Ignore(e => e.EstaCancelado);
+                entity.Ignore(e => e.PuedeCancelarse);
+                entity.Ignore(e => e.PuedeEnviarse);
+                entity.Ignore(e => e.EstadoPedidoClase);
+                entity.Ignore(e => e.EstadoPagoClase);
+                entity.Ignore(e => e.EstadoPedidoIcono);
+                entity.Ignore(e => e.DiasDesdeCreacion);
+            });
+
+            // ------------------------------------------------------------
+            // ⭐ DETALLES PEDIDO (Mejorado)
+            // ------------------------------------------------------------
+            modelBuilder.Entity<DetallesPedido>(entity =>
+            {
+                entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PrecioOriginal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Descuento).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PorcentajeComision).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.MontoComision).HasColumnType("decimal(18,2)");
+
+                entity.Ignore(e => e.TieneDescuento);
+                entity.Ignore(e => e.PorcentajeDescuento);
+                entity.Ignore(e => e.EsDevolucion);
+                entity.Ignore(e => e.EstaCancelado);
+                entity.Ignore(e => e.EsNormal);
+                entity.Ignore(e => e.NombreMostrar);
+                entity.Ignore(e => e.DescripcionCompleta);
+            });
             // ==================== FIN CONFIGURACIÓN ====================
         }
     }

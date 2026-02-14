@@ -1,0 +1,641 @@
+@using System.Globalization
+@{
+    ViewData["Title"] = "Panel de Ventas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var stats = ViewBag.Stats as Simone.Services.EstadisticasVentas;
+    var topVendedores = ViewBag.TopVendedores as List<Simone.Services.TopVendedor> ?? new();
+    var ultimosPedidos = ViewBag.UltimosPedidos as List<Simone.Models.Pedido> ?? new();
+    var comisionesPendientes = ViewBag.ComisionesPendientes as List<Simone.Models.PagoComision> ?? new();
+    var ventasPorDia = ViewBag.VentasPorDia as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
+
+    var mesActual = (int)(ViewBag.MesActual ?? DateTime.Now.Month);
+    var anioActual = (int)(ViewBag.AnioActual ?? DateTime.Now.Year);
+    var nombreMes = ViewBag.NombreMes as string ?? "";
+
+    var culture = new CultureInfo("es-EC");
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-purple: #4B0082;
+        --primary-gold: #D4AF37;
+        --success: #28a745;
+        --warning: #ffc107;
+        --danger: #dc3545;
+        --info: #17a2b8;
+        --dark: #1a1a2e;
+        --light-bg: #f8f9fa;
+        --card-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background: var(--light-bg);
+    }
+
+    h1, h2, h3, h4, h5 {
+        font-family: 'Playfair Display', serif;
+    }
+
+    .dashboard-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .dashboard-title {
+        font-size: 1.8rem;
+        color: var(--primary-purple);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .period-selector {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+        .period-selector select {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+    .btn-export {
+        background: var(--primary-purple);
+        color: #fff;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+        .btn-export:hover {
+            background: #5a0f9e;
+            transform: translateY(-2px);
+            color: #fff;
+        }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--primary-purple);
+        }
+
+        .stat-card.gold::before {
+            background: var(--primary-gold);
+        }
+
+        .stat-card.success::before {
+            background: var(--success);
+        }
+
+        .stat-card.warning::before {
+            background: var(--warning);
+        }
+
+        .stat-card.info::before {
+            background: var(--info);
+        }
+
+    .stat-icon {
+        font-size: 2rem;
+        opacity: 0.15;
+        position: absolute;
+        right: 1rem;
+        top: 1rem;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--dark);
+        margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #666;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 1.1rem;
+        color: var(--primary-purple);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .card-link {
+        color: var(--primary-purple);
+        text-decoration: none;
+        font-size: 0.85rem;
+    }
+
+        .card-link:hover {
+            text-decoration: underline;
+        }
+
+    .chart-container {
+        height: 250px;
+        position: relative;
+    }
+
+    .mini-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .mini-table th {
+            text-align: left;
+            padding: 0.75rem 0.5rem;
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            border-bottom: 1px solid #eee;
+        }
+
+        .mini-table td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid #f5f5f5;
+            vertical-align: middle;
+        }
+
+        .mini-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .mini-table tr:hover td {
+            background: #fafafa;
+        }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: rgba(40,167,69,0.1);
+        color: var(--success);
+    }
+
+    .badge-warning {
+        background: rgba(255,193,7,0.15);
+        color: #856404;
+    }
+
+    .badge-info {
+        background: rgba(23,162,184,0.1);
+        color: var(--info);
+    }
+
+    .badge-danger {
+        background: rgba(220,53,69,0.1);
+        color: var(--danger);
+    }
+
+    .badge-secondary {
+        background: #eee;
+        color: #666;
+    }
+
+    .top-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+        .top-item:last-child {
+            border-bottom: none;
+        }
+
+    .top-rank {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--primary-purple);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+        .top-rank.gold {
+            background: var(--primary-gold);
+        }
+
+        .top-rank.silver {
+            background: #adb5bd;
+        }
+
+        .top-rank.bronze {
+            background: #cd7f32;
+        }
+
+    .top-info {
+        flex: 1;
+    }
+
+    .top-name {
+        font-weight: 600;
+        color: var(--dark);
+        font-size: 0.95rem;
+    }
+
+    .top-meta {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .top-value {
+        font-weight: 700;
+        color: var(--primary-purple);
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+
+    .quick-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid #eee;
+        background: #fff;
+        text-decoration: none;
+        color: var(--dark);
+        transition: all 0.2s;
+    }
+
+        .quick-btn:hover {
+            border-color: var(--primary-purple);
+            background: rgba(75,0,130,0.02);
+            transform: translateY(-2px);
+        }
+
+        .quick-btn i {
+            font-size: 1.5rem;
+            color: var(--primary-purple);
+            margin-bottom: 0.5rem;
+        }
+
+        .quick-btn span {
+            font-size: 0.85rem;
+        }
+</style>
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-chart-line"></i> Panel de Ventas
+        </h1>
+        <div class="period-selector">
+            <form method="get" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select name="mes" onchange="this.form.submit()">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        if (m == mesActual)
+                        {
+                            <option value="@m" selected>@(new DateTime(2000, m, 1).ToString("MMMM", culture))</option>
+                        }
+                        else
+                        {
+                            <option value="@m">@(new DateTime(2000, m, 1).ToString("MMMM", culture))</option>
+                        }
+                    }
+                </select>
+                <select name="anio" onchange="this.form.submit()">
+                    @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 2; y--)
+                    {
+                        if (y == anioActual)
+                        {
+                            <option value="@y" selected>@y</option>
+                        }
+                        else
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    }
+                </select>
+            </form>
+            <a href="@Url.Action("ExportarVentas", new { mes = mesActual, anio = anioActual })" class="btn-export">
+                <i class="fas fa-file-csv"></i> Exportar
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <i class="fas fa-dollar-sign stat-icon"></i>
+            <div class="stat-value">@(stats?.TotalVentas.ToString("C0", culture) ?? "$0")</div>
+            <div class="stat-label">Ventas del Mes</div>
+        </div>
+        <div class="stat-card gold">
+            <i class="fas fa-coins stat-icon"></i>
+            <div class="stat-value">@(stats?.TotalComisiones.ToString("C0", culture) ?? "$0")</div>
+            <div class="stat-label">Mi Comisión</div>
+        </div>
+        <div class="stat-card info">
+            <i class="fas fa-shopping-cart stat-icon"></i>
+            <div class="stat-value">@(stats?.CantidadPedidos ?? 0)</div>
+            <div class="stat-label">Pedidos</div>
+        </div>
+        <div class="stat-card success">
+            <i class="fas fa-store stat-icon"></i>
+            <div class="stat-value">@(stats?.VendedoresActivos ?? 0)</div>
+            <div class="stat-label">Vendedores Activos</div>
+        </div>
+        <div class="stat-card warning">
+            <i class="fas fa-receipt stat-icon"></i>
+            <div class="stat-value">@(stats?.TicketPromedio.ToString("C0", culture) ?? "$0")</div>
+            <div class="stat-label">Ticket Promedio</div>
+        </div>
+    </div>
+
+    <div class="content-grid">
+        <div>
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-chart-area"></i> Ventas de @nombreMes @anioActual</h3>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="ventasChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-clock"></i> Últimos Pedidos</h3>
+                    <a href="@Url.Action("Pedidos")" class="card-link">Ver todos →</a>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <table class="mini-table">
+                        <thead>
+                            <tr>
+                                <th>Orden</th>
+                                <th>Cliente</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Pago</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ultimosPedidos.Any())
+                            {
+                                @foreach (var p in ultimosPedidos)
+                                {
+                                    <tr>
+                                        <td>
+                                            <a href="@Url.Action("DetallePedido", new { id = p.PedidoID })" style="color: var(--primary-purple); font-weight: 600;">
+                                                @(p.NumeroOrden ?? $"#{p.PedidoID}")
+                                            </a>
+                                            <div style="font-size: 0.75rem; color: #888;">@p.FechaPedido.ToString("dd/MM HH:mm")</div>
+                                        </td>
+                                        <td>
+                                            @(p.NombreCliente ?? p.Usuario?.NombreCompleto ?? "—")
+                                            <div style="font-size: 0.75rem; color: #888;">@(p.EmailCliente ?? p.Usuario?.Email)</div>
+                                        </td>
+                                        <td style="font-weight: 600;">@p.Total.ToString("C2", culture)</td>
+                                        <td><span class="badge badge-@p.EstadoPedidoClase">@p.EstadoPedido</span></td>
+                                        <td><span class="badge badge-@p.EstadoPagoClase">@p.EstadoPago</span></td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr><td colspan="5" style="text-align: center; padding: 2rem; color: #888;">No hay pedidos en este período</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-bolt"></i> Acciones Rápidas</h3>
+                </div>
+                <div class="card-body">
+                    <div class="quick-actions">
+                        <a href="@Url.Action("Vendedores")" class="quick-btn">
+                            <i class="fas fa-users"></i>
+                            <span>Por Vendedor</span>
+                        </a>
+                        <a href="@Url.Action("Comisiones")" class="quick-btn">
+                            <i class="fas fa-hand-holding-usd"></i>
+                            <span>Comisiones</span>
+                        </a>
+                        <a href="@Url.Action("ConfiguracionComisiones")" class="quick-btn">
+                            <i class="fas fa-cog"></i>
+                            <span>Configuración</span>
+                        </a>
+                        <a href="@Url.Action("Pedidos")" class="quick-btn">
+                            <i class="fas fa-list"></i>
+                            <span>Todos los Pedidos</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-trophy"></i> Top Vendedores</h3>
+                    <a href="@Url.Action("Vendedores")" class="card-link">Ver todos →</a>
+                </div>
+                <div class="card-body">
+                    @if (topVendedores.Any())
+                    {
+                        @for (int i = 0; i < topVendedores.Count; i++)
+                        {
+                            var v = topVendedores[i];
+                            var rankClass = i == 0 ? "gold" : (i == 1 ? "silver" : (i == 2 ? "bronze" : ""));
+                            <div class="top-item">
+                                <div class="top-rank @rankClass">@(i + 1)</div>
+                                <div class="top-info">
+                                    <div class="top-name">@v.NombreVendedor</div>
+                                    <div class="top-meta">@v.CantidadPedidos pedidos · @v.CantidadProductos productos</div>
+                                </div>
+                                <div class="top-value">@v.TotalVentas.ToString("C0", culture)</div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p style="text-align: center; color: #888; padding: 1rem;">Sin ventas en el período</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-clock"></i> Comisiones Pendientes</h3>
+                    <a href="@Url.Action("Comisiones")" class="card-link">Ver todas →</a>
+                </div>
+                <div class="card-body">
+                    @if (comisionesPendientes.Any())
+                    {
+                        @foreach (var c in comisionesPendientes)
+                        {
+                            <div class="top-item">
+                                <div class="top-info">
+                                    <div class="top-name">@(c.Vendedor?.NombreCompleto ?? "Vendedor")</div>
+                                    <div class="top-meta">@c.PeriodoNombre · <span class="badge badge-@c.EstadoClase">@c.Estado</span></div>
+                                </div>
+                                <div class="top-value">@c.MontoFinal.ToString("C0", culture)</div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p style="text-align: center; color: #888; padding: 1rem;">Sin comisiones pendientes</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        var ventasData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                    ventasPorDia.Select(v => new { dia = (int)v.Dia, total = (decimal)v.Total })
+            ));
+
+    var diasMes = @DateTime.DaysInMonth(anioActual, mesActual);
+    var labels = Array.from({length: diasMes}, (_, i) => i + 1);
+    var data = labels.map(function(d) {
+        var found = ventasData.find(function(v) { return v.dia === d; });
+        return found ? found.total : 0;
+    });
+
+        var ctx = document.getElementById('ventasChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Ventas ($)',
+                    data: data,
+                    borderColor: '#4B0082',
+                    backgroundColor: 'rgba(75, 0, 130, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#4B0082'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '$' + value.toLocaleString();
+                            }
+                        }
+                    },
+                    x: {
+                        title: { display: true, text: 'Día del mes' }
+                    }
+                }
+            }
+        });
+    </script>
+}

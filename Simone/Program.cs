@@ -145,6 +145,12 @@ builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<LogService>();
 
+// ────────────────────────────────────────────────────────────────────────────
+// VENTAS Y COMISIONES
+// ────────────────────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ComisionService>();
+
+
 // ============================================================================
 // 7) CONFIGURACIÓN DE MVC Y MODEL BINDERS
 // ============================================================================

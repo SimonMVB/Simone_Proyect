@@ -59,6 +59,7 @@
   <ItemGroup>
     <Folder Include="Data\Migrations\" />
     <Folder Include="Microsoft\AspNetCore\Identity\UI\" />
+    <Folder Include="Views\AdminVentas\" />
     <Folder Include="Views\NewFolder\" />
     <Folder Include="Views\Ofertas\" />
     <Folder Include="wwwroot\images\Home\" />

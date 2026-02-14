@@ -1,0 +1,344 @@
+@using System.Globalization
+@{
+    ViewData["Title"] = "Ventas por Vendedor";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var comisiones = ViewBag.Comisiones as List<Simone.Services.ResumenComisionVendedor> ?? new();
+    var pagosExistentes = ViewBag.PagosExistentes as List<Simone.Models.PagoComision> ?? new();
+    var mesActual = (int)(ViewBag.MesActual ?? DateTime.Now.Month);
+    var anioActual = (int)(ViewBag.AnioActual ?? DateTime.Now.Year);
+    var nombreMes = ViewBag.NombreMes as string ?? "";
+    var culture = new CultureInfo("es-EC");
+
+    var hoy = DateTime.Now;
+    var quincenaActual = hoy.Day <= 15 ? 1 : 2;
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    .page-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .page-title {
+        font-size: 1.6rem;
+        color: #4B0082;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+
+    .btn-outline {
+        background: #fff;
+        border: 1px solid #ddd;
+        color: #333;
+    }
+
+    .btn-success {
+        background: #28a745;
+        color: #fff;
+    }
+
+    .btn-sm {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .filters select {
+        padding: 0.5rem 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .summary-card {
+        background: #fff;
+        padding: 1rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        text-align: center;
+    }
+
+    .summary-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #4B0082;
+    }
+
+    .summary-label {
+        font-size: 0.8rem;
+        color: #888;
+        text-transform: uppercase;
+    }
+
+    .table-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .table-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .table-title {
+        font-size: 1.1rem;
+        color: #4B0082;
+        margin: 0;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th {
+        background: #f8f9fa;
+        padding: 0.85rem 1rem;
+        text-align: left;
+        font-size: 0.8rem;
+        color: #666;
+        text-transform: uppercase;
+        border-bottom: 2px solid #eee;
+    }
+
+    td {
+        padding: 1rem;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+    }
+
+    tr:hover td {
+        background: #fafafa;
+    }
+
+    .vendor-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .vendor-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4B0082, #8B5CF6);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+    .vendor-name {
+        font-weight: 600;
+        color: #333;
+    }
+
+    .vendor-email {
+        font-size: 0.8rem;
+        color: #888;
+    }
+
+    .amount {
+        font-weight: 600;
+        color: #4B0082;
+    }
+
+    .commission {
+        font-weight: 700;
+        color: #D4AF37;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.6rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .badge-success {
+        background: rgba(40,167,69,0.1);
+        color: #28a745;
+    }
+
+    .badge-info {
+        background: rgba(23,162,184,0.1);
+        color: #17a2b8;
+    }
+
+    .badge-secondary {
+        background: #eee;
+        color: #666;
+    }
+
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        color: #888;
+    }
+</style>
+
+<div class="page-container">
+    <div class="page-header">
+        <h1 class="page-title"><i class="fas fa-users"></i> Ventas por Vendedor</h1>
+        <div class="filters" style="display: flex; gap: 0.5rem; align-items: center;">
+            <form method="get" style="display: flex; gap: 0.5rem;">
+                <select name="mes" onchange="this.form.submit()">
+                    @for (int m = 1; m <= 12; m++)
+                    {
+                        if (m == mesActual)
+                        {
+                            <option value="@m" selected>@(new DateTime(2000, m, 1).ToString("MMMM", culture))</option>
+                        }
+                        else
+                        {
+                            <option value="@m">@(new DateTime(2000, m, 1).ToString("MMMM", culture))</option>
+                        }
+                    }
+                </select>
+                <select name="anio" onchange="this.form.submit()">
+                    @for (int y = DateTime.Now.Year; y >= DateTime.Now.Year - 2; y--)
+                    {
+                        if (y == anioActual)
+                        {
+                            <option value="@y" selected>@y</option>
+                        }
+                        else
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    }
+                </select>
+            </form>
+            <a href="@Url.Action("Index")" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Volver</a>
+        </div>
+    </div>
+
+    <div class="summary-cards">
+        <div class="summary-card"><div class="summary-value">@comisiones.Count</div><div class="summary-label">Vendedores</div></div>
+        <div class="summary-card"><div class="summary-value">@comisiones.Sum(c => c.MontoVentas).ToString("C0", culture)</div><div class="summary-label">Total Ventas</div></div>
+        <div class="summary-card"><div class="summary-value">@comisiones.Sum(c => c.CantidadPedidos)</div><div class="summary-label">Pedidos</div></div>
+        <div class="summary-card"><div class="summary-value">@comisiones.Sum(c => c.MontoComision).ToString("C0", culture)</div><div class="summary-label">Comisiones</div></div>
+    </div>
+
+    <div class="table-card">
+        <div class="table-header">
+            <h3 class="table-title">@nombreMes @anioActual</h3>
+            <span class="badge badge-info">Quincena actual: Q@quincenaActual</span>
+        </div>
+
+        @if (comisiones.Any())
+        {
+            <table>
+                <thead>
+                    <tr><th>Vendedor</th><th>Ventas</th><th>Pedidos</th><th>Productos</th><th>%</th><th>Comisión</th><th>Liquidaciones</th><th>Acciones</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in comisiones)
+                    {
+                        var iniciales = string.Join("", c.NombreVendedor.Split(' ').Take(2).Select(p => p[0]));
+                        var pagosVendedor = pagosExistentes.Where(p => p.VendedorId == c.VendedorId).ToList();
+                        var tieneQ1 = pagosVendedor.Any(p => p.NumeroQuincena == 1);
+                        var tieneQ2 = pagosVendedor.Any(p => p.NumeroQuincena == 2);
+                        <tr>
+                            <td><div class="vendor-info"><div class="vendor-avatar">@iniciales</div><div><div class="vendor-name">@c.NombreVendedor</div><div class="vendor-email">@c.EmailVendedor</div></div></div></td>
+                            <td class="amount">@c.MontoVentas.ToString("C2", culture)</td>
+                            <td>@c.CantidadPedidos</td>
+                            <td>@c.CantidadProductos</td>
+                            <td>@c.PorcentajeComision%</td>
+                            <td class="commission">@c.MontoComision.ToString("C2", culture)</td>
+                            <td>
+                                <span class="badge @(tieneQ1 ? "badge-success" : "badge-secondary")">Q1</span>
+                                <span class="badge @(tieneQ2 ? "badge-success" : "badge-secondary")">Q2</span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <a href="@Url.Action("DetalleVendedor", new { vendedorId = c.VendedorId, mes = mesActual, anio = anioActual })" class="btn btn-outline btn-sm"><i class="fas fa-eye"></i></a>
+                                    @if (!tieneQ1)
+                                    {
+                                        <form method="post" asp-action="GenerarLiquidacion" style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="vendedorId" value="@c.VendedorId" />
+                                            <input type="hidden" name="anio" value="@anioActual" />
+                                            <input type="hidden" name="mes" value="@mesActual" />
+                                            <input type="hidden" name="quincena" value="1" />
+                                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('¿Generar Q1?')"><i class="fas fa-file-invoice-dollar"></i> Q1</button>
+                                        </form>
+                                    }
+                                    @if (!tieneQ2)
+                                    {
+                                        <form method="post" asp-action="GenerarLiquidacion" style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="vendedorId" value="@c.VendedorId" />
+                                            <input type="hidden" name="anio" value="@anioActual" />
+                                            <input type="hidden" name="mes" value="@mesActual" />
+                                            <input type="hidden" name="quincena" value="2" />
+                                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('¿Generar Q2?')"><i class="fas fa-file-invoice-dollar"></i> Q2</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state"><i class="fas fa-chart-bar" style="font-size: 3rem; opacity: 0.3;"></i><h3>Sin ventas en este período</h3></div>
+        }
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <script>alert('@TempData["Success"]');</script>
+}
+@if (TempData["Error"] != null)
+{
+    <script>alert('Error: @TempData["Error"]');</script>
+}
