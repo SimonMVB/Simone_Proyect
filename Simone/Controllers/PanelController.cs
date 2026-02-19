@@ -91,6 +91,8 @@ namespace Simone.Controllers
         private const string CACHE_KEY_PROVEEDORES = "Proveedores_All";
         private const string CACHE_KEY_SUBCATEGORIAS_PREFIX = "Subcategorias_Vendor_";
         private const string CACHE_KEY_TIENDAS = "Tiendas_All";
+        private const string CACHE_KEY_HUBS = "Hubs_All";
+        private static readonly TimeSpan CACHE_DURATION_HUBS = TimeSpan.FromMinutes(30);
 
         private static readonly TimeSpan CACHE_DURATION_CATEGORIAS = TimeSpan.FromMinutes(30);
         private static readonly TimeSpan CACHE_DURATION_PROVEEDORES = TimeSpan.FromMinutes(30);
@@ -162,6 +164,32 @@ namespace Simone.Controllers
                     .ToListAsync(ct);
             }) ?? new List<SelectListItem>();
         }
+
+
+        private async Task<List<SelectListItem>> ObtenerHubsConCacheAsync(CancellationToken ct = default)
+        {
+            return await _cache.GetOrCreateAsync(CACHE_KEY_HUBS, async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = CACHE_DURATION_HUBS;
+                _logger.LogDebug("Cargando hubs desde BD (cache miss)");
+                return await _context.HubsEnvio.AsNoTracking()
+                    .Where(h => h.Activo)
+                    .OrderBy(h => h.Nombre)
+                    .Select(h => new SelectListItem { Value = h.HubId.ToString(), Text = h.Nombre })
+                    .ToListAsync(ct);
+            }) ?? new List<SelectListItem>();
+        }
+
+        private void InvalidarCacheHubs()
+        {
+            _cache.Remove(CACHE_KEY_HUBS);
+            _logger.LogDebug("Cache de hubs invalidado");
+        }
+
+
+
+
+
 
         private async Task<List<Categorias>> ObtenerCategoriasConCacheAsync()
         {
@@ -240,6 +268,474 @@ namespace Simone.Controllers
         }
 
         #endregion
+        #region Alianzas de Envío (Admin)
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> Alianzas(CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation("Listado de Alianzas solicitado");
+
+                var alianzas = await _context.AlianzasEnvio
+                    .AsNoTracking()
+                    .Include(a => a.Hub)
+                    .Include(a => a.Vendedores)
+                    .OrderBy(a => a.Hub.Nombre)
+                    .ThenBy(a => a.Nombre)
+                    .ToListAsync(ct);
+
+                var hubs = await _context.HubsEnvio
+                    .AsNoTracking()
+                    .Where(h => h.Activo)
+                    .OrderBy(h => h.Nombre)
+                    .ToListAsync(ct);
+
+                var tiendasSinAlianza = await _context.Vendedores
+                    .AsNoTracking()
+                    .Where(v => v.AlianzaId == null && v.HubId != null)
+                    .OrderBy(v => v.Nombre)
+                    .ToListAsync(ct);
+
+                ViewBag.Hubs = hubs;
+                ViewBag.TiendasSinAlianza = tiendasSinAlianza;
+
+                _logger.LogDebug("Alianzas cargadas: {Count}", alianzas.Count);
+                return View(alianzas);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar alianzas");
+                TempData["MensajeError"] = "Error al cargar la lista de alianzas.";
+                return View(new List<AlianzaEnvio>());
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearAlianza(string nombre, int hubId, string? descripcion, CancellationToken ct = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(nombre))
+                {
+                    TempData["MensajeError"] = "El nombre es obligatorio.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                var hub = await _context.HubsEnvio.FindAsync(new object[] { hubId }, ct);
+                if (hub == null)
+                {
+                    TempData["MensajeError"] = "Hub no válido.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                var alianza = new AlianzaEnvio
+                {
+                    Nombre = nombre.Trim(),
+                    HubId = hubId,
+                    Descripcion = descripcion?.Trim(),
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow
+                };
+
+                _context.AlianzasEnvio.Add(alianza);
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Alianza creada. AlianzaId: {AlianzaId}, Nombre: {Nombre}, Hub: {Hub}",
+                    alianza.AlianzaId, alianza.Nombre, hub.Nombre);
+                TempData["MensajeExito"] = $"Alianza '{alianza.Nombre}' creada correctamente.";
+
+                return RedirectToAction(nameof(Alianzas));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear alianza");
+                TempData["MensajeError"] = "Error al crear la alianza.";
+                return RedirectToAction(nameof(Alianzas));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarAlianza(int alianzaId, string nombre, int hubId, string? descripcion, bool activo, CancellationToken ct = default)
+        {
+            try
+            {
+                var alianza = await _context.AlianzasEnvio
+                    .Include(a => a.Vendedores)
+                    .FirstOrDefaultAsync(a => a.AlianzaId == alianzaId, ct);
+
+                if (alianza == null)
+                {
+                    TempData["MensajeError"] = "Alianza no encontrada.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                if (string.IsNullOrWhiteSpace(nombre))
+                {
+                    TempData["MensajeError"] = "El nombre es obligatorio.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                // Si cambia de Hub, verificar que no tenga tiendas
+                if (alianza.HubId != hubId && alianza.Vendedores.Any())
+                {
+                    TempData["MensajeError"] = "No se puede cambiar de Hub. La alianza tiene tiendas asignadas.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                alianza.Nombre = nombre.Trim();
+                alianza.HubId = hubId;
+                alianza.Descripcion = descripcion?.Trim();
+                alianza.Activo = activo;
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Alianza editada. AlianzaId: {AlianzaId}, Nombre: {Nombre}", alianza.AlianzaId, alianza.Nombre);
+                TempData["MensajeExito"] = $"Alianza '{alianza.Nombre}' actualizada correctamente.";
+
+                return RedirectToAction(nameof(Alianzas));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar alianza. AlianzaId: {AlianzaId}", alianzaId);
+                TempData["MensajeError"] = "Error al actualizar la alianza.";
+                return RedirectToAction(nameof(Alianzas));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarAlianza(int alianzaId, CancellationToken ct = default)
+        {
+            try
+            {
+                var alianza = await _context.AlianzasEnvio
+                    .Include(a => a.Vendedores)
+                    .FirstOrDefaultAsync(a => a.AlianzaId == alianzaId, ct);
+
+                if (alianza == null)
+                {
+                    TempData["MensajeError"] = "Alianza no encontrada.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                if (alianza.Vendedores.Any())
+                {
+                    TempData["MensajeError"] = $"No se puede eliminar. La alianza tiene {alianza.Vendedores.Count} tienda(s) asignada(s).";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                _context.AlianzasEnvio.Remove(alianza);
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogWarning("Alianza eliminada. AlianzaId: {AlianzaId}, Nombre: {Nombre}", alianza.AlianzaId, alianza.Nombre);
+                TempData["MensajeExito"] = $"Alianza '{alianza.Nombre}' eliminada correctamente.";
+
+                return RedirectToAction(nameof(Alianzas));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar alianza. AlianzaId: {AlianzaId}", alianzaId);
+                TempData["MensajeError"] = "Error al eliminar la alianza.";
+                return RedirectToAction(nameof(Alianzas));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarTiendaAlianza(int alianzaId, int vendedorId, CancellationToken ct = default)
+        {
+            try
+            {
+                var alianza = await _context.AlianzasEnvio
+                    .Include(a => a.Hub)
+                    .FirstOrDefaultAsync(a => a.AlianzaId == alianzaId, ct);
+
+                if (alianza == null)
+                {
+                    TempData["MensajeError"] = "Alianza no encontrada.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                var vendedor = await _context.Vendedores.FindAsync(new object[] { vendedorId }, ct);
+                if (vendedor == null)
+                {
+                    TempData["MensajeError"] = "Tienda no encontrada.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                // Asignar el mismo Hub de la alianza a la tienda
+                vendedor.HubId = alianza.HubId;
+                vendedor.AlianzaId = alianzaId;
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Tienda asignada a alianza. VendedorId: {VendedorId}, AlianzaId: {AlianzaId}",
+                    vendedorId, alianzaId);
+                TempData["MensajeExito"] = $"Tienda '{vendedor.Nombre}' asignada a la alianza '{alianza.Nombre}'.";
+
+                return RedirectToAction(nameof(Alianzas));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar tienda a alianza");
+                TempData["MensajeError"] = "Error al asignar la tienda.";
+                return RedirectToAction(nameof(Alianzas));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuitarTiendaAlianza(int vendedorId, CancellationToken ct = default)
+        {
+            try
+            {
+                var vendedor = await _context.Vendedores.FindAsync(new object[] { vendedorId }, ct);
+                if (vendedor == null)
+                {
+                    TempData["MensajeError"] = "Tienda no encontrada.";
+                    return RedirectToAction(nameof(Alianzas));
+                }
+
+                var nombreTienda = vendedor.Nombre;
+                vendedor.AlianzaId = null;
+                // Nota: No quitamos el HubId, la tienda sigue en el Hub pero sin alianza
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Tienda quitada de alianza. VendedorId: {VendedorId}", vendedorId);
+                TempData["MensajeExito"] = $"Tienda '{nombreTienda}' quitada de la alianza.";
+
+                return RedirectToAction(nameof(Alianzas));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al quitar tienda de alianza. VendedorId: {VendedorId}", vendedorId);
+                TempData["MensajeError"] = "Error al quitar la tienda.";
+                return RedirectToAction(nameof(Alianzas));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<JsonResult> ObtenerTiendasParaAlianza(int hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                // Tiendas que están en este Hub o sin Hub, y sin alianza
+                var tiendas = await _context.Vendedores
+                    .AsNoTracking()
+                    .Where(v => v.AlianzaId == null && (v.HubId == null || v.HubId == hubId))
+                    .OrderBy(v => v.Nombre)
+                    .Select(v => new { value = v.VendedorId, text = v.Nombre })
+                    .ToListAsync(ct);
+
+                return Json(new { success = true, tiendas });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener tiendas para alianza. HubId: {HubId}", hubId);
+                return Json(new { success = false, tiendas = new List<object>() });
+            }
+        }
+
+        #endregion
+
+        #region Hubs de Envío (Admin)
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> Hubs(CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation("Listado de Hubs solicitado");
+
+                var hubs = await _context.HubsEnvio
+                    .AsNoTracking()
+                    .Include(h => h.Vendedores)
+                    .Include(h => h.Responsables)
+                    .OrderBy(h => h.Nombre)
+                    .ToListAsync(ct);
+
+                _logger.LogDebug("Hubs cargados: {Count}", hubs.Count);
+                return View(hubs);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar hubs");
+                TempData["MensajeError"] = "Error al cargar la lista de hubs.";
+                return View(new List<HubEnvio>());
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearHub(string nombre, string provincia, string ciudad, string? direccion, string? telefono, CancellationToken ct = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(provincia) || string.IsNullOrWhiteSpace(ciudad))
+                {
+                    TempData["MensajeError"] = "Nombre, provincia y ciudad son obligatorios.";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                var hub = new HubEnvio
+                {
+                    Nombre = nombre.Trim(),
+                    Provincia = provincia.Trim(),
+                    Ciudad = ciudad.Trim(),
+                    Direccion = direccion?.Trim(),
+                    Telefono = telefono?.Trim(),
+                    Activo = true,
+                    FechaCreacion = DateTime.UtcNow
+                };
+
+                _context.HubsEnvio.Add(hub);
+                await _context.SaveChangesAsync(ct);
+
+                InvalidarCacheHubs();
+
+                _logger.LogInformation("Hub creado. HubId: {HubId}, Nombre: {Nombre}", hub.HubId, hub.Nombre);
+                TempData["MensajeExito"] = $"Hub '{hub.Nombre}' creado correctamente.";
+
+                return RedirectToAction(nameof(Hubs));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear hub");
+                TempData["MensajeError"] = "Error al crear el hub.";
+                return RedirectToAction(nameof(Hubs));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarHub(int hubId, string nombre, string provincia, string ciudad, string? direccion, string? telefono, bool activo, CancellationToken ct = default)
+        {
+            try
+            {
+                var hub = await _context.HubsEnvio.FindAsync(new object[] { hubId }, ct);
+                if (hub == null)
+                {
+                    TempData["MensajeError"] = "Hub no encontrado.";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                if (string.IsNullOrWhiteSpace(nombre) || string.IsNullOrWhiteSpace(provincia) || string.IsNullOrWhiteSpace(ciudad))
+                {
+                    TempData["MensajeError"] = "Nombre, provincia y ciudad son obligatorios.";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                hub.Nombre = nombre.Trim();
+                hub.Provincia = provincia.Trim();
+                hub.Ciudad = ciudad.Trim();
+                hub.Direccion = direccion?.Trim();
+                hub.Telefono = telefono?.Trim();
+                hub.Activo = activo;
+
+                await _context.SaveChangesAsync(ct);
+
+                InvalidarCacheHubs();
+
+                _logger.LogInformation("Hub editado. HubId: {HubId}, Nombre: {Nombre}", hub.HubId, hub.Nombre);
+                TempData["MensajeExito"] = $"Hub '{hub.Nombre}' actualizado correctamente.";
+
+                return RedirectToAction(nameof(Hubs));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar hub. HubId: {HubId}", hubId);
+                TempData["MensajeError"] = "Error al actualizar el hub.";
+                return RedirectToAction(nameof(Hubs));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarHub(int hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                var hub = await _context.HubsEnvio
+                    .Include(h => h.Vendedores)
+                    .Include(h => h.Responsables)
+                    .FirstOrDefaultAsync(h => h.HubId == hubId, ct);
+
+                if (hub == null)
+                {
+                    TempData["MensajeError"] = "Hub no encontrado.";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                if (hub.Vendedores.Any())
+                {
+                    TempData["MensajeError"] = $"No se puede eliminar. El hub tiene {hub.Vendedores.Count} tienda(s) asignada(s).";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                if (hub.Responsables.Any())
+                {
+                    TempData["MensajeError"] = $"No se puede eliminar. El hub tiene {hub.Responsables.Count} responsable(s) asignado(s).";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                _context.HubsEnvio.Remove(hub);
+                await _context.SaveChangesAsync(ct);
+
+                InvalidarCacheHubs();
+
+                _logger.LogWarning("Hub eliminado. HubId: {HubId}, Nombre: {Nombre}", hub.HubId, hub.Nombre);
+                TempData["MensajeExito"] = $"Hub '{hub.Nombre}' eliminado correctamente.";
+
+                return RedirectToAction(nameof(Hubs));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar hub. HubId: {HubId}", hubId);
+                TempData["MensajeError"] = "Error al eliminar el hub.";
+                return RedirectToAction(nameof(Hubs));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleHubActivo(int hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                var hub = await _context.HubsEnvio.FindAsync(new object[] { hubId }, ct);
+                if (hub == null)
+                {
+                    TempData["MensajeError"] = "Hub no encontrado.";
+                    return RedirectToAction(nameof(Hubs));
+                }
+
+                hub.Activo = !hub.Activo;
+                await _context.SaveChangesAsync(ct);
+
+                InvalidarCacheHubs();
+
+                var estado = hub.Activo ? "activado" : "desactivado";
+                _logger.LogInformation("Hub {Estado}. HubId: {HubId}", estado, hub.HubId);
+                TempData["MensajeExito"] = $"Hub '{hub.Nombre}' {estado}.";
+
+                return RedirectToAction(nameof(Hubs));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar estado del hub. HubId: {HubId}", hubId);
+                TempData["MensajeError"] = "Error al cambiar estado del hub.";
+                return RedirectToAction(nameof(Hubs));
+            }
+        }
+
+        #endregion
 
         #region Usuarios (Admin)
 
@@ -272,7 +768,8 @@ namespace Simone.Controllers
                     NombreCompleto = x.u.NombreCompleto,
                     Activo = x.u.Activo,
                     RolID = x.rolId,
-                    VendedorId = x.u.VendedorId
+                    VendedorId = x.u.VendedorId,
+                    HubResponsableId = x.u.HubResponsableId
                 }).ToListAsync(ct);
 
                 _logger.LogDebug("Usuarios cargados: {Count}", lista.Count);
@@ -282,6 +779,7 @@ namespace Simone.Controllers
                     .Select(r => new SelectListItem { Value = r.Id, Text = r.Name }).ToList();
                 ViewBag.Tiendas = tiendasList;
                 ViewBag.FiltroTiendaId = tiendaId ?? "";
+                ViewBag.Hubs = await ObtenerHubsConCacheAsync(ct);
                 return View();
             }
             catch (Exception ex)
@@ -393,7 +891,97 @@ namespace Simone.Controllers
                 return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
             }
         }
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarHubResponsable(string usuarioID, int hubID, string? returnTiendaId = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(usuarioID))
+                {
+                    TempData["MensajeError"] = "Usuario inválido.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
 
+                var user = await _userManager.FindByIdAsync(usuarioID);
+                if (user == null)
+                {
+                    TempData["MensajeError"] = "Usuario no encontrado.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                var hub = await _context.HubsEnvio.FindAsync(new object[] { hubID }, ct);
+                if (hub == null)
+                {
+                    TempData["MensajeError"] = "Hub no válido.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                user.HubResponsableId = hubID;
+                var res = await _userManager.UpdateAsync(user);
+
+                if (res.Succeeded)
+                {
+                    _logger.LogInformation("Hub asignado. UsuarioId: {UsuarioId}, HubId: {HubId}, Hub: {HubNombre}",
+                        user.Id, hubID, hub.Nombre);
+                    TempData["MensajeExito"] = $"Hub '{hub.Nombre}' asignado correctamente.";
+                }
+                else
+                {
+                    TempData["MensajeError"] = "No se pudo asignar el Hub.";
+                }
+
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar hub. UsuarioId: {UsuarioId}", usuarioID);
+                TempData["MensajeError"] = "Error inesperado al asignar el Hub.";
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> QuitarHubResponsable(string usuarioID, string? returnTiendaId = null)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(usuarioID))
+                {
+                    TempData["MensajeError"] = "Usuario inválido.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                var user = await _userManager.FindByIdAsync(usuarioID);
+                if (user == null)
+                {
+                    TempData["MensajeError"] = "Usuario no encontrado.";
+                    return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+                }
+
+                user.HubResponsableId = null;
+                var res = await _userManager.UpdateAsync(user);
+
+                if (res.Succeeded)
+                {
+                    _logger.LogInformation("Hub quitado. UsuarioId: {UsuarioId}, Email: {Email}", user.Id, user.Email);
+                    TempData["MensajeExito"] = "Hub quitado correctamente.";
+                }
+                else
+                {
+                    TempData["MensajeError"] = "No se pudo quitar el Hub.";
+                }
+
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al quitar hub. UsuarioId: {UsuarioId}", usuarioID);
+                TempData["MensajeError"] = "Error inesperado al quitar el Hub.";
+                return RedirectToAction(nameof(Usuarios), new { tiendaId = returnTiendaId });
+            }
+        }
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> CrearTiendaSimple(string nombre, CancellationToken ct = default)

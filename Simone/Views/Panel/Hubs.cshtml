@@ -1,0 +1,644 @@
+@model IEnumerable<Simone.Models.HubEnvio>
+@{
+    ViewData["Title"] = "Gestión de Hubs de Envío";
+    var hubs = Model ?? Enumerable.Empty<Simone.Models.HubEnvio>();
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+        --hub-color: #6f42c1
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background: #f5f5f7;
+        color: var(--text-color)
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600
+    }
+
+    .management-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 15px
+    }
+
+    .management-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--medium-gray);
+        flex-wrap: wrap
+    }
+
+    .management-title {
+        font-size: 1.8rem;
+        color: var(--hub-color);
+        display: flex;
+        align-items: center;
+        margin-bottom: 0
+    }
+
+        .management-title i {
+            margin-right: 1rem;
+            color: var(--hub-color)
+        }
+
+    .btn-nuevo-hub {
+        background: var(--hub-color);
+        color: #fff;
+        border: none;
+        padding: .6rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        transition: .3s
+    }
+
+        .btn-nuevo-hub:hover {
+            background: #5a32a3;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(111, 66, 193, .3)
+        }
+
+    /* Stats Cards */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, .05);
+        display: flex;
+        align-items: center;
+        gap: 1rem
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem
+    }
+
+        .stat-icon.purple {
+            background: rgba(111, 66, 193, .1);
+            color: var(--hub-color)
+        }
+
+        .stat-icon.green {
+            background: rgba(40, 167, 69, .1);
+            color: var(--success-color)
+        }
+
+        .stat-icon.blue {
+            background: rgba(23, 162, 184, .1);
+            color: var(--info-color)
+        }
+
+    .stat-info h4 {
+        font-size: 1.5rem;
+        margin: 0;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700
+    }
+
+    .stat-info p {
+        margin: 0;
+        font-size: .85rem;
+        color: var(--text-light)
+    }
+
+    /* Table */
+    .management-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, .05)
+    }
+
+        .management-table th {
+            background: var(--hub-color);
+            color: #fff;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+            z-index: 1
+        }
+
+        .management-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--medium-gray);
+            vertical-align: middle
+        }
+
+        .management-table tr:last-child td {
+            border-bottom: none
+        }
+
+        .management-table tr:hover td {
+            background: rgba(111, 66, 193, .03)
+        }
+
+    .hub-name {
+        font-weight: 600;
+        color: var(--dark-gray);
+        display: flex;
+        align-items: center;
+        gap: .5rem
+    }
+
+    .hub-location {
+        display: flex;
+        flex-direction: column;
+        gap: .2rem
+    }
+
+        .hub-location .ciudad {
+            font-weight: 500;
+            color: var(--dark-gray)
+        }
+
+        .hub-location .provincia {
+            font-size: .85rem;
+            color: var(--text-light)
+        }
+
+    .badge-count {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .3rem .6rem;
+        border-radius: 20px;
+        font-size: .8rem;
+        font-weight: 600
+    }
+
+        .badge-count.tiendas {
+            background: rgba(23, 162, 184, .1);
+            color: var(--info-color)
+        }
+
+        .badge-count.responsables {
+            background: rgba(111, 66, 193, .1);
+            color: var(--hub-color)
+        }
+
+    .status-active, .status-inactive {
+        display: inline-block;
+        padding: .3rem .6rem;
+        border-radius: 20px;
+        font-size: .75rem;
+        font-weight: 600
+    }
+
+    .status-active {
+        background: rgba(40, 167, 69, .1);
+        color: var(--success-color)
+    }
+
+    .status-inactive {
+        background: rgba(220, 53, 69, .1);
+        color: var(--danger-color)
+    }
+
+    .action-btn {
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: .3rem;
+        transition: .3s;
+        cursor: pointer
+    }
+
+    .edit-btn {
+        background: rgba(111, 66, 193, .1);
+        color: var(--hub-color)
+    }
+
+        .edit-btn:hover {
+            background: var(--hub-color);
+            color: #fff
+        }
+
+    .toggle-btn {
+        background: rgba(255, 193, 7, .1);
+        color: var(--warning-color)
+    }
+
+        .toggle-btn:hover {
+            background: var(--warning-color);
+            color: #fff
+        }
+
+    .delete-btn {
+        background: rgba(220, 53, 69, .1);
+        color: var(--danger-color)
+    }
+
+        .delete-btn:hover {
+            background: var(--danger-color);
+            color: #fff
+        }
+
+    .empty-state {
+        background: #fff;
+        border-radius: 12px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, .05)
+    }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--medium-gray);
+            margin-bottom: 1rem
+        }
+
+        .empty-state h4 {
+            color: var(--dark-gray);
+            margin-bottom: .5rem
+        }
+
+        .empty-state p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem
+        }
+
+    /* Modal styles */
+    .modal-header {
+        background: var(--hub-color);
+        color: #fff
+    }
+
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1)
+        }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--dark-gray);
+        margin-bottom: .3rem
+    }
+
+    .form-control:focus {
+        border-color: var(--hub-color);
+        box-shadow: 0 0 0 3px rgba(111, 66, 193, .15)
+    }
+
+    .required::after {
+        content: " *";
+        color: var(--danger-color)
+    }
+
+    @@media (max-width: 992px) {
+        .management-container {
+            overflow-x: auto
+        }
+
+        .management-table {
+            min-width: 800px
+        }
+    }
+
+    @@media (max-width: 768px) {
+        .management-title {
+            font-size: 1.5rem
+        }
+
+        .stats-row {
+            grid-template-columns: 1fr
+        }
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px)
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0)
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn .6s ease-out
+    }
+</style>
+
+<div class="management-container fade-in">
+    <div class="management-header">
+        <h2 class="management-title">
+            <i class="fas fa-warehouse"></i> @ViewData["Title"]
+        </h2>
+        <button type="button" class="btn-nuevo-hub" data-bs-toggle="modal" data-bs-target="#modalHub" onclick="limpiarModal()">
+            <i class="fas fa-plus"></i> Nuevo Hub
+        </button>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="fas fa-warehouse"></i>
+            </div>
+            <div class="stat-info">
+                <h4>@hubs.Count()</h4>
+                <p>Total Hubs</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="stat-info">
+                <h4>@hubs.Count(h => h.Activo)</h4>
+                <p>Hubs Activos</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="fas fa-store"></i>
+            </div>
+            <div class="stat-info">
+                <h4>@hubs.Sum(h => h.Vendedores?.Count ?? 0)</h4>
+                <p>Tiendas Asignadas</p>
+            </div>
+        </div>
+    </div>
+
+    @if (hubs.Any())
+    {
+        <table class="management-table">
+            <thead>
+                <tr>
+                    <th>Hub</th>
+                    <th>Ubicación</th>
+                    <th>Dirección</th>
+                    <th>Teléfono</th>
+                    <th>Tiendas</th>
+                    <th>Responsables</th>
+                    <th>Estado</th>
+                    <th style="width: 140px">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var hub in hubs)
+                {
+                    var tiendas = hub.Vendedores?.Count ?? 0;
+                    var responsables = hub.Responsables?.Count ?? 0;
+
+                    <tr>
+                        <td>
+                            <span class="hub-name">
+                                <i class="fas fa-warehouse text-muted"></i>
+                                @hub.Nombre
+                            </span>
+                        </td>
+                        <td>
+                            <div class="hub-location">
+                                <span class="ciudad">@hub.Ciudad</span>
+                                <span class="provincia">@hub.Provincia</span>
+                            </div>
+                        </td>
+                        <td>@(hub.Direccion ?? "-")</td>
+                        <td>@(hub.Telefono ?? "-")</td>
+                        <td>
+                            <span class="badge-count tiendas">
+                                <i class="fas fa-store"></i> @tiendas
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge-count responsables">
+                                <i class="fas fa-user-tie"></i> @responsables
+                            </span>
+                        </td>
+                        <td>
+                            @if (hub.Activo)
+                            {
+                                <span class="status-active"><i class="fas fa-check me-1"></i>Activo</span>
+                            }
+                            else
+                            {
+                                <span class="status-inactive"><i class="fas fa-times me-1"></i>Inactivo</span>
+                            }
+                        </td>
+                        <td>
+                            <!-- Editar -->
+                            <button type="button"
+                                    class="action-btn edit-btn"
+                                    title="Editar"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalHub"
+                                    onclick="editarHub(@hub.HubId, '@hub.Nombre.Replace("'", "\\'")', '@hub.Provincia.Replace("'", "\\'")', '@hub.Ciudad.Replace("'", "\\'")', '@(hub.Direccion?.Replace("'", "\\'") ?? "")', '@(hub.Telefono ?? "")', @(hub.Activo ? "true" : "false"))">
+                                <i class="fas fa-edit"></i>
+                            </button>
+
+                            <!-- Toggle Activo -->
+                            <form method="post" asp-controller="Panel" asp-action="ToggleHubActivo" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="hubId" value="@hub.HubId" />
+                                <button type="submit" class="action-btn toggle-btn" title="@(hub.Activo ? "Desactivar" : "Activar")">
+                                    <i class="fas fa-power-off"></i>
+                                </button>
+                            </form>
+
+                            <!-- Eliminar -->
+                            <form method="post" asp-controller="Panel" asp-action="EliminarHub"
+                                  onsubmit="return confirmarEliminar(@tiendas, @responsables);" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="hubId" value="@hub.HubId" />
+                                <button type="submit" class="action-btn delete-btn" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="fas fa-warehouse"></i>
+            <h4>No hay hubs registrados</h4>
+            <p>Los hubs son puntos físicos donde se consolidan los pedidos de múltiples tiendas.</p>
+            <button type="button" class="btn-nuevo-hub" data-bs-toggle="modal" data-bs-target="#modalHub" onclick="limpiarModal()">
+                <i class="fas fa-plus"></i> Crear primer Hub
+            </button>
+        </div>
+    }
+</div>
+
+<!-- Modal Crear/Editar Hub -->
+<div class="modal fade" id="modalHub" tabindex="-1" aria-labelledby="modalHubLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalHubLabel">
+                    <i class="fas fa-warehouse me-2"></i><span id="modalTitulo">Nuevo Hub</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formHub" method="post" asp-controller="Panel" asp-action="CrearHub">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="hubId" id="hubId" value="0" />
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label required">Nombre del Hub</label>
+                        <input type="text" class="form-control" name="nombre" id="nombre" required maxlength="100" placeholder="Ej: Hub Milagro" />
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Provincia</label>
+                            <input type="text" class="form-control" name="provincia" id="provincia" required maxlength="100" placeholder="Ej: Guayas" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required">Ciudad</label>
+                            <input type="text" class="form-control" name="ciudad" id="ciudad" required maxlength="100" placeholder="Ej: Milagro" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Dirección</label>
+                        <input type="text" class="form-control" name="direccion" id="direccion" maxlength="300" placeholder="Dirección física del punto de consolidación" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" name="telefono" id="telefono" maxlength="20" placeholder="Ej: 0999999999" />
+                    </div>
+
+                    <div class="form-check mb-3" id="checkActivoContainer" style="display: none;">
+                        <input class="form-check-input" type="checkbox" name="activo" id="activo" value="true" checked />
+                        <label class="form-check-label" for="activo">Hub activo</label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" style="background: var(--hub-color); border-color: var(--hub-color)">
+                        <i class="fas fa-save me-1"></i><span id="btnTexto">Crear Hub</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function limpiarModal() {
+            document.getElementById('modalTitulo').textContent = 'Nuevo Hub';
+            document.getElementById('btnTexto').textContent = 'Crear Hub';
+            document.getElementById('formHub').action = '@Url.Action("CrearHub", "Panel")';
+            document.getElementById('hubId').value = '0';
+            document.getElementById('nombre').value = '';
+            document.getElementById('provincia').value = '';
+            document.getElementById('ciudad').value = '';
+            document.getElementById('direccion').value = '';
+            document.getElementById('telefono').value = '';
+            document.getElementById('activo').checked = true;
+            document.getElementById('checkActivoContainer').style.display = 'none';
+        }
+
+        function editarHub(hubId, nombre, provincia, ciudad, direccion, telefono, activo) {
+            document.getElementById('modalTitulo').textContent = 'Editar Hub';
+            document.getElementById('btnTexto').textContent = 'Guardar Cambios';
+            document.getElementById('formHub').action = '@Url.Action("EditarHub", "Panel")';
+            document.getElementById('hubId').value = hubId;
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('provincia').value = provincia;
+            document.getElementById('ciudad').value = ciudad;
+            document.getElementById('direccion').value = direccion;
+            document.getElementById('telefono').value = telefono;
+            document.getElementById('activo').checked = activo;
+            document.getElementById('checkActivoContainer').style.display = 'block';
+        }
+
+        function confirmarEliminar(tiendas, responsables) {
+            if (tiendas > 0) {
+                alert('No se puede eliminar. El hub tiene ' + tiendas + ' tienda(s) asignada(s).');
+                return false;
+            }
+            if (responsables > 0) {
+                alert('No se puede eliminar. El hub tiene ' + responsables + ' responsable(s) asignado(s).');
+                return false;
+            }
+            return confirm('¿Estás seguro de eliminar este hub?');
+        }
+
+        // Auto-ocultar alertas después de 5 segundos
+        setTimeout(function () {
+            document.querySelectorAll('.alert-dismissible').forEach(function (alert) {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+}

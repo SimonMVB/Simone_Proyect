@@ -682,6 +682,67 @@ namespace Simone.Migrations
                     b.ToTable("Compras");
                 });
 
+            modelBuilder.Entity("Simone.Models.ConfiguracionComision", b =>
+                {
+                    b.Property<int>("ConfiguracionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ConfiguracionId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("CategoriaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("FechaFin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModificadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("MontoMaximo")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MontoMinimo")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Porcentaje")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("TipoComision")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("VendedorId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("ConfiguracionId");
+
+                    b.HasIndex("CategoriaId");
+
+                    b.HasIndex("VendedorId");
+
+                    b.ToTable("ConfiguracionesComision", (string)null);
+                });
+
             modelBuilder.Entity("Simone.Models.ContactoTienda", b =>
                 {
                     b.Property<int>("ContactoTiendaId")
@@ -826,8 +887,55 @@ namespace Simone.Migrations
                     b.Property<int>("Cantidad")
                         .HasColumnType("int");
 
-                    b.Property<int>("PedidoID")
+                    b.Property<string>("Color")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("ComisionLiquidada")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Descuento")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("FechaDevolucion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ImagenProducto")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal?>("MontoComision")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("MotivoDevolucion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NombreProducto")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NombreVendedor")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int?>("PedidoID")
                         .HasColumnType("int");
+
+                    b.Property<decimal?>("PorcentajeComision")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<decimal?>("PrecioOriginal")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("PrecioUnitario")
                         .HasColumnType("decimal(18,2)");
@@ -835,14 +943,31 @@ namespace Simone.Migrations
                     b.Property<int>("ProductoID")
                         .HasColumnType("int");
 
-                    b.Property<decimal?>("Subtotal")
+                    b.Property<string>("SKU")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("Subtotal")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Talla")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("VarianteID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("VendedorID")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
 
                     b.HasKey("DetalleID");
 
                     b.HasIndex("PedidoID");
 
                     b.HasIndex("ProductoID");
+
+                    b.HasIndex("VarianteID");
 
                     b.ToTable("DetallesPedido");
                 });
@@ -1009,6 +1134,54 @@ namespace Simone.Migrations
                     b.ToTable("HistorialPrecios");
                 });
 
+            modelBuilder.Entity("Simone.Models.HubEnvio", b =>
+                {
+                    b.Property<int>("HubId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HubId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Ciudad")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Provincia")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("HubId");
+
+                    b.HasIndex("Activo")
+                        .HasDatabaseName("IX_HubsEnvio_Activo");
+
+                    b.HasIndex("Provincia", "Ciudad")
+                        .HasDatabaseName("IX_HubsEnvio_Ubicacion");
+
+                    b.ToTable("HubsEnvio", (string)null);
+                });
+
             modelBuilder.Entity("Simone.Models.ImagenesProductos", b =>
                 {
                     b.Property<int>("ImagenID")
@@ -1141,6 +1314,140 @@ namespace Simone.Migrations
                     b.ToTable("MovimientosInventario");
                 });
 
+            modelBuilder.Entity("Simone.Models.PagoComision", b =>
+                {
+                    b.Property<int>("PagoId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PagoId"));
+
+                    b.Property<int>("Anio")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AprobadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("BancoEntidad")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("Bonificaciones")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CantidadPedidos")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CantidadProductos")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ComprobanteAdjunto")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("Deducciones")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("FechaPago")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Mes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MetodoPago")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModificadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("MontoComision")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MontoFinal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MontoVentas")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NumeroComprobante")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("NumeroQuincena")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PagadoPor")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("PeriodoFin")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("PeriodoInicio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("PorcentajeAplicado")
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("VendedorId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("PagoId");
+
+                    b.HasIndex("VendedorId");
+
+                    b.ToTable("PagosComision", (string)null);
+                });
+
+            modelBuilder.Entity("Simone.Models.PagoComisionDetalle", b =>
+                {
+                    b.Property<int>("DetalleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DetalleId"));
+
+                    b.Property<decimal>("ComisionPedido")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MontoPedido")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("PagoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PedidoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("DetalleId");
+
+                    b.HasIndex("PagoId");
+
+                    b.HasIndex("PedidoId");
+
+                    b.ToTable("PagosComisionDetalle", (string)null);
+                });
+
             modelBuilder.Entity("Simone.Models.Pedido", b =>
                 {
                     b.Property<int>("PedidoID")
@@ -1149,34 +1456,192 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PedidoID"));
 
+                    b.Property<string>("CiudadEnvio")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CodigoPostalEnvio")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("ComisionCalculada")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ComprobantePago")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("CostoEnvio")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Descuento")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("DireccionEnvio")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("EmailCliente")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("EstadoPago")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("EstadoPedido")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime?>("FechaCancelacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEntrega")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEnvio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaPago")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaPedido")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("Impuestos")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("IpOrigen")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("MetodoEnvio")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MetodoPago")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("ModificadoUtc")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("MotivoCancelacion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("NombreCliente")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("NotasCliente")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NotasInternas")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("NumeroGuia")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NumeroOrden")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("PagoComisionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProvinciaEnvio")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReferenciaEnvio")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("ReferenciaPago")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("TelefonoCliente")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("Transportadora")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("UsuarioId")
                         .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("VendedorId")
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("PedidoID");
 
                     b.HasIndex("UsuarioId");
 
+                    b.HasIndex("VendedorId");
+
                     b.ToTable("Pedidos");
+                });
+
+            modelBuilder.Entity("Simone.Models.PedidoHistorial", b =>
+                {
+                    b.Property<int>("HistorialId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("HistorialId"));
+
+                    b.Property<string>("Comentario")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("EstadoAnterior")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("EstadoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("FechaCambio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PedidoID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UsuarioId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("HistorialId");
+
+                    b.HasIndex("PedidoID");
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("PedidosHistorial", (string)null);
                 });
 
             modelBuilder.Entity("Simone.Models.Producto", b =>
@@ -1667,6 +2132,9 @@ namespace Simone.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<int?>("HubResponsableId")
+                        .HasColumnType("int");
+
                     b.Property<string>("InstruccionesEnvio")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -1742,6 +2210,8 @@ namespace Simone.Migrations
                         .IsUnique()
                         .HasFilter("[Cedula] IS NOT NULL");
 
+                    b.HasIndex("HubResponsableId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -1766,11 +2236,16 @@ namespace Simone.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("HubId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("VendedorId");
+
+                    b.HasIndex("HubId");
 
                     b.ToTable("Vendedores");
                 });
@@ -2080,6 +2555,23 @@ namespace Simone.Migrations
                     b.Navigation("Proveedor");
                 });
 
+            modelBuilder.Entity("Simone.Models.ConfiguracionComision", b =>
+                {
+                    b.HasOne("Simone.Models.Categorias", "Categoria")
+                        .WithMany()
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Simone.Models.Usuario", "Vendedor")
+                        .WithMany()
+                        .HasForeignKey("VendedorId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Categoria");
+
+                    b.Navigation("Vendedor");
+                });
+
             modelBuilder.Entity("Simone.Models.ContactoTienda", b =>
                 {
                     b.HasOne("Simone.Models.Vendedor", "Vendedor")
@@ -2156,9 +2648,7 @@ namespace Simone.Migrations
                 {
                     b.HasOne("Simone.Models.Pedido", "Pedido")
                         .WithMany("DetallesPedido")
-                        .HasForeignKey("PedidoID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("PedidoID");
 
                     b.HasOne("Simone.Models.Producto", "Producto")
                         .WithMany("DetallesPedido")
@@ -2166,9 +2656,15 @@ namespace Simone.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Simone.Models.ProductoVariante", "Variante")
+                        .WithMany()
+                        .HasForeignKey("VarianteID");
+
                     b.Navigation("Pedido");
 
                     b.Navigation("Producto");
+
+                    b.Navigation("Variante");
                 });
 
             modelBuilder.Entity("Simone.Models.Devoluciones", b =>
@@ -2278,6 +2774,36 @@ namespace Simone.Migrations
                     b.Navigation("Variante");
                 });
 
+            modelBuilder.Entity("Simone.Models.PagoComision", b =>
+                {
+                    b.HasOne("Simone.Models.Usuario", "Vendedor")
+                        .WithMany()
+                        .HasForeignKey("VendedorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Vendedor");
+                });
+
+            modelBuilder.Entity("Simone.Models.PagoComisionDetalle", b =>
+                {
+                    b.HasOne("Simone.Models.PagoComision", "Pago")
+                        .WithMany("Detalles")
+                        .HasForeignKey("PagoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Simone.Models.Pedido", "Pedido")
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Pago");
+
+                    b.Navigation("Pedido");
+                });
+
             modelBuilder.Entity("Simone.Models.Pedido", b =>
                 {
                     b.HasOne("Simone.Models.Usuario", "Usuario")
@@ -2285,6 +2811,30 @@ namespace Simone.Migrations
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Simone.Models.Usuario", "Vendedor")
+                        .WithMany()
+                        .HasForeignKey("VendedorId");
+
+                    b.Navigation("Usuario");
+
+                    b.Navigation("Vendedor");
+                });
+
+            modelBuilder.Entity("Simone.Models.PedidoHistorial", b =>
+                {
+                    b.HasOne("Simone.Models.Pedido", "Pedido")
+                        .WithMany("Historial")
+                        .HasForeignKey("PedidoID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Simone.Models.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Pedido");
 
                     b.Navigation("Usuario");
                 });
@@ -2406,12 +2956,29 @@ namespace Simone.Migrations
 
             modelBuilder.Entity("Simone.Models.Usuario", b =>
                 {
+                    b.HasOne("Simone.Models.HubEnvio", "HubResponsable")
+                        .WithMany("Responsables")
+                        .HasForeignKey("HubResponsableId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Simone.Models.Vendedor", "Vendedor")
                         .WithMany()
                         .HasForeignKey("VendedorId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.Navigation("HubResponsable");
+
                     b.Navigation("Vendedor");
+                });
+
+            modelBuilder.Entity("Simone.Models.Vendedor", b =>
+                {
+                    b.HasOne("Simone.Models.HubEnvio", "Hub")
+                        .WithMany("Vendedores")
+                        .HasForeignKey("HubId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Hub");
                 });
 
             modelBuilder.Entity("Simone.Models.Ventas", b =>
@@ -2491,9 +3058,23 @@ namespace Simone.Migrations
                     b.Navigation("Gastos");
                 });
 
+            modelBuilder.Entity("Simone.Models.HubEnvio", b =>
+                {
+                    b.Navigation("Responsables");
+
+                    b.Navigation("Vendedores");
+                });
+
+            modelBuilder.Entity("Simone.Models.PagoComision", b =>
+                {
+                    b.Navigation("Detalles");
+                });
+
             modelBuilder.Entity("Simone.Models.Pedido", b =>
                 {
                     b.Navigation("DetallesPedido");
+
+                    b.Navigation("Historial");
                 });
 
             modelBuilder.Entity("Simone.Models.Producto", b =>

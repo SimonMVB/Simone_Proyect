@@ -97,6 +97,25 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "HubsEnvio",
+                columns: table => new
+                {
+                    HubId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Provincia = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Ciudad = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Direccion = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    Telefono = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Activo = table.Column<bool>(type: "bit", nullable: false),
+                    FechaCreacion = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_HubsEnvio", x => x.HubId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ProgramasFidelizacion",
                 columns: table => new
                 {
@@ -143,20 +162,6 @@ namespace Simone.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Proveedores", x => x.ProveedorID);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Vendedores",
-                columns: table => new
-                {
-                    VendedorId = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Activo = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Vendedores", x => x.VendedorId);
                 });
 
             migrationBuilder.CreateTable(
@@ -248,6 +253,27 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Vendedores",
+                columns: table => new
+                {
+                    VendedorId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nombre = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Activo = table.Column<bool>(type: "bit", nullable: false),
+                    HubId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Vendedores", x => x.VendedorId);
+                    table.ForeignKey(
+                        name: "FK_Vendedores_HubsEnvio_HubId",
+                        column: x => x.HubId,
+                        principalTable: "HubsEnvio",
+                        principalColumn: "HubId",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Compras",
                 columns: table => new
                 {
@@ -275,6 +301,51 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "AsistenciaEmpleados",
+                columns: table => new
+                {
+                    AsistenciaID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EmpleadoID = table.Column<int>(type: "int", nullable: false),
+                    Fecha = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    HoraEntrada = table.Column<TimeSpan>(type: "time", nullable: true),
+                    HoraSalida = table.Column<TimeSpan>(type: "time", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AsistenciaEmpleados", x => x.AsistenciaID);
+                    table.ForeignKey(
+                        name: "FK_AsistenciaEmpleados_Empleados_EmpleadoID",
+                        column: x => x.EmpleadoID,
+                        principalTable: "Empleados",
+                        principalColumn: "EmpleadoID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Gastos",
+                columns: table => new
+                {
+                    GastoID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EmpleadoID = table.Column<int>(type: "int", nullable: false),
+                    Concepto = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Monto = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    FechaGasto = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Observaciones = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Gastos", x => x.GastoID);
+                    table.ForeignKey(
+                        name: "FK_Gastos_Empleados_EmpleadoID",
+                        column: x => x.EmpleadoID,
+                        principalTable: "Empleados",
+                        principalColumn: "EmpleadoID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetUsers",
                 columns: table => new
                 {
@@ -296,6 +367,7 @@ namespace Simone.Migrations
                     NombreDepositante = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     FotoComprobanteDeposito = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
                     VendedorId = table.Column<int>(type: "int", nullable: true),
+                    HubResponsableId = table.Column<int>(type: "int", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -314,6 +386,12 @@ namespace Simone.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_AspNetUsers_HubsEnvio_HubResponsableId",
+                        column: x => x.HubResponsableId,
+                        principalTable: "HubsEnvio",
+                        principalColumn: "HubId",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_AspNetUsers_Vendedores_VendedorId",
                         column: x => x.VendedorId,
@@ -374,51 +452,6 @@ namespace Simone.Migrations
                         column: x => x.VendedorId,
                         principalTable: "Vendedores",
                         principalColumn: "VendedorId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AsistenciaEmpleados",
-                columns: table => new
-                {
-                    AsistenciaID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EmpleadoID = table.Column<int>(type: "int", nullable: false),
-                    Fecha = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    HoraEntrada = table.Column<TimeSpan>(type: "time", nullable: true),
-                    HoraSalida = table.Column<TimeSpan>(type: "time", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AsistenciaEmpleados", x => x.AsistenciaID);
-                    table.ForeignKey(
-                        name: "FK_AsistenciaEmpleados_Empleados_EmpleadoID",
-                        column: x => x.EmpleadoID,
-                        principalTable: "Empleados",
-                        principalColumn: "EmpleadoID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Gastos",
-                columns: table => new
-                {
-                    GastoID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EmpleadoID = table.Column<int>(type: "int", nullable: false),
-                    Concepto = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Monto = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    FechaGasto = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    Observaciones = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Gastos", x => x.GastoID);
-                    table.ForeignKey(
-                        name: "FK_Gastos_Empleados_EmpleadoID",
-                        column: x => x.EmpleadoID,
-                        principalTable: "Empleados",
-                        principalColumn: "EmpleadoID",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -582,6 +615,43 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ConfiguracionesComision",
+                columns: table => new
+                {
+                    ConfiguracionId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TipoComision = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    VendedorId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    CategoriaId = table.Column<int>(type: "int", nullable: true),
+                    Porcentaje = table.Column<decimal>(type: "decimal(5,2)", nullable: false),
+                    MontoMinimo = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    MontoMaximo = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    FechaInicio = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FechaFin = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Activo = table.Column<bool>(type: "bit", nullable: false),
+                    Descripcion = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreadoPor = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ConfiguracionesComision", x => x.ConfiguracionId);
+                    table.ForeignKey(
+                        name: "FK_ConfiguracionesComision_AspNetUsers_VendedorId",
+                        column: x => x.VendedorId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ConfiguracionesComision_Categorias_CategoriaId",
+                        column: x => x.CategoriaId,
+                        principalTable: "Categorias",
+                        principalColumn: "CategoriaID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "CuponesUsados",
                 columns: table => new
                 {
@@ -659,17 +729,92 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PagosComision",
+                columns: table => new
+                {
+                    PagoId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    VendedorId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    PeriodoInicio = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    PeriodoFin = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    NumeroQuincena = table.Column<int>(type: "int", nullable: false),
+                    Anio = table.Column<int>(type: "int", nullable: false),
+                    Mes = table.Column<int>(type: "int", nullable: false),
+                    MontoVentas = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CantidadPedidos = table.Column<int>(type: "int", nullable: false),
+                    CantidadProductos = table.Column<int>(type: "int", nullable: false),
+                    PorcentajeAplicado = table.Column<decimal>(type: "decimal(5,2)", nullable: false),
+                    MontoComision = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Deducciones = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Bonificaciones = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MontoFinal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Estado = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    FechaPago = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    MetodoPago = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    NumeroComprobante = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    BancoEntidad = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ComprobanteAdjunto = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Notas = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CreadoUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreadoPor = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    AprobadoPor = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    PagadoPor = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PagosComision", x => x.PagoId);
+                    table.ForeignKey(
+                        name: "FK_PagosComision_AspNetUsers_VendedorId",
+                        column: x => x.VendedorId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Pedidos",
                 columns: table => new
                 {
                     PedidoID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    NumeroOrden = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    NombreCliente = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    EmailCliente = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    TelefonoCliente = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    VendedorId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     FechaPedido = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    FechaPago = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FechaEnvio = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FechaEntrega = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    FechaCancelacion = table.Column<DateTime>(type: "datetime2", nullable: true),
                     EstadoPedido = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    MetodoEnvio = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    DireccionEnvio = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
-                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                    EstadoPago = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    MetodoEnvio = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    DireccionEnvio = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CiudadEnvio = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ProvinciaEnvio = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CodigoPostalEnvio = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    ReferenciaEnvio = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: true),
+                    NumeroGuia = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Transportadora = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CostoEnvio = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Descuento = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Impuestos = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Total = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    MetodoPago = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ReferenciaPago = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ComprobantePago = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ComisionCalculada = table.Column<bool>(type: "bit", nullable: false),
+                    PagoComisionId = table.Column<int>(type: "int", nullable: true),
+                    NotasCliente = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    NotasInternas = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    MotivoCancelacion = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IpOrigen = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    UserAgent = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ModificadoUtc = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -680,6 +825,11 @@ namespace Simone.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Pedidos_AspNetUsers_VendedorId",
+                        column: x => x.VendedorId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -751,6 +901,64 @@ namespace Simone.Migrations
                         column: x => x.UsuarioId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PagosComisionDetalle",
+                columns: table => new
+                {
+                    DetalleId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PagoId = table.Column<int>(type: "int", nullable: false),
+                    PedidoId = table.Column<int>(type: "int", nullable: false),
+                    MontoPedido = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    ComisionPedido = table.Column<decimal>(type: "decimal(18,2)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PagosComisionDetalle", x => x.DetalleId);
+                    table.ForeignKey(
+                        name: "FK_PagosComisionDetalle_PagosComision_PagoId",
+                        column: x => x.PagoId,
+                        principalTable: "PagosComision",
+                        principalColumn: "PagoId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_PagosComisionDetalle_Pedidos_PedidoId",
+                        column: x => x.PedidoId,
+                        principalTable: "Pedidos",
+                        principalColumn: "PedidoID",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PedidosHistorial",
+                columns: table => new
+                {
+                    HistorialId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PedidoID = table.Column<int>(type: "int", nullable: false),
+                    EstadoAnterior = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    EstadoNuevo = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Comentario = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    FechaCambio = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PedidosHistorial", x => x.HistorialId);
+                    table.ForeignKey(
+                        name: "FK_PedidosHistorial_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_PedidosHistorial_Pedidos_PedidoID",
+                        column: x => x.PedidoID,
+                        principalTable: "Pedidos",
+                        principalColumn: "PedidoID",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -916,35 +1124,6 @@ namespace Simone.Migrations
                         principalTable: "Productos",
                         principalColumn: "ProductoID",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "DetallesPedido",
-                columns: table => new
-                {
-                    DetalleID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    PedidoID = table.Column<int>(type: "int", nullable: false),
-                    ProductoID = table.Column<int>(type: "int", nullable: false),
-                    Cantidad = table.Column<int>(type: "int", nullable: false),
-                    PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DetallesPedido", x => x.DetalleID);
-                    table.ForeignKey(
-                        name: "FK_DetallesPedido_Pedidos_PedidoID",
-                        column: x => x.PedidoID,
-                        principalTable: "Pedidos",
-                        principalColumn: "PedidoID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_DetallesPedido_Productos_ProductoID",
-                        column: x => x.ProductoID,
-                        principalTable: "Productos",
-                        principalColumn: "ProductoID",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -1162,6 +1341,56 @@ namespace Simone.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "DetallesPedido",
+                columns: table => new
+                {
+                    DetalleID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PedidoID = table.Column<int>(type: "int", nullable: true),
+                    ProductoID = table.Column<int>(type: "int", nullable: false),
+                    VarianteID = table.Column<int>(type: "int", nullable: true),
+                    NombreProducto = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    SKU = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Color = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Talla = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ImagenProducto = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    VendedorID = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    NombreVendedor = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Cantidad = table.Column<int>(type: "int", nullable: false),
+                    PrecioUnitario = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PrecioOriginal = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    Descuento = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Subtotal = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PorcentajeComision = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
+                    MontoComision = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    ComisionLiquidada = table.Column<bool>(type: "bit", nullable: false),
+                    Estado = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    MotivoDevolucion = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    FechaDevolucion = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Notas = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DetallesPedido", x => x.DetalleID);
+                    table.ForeignKey(
+                        name: "FK_DetallesPedido_Pedidos_PedidoID",
+                        column: x => x.PedidoID,
+                        principalTable: "Pedidos",
+                        principalColumn: "PedidoID");
+                    table.ForeignKey(
+                        name: "FK_DetallesPedido_ProductoVariantes_VarianteID",
+                        column: x => x.VarianteID,
+                        principalTable: "ProductoVariantes",
+                        principalColumn: "ProductoVarianteID");
+                    table.ForeignKey(
+                        name: "FK_DetallesPedido_Productos_ProductoID",
+                        column: x => x.ProductoID,
+                        principalTable: "Productos",
+                        principalColumn: "ProductoID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DetalleVentas",
                 columns: table => new
                 {
@@ -1300,6 +1529,11 @@ namespace Simone.Migrations
                 filter: "[Cedula] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_HubResponsableId",
+                table: "AspNetUsers",
+                column: "HubResponsableId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_VendedorId",
                 table: "AspNetUsers",
                 column: "VendedorId");
@@ -1413,6 +1647,16 @@ namespace Simone.Migrations
                 column: "ProveedorID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ConfiguracionesComision_CategoriaId",
+                table: "ConfiguracionesComision",
+                column: "CategoriaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ConfiguracionesComision_VendedorId",
+                table: "ConfiguracionesComision",
+                column: "VendedorId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ContactosTiendas_VendedorId",
                 table: "ContactosTiendas",
                 column: "VendedorId");
@@ -1456,6 +1700,11 @@ namespace Simone.Migrations
                 name: "IX_DetallesPedido_ProductoID",
                 table: "DetallesPedido",
                 column: "ProductoID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DetallesPedido_VarianteID",
+                table: "DetallesPedido",
+                column: "VarianteID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DetalleVentas_ProductoID",
@@ -1503,6 +1752,16 @@ namespace Simone.Migrations
                 column: "ProductoID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_HubsEnvio_Activo",
+                table: "HubsEnvio",
+                column: "Activo");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_HubsEnvio_Ubicacion",
+                table: "HubsEnvio",
+                columns: new[] { "Provincia", "Ciudad" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ImagenesProductos_ProductoID",
                 table: "ImagenesProductos",
                 column: "ProductoID");
@@ -1528,8 +1787,38 @@ namespace Simone.Migrations
                 column: "ProductoVarianteID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PagosComision_VendedorId",
+                table: "PagosComision",
+                column: "VendedorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PagosComisionDetalle_PagoId",
+                table: "PagosComisionDetalle",
+                column: "PagoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PagosComisionDetalle_PedidoId",
+                table: "PagosComisionDetalle",
+                column: "PedidoId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Pedidos_UsuarioId",
                 table: "Pedidos",
+                column: "UsuarioId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Pedidos_VendedorId",
+                table: "Pedidos",
+                column: "VendedorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PedidosHistorial_PedidoID",
+                table: "PedidosHistorial",
+                column: "PedidoID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PedidosHistorial_UsuarioId",
+                table: "PedidosHistorial",
                 column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
@@ -1612,6 +1901,11 @@ namespace Simone.Migrations
                 filter: "[VendedorID] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Vendedores_HubId",
+                table: "Vendedores",
+                column: "HubId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_VentaReversiones_AdminId",
                 table: "VentaReversiones",
                 column: "AdminId");
@@ -1672,6 +1966,9 @@ namespace Simone.Migrations
                 name: "Comisiones");
 
             migrationBuilder.DropTable(
+                name: "ConfiguracionesComision");
+
+            migrationBuilder.DropTable(
                 name: "ContactosTiendas");
 
             migrationBuilder.DropTable(
@@ -1711,6 +2008,12 @@ namespace Simone.Migrations
                 name: "MovimientosInventario");
 
             migrationBuilder.DropTable(
+                name: "PagosComisionDetalle");
+
+            migrationBuilder.DropTable(
+                name: "PedidosHistorial");
+
+            migrationBuilder.DropTable(
                 name: "ProductoAtributoValores");
 
             migrationBuilder.DropTable(
@@ -1738,13 +2041,16 @@ namespace Simone.Migrations
                 name: "Compras");
 
             migrationBuilder.DropTable(
-                name: "Pedidos");
-
-            migrationBuilder.DropTable(
                 name: "DetalleVentas");
 
             migrationBuilder.DropTable(
                 name: "Empleados");
+
+            migrationBuilder.DropTable(
+                name: "PagosComision");
+
+            migrationBuilder.DropTable(
+                name: "Pedidos");
 
             migrationBuilder.DropTable(
                 name: "CategoriaAtributos");
@@ -1775,6 +2081,9 @@ namespace Simone.Migrations
 
             migrationBuilder.DropTable(
                 name: "Vendedores");
+
+            migrationBuilder.DropTable(
+                name: "HubsEnvio");
         }
     }
 }

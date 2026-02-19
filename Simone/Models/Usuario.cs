@@ -63,6 +63,11 @@ namespace Simone.Models
         [ForeignKey(nameof(VendedorId))]
         public Vendedor? Vendedor { get; set; }
 
+        // -------- Responsable de Hub (para recolecciones) --------
+        public int? HubResponsableId { get; set; }
+        [ForeignKey(nameof(HubResponsableId))]
+        public HubEnvio? HubResponsable { get; set; }
+
         // -------- Relaciones existentes --------
         public virtual ICollection<ActividadUsuario> Actividades { get; set; } = new HashSet<ActividadUsuario>();
         public virtual ICollection<LogIniciosSesion> LogsInicioSesion { get; set; } = new HashSet<LogIniciosSesion>();

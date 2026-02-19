@@ -9,6 +9,14 @@ namespace Simone.Models
         public string Nombre { get; set; } = string.Empty;
         public bool Activo { get; set; } = true;
 
+        // -------- Hub de envío (donde entrega sus productos) --------
+        public int? HubId { get; set; }
+        public HubEnvio? Hub { get; set; }
+
+        // -------- Alianza de envío (configuración compartida) --------
+        public int? AlianzaId { get; set; }
+        public AlianzaEnvio? Alianza { get; set; }
+
         // Contacto rápido (opcional)
         public ICollection<ContactoTienda> Contactos { get; set; } = new List<ContactoTienda>();
         public ICollection<CuentaBancaria> Cuentas { get; set; } = new List<CuentaBancaria>();

@@ -1,0 +1,811 @@
+@model IEnumerable<Simone.Models.AlianzaEnvio>
+@{
+    ViewData["Title"] = "Gestión de Alianzas de Envío";
+    var alianzas = Model ?? Enumerable.Empty<Simone.Models.AlianzaEnvio>();
+    var hubs = ViewBag.Hubs as IEnumerable<Simone.Models.HubEnvio> ?? Enumerable.Empty<Simone.Models.HubEnvio>();
+    var tiendasSinAlianza = ViewBag.TiendasSinAlianza as IEnumerable<Simone.Models.Vendedor> ?? Enumerable.Empty<Simone.Models.Vendedor>();
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --primary-dark: #1A1A1A;
+        --primary-light: #FFFFFF;
+        --accent-purple: #4B0082;
+        --accent-gold: #D4AF37;
+        --light-gray: #F8F8F8;
+        --medium-gray: #E0E0E0;
+        --dark-gray: #333333;
+        --text-color: #333333;
+        --text-light: #777777;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+        --hub-color: #6f42c1;
+        --alianza-color: #20c997
+    }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background: #f5f5f7;
+        color: var(--text-color)
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        font-family: 'Playfair Display', serif;
+        font-weight: 600
+    }
+
+    .management-container {
+        max-width: 1400px;
+        margin: 2rem auto;
+        padding: 0 15px
+    }
+
+    .management-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--medium-gray);
+        flex-wrap: wrap
+    }
+
+    .management-title {
+        font-size: 1.8rem;
+        color: var(--alianza-color);
+        display: flex;
+        align-items: center;
+        margin-bottom: 0
+    }
+
+        .management-title i {
+            margin-right: 1rem;
+            color: var(--alianza-color)
+        }
+
+    .btn-nueva-alianza {
+        background: var(--alianza-color);
+        color: #fff;
+        border: none;
+        padding: .6rem 1.2rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        transition: .3s
+    }
+
+        .btn-nueva-alianza:hover {
+            background: #1aa179;
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(32, 201, 151, .3)
+        }
+
+    /* Stats Cards */
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, .05);
+        display: flex;
+        align-items: center;
+        gap: 1rem
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem
+    }
+
+        .stat-icon.teal {
+            background: rgba(32, 201, 151, .1);
+            color: var(--alianza-color)
+        }
+
+        .stat-icon.purple {
+            background: rgba(111, 66, 193, .1);
+            color: var(--hub-color)
+        }
+
+        .stat-icon.blue {
+            background: rgba(23, 162, 184, .1);
+            color: var(--info-color)
+        }
+
+    .stat-info h4 {
+        font-size: 1.5rem;
+        margin: 0;
+        font-family: 'Montserrat', sans-serif;
+        font-weight: 700
+    }
+
+    .stat-info p {
+        margin: 0;
+        font-size: .85rem;
+        color: var(--text-light)
+    }
+
+    /* Alianza Cards */
+    .alianzas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 1.5rem
+    }
+
+    .alianza-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, .05);
+        overflow: hidden;
+        transition: .3s
+    }
+
+        .alianza-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, .1);
+            transform: translateY(-3px)
+        }
+
+        .alianza-card.inactive {
+            opacity: .7
+        }
+
+    .alianza-header {
+        background: linear-gradient(135deg, var(--alianza-color), #1aa179);
+        color: #fff;
+        padding: 1rem 1.25rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center
+    }
+
+        .alianza-header.inactive {
+            background: linear-gradient(135deg, #6c757d, #5a6268)
+        }
+
+    .alianza-nombre {
+        font-size: 1.1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: .5rem
+    }
+
+    .alianza-hub {
+        font-size: .8rem;
+        opacity: .9;
+        display: flex;
+        align-items: center;
+        gap: .3rem
+    }
+
+    .alianza-body {
+        padding: 1.25rem
+    }
+
+    .alianza-descripcion {
+        font-size: .9rem;
+        color: var(--text-light);
+        margin-bottom: 1rem;
+        min-height: 40px
+    }
+
+    .alianza-tiendas-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: .75rem;
+        padding-bottom: .5rem;
+        border-bottom: 1px solid var(--medium-gray)
+    }
+
+        .alianza-tiendas-header h6 {
+            margin: 0;
+            font-size: .9rem;
+            color: var(--dark-gray);
+            font-family: 'Montserrat', sans-serif
+        }
+
+    .btn-agregar-tienda {
+        background: rgba(32, 201, 151, .1);
+        color: var(--alianza-color);
+        border: 1px dashed var(--alianza-color);
+        padding: .3rem .6rem;
+        border-radius: 6px;
+        font-size: .75rem;
+        cursor: pointer;
+        transition: .3s
+    }
+
+        .btn-agregar-tienda:hover {
+            background: var(--alianza-color);
+            color: #fff
+        }
+
+    .tiendas-lista {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        max-height: 200px;
+        overflow-y: auto
+    }
+
+    .tienda-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: .5rem .75rem;
+        background: var(--light-gray);
+        border-radius: 6px;
+        font-size: .85rem
+    }
+
+        .tienda-item .nombre {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            color: var(--dark-gray)
+        }
+
+            .tienda-item .nombre i {
+                color: var(--info-color)
+            }
+
+    .btn-quitar-tienda {
+        background: none;
+        border: none;
+        color: var(--danger-color);
+        cursor: pointer;
+        padding: .2rem .4rem;
+        border-radius: 4px;
+        transition: .3s
+    }
+
+        .btn-quitar-tienda:hover {
+            background: rgba(220, 53, 69, .1)
+        }
+
+    .sin-tiendas {
+        text-align: center;
+        padding: 1rem;
+        color: var(--text-light);
+        font-size: .85rem;
+        font-style: italic
+    }
+
+    .alianza-footer {
+        padding: .75rem 1.25rem;
+        background: var(--light-gray);
+        display: flex;
+        justify-content: flex-end;
+        gap: .5rem
+    }
+
+    .action-btn {
+        border: none;
+        border-radius: 6px;
+        padding: .4rem .8rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        font-size: .8rem;
+        cursor: pointer;
+        transition: .3s
+    }
+
+    .edit-btn {
+        background: rgba(32, 201, 151, .1);
+        color: var(--alianza-color)
+    }
+
+        .edit-btn:hover {
+            background: var(--alianza-color);
+            color: #fff
+        }
+
+    .delete-btn {
+        background: rgba(220, 53, 69, .1);
+        color: var(--danger-color)
+    }
+
+        .delete-btn:hover {
+            background: var(--danger-color);
+            color: #fff
+        }
+
+    .status-active, .status-inactive {
+        display: inline-block;
+        padding: .2rem .5rem;
+        border-radius: 20px;
+        font-size: .7rem;
+        font-weight: 600
+    }
+
+    .status-active {
+        background: rgba(255, 255, 255, .2);
+        color: #fff
+    }
+
+    .status-inactive {
+        background: rgba(255, 255, 255, .2);
+        color: #fff
+    }
+
+    .empty-state {
+        background: #fff;
+        border-radius: 12px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, .05)
+    }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--medium-gray);
+            margin-bottom: 1rem
+        }
+
+        .empty-state h4 {
+            color: var(--dark-gray);
+            margin-bottom: .5rem
+        }
+
+        .empty-state p {
+            color: var(--text-light);
+            margin-bottom: 1.5rem
+        }
+
+    /* Modal styles */
+    .modal-header.alianza {
+        background: var(--alianza-color);
+        color: #fff
+    }
+
+    .modal-header .btn-close {
+        filter: brightness(0) invert(1)
+    }
+
+    .form-label {
+        font-weight: 500;
+        color: var(--dark-gray);
+        margin-bottom: .3rem
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--alianza-color);
+        box-shadow: 0 0 0 3px rgba(32, 201, 151, .15)
+    }
+
+    .required::after {
+        content: " *";
+        color: var(--danger-color)
+    }
+
+    .hub-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        background: rgba(111, 66, 193, .1);
+        color: var(--hub-color);
+        padding: .25rem .6rem;
+        border-radius: 20px;
+        font-size: .75rem;
+        font-weight: 500
+    }
+
+    @@media (max-width: 768px) {
+        .alianzas-grid {
+            grid-template-columns: 1fr
+        }
+
+        .management-title {
+            font-size: 1.5rem
+        }
+
+        .stats-row {
+            grid-template-columns: 1fr
+        }
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px)
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0)
+        }
+    }
+
+    .fade-in {
+        animation: fadeIn .6s ease-out
+    }
+</style>
+
+<div class="management-container fade-in">
+    <div class="management-header">
+        <h2 class="management-title">
+            <i class="fas fa-handshake"></i> @ViewData["Title"]
+        </h2>
+        @if (hubs.Any())
+        {
+            <button type="button" class="btn-nueva-alianza" data-bs-toggle="modal" data-bs-target="#modalAlianza" onclick="limpiarModal()">
+                <i class="fas fa-plus"></i> Nueva Alianza
+            </button>
+        }
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+    }
+
+    @if (!hubs.Any())
+    {
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Primero debes crear un Hub.</strong> Las alianzas requieren un Hub al que pertenecer.
+            <a href="@Url.Action("Hubs", "Panel")" class="alert-link ms-2">Ir a Hubs <i class="fas fa-arrow-right"></i></a>
+        </div>
+    }
+    else
+    {
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon teal">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <div class="stat-info">
+                    <h4>@alianzas.Count()</h4>
+                    <p>Total Alianzas</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">
+                    <i class="fas fa-warehouse"></i>
+                </div>
+                <div class="stat-info">
+                    <h4>@alianzas.Select(a => a.HubId).Distinct().Count()</h4>
+                    <p>Hubs con Alianzas</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="stat-info">
+                    <h4>@alianzas.Sum(a => a.Vendedores?.Count ?? 0)</h4>
+                    <p>Tiendas en Alianzas</p>
+                </div>
+            </div>
+        </div>
+
+        @if (alianzas.Any())
+        {
+            <div class="alianzas-grid">
+                @foreach (var alianza in alianzas)
+                {
+                    var tiendas = alianza.Vendedores?.ToList() ?? new List<Simone.Models.Vendedor>();
+
+                    <div class="alianza-card @(alianza.Activo ? "" : "inactive")">
+                        <div class="alianza-header @(alianza.Activo ? "" : "inactive")">
+                            <div>
+                                <div class="alianza-nombre">
+                                    <i class="fas fa-handshake"></i>
+                                    @alianza.Nombre
+                                    @if (!alianza.Activo)
+                                    {
+                                        <span class="status-inactive">Inactiva</span>
+                                    }
+                                </div>
+                                <div class="alianza-hub">
+                                    <i class="fas fa-warehouse"></i>
+                                    @alianza.Hub?.Nombre
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge bg-light text-dark">
+                                    <i class="fas fa-store me-1"></i>@tiendas.Count tiendas
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="alianza-body">
+                            <div class="alianza-descripcion">
+                                @(alianza.Descripcion ?? "Sin descripción")
+                            </div>
+
+                            <div class="alianza-tiendas-header">
+                                <h6><i class="fas fa-store me-1"></i>Tiendas de la alianza</h6>
+                                <button type="button"
+                                        class="btn-agregar-tienda"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalAsignarTienda"
+                                        onclick="prepararAsignarTienda(@alianza.AlianzaId, '@alianza.Nombre.Replace("'", "\\'")', @alianza.HubId)">
+                                    <i class="fas fa-plus"></i> Agregar
+                                </button>
+                            </div>
+
+                            <div class="tiendas-lista">
+                                @if (tiendas.Any())
+                                {
+                                    @foreach (var tienda in tiendas)
+                                    {
+                                        <div class="tienda-item">
+                                            <span class="nombre">
+                                                <i class="fas fa-store"></i>
+                                                @tienda.Nombre
+                                            </span>
+                                            <form method="post" asp-controller="Panel" asp-action="QuitarTiendaAlianza" class="d-inline"
+                                                  onsubmit="return confirm('¿Quitar esta tienda de la alianza?');">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="vendedorId" value="@tienda.VendedorId" />
+                                                <button type="submit" class="btn-quitar-tienda" title="Quitar de alianza">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    }
+                                }
+                                else
+                                {
+                                    <div class="sin-tiendas">
+                                        <i class="fas fa-inbox"></i> Sin tiendas asignadas
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        <div class="alianza-footer">
+                            <button type="button"
+                                    class="action-btn edit-btn"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#modalAlianza"
+                                    onclick="editarAlianza(@alianza.AlianzaId, '@alianza.Nombre.Replace("'", "\\'")', @alianza.HubId, '@(alianza.Descripcion?.Replace("'", "\\'").Replace("\n", "\\n").Replace("\r", "") ?? "")', @(alianza.Activo ? "true" : "false"))">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
+
+                            <form method="post" asp-controller="Panel" asp-action="EliminarAlianza"
+                                  onsubmit="return confirmarEliminar(@tiendas.Count);" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="alianzaId" value="@alianza.AlianzaId" />
+                                <button type="submit" class="action-btn delete-btn">
+                                    <i class="fas fa-trash"></i> Eliminar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-handshake"></i>
+                <h4>No hay alianzas registradas</h4>
+                <p>Las alianzas permiten que múltiples tiendas compartan configuración de envío y consoliden pedidos.</p>
+                <button type="button" class="btn-nueva-alianza" data-bs-toggle="modal" data-bs-target="#modalAlianza" onclick="limpiarModal()">
+                    <i class="fas fa-plus"></i> Crear primera Alianza
+                </button>
+            </div>
+        }
+
+        <!-- Leyenda -->
+        <div class="mt-4 p-3 bg-white rounded-3 shadow-sm">
+            <h6 class="mb-2"><i class="fas fa-info-circle text-info me-2"></i>¿Cómo funcionan las alianzas?</h6>
+            <ul class="mb-0 small text-muted">
+                <li>Las tiendas de una misma alianza comparten configuración de envío (tarifas, descuentos, etc.)</li>
+                <li>Los pedidos de tiendas en la misma alianza se consolidan en un solo envío</li>
+                <li>Todas las tiendas de una alianza deben pertenecer al mismo Hub</li>
+                <li>Cualquier tienda de la alianza puede editar la configuración compartida</li>
+            </ul>
+        </div>
+    }
+</div>
+
+<!-- Modal Crear/Editar Alianza -->
+<div class="modal fade" id="modalAlianza" tabindex="-1" aria-labelledby="modalAlianzaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header alianza">
+                <h5 class="modal-title" id="modalAlianzaLabel">
+                    <i class="fas fa-handshake me-2"></i><span id="modalTitulo">Nueva Alianza</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formAlianza" method="post" asp-controller="Panel" asp-action="CrearAlianza">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="alianzaId" id="alianzaId" value="0" />
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label required">Nombre de la Alianza</label>
+                        <input type="text" class="form-control" name="nombre" id="nombre" required maxlength="100" placeholder="Ej: ModaEC, Ropa Costa" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label required">Hub</label>
+                        <select class="form-select" name="hubId" id="hubId" required>
+                            <option value="">Seleccionar Hub...</option>
+                            @foreach (var hub in hubs)
+                            {
+                                <option value="@hub.HubId">@hub.Nombre (@hub.Ciudad, @hub.Provincia)</option>
+                            }
+                        </select>
+                        <small class="text-muted">Todas las tiendas de esta alianza pertenecerán a este Hub</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" name="descripcion" id="descripcion" rows="2" maxlength="500" placeholder="Descripción opcional de la alianza"></textarea>
+                    </div>
+
+                    <div class="form-check mb-3" id="checkActivoContainer" style="display: none;">
+                        <input class="form-check-input" type="checkbox" name="activo" id="activo" value="true" checked />
+                        <label class="form-check-label" for="activo">Alianza activa</label>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn" style="background: var(--alianza-color); border-color: var(--alianza-color); color: #fff">
+                        <i class="fas fa-save me-1"></i><span id="btnTexto">Crear Alianza</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Asignar Tienda a Alianza -->
+<div class="modal fade" id="modalAsignarTienda" tabindex="-1" aria-labelledby="modalAsignarTiendaLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header alianza">
+                <h5 class="modal-title" id="modalAsignarTiendaLabel">
+                    <i class="fas fa-store me-2"></i>Agregar Tienda a <span id="nombreAlianzaAsignar"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formAsignarTienda" method="post" asp-controller="Panel" asp-action="AsignarTiendaAlianza">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="alianzaId" id="alianzaIdAsignar" value="0" />
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label required">Seleccionar Tienda</label>
+                        <select class="form-select" name="vendedorId" id="vendedorIdAsignar" required>
+                            <option value="">Cargando tiendas...</option>
+                        </select>
+                        <small class="text-muted">Solo se muestran tiendas sin alianza asignada</small>
+                    </div>
+
+                    <div class="alert alert-info small mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Al agregar la tienda, automáticamente se le asignará el Hub de la alianza.
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn" style="background: var(--alianza-color); border-color: var(--alianza-color); color: #fff">
+                        <i class="fas fa-plus me-1"></i>Agregar Tienda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function limpiarModal() {
+            document.getElementById('modalTitulo').textContent = 'Nueva Alianza';
+            document.getElementById('btnTexto').textContent = 'Crear Alianza';
+            document.getElementById('formAlianza').action = '@Url.Action("CrearAlianza", "Panel")';
+            document.getElementById('alianzaId').value = '0';
+            document.getElementById('nombre').value = '';
+            document.getElementById('hubId').value = '';
+            document.getElementById('descripcion').value = '';
+            document.getElementById('activo').checked = true;
+            document.getElementById('checkActivoContainer').style.display = 'none';
+        }
+
+        function editarAlianza(alianzaId, nombre, hubId, descripcion, activo) {
+            document.getElementById('modalTitulo').textContent = 'Editar Alianza';
+            document.getElementById('btnTexto').textContent = 'Guardar Cambios';
+            document.getElementById('formAlianza').action = '@Url.Action("EditarAlianza", "Panel")';
+            document.getElementById('alianzaId').value = alianzaId;
+            document.getElementById('nombre').value = nombre;
+            document.getElementById('hubId').value = hubId;
+            document.getElementById('descripcion').value = descripcion;
+            document.getElementById('activo').checked = activo;
+            document.getElementById('checkActivoContainer').style.display = 'block';
+        }
+
+        async function prepararAsignarTienda(alianzaId, nombreAlianza, hubId) {
+            document.getElementById('alianzaIdAsignar').value = alianzaId;
+            document.getElementById('nombreAlianzaAsignar').textContent = nombreAlianza;
+
+            var select = document.getElementById('vendedorIdAsignar');
+            select.innerHTML = '<option value="">Cargando tiendas...</option>';
+            select.disabled = true;
+
+            try {
+                const url = '@Url.Action("ObtenerTiendasParaAlianza", "Panel")?hubId=' + hubId;
+                const res = await fetch(url, { credentials: 'same-origin' });
+                const json = await res.json();
+
+                select.innerHTML = '<option value="">Seleccionar tienda...</option>';
+
+                if (json.success && json.tiendas && json.tiendas.length > 0) {
+                    json.tiendas.forEach(function (t) {
+                        var opt = document.createElement('option');
+                        opt.value = t.value;
+                        opt.text = t.text;
+                        select.appendChild(opt);
+                    });
+                    select.disabled = false;
+                } else {
+                    select.innerHTML = '<option value="">No hay tiendas disponibles</option>';
+                }
+            } catch (err) {
+                select.innerHTML = '<option value="">Error al cargar tiendas</option>';
+                console.error('Error:', err);
+            }
+        }
+
+        function confirmarEliminar(numTiendas) {
+            if (numTiendas > 0) {
+                alert('No se puede eliminar. La alianza tiene ' + numTiendas + ' tienda(s) asignada(s).');
+                return false;
+            }
+            return confirm('¿Estás seguro de eliminar esta alianza?');
+        }
+
+        // Auto-ocultar alertas después de 5 segundos
+        setTimeout(function () {
+            document.querySelectorAll('.alert-dismissible').forEach(function (alert) {
+                var bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+    </script>
+}

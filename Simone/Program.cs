@@ -1,12 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.Http.Features;
+﻿using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using Simone.Data;
+using Simone.ModelBinders;
 using Simone.Models;
 using Simone.Services;
-using Simone.ModelBinders;
 using System.Globalization;
 using System.Linq;
 
@@ -19,10 +20,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("La cadena de conexión 'DefaultConnection' no está configurada.");
 
 builder.Services.AddDbContext<TiendaDbContext>(options =>
-    options.UseSqlServer(
-        connectionString,
-        sql => sql.MigrationsAssembly(typeof(TiendaDbContext).Assembly.FullName)
-    )
+    options.UseSqlServer(connectionString)
+    .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
 );
 
 // ============================================================================
