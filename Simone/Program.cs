@@ -10,6 +10,7 @@ using Simone.Models;
 using Simone.Services;
 using System.Globalization;
 using System.Linq;
+using Simone.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,6 +117,11 @@ builder.Services.AddScoped<ProductoAtributoService>();
 
 // Productos
 builder.Services.AddScoped<ProductosService>();
+
+
+
+
+builder.Services.AddScoped<IEnvioConsolidadoService, EnvioConsolidadoService>();
 
 // ────────────────────────────────────────────────────────────────────────────
 // CARRITO Y PAGOS

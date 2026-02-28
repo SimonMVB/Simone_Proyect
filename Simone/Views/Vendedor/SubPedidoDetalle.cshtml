@@ -1,0 +1,383 @@
+@model Simone.Models.SubPedido
+@{
+    ViewData["Title"] = $"Pedido {Model.Codigo}";
+    var estados = ViewBag.Estados as string[] ?? Array.Empty<string>();
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="@Url.Action("MisSubPedidos")" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left me-1"></i>Mis Pedidos
+            </a>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-clipboard-list me-2"></i>@Model.Codigo
+            </h1>
+        </div>
+        <div>
+            @{
+                var (badgeClass, iconClass) = Model.Estado switch
+                {
+                    "Pendiente" => ("bg-warning text-dark", "bi-hourglass-split"),
+                    "Preparando" => ("bg-info", "bi-box-seam"),
+                    "Listo" => ("bg-primary", "bi-check-circle"),
+                    "EnCaminoHub" => ("bg-purple", "bi-truck"),
+                    "EnHub" => ("bg-success", "bi-building"),
+                    "Entregado" => ("bg-success", "bi-check2-all"),
+                    "Cancelado" => ("bg-danger", "bi-x-circle"),
+                    _ => ("bg-secondary", "bi-circle")
+                };
+            }
+            <span class="badge @badgeClass fs-5">
+                <i class="bi @iconClass me-1"></i>@Model.Estado
+            </span>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Columna Principal -->
+        <div class="col-lg-8">
+            <!-- Info del Cliente y Destino -->
+            @if (Model.Envio != null)
+            {
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-geo-alt me-2"></i>Datos de Entrega</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">Cliente</h6>
+                                @if (Model.Envio.Cliente != null)
+                                {
+                                    <p class="mb-1"><strong>@Model.Envio.Cliente.NombreCompleto</strong></p>
+                                    <p class="mb-1"><i class="bi bi-envelope me-1"></i>@Model.Envio.Cliente.Email</p>
+                                    <p class="mb-0"><i class="bi bi-telephone me-1"></i>@Model.Envio.TelefonoContacto</p>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">Dirección de Entrega</h6>
+                                <p class="mb-1"><strong>@Model.Envio.Provincia, @Model.Envio.Ciudad</strong></p>
+                                <p class="mb-1">@Model.Envio.DireccionEntrega</p>
+                                @if (!string.IsNullOrEmpty(Model.Envio.ReferenciaEntrega))
+                                {
+                                    <p class="mb-0 text-muted"><small>Ref: @Model.Envio.ReferenciaEntrega</small></p>
+                                }
+                            </div>
+                        </div>
+                        @if (Model.Envio.Hub != null)
+                        {
+                            <hr />
+                            <div class="alert alert-info mb-0">
+                                <i class="bi bi-building me-2"></i>
+                                <strong>Hub de destino:</strong> @Model.Envio.Hub.Nombre
+                                <br><small>@Model.Envio.Hub.Direccion, @Model.Envio.Hub.Ciudad</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <!-- Productos a Preparar -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-bag me-2"></i>Productos a Preparar</h5>
+                    <span class="badge bg-primary">@Model.Items.Count items</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px"></th>
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(item.ImagenPath))
+                                            {
+                                                <img src="@item.ImagenPath" alt="" class="rounded"
+                                                     style="width:50px; height:50px; object-fit:cover;" />
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-light rounded d-flex align-items-center justify-content-center"
+                                                     style="width:50px; height:50px;">
+                                                    <i class="bi bi-image text-muted"></i>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <strong>@item.NombreProducto</strong>
+                                            @if (!string.IsNullOrEmpty(item.Color) || !string.IsNullOrEmpty(item.Talla))
+                                            {
+                                                <br>
+                                                @if (!string.IsNullOrEmpty(item.Color))
+                                                {
+                                                    <span class="badge bg-light text-dark">@item.Color</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.Talla))
+                                                {
+                                                    <span class="badge bg-light text-dark">@item.Talla</span>
+                                                }
+                                            }
+                                        </td>
+                                        <td><code>@item.SKU</code></td>
+                                        <td class="text-center">
+                                            <span class="badge bg-secondary fs-6">@item.Cantidad</span>
+                                        </td>
+                                        <td class="text-end"><strong>$@item.Subtotal.ToString("N2")</strong></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Subtotal:</strong></td>
+                                    <td class="text-end"><strong>$@Model.Subtotal.ToString("N2")</strong></td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td colspan="4" class="text-end"><strong>TOTAL PEDIDO:</strong></td>
+                                    <td class="text-end"><strong class="fs-5">$@Model.Total.ToString("N2")</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial -->
+            @if (Model.Historial.Any())
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Historial</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="timeline">
+                            @foreach (var h in Model.Historial.OrderByDescending(x => x.FechaCambio).Take(10))
+                            {
+                                var hIconClass = h.EstadoNuevo switch
+                                {
+                                    "Pendiente" => "bi-hourglass text-warning",
+                                    "Preparando" => "bi-box-seam text-info",
+                                    "Listo" => "bi-check-circle text-primary",
+                                    "EnCaminoHub" => "bi-truck text-purple",
+                                    "EnHub" => "bi-building text-success",
+                                    "Entregado" => "bi-check2-all text-success",
+                                    "Cancelado" => "bi-x-circle text-danger",
+                                    _ => "bi-circle text-secondary"
+                                };
+
+                                <div class="d-flex mb-3">
+                                    <div class="me-3">
+                                        <i class="bi @hIconClass fs-5"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between">
+                                            <strong>@h.EstadoAnterior → @h.EstadoNuevo</strong>
+                                            <small class="text-muted">@h.FechaCambio.ToString("dd/MM HH:mm")</small>
+                                        </div>
+                                        <small class="text-muted">Por: @h.TipoUsuario</small>
+                                        @if (!string.IsNullOrEmpty(h.Comentario))
+                                        {
+                                            <p class="mb-0 mt-1 text-muted fst-italic">"@h.Comentario"</p>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- Columna Lateral -->
+        <div class="col-lg-4">
+            <!-- Acciones Rápidas -->
+            <div class="card mb-4 border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Acciones</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.Estado == "Pendiente")
+                    {
+                        <form method="post" asp-action="CambiarEstadoSubPedido">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="subPedidoId" value="@Model.SubPedidoId" />
+                            <input type="hidden" name="nuevoEstado" value="Preparando" />
+                            <button type="submit" class="btn btn-info btn-lg w-100 mb-2">
+                                <i class="bi bi-play-fill me-2"></i>Iniciar Preparación
+                            </button>
+                        </form>
+                        <small class="text-muted">Haz clic cuando comiences a preparar este pedido.</small>
+                    }
+                    else if (Model.Estado == "Preparando")
+                    {
+                        <form method="post" asp-action="MarcarListoParaHub">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="subPedidoId" value="@Model.SubPedidoId" />
+                            <button type="submit" class="btn btn-primary btn-lg w-100 mb-2">
+                                <i class="bi bi-check-lg me-2"></i>Marcar como Listo
+                            </button>
+                        </form>
+                        <small class="text-muted">Haz clic cuando el pedido esté empacado y listo.</small>
+                    }
+                    else if (Model.Estado == "Listo")
+                    {
+                        <form method="post" asp-action="MarcarEnviadoAHub">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="subPedidoId" value="@Model.SubPedidoId" />
+                            <button type="submit" class="btn btn-success btn-lg w-100 mb-2">
+                                <i class="bi bi-truck me-2"></i>Enviado al Hub
+                            </button>
+                        </form>
+                        <small class="text-muted">Haz clic cuando hayas enviado el paquete al Hub.</small>
+                    }
+                    else if (Model.Estado == "EnCaminoHub")
+                    {
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-truck me-2"></i>
+                            <strong>En camino al Hub</strong>
+                            <p class="mb-0 mt-1 small">El Hub confirmará la recepción del paquete.</p>
+                        </div>
+                    }
+                    else if (Model.Estado == "EnHub" || Model.Estado == "Entregado")
+                    {
+                        <div class="alert alert-success mb-0">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <strong>¡Completado!</strong>
+                            <p class="mb-0 mt-1 small">Este pedido ya fue procesado correctamente.</p>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Cambiar Estado Manual -->
+            @if (estados.Contains(Model.Estado) || Model.Estado == "Pendiente")
+            {
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Cambiar Estado</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" asp-action="CambiarEstadoSubPedido">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="subPedidoId" value="@Model.SubPedidoId" />
+                            <div class="mb-3">
+                                <select name="nuevoEstado" class="form-select">
+                                    @foreach (var e in estados)
+                                    {
+                                        <option value="@e" selected="@(Model.Estado == e)">@e</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <textarea name="notasVendedor" class="form-control" rows="2"
+                                      placeholder="Nota (opcional)"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-check-lg me-1"></i>Actualizar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+
+            <!-- Fechas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Fechas</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Creación:</span>
+                            <span>@Model.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</span>
+                        </li>
+                        @if (Model.FechaPreparacionInicio.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Inicio preparación:</span>
+                                <span>@Model.FechaPreparacionInicio.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                        @if (Model.FechaListo.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Listo:</span>
+                                <span>@Model.FechaListo.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                        @if (Model.FechaEnvioHub.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Enviado a Hub:</span>
+                                <span>@Model.FechaEnvioHub.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                        @if (Model.FechaRecepcionHub.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Recibido en Hub:</span>
+                                <span class="text-success">@Model.FechaRecepcionHub.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Info Adicional -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información</h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Peso estimado:</span>
+                            <span>@Model.PesoEstimadoKg.ToString("N2") kg</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Envío consolidado:</span>
+                            <span class="font-monospace">@(Model.Envio?.Codigo ?? "-")</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+</style>

@@ -1,0 +1,231 @@
+@model List<Simone.Models.SubPedido>
+@{
+    ViewData["Title"] = "Mis Pedidos";
+    var estados = ViewBag.Estados as string[] ?? Array.Empty<string>();
+    var filtroEstado = ViewBag.FiltroEstado as string;
+    var conteoEstados = ViewBag.ConteoEstados as Dictionary<string, int> ?? new Dictionary<string, int>();
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="@Url.Action("Index", "Panel")" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left me-1"></i>Panel
+            </a>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-clipboard-list me-2"></i>Mis Pedidos
+            </h1>
+            <p class="text-muted mb-0">Pedidos asignados a tu tienda para preparar y enviar</p>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Resumen por Estado -->
+    <div class="row mb-4 g-3">
+        @foreach (var e in new[] { "Pendiente", "Preparando", "Listo", "EnCaminoHub", "EnHub", "Entregado" })
+        {
+            var count = conteoEstados.GetValueOrDefault(e, 0);
+            var (colorClass, iconClass) = e switch
+            {
+                "Pendiente" => ("warning", "bi-hourglass-split"),
+                "Preparando" => ("info", "bi-box-seam"),
+                "Listo" => ("primary", "bi-check-circle"),
+                "EnCaminoHub" => ("purple", "bi-truck"),
+                "EnHub" => ("success", "bi-building"),
+                "Entregado" => ("success", "bi-check2-all"),
+                _ => ("secondary", "bi-circle")
+            };
+            var isActive = filtroEstado == e;
+
+            <div class="col-6 col-md-4 col-lg-2">
+                <a href="@Url.Action("MisSubPedidos", new { estado = e })"
+                   class="card text-decoration-none h-100 @(isActive ? "border-3 border-" + colorClass : "")">
+                    <div class="card-body text-center py-3">
+                        <i class="bi @iconClass fs-4 text-@colorClass"></i>
+                        <h4 class="mb-0 mt-2 text-@colorClass">@count</h4>
+                        <small class="text-muted">@e</small>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- Filtro activo -->
+    @if (!string.IsNullOrEmpty(filtroEstado))
+    {
+        <div class="mb-3">
+            <span class="text-muted">Filtrando por:</span>
+            <span class="badge bg-secondary ms-1">@filtroEstado</span>
+            <a href="@Url.Action("MisSubPedidos")" class="btn btn-sm btn-outline-secondary ms-2">
+                <i class="bi bi-x"></i> Quitar filtro
+            </a>
+        </div>
+    }
+
+    <!-- Lista de Pedidos -->
+    @if (Model.Any())
+    {
+        <div class="row g-4">
+            @foreach (var sp in Model)
+            {
+                var (badgeClass, iconClass) = sp.Estado switch
+                {
+                    "Pendiente" => ("bg-warning text-dark", "bi-hourglass-split"),
+                    "Preparando" => ("bg-info", "bi-box-seam"),
+                    "Listo" => ("bg-primary", "bi-check-circle"),
+                    "EnCaminoHub" => ("bg-purple", "bi-truck"),
+                    "EnHub" => ("bg-success", "bi-building"),
+                    "Entregado" => ("bg-success", "bi-check2-all"),
+                    "Cancelado" => ("bg-danger", "bi-x-circle"),
+                    _ => ("bg-secondary", "bi-circle")
+                };
+
+                var esUrgente = sp.Estado == "Pendiente" && sp.FechaCreacion < DateTime.UtcNow.AddHours(-24);
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="card h-100 @(esUrgente ? "border-danger border-2" : "")">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span class="font-monospace fw-bold">@sp.Codigo</span>
+                            <span class="badge @badgeClass">
+                                <i class="bi @iconClass me-1"></i>@sp.Estado
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            @if (esUrgente)
+                            {
+                                <div class="alert alert-danger py-1 px-2 mb-2">
+                                    <small><i class="bi bi-exclamation-triangle me-1"></i>Pedido urgente (+24h)</small>
+                                </div>
+                            }
+
+                            <!-- Cliente -->
+                            @if (sp.Envio?.Cliente != null)
+                            {
+                                <div class="mb-2">
+                                    <small class="text-muted">Cliente:</small>
+                                    <br><strong>@sp.Envio.Cliente.NombreCompleto</strong>
+                                </div>
+                            }
+
+                            <!-- Destino -->
+                            @if (sp.Envio != null)
+                            {
+                                <div class="mb-2">
+                                    <small class="text-muted">Destino:</small>
+                                    <br><small>@sp.Envio.Provincia, @sp.Envio.Ciudad</small>
+                                </div>
+                            }
+
+                            <!-- Items -->
+                            <div class="mb-2">
+                                <small class="text-muted">Productos:</small>
+                                <span class="badge bg-light text-dark ms-1">@sp.Items.Count items</span>
+                            </div>
+
+                            <!-- Total -->
+                            <div class="mb-2">
+                                <small class="text-muted">Total:</small>
+                                <strong class="text-success ms-1">$@sp.Total.ToString("N2")</strong>
+                            </div>
+
+                            <!-- Fecha -->
+                            <div>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>@sp.FechaCreacion.ToString("dd/MM/yyyy HH:mm")
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <div class="d-flex gap-2">
+                                <a href="@Url.Action("SubPedidoDetalle", new { id = sp.SubPedidoId })"
+                                   class="btn btn-outline-primary btn-sm flex-grow-1">
+                                    <i class="bi bi-eye me-1"></i>Ver detalle
+                                </a>
+
+                                @if (sp.Estado == "Pendiente")
+                                {
+                                    <form method="post" asp-action="CambiarEstadoSubPedido" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="subPedidoId" value="@sp.SubPedidoId" />
+                                        <input type="hidden" name="nuevoEstado" value="Preparando" />
+                                        <button type="submit" class="btn btn-info btn-sm" title="Iniciar preparación">
+                                            <i class="bi bi-play-fill"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else if (sp.Estado == "Preparando")
+                                {
+                                    <form method="post" asp-action="MarcarListoParaHub" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="subPedidoId" value="@sp.SubPedidoId" />
+                                        <button type="submit" class="btn btn-primary btn-sm" title="Marcar como listo">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else if (sp.Estado == "Listo")
+                                {
+                                    <form method="post" asp-action="MarcarEnviadoAHub" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="subPedidoId" value="@sp.SubPedidoId" />
+                                        <button type="submit" class="btn btn-success btn-sm" title="Enviado al Hub">
+                                            <i class="bi bi-truck"></i>
+                                        </button>
+                                    </form>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <p class="text-muted mt-3 mb-0">
+                    @if (!string.IsNullOrEmpty(filtroEstado))
+                    {
+                        <span>No hay pedidos con estado "@filtroEstado"</span>
+                    }
+                    else
+                    {
+                        <span>No tienes pedidos asignados</span>
+                    }
+                </p>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+
+    .border-purple {
+        border-color: #6f42c1 !important;
+    }
+</style>

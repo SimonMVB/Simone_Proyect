@@ -11,10 +11,13 @@ namespace Simone.Models
     /// Soporta tracking de vendedor, estados detallados y comisiones
     /// </summary>
     public class Pedido
+
+
     {
         [Key]
         public int PedidoID { get; set; }
-
+        /// </summary>
+        public virtual EnvioConsolidado? EnvioConsolidado { get; set; }
         // ==================== NÚMERO DE ORDEN ====================
 
         /// <summary>

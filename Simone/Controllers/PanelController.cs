@@ -737,6 +737,893 @@ namespace Simone.Controllers
 
         #endregion
 
+        #region Tarifas de Envío - Alianzas (Admin)
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> TarifasEnvio(int? alianzaId, int? vendedorId, CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation("Listado de Tarifas de Envío solicitado");
+
+                var query = _context.TarifasEnvioAlianza
+                    .AsNoTracking()
+                    .Include(t => t.Alianza)
+                    .Include(t => t.Vendedor)
+                    .AsQueryable();
+
+                if (alianzaId.HasValue)
+                    query = query.Where(t => t.AlianzaId == alianzaId);
+
+                if (vendedorId.HasValue)
+                    query = query.Where(t => t.VendedorId == vendedorId);
+
+                var tarifas = await query
+                    .OrderBy(t => t.AlianzaId.HasValue ? 0 : 1)
+                    .ThenBy(t => t.Alianza != null ? t.Alianza.Nombre : "")
+                    .ThenBy(t => t.Vendedor != null ? t.Vendedor.Nombre : "")
+                    .ThenBy(t => t.Provincia)
+                    .ThenBy(t => t.Ciudad)
+                    .ToListAsync(ct);
+
+                var alianzas = await _context.AlianzasEnvio
+                    .AsNoTracking()
+                    .Where(a => a.Activo)
+                    .OrderBy(a => a.Nombre)
+                    .ToListAsync(ct);
+
+                var vendedoresSinAlianza = await _context.Vendedores
+                    .AsNoTracking()
+                    .Where(v => v.AlianzaId == null)
+                    .OrderBy(v => v.Nombre)
+                    .ToListAsync(ct);
+
+                ViewBag.Alianzas = alianzas;
+                ViewBag.VendedoresSinAlianza = vendedoresSinAlianza;
+                ViewBag.FiltroAlianzaId = alianzaId;
+                ViewBag.FiltroVendedorId = vendedorId;
+
+                return View(tarifas);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar tarifas de envío");
+                TempData["MensajeError"] = "Error al cargar las tarifas.";
+                return View(new List<TarifaEnvioAlianza>());
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CrearTarifa(
+            int? alianzaId, int? vendedorId,
+            string provincia, string? ciudad,
+            decimal precioBase, decimal pesoIncluidoKg, decimal precioPorKgExtra,
+            int diasEntregaEstimados, CancellationToken ct = default)
+        {
+            try
+            {
+                if (!alianzaId.HasValue && !vendedorId.HasValue)
+                {
+                    TempData["MensajeError"] = "Debe seleccionar una Alianza o una Tienda.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                if (alianzaId.HasValue && vendedorId.HasValue)
+                {
+                    TempData["MensajeError"] = "Seleccione solo Alianza O Tienda, no ambos.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                if (string.IsNullOrWhiteSpace(provincia))
+                {
+                    TempData["MensajeError"] = "La provincia es obligatoria.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                var ciudadNorm = string.IsNullOrWhiteSpace(ciudad) ? null : ciudad.Trim();
+                var existente = await _context.TarifasEnvioAlianza
+                    .AnyAsync(t =>
+                        t.AlianzaId == alianzaId &&
+                        t.VendedorId == vendedorId &&
+                        t.Provincia == provincia.Trim() &&
+                        t.Ciudad == ciudadNorm, ct);
+
+                if (existente)
+                {
+                    TempData["MensajeError"] = "Ya existe una tarifa para ese destino.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                var tarifa = new TarifaEnvioAlianza
+                {
+                    AlianzaId = alianzaId,
+                    VendedorId = vendedorId,
+                    Provincia = provincia.Trim(),
+                    Ciudad = ciudadNorm,
+                    PrecioBase = precioBase,
+                    PesoIncluidoKg = pesoIncluidoKg,
+                    PrecioPorKgExtra = precioPorKgExtra,
+                    DiasEntregaEstimados = diasEntregaEstimados,
+                    Activo = true
+                };
+
+                _context.TarifasEnvioAlianza.Add(tarifa);
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Tarifa creada. TarifaId: {TarifaId}, Destino: {Provincia}/{Ciudad}",
+                    tarifa.TarifaId, tarifa.Provincia, tarifa.Ciudad ?? "Toda la provincia");
+                TempData["MensajeExito"] = $"Tarifa para '{tarifa.Provincia}' creada correctamente.";
+
+                return RedirectToAction(nameof(TarifasEnvio), new { alianzaId, vendedorId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear tarifa");
+                TempData["MensajeError"] = "Error al crear la tarifa.";
+                return RedirectToAction(nameof(TarifasEnvio));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarTarifa(
+            int tarifaId,
+            string provincia, string? ciudad,
+            decimal precioBase, decimal pesoIncluidoKg, decimal precioPorKgExtra,
+            int diasEntregaEstimados, bool activo, CancellationToken ct = default)
+        {
+            try
+            {
+                var tarifa = await _context.TarifasEnvioAlianza.FindAsync(new object[] { tarifaId }, ct);
+
+                if (tarifa == null)
+                {
+                    TempData["MensajeError"] = "Tarifa no encontrada.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                if (string.IsNullOrWhiteSpace(provincia))
+                {
+                    TempData["MensajeError"] = "La provincia es obligatoria.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                tarifa.Provincia = provincia.Trim();
+                tarifa.Ciudad = string.IsNullOrWhiteSpace(ciudad) ? null : ciudad.Trim();
+                tarifa.PrecioBase = precioBase;
+                tarifa.PesoIncluidoKg = pesoIncluidoKg;
+                tarifa.PrecioPorKgExtra = precioPorKgExtra;
+                tarifa.DiasEntregaEstimados = diasEntregaEstimados;
+                tarifa.Activo = activo;
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Tarifa editada. TarifaId: {TarifaId}", tarifaId);
+                TempData["MensajeExito"] = $"Tarifa para '{tarifa.Provincia}' actualizada.";
+
+                return RedirectToAction(nameof(TarifasEnvio), new { alianzaId = tarifa.AlianzaId, vendedorId = tarifa.VendedorId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al editar tarifa. TarifaId: {TarifaId}", tarifaId);
+                TempData["MensajeError"] = "Error al actualizar la tarifa.";
+                return RedirectToAction(nameof(TarifasEnvio));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> EliminarTarifa(int tarifaId, CancellationToken ct = default)
+        {
+            try
+            {
+                var tarifa = await _context.TarifasEnvioAlianza.FindAsync(new object[] { tarifaId }, ct);
+
+                if (tarifa == null)
+                {
+                    TempData["MensajeError"] = "Tarifa no encontrada.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                var alianzaId = tarifa.AlianzaId;
+                var vendedorId = tarifa.VendedorId;
+                var destino = $"{tarifa.Provincia}/{tarifa.Ciudad ?? "Toda"}";
+
+                _context.TarifasEnvioAlianza.Remove(tarifa);
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogWarning("Tarifa eliminada. TarifaId: {TarifaId}, Destino: {Destino}", tarifaId, destino);
+                TempData["MensajeExito"] = $"Tarifa para '{destino}' eliminada.";
+
+                return RedirectToAction(nameof(TarifasEnvio), new { alianzaId, vendedorId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar tarifa. TarifaId: {TarifaId}", tarifaId);
+                TempData["MensajeError"] = "Error al eliminar la tarifa.";
+                return RedirectToAction(nameof(TarifasEnvio));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> DuplicarTarifasAlianza(int alianzaOrigenId, int alianzaDestinoId, CancellationToken ct = default)
+        {
+            try
+            {
+                if (alianzaOrigenId == alianzaDestinoId)
+                {
+                    TempData["MensajeError"] = "La alianza origen y destino no pueden ser iguales.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                var tarifasOrigen = await _context.TarifasEnvioAlianza
+                    .AsNoTracking()
+                    .Where(t => t.AlianzaId == alianzaOrigenId)
+                    .ToListAsync(ct);
+
+                if (!tarifasOrigen.Any())
+                {
+                    TempData["MensajeError"] = "La alianza origen no tiene tarifas.";
+                    return RedirectToAction(nameof(TarifasEnvio));
+                }
+
+                var existentes = await _context.TarifasEnvioAlianza
+                    .Where(t => t.AlianzaId == alianzaDestinoId)
+                    .Select(t => new { t.Provincia, t.Ciudad })
+                    .ToListAsync(ct);
+
+                int creadas = 0;
+                foreach (var origen in tarifasOrigen)
+                {
+                    var existe = existentes.Any(e => e.Provincia == origen.Provincia && e.Ciudad == origen.Ciudad);
+                    if (!existe)
+                    {
+                        _context.TarifasEnvioAlianza.Add(new TarifaEnvioAlianza
+                        {
+                            AlianzaId = alianzaDestinoId,
+                            Provincia = origen.Provincia,
+                            Ciudad = origen.Ciudad,
+                            PrecioBase = origen.PrecioBase,
+                            PesoIncluidoKg = origen.PesoIncluidoKg,
+                            PrecioPorKgExtra = origen.PrecioPorKgExtra,
+                            DiasEntregaEstimados = origen.DiasEntregaEstimados,
+                            Activo = true
+                        });
+                        creadas++;
+                    }
+                }
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Tarifas duplicadas. Origen: {Origen}, Destino: {Destino}, Creadas: {Creadas}",
+                    alianzaOrigenId, alianzaDestinoId, creadas);
+                TempData["MensajeExito"] = $"Se duplicaron {creadas} tarifas correctamente.";
+
+                return RedirectToAction(nameof(TarifasEnvio), new { alianzaId = alianzaDestinoId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al duplicar tarifas");
+                TempData["MensajeError"] = "Error al duplicar las tarifas.";
+                return RedirectToAction(nameof(TarifasEnvio));
+            }
+        }
+
+        #endregion
+
+        #region Envíos Consolidados (Admin)
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> EnviosConsolidados(string? estado, int? hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation("Listado de Envíos Consolidados solicitado. Estado: {Estado}, HubId: {HubId}", estado, hubId);
+
+                var query = _context.EnviosConsolidados
+                    .AsNoTracking()
+                    .Include(e => e.Cliente)
+                    .Include(e => e.Hub)
+                    .Include(e => e.SubPedidos)
+                    .AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(estado))
+                    query = query.Where(e => e.Estado == estado);
+
+                if (hubId.HasValue)
+                    query = query.Where(e => e.HubId == hubId);
+
+                var envios = await query
+                    .OrderByDescending(e => e.FechaCreacion)
+                    .Take(100)
+                    .ToListAsync(ct);
+
+                var hubs = await _context.HubsEnvio
+                    .AsNoTracking()
+                    .Where(h => h.Activo)
+                    .OrderBy(h => h.Nombre)
+                    .ToListAsync(ct);
+
+                ViewBag.Hubs = hubs;
+                ViewBag.FiltroEstado = estado;
+                ViewBag.FiltroHubId = hubId;
+                ViewBag.Estados = new[] { "Pendiente", "EnProceso", "EnHub", "EnCamino", "Entregado", "Cancelado" };
+
+                return View(envios);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar envíos consolidados");
+                TempData["MensajeError"] = "Error al cargar los envíos.";
+                return View(new List<EnvioConsolidado>());
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> DetalleEnvioConsolidado(int id, CancellationToken ct = default)
+        {
+            try
+            {
+                var envio = await _context.EnviosConsolidados
+                    .AsNoTracking()
+                    .Include(e => e.Cliente)
+                    .Include(e => e.Hub)
+                    .Include(e => e.Pedido)
+                    .Include(e => e.SubPedidos)
+                        .ThenInclude(sp => sp.Vendedor)
+                    .Include(e => e.SubPedidos)
+                        .ThenInclude(sp => sp.Items)
+                            .ThenInclude(i => i.Producto)
+                    .Include(e => e.SubPedidos)
+                        .ThenInclude(sp => sp.Historial)
+                    .AsSplitQuery()
+                    .FirstOrDefaultAsync(e => e.EnvioId == id, ct);
+
+                if (envio == null)
+                {
+                    TempData["MensajeError"] = "Envío no encontrado.";
+                    return RedirectToAction(nameof(EnviosConsolidados));
+                }
+
+                return View(envio);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar detalle de envío. EnvioId: {EnvioId}", id);
+                TempData["MensajeError"] = "Error al cargar el detalle.";
+                return RedirectToAction(nameof(EnviosConsolidados));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarEstadoEnvio(int envioId, string nuevoEstado, string? notas, CancellationToken ct = default)
+        {
+            try
+            {
+                var envio = await _context.EnviosConsolidados.FindAsync(new object[] { envioId }, ct);
+
+                if (envio == null)
+                {
+                    TempData["MensajeError"] = "Envío no encontrado.";
+                    return RedirectToAction(nameof(EnviosConsolidados));
+                }
+
+                var estadoAnterior = envio.Estado;
+                envio.Estado = nuevoEstado;
+
+                if (nuevoEstado == "EnCamino" && !envio.FechaEnvio.HasValue)
+                    envio.FechaEnvio = DateTime.UtcNow;
+
+                if (nuevoEstado == "Entregado" && !envio.FechaEntrega.HasValue)
+                    envio.FechaEntrega = DateTime.UtcNow;
+
+                if (!string.IsNullOrWhiteSpace(notas))
+                    envio.Notas = notas.Trim();
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Estado de envío cambiado. EnvioId: {EnvioId}, De: {Anterior}, A: {Nuevo}",
+                    envioId, estadoAnterior, nuevoEstado);
+                TempData["MensajeExito"] = $"Estado actualizado a '{nuevoEstado}'.";
+
+                return RedirectToAction(nameof(DetalleEnvioConsolidado), new { id = envioId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar estado de envío. EnvioId: {EnvioId}", envioId);
+                TempData["MensajeError"] = "Error al cambiar el estado.";
+                return RedirectToAction(nameof(EnviosConsolidados));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> AsignarGuiaEnvio(int envioId, string numeroGuia, string? transportista, CancellationToken ct = default)
+        {
+            try
+            {
+                var envio = await _context.EnviosConsolidados.FindAsync(new object[] { envioId }, ct);
+
+                if (envio == null)
+                {
+                    TempData["MensajeError"] = "Envío no encontrado.";
+                    return RedirectToAction(nameof(EnviosConsolidados));
+                }
+
+                if (string.IsNullOrWhiteSpace(numeroGuia))
+                {
+                    TempData["MensajeError"] = "El número de guía es obligatorio.";
+                    return RedirectToAction(nameof(DetalleEnvioConsolidado), new { id = envioId });
+                }
+
+                envio.NumeroGuia = numeroGuia.Trim();
+                envio.Transportista = transportista?.Trim();
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Guía asignada. EnvioId: {EnvioId}, Guia: {Guia}", envioId, numeroGuia);
+                TempData["MensajeExito"] = $"Guía '{numeroGuia}' asignada correctamente.";
+
+                return RedirectToAction(nameof(DetalleEnvioConsolidado), new { id = envioId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al asignar guía. EnvioId: {EnvioId}", envioId);
+                TempData["MensajeError"] = "Error al asignar la guía.";
+                return RedirectToAction(nameof(EnviosConsolidados));
+            }
+        }
+
+        #endregion
+
+        #region SubPedidos (Admin)
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> SubPedidos(string? estado, int? vendedorId, CancellationToken ct = default)
+        {
+            try
+            {
+                _logger.LogInformation("Listado de SubPedidos solicitado. Estado: {Estado}, VendedorId: {VendedorId}", estado, vendedorId);
+
+                var query = _context.SubPedidos
+                    .AsNoTracking()
+                    .Include(sp => sp.Envio)
+                    .Include(sp => sp.Vendedor)
+                    .Include(sp => sp.Items)
+                    .AsQueryable();
+
+                if (!string.IsNullOrWhiteSpace(estado))
+                    query = query.Where(sp => sp.Estado == estado);
+
+                if (vendedorId.HasValue)
+                    query = query.Where(sp => sp.VendedorId == vendedorId);
+
+                var subPedidos = await query
+                    .OrderByDescending(sp => sp.FechaCreacion)
+                    .Take(100)
+                    .ToListAsync(ct);
+
+                var vendedores = await _context.Vendedores
+                    .AsNoTracking()
+                    .OrderBy(v => v.Nombre)
+                    .Select(v => new SelectListItem { Value = v.VendedorId.ToString(), Text = v.Nombre })
+                    .ToListAsync(ct);
+
+                ViewBag.Vendedores = vendedores;
+                ViewBag.FiltroEstado = estado;
+                ViewBag.FiltroVendedorId = vendedorId;
+                ViewBag.Estados = new[] { "Pendiente", "Preparando", "Listo", "EnCaminoHub", "EnHub", "Entregado", "Cancelado" };
+
+                return View(subPedidos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar subpedidos");
+                TempData["MensajeError"] = "Error al cargar los subpedidos.";
+                return View(new List<SubPedido>());
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> DetalleSubPedido(int id, CancellationToken ct = default)
+        {
+            try
+            {
+                var subPedido = await _context.SubPedidos
+                    .AsNoTracking()
+                    .Include(sp => sp.Envio)
+                        .ThenInclude(e => e!.Cliente)
+                    .Include(sp => sp.Vendedor)
+                    .Include(sp => sp.Items)
+                        .ThenInclude(i => i.Producto)
+                    .Include(sp => sp.Historial.OrderByDescending(h => h.FechaCambio))
+                    .AsSplitQuery()
+                    .FirstOrDefaultAsync(sp => sp.SubPedidoId == id, ct);
+
+                if (subPedido == null)
+                {
+                    TempData["MensajeError"] = "SubPedido no encontrado.";
+                    return RedirectToAction(nameof(SubPedidos));
+                }
+
+                return View(subPedido);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar detalle de subpedido. SubPedidoId: {SubPedidoId}", id);
+                TempData["MensajeError"] = "Error al cargar el detalle.";
+                return RedirectToAction(nameof(SubPedidos));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarEstadoSubPedido(int subPedidoId, string nuevoEstado, string? comentario, CancellationToken ct = default)
+        {
+            try
+            {
+                var subPedido = await _context.SubPedidos
+                    .Include(sp => sp.Historial)
+                    .FirstOrDefaultAsync(sp => sp.SubPedidoId == subPedidoId, ct);
+
+                if (subPedido == null)
+                {
+                    TempData["MensajeError"] = "SubPedido no encontrado.";
+                    return RedirectToAction(nameof(SubPedidos));
+                }
+
+                var estadoAnterior = subPedido.Estado;
+                var userId = CurrentUserId();
+
+                // Registrar en historial
+                subPedido.Historial.Add(new SubPedidoHistorial
+                {
+                    SubPedidoId = subPedidoId,
+                    EstadoAnterior = estadoAnterior,
+                    EstadoNuevo = nuevoEstado,
+                    Comentario = comentario?.Trim(),
+                    UsuarioId = userId,
+                    TipoUsuario = "Admin",
+                    FechaCambio = DateTime.UtcNow
+                });
+
+                subPedido.Estado = nuevoEstado;
+
+                if (nuevoEstado == "EnHub" && !subPedido.FechaRecepcionHub.HasValue)
+                    subPedido.FechaRecepcionHub = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Estado de subpedido cambiado. SubPedidoId: {SubPedidoId}, De: {Anterior}, A: {Nuevo}",
+                    subPedidoId, estadoAnterior, nuevoEstado);
+                TempData["MensajeExito"] = $"Estado actualizado a '{nuevoEstado}'.";
+
+                return RedirectToAction(nameof(DetalleSubPedido), new { id = subPedidoId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar estado de subpedido. SubPedidoId: {SubPedidoId}", subPedidoId);
+                TempData["MensajeError"] = "Error al cambiar el estado.";
+                return RedirectToAction(nameof(SubPedidos));
+            }
+        }
+
+        #endregion
+
+        #region Panel Hub (Responsable de Hub)
+
+        [Authorize(Roles = "Administrador,Vendedor")]
+        [HttpGet]
+        public async Task<IActionResult> PanelHub(CancellationToken ct = default)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                // Verificar si es responsable de Hub o Admin
+                int? hubId = user?.HubResponsableId;
+
+                if (!hubId.HasValue && !IsAdmin())
+                {
+                    TempData["MensajeError"] = "No tienes un Hub asignado.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                _logger.LogInformation("PanelHub accedido. UserId: {UserId}, HubId: {HubId}", user?.Id, hubId);
+
+                // Si es admin sin hub asignado, mostrar selector de hub
+                if (!hubId.HasValue && IsAdmin())
+                {
+                    var todosHubs = await _context.HubsEnvio
+                        .AsNoTracking()
+                        .Where(h => h.Activo)
+                        .OrderBy(h => h.Nombre)
+                        .ToListAsync(ct);
+
+                    ViewBag.Hubs = todosHubs;
+                    ViewBag.ModoAdmin = true;
+                    return View("PanelHubSelector");
+                }
+
+                return await CargarPanelHub(hubId!.Value, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar PanelHub");
+                TempData["MensajeError"] = "Error al cargar el panel.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> PanelHubAdmin(int hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                var hub = await _context.HubsEnvio.FindAsync(new object[] { hubId }, ct);
+                if (hub == null)
+                {
+                    TempData["MensajeError"] = "Hub no encontrado.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                return await CargarPanelHub(hubId, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar PanelHubAdmin. HubId: {HubId}", hubId);
+                TempData["MensajeError"] = "Error al cargar el panel.";
+                return RedirectToAction(nameof(PanelHub));
+            }
+        }
+
+        private async Task<IActionResult> CargarPanelHub(int hubId, CancellationToken ct)
+        {
+            var hub = await _context.HubsEnvio
+                .AsNoTracking()
+                .FirstOrDefaultAsync(h => h.HubId == hubId, ct);
+
+            if (hub == null)
+            {
+                TempData["MensajeError"] = "Hub no encontrado.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // SubPedidos en camino al Hub (para recibir)
+            var subPedidosEnCamino = await _context.SubPedidos
+                .AsNoTracking()
+                .Include(sp => sp.Vendedor)
+                .Include(sp => sp.Envio)
+                .Include(sp => sp.Items)
+                .Where(sp => sp.Estado == "EnCaminoHub" && sp.Envio != null && sp.Envio.HubId == hubId)
+                .OrderBy(sp => sp.FechaEnvioHub)
+                .ToListAsync(ct);
+
+            // SubPedidos ya en el Hub
+            var subPedidosEnHub = await _context.SubPedidos
+                .AsNoTracking()
+                .Include(sp => sp.Vendedor)
+                .Include(sp => sp.Envio)
+                .Include(sp => sp.Items)
+                .Where(sp => sp.Estado == "EnHub" && sp.Envio != null && sp.Envio.HubId == hubId)
+                .OrderBy(sp => sp.FechaRecepcionHub)
+                .ToListAsync(ct);
+
+            // Envíos consolidados pendientes de despacho
+            var enviosPendientes = await _context.EnviosConsolidados
+                .AsNoTracking()
+                .Include(e => e.Cliente)
+                .Include(e => e.SubPedidos)
+                .Where(e => e.HubId == hubId && (e.Estado == "EnProceso" || e.Estado == "EnHub"))
+                .OrderBy(e => e.FechaCreacion)
+                .ToListAsync(ct);
+
+            // Estadísticas
+            var stats = new
+            {
+                EnCamino = subPedidosEnCamino.Count,
+                EnHub = subPedidosEnHub.Count,
+                EnviosPendientes = enviosPendientes.Count,
+                EnviosListos = enviosPendientes.Count(e => e.SubPedidos.All(sp => sp.Estado == "EnHub"))
+            };
+
+            ViewBag.Hub = hub;
+            ViewBag.SubPedidosEnCamino = subPedidosEnCamino;
+            ViewBag.SubPedidosEnHub = subPedidosEnHub;
+            ViewBag.EnviosPendientes = enviosPendientes;
+            ViewBag.Stats = stats;
+
+            return View("PanelHub");
+        }
+
+        [Authorize(Roles = "Administrador,Vendedor")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> RecibirSubPedidoEnHub(int subPedidoId, string? notasHub, int hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                // Verificar permisos
+                if (user?.HubResponsableId != hubId && !IsAdmin())
+                {
+                    TempData["MensajeError"] = "No tienes permiso para este Hub.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                var subPedido = await _context.SubPedidos
+                    .Include(sp => sp.Envio)
+                    .Include(sp => sp.Historial)
+                    .FirstOrDefaultAsync(sp => sp.SubPedidoId == subPedidoId, ct);
+
+                if (subPedido == null)
+                {
+                    TempData["MensajeError"] = "SubPedido no encontrado.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                if (subPedido.Envio?.HubId != hubId)
+                {
+                    TempData["MensajeError"] = "Este pedido no pertenece a tu Hub.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                var estadoAnterior = subPedido.Estado;
+
+                // Registrar en historial
+                subPedido.Historial.Add(new SubPedidoHistorial
+                {
+                    SubPedidoId = subPedidoId,
+                    EstadoAnterior = estadoAnterior,
+                    EstadoNuevo = "EnHub",
+                    Comentario = notasHub?.Trim() ?? "Paquete recibido en Hub",
+                    UsuarioId = user?.Id,
+                    TipoUsuario = "Hub",
+                    FechaCambio = DateTime.UtcNow
+                });
+
+                subPedido.Estado = "EnHub";
+                subPedido.FechaRecepcionHub = DateTime.UtcNow;
+
+                if (!string.IsNullOrWhiteSpace(notasHub))
+                    subPedido.NotasHub = notasHub.Trim();
+
+                // Verificar si todos los SubPedidos del Envío están en Hub
+                await ActualizarEstadoEnvioSiCompleto(subPedido.EnvioId, ct);
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("SubPedido recibido en Hub. SubPedidoId: {SubPedidoId}, HubId: {HubId}",
+                    subPedidoId, hubId);
+
+                TempData["MensajeExito"] = $"Paquete {subPedido.Codigo} recibido correctamente.";
+
+                return IsAdmin() ?
+                    RedirectToAction(nameof(PanelHubAdmin), new { hubId }) :
+                    RedirectToAction(nameof(PanelHub));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al recibir SubPedido. SubPedidoId: {SubPedidoId}", subPedidoId);
+                TempData["MensajeError"] = "Error al recibir el paquete.";
+                return RedirectToAction(nameof(PanelHub));
+            }
+        }
+
+        [Authorize(Roles = "Administrador,Vendedor")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> DespacharEnvioConsolidado(int envioId, string numeroGuia, string? transportista, int hubId, CancellationToken ct = default)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+
+                // Verificar permisos
+                if (user?.HubResponsableId != hubId && !IsAdmin())
+                {
+                    TempData["MensajeError"] = "No tienes permiso para este Hub.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                if (string.IsNullOrWhiteSpace(numeroGuia))
+                {
+                    TempData["MensajeError"] = "El número de guía es obligatorio.";
+                    return IsAdmin() ?
+                        RedirectToAction(nameof(PanelHubAdmin), new { hubId }) :
+                        RedirectToAction(nameof(PanelHub));
+                }
+
+                var envio = await _context.EnviosConsolidados
+                    .Include(e => e.SubPedidos)
+                    .FirstOrDefaultAsync(e => e.EnvioId == envioId, ct);
+
+                if (envio == null)
+                {
+                    TempData["MensajeError"] = "Envío no encontrado.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                if (envio.HubId != hubId)
+                {
+                    TempData["MensajeError"] = "Este envío no pertenece a tu Hub.";
+                    return RedirectToAction(nameof(PanelHub));
+                }
+
+                // Verificar que todos los SubPedidos estén en Hub
+                if (!envio.SubPedidos.All(sp => sp.Estado == "EnHub"))
+                {
+                    TempData["MensajeError"] = "No todos los paquetes han llegado al Hub.";
+                    return IsAdmin() ?
+                        RedirectToAction(nameof(PanelHubAdmin), new { hubId }) :
+                        RedirectToAction(nameof(PanelHub));
+                }
+
+                // Actualizar envío
+                envio.Estado = "EnCamino";
+                envio.NumeroGuia = numeroGuia.Trim();
+                envio.Transportista = transportista?.Trim();
+                envio.FechaEnvio = DateTime.UtcNow;
+
+                // Actualizar SubPedidos
+                foreach (var sp in envio.SubPedidos)
+                {
+                    sp.Estado = "Entregado"; // Consideramos entregado desde perspectiva del vendedor
+                }
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Envío despachado. EnvioId: {EnvioId}, Guia: {Guia}, HubId: {HubId}",
+                    envioId, numeroGuia, hubId);
+
+                TempData["MensajeExito"] = $"Envío {envio.Codigo} despachado con guía {numeroGuia}.";
+
+                return IsAdmin() ?
+                    RedirectToAction(nameof(PanelHubAdmin), new { hubId }) :
+                    RedirectToAction(nameof(PanelHub));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al despachar envío. EnvioId: {EnvioId}", envioId);
+                TempData["MensajeError"] = "Error al despachar el envío.";
+                return RedirectToAction(nameof(PanelHub));
+            }
+        }
+
+        private async Task ActualizarEstadoEnvioSiCompleto(int envioId, CancellationToken ct)
+        {
+            var envio = await _context.EnviosConsolidados
+                .Include(e => e.SubPedidos)
+                .FirstOrDefaultAsync(e => e.EnvioId == envioId, ct);
+
+            if (envio == null) return;
+
+            // Si todos los SubPedidos están en Hub, actualizar el envío
+            if (envio.SubPedidos.All(sp => sp.Estado == "EnHub"))
+            {
+                envio.Estado = "EnHub";
+                envio.FechaConsolidacion = DateTime.UtcNow;
+
+                _logger.LogInformation("Envío consolidado listo. EnvioId: {EnvioId}, SubPedidos: {Count}",
+                    envioId, envio.SubPedidos.Count);
+            }
+            else if (envio.SubPedidos.Any(sp => sp.Estado == "EnHub"))
+            {
+                envio.Estado = "EnProceso";
+            }
+        }
+
+        #endregion
+
+
         #region Usuarios (Admin)
 
         [Authorize(Roles = "Administrador")]

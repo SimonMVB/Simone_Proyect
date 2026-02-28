@@ -1,0 +1,444 @@
+﻿@model int
+@{
+    ViewData["Title"] = "¡Compra Confirmada!";
+    var venta = ViewBag.Venta as Simone.Models.Ventas;
+    var envio = ViewBag.Envio as Simone.Models.EnvioConsolidado;
+    var codigoEnvio = ViewBag.CodigoEnvio as string;
+}
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+            <!-- Mensaje de Éxito -->
+            <div class="text-center mb-5">
+                <div class="success-checkmark mb-4">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size: 5rem;"></i>
+                </div>
+                <h1 class="h2 text-success mb-3">¡Gracias por tu compra!</h1>
+                <p class="text-muted fs-5">
+                    Tu pedido ha sido procesado exitosamente y pronto comenzará a prepararse.
+                </p>
+            </div>
+
+            <!-- Código de Seguimiento -->
+            @if (!string.IsNullOrEmpty(codigoEnvio))
+            {
+                <div class="card border-0 bg-primary text-white mb-4 shadow">
+                    <div class="card-body text-center py-4">
+                        <h5 class="mb-2">
+                            <i class="bi bi-truck me-2"></i>Código de Seguimiento
+                        </h5>
+                        <div class="display-6 fw-bold font-monospace mb-2">@codigoEnvio</div>
+                        <small class="opacity-75">Guarda este código para rastrear tu envío</small>
+                    </div>
+                </div>
+            }
+
+            <!-- Resumen del Pedido -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt me-2 text-primary"></i>Resumen del Pedido
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <small class="text-muted d-block">Número de Venta</small>
+                            <strong class="font-monospace">#@venta?.VentaID</strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted d-block">Fecha</small>
+                            <strong>@venta?.FechaVenta.ToString("dd/MM/yyyy HH:mm")</strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted d-block">Método de Pago</small>
+                            <strong>@(venta?.MetodoPago ?? "Por definir")</strong>
+                        </div>
+                        <div class="col-sm-6">
+                            <small class="text-muted d-block">Estado</small>
+                            <span class="badge bg-warning text-dark">@(venta?.Estado ?? "Pendiente")</span>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <!-- Productos -->
+                    <h6 class="text-muted mb-3">Productos</h6>
+                    @if (venta?.DetalleVentas != null && venta.DetalleVentas.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th class="text-center">Cant.</th>
+                                        <th class="text-end">Precio</th>
+                                        <th class="text-end">Subtotal</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in venta.DetalleVentas)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    @if (!string.IsNullOrEmpty(item.Producto?.ImagenUrl))
+                                                    {
+                                                        <img src="@item.Producto.ImagenUrl" alt=""
+                                                             class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                                    }
+                                                    <span>@(item.Producto?.Nombre ?? "Producto")</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">@item.Cantidad</td>
+                                            <td class="text-end">$@item.PrecioUnitario.ToString("N2")</td>
+                                            <td class="text-end">$@((item.PrecioUnitario * item.Cantidad).ToString("N2"))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-light">
+                                    <tr>
+                                        <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                        <td class="text-end"><strong class="text-primary fs-5">$@venta.Total.ToString("N2")</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Información de Envío -->
+            @if (envio != null)
+            {
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0">
+                            <i class="bi bi-box-seam me-2 text-info"></i>Información de Envío
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <!-- Dirección de Entrega -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">
+                                    <i class="bi bi-geo-alt me-1"></i>Dirección de Entrega
+                                </h6>
+                                <p class="mb-1"><strong>@envio.DireccionEntrega</strong></p>
+                                <p class="mb-1">@envio.Ciudad, @envio.Provincia</p>
+                                @if (!string.IsNullOrEmpty(envio.TelefonoContacto))
+                                {
+                                    <p class="mb-0 text-muted">
+                                        <i class="bi bi-telephone me-1"></i>@envio.TelefonoContacto
+                                    </p>
+                                }
+                            </div>
+                            <div class="col-md-6">
+                                @if (envio.Hub != null)
+                                {
+                                    <h6 class="text-muted mb-2">
+                                        <i class="bi bi-building me-1"></i>Hub de Consolidación
+                                    </h6>
+                                    <p class="mb-1"><strong>@envio.Hub.Nombre</strong></p>
+                                    <p class="mb-0 text-muted small">@envio.Hub.Ciudad, @envio.Hub.Provincia</p>
+                                }
+                            </div>
+                        </div>
+
+                        <!-- Costos de Envío -->
+                        @if (envio.CostoEnvioTotal > 0)
+                        {
+                            <div class="bg-light rounded p-3 mb-4">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Envío Base</small>
+                                        <strong>$@envio.CostoEnvioTotal.ToString("N2")</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Descuento</small>
+                                        <strong class="text-success">-$@envio.DescuentoEnvio.ToString("N2")</strong>
+                                    </div>
+                                    <div class="col-4">
+                                        <small class="text-muted d-block">Total Envío</small>
+                                        <strong class="text-primary">$@envio.CostoEnvioFinal.ToString("N2")</strong>
+                                    </div>
+                                </div>
+                                @if (envio.DescuentoEnvio > 0)
+                                {
+                                    <div class="text-center mt-2">
+                                        <span class="badge bg-success">
+                                            <i class="bi bi-tag me-1"></i>¡Ahorraste con envío consolidado!
+                                        </span>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        <!-- SubPedidos por Tienda -->
+                        @if (envio.SubPedidos != null && envio.SubPedidos.Any())
+                        {
+                            <h6 class="text-muted mb-3">
+                                <i class="bi bi-shop me-1"></i>Paquetes por Tienda (@envio.SubPedidos.Count)
+                            </h6>
+
+                            <div class="row g-3">
+                                @foreach (var subPedido in envio.SubPedidos)
+                                {
+                                    var estadoClass = subPedido.Estado switch
+                                    {
+                                        "Pendiente" => "warning",
+                                        "Preparando" => "info",
+                                        "Listo" => "primary",
+                                        "EnCaminoHub" => "info",
+                                        "EnHub" => "success",
+                                        "Entregado" => "success",
+                                        _ => "secondary"
+                                    };
+
+                                    var estadoIcono = subPedido.Estado switch
+                                    {
+                                        "Pendiente" => "bi-clock",
+                                        "Preparando" => "bi-gear",
+                                        "Listo" => "bi-check-circle",
+                                        "EnCaminoHub" => "bi-truck",
+                                        "EnHub" => "bi-box-seam",
+                                        "Entregado" => "bi-check2-all",
+                                        _ => "bi-question-circle"
+                                    };
+
+                                    <div class="col-md-6">
+                                        <div class="card h-100 border">
+                                            <div class="card-body p-3">
+                                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                                    <div>
+                                                        <h6 class="mb-1">@(subPedido.Vendedor?.Nombre ?? "Tienda")</h6>
+                                                        <small class="text-muted font-monospace">@subPedido.Codigo</small>
+                                                    </div>
+                                                    <span class="badge bg-@estadoClass">
+                                                        <i class="bi @estadoIcono me-1"></i>@subPedido.Estado
+                                                    </span>
+                                                </div>
+
+                                                @if (subPedido.Items != null && subPedido.Items.Any())
+                                                {
+                                                    <ul class="list-unstyled small mb-0 mt-2">
+                                                        @foreach (var item in subPedido.Items.Take(3))
+                                                        {
+                                                            <li class="text-muted">
+                                                                <i class="bi bi-dot"></i>@item.NombreProducto x@item.Cantidad
+                                                            </li>
+                                                        }
+                                                        @if (subPedido.Items.Count > 3)
+                                                        {
+                                                            <li class="text-muted">
+                                                                <i class="bi bi-three-dots"></i> y @(subPedido.Items.Count - 3) más
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Timeline de Estado -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white border-bottom">
+                        <h5 class="mb-0">
+                            <i class="bi bi-signpost-split me-2 text-warning"></i>Estado del Envío
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @{
+                            var estados = new[] { "Pendiente", "EnProceso", "EnHub", "EnCamino", "Entregado" };
+                            var estadoActual = envio.Estado;
+                            var indexActual = Array.IndexOf(estados, estadoActual);
+                            if (indexActual < 0) indexActual = 0;
+                        }
+
+                        <div class="timeline-horizontal">
+                            @for (int i = 0; i < estados.Length; i++)
+                            {
+                                var estado = estados[i];
+                                var isCompleted = i < indexActual;
+                                var isCurrent = i == indexActual;
+                                var statusClass = isCompleted ? "completed" : (isCurrent ? "current" : "pending");
+
+                                var iconos = new Dictionary<string, string>
+                                                {
+                                                { "Pendiente", "bi-clock" },
+                                                { "EnProceso", "bi-gear" },
+                                                { "EnHub", "bi-building" },
+                                                { "EnCamino", "bi-truck" },
+                                                { "Entregado", "bi-house-check" }
+                                                };
+
+                                var nombres = new Dictionary<string, string>
+                                                {
+                                                { "Pendiente", "Pendiente" },
+                                                { "EnProceso", "Preparando" },
+                                                { "EnHub", "En Hub" },
+                                                { "EnCamino", "En Camino" },
+                                                { "Entregado", "Entregado" }
+                                                };
+
+                                <div class="timeline-step @statusClass">
+                                    <div class="timeline-icon">
+                                        <i class="bi @iconos[estado]"></i>
+                                    </div>
+                                    <div class="timeline-label">@nombres[estado]</div>
+                                </div>
+
+                                if (i < estados.Length - 1)
+                                {
+                                    <div class="timeline-line @(i < indexActual ? "completed" : "")"></div>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Acciones -->
+            <div class="d-flex flex-wrap gap-2 justify-content-center">
+                <a href="@Url.Action("Index", "MisCompras")" class="btn btn-primary">
+                    <i class="bi bi-bag me-2"></i>Ver Mis Compras
+                </a>
+                <a href="@Url.Action("Index", "Home")" class="btn btn-outline-secondary">
+                    <i class="bi bi-house me-2"></i>Volver al Inicio
+                </a>
+                <a href="@Url.Action("Index", "Productos")" class="btn btn-outline-primary">
+                    <i class="bi bi-cart-plus me-2"></i>Seguir Comprando
+                </a>
+            </div>
+
+            <!-- Info Adicional -->
+            <div class="alert alert-light border mt-4 text-center">
+                <i class="bi bi-envelope me-2"></i>
+                Te enviaremos un correo con los detalles de tu pedido y actualizaciones de estado.
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+    .success-checkmark {
+        animation: checkmark-pop 0.5s ease-out;
+    }
+
+    @@keyframes checkmark-pop {
+        0% {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        50% {
+            transform: scale(1.2);
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* Timeline Horizontal */
+    .timeline-horizontal {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 0;
+    }
+
+    .timeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+    }
+
+    .timeline-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        background: #e9ecef;
+        color: #6c757d;
+        border: 3px solid #dee2e6;
+        transition: all 0.3s ease;
+    }
+
+    .timeline-step.completed .timeline-icon {
+        background: #198754;
+        color: white;
+        border-color: #198754;
+    }
+
+    .timeline-step.current .timeline-icon {
+        background: #0d6efd;
+        color: white;
+        border-color: #0d6efd;
+        animation: pulse 2s infinite;
+    }
+
+    @@keyframes pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(13, 110, 253, 0.4);
+        }
+
+        50% {
+            box-shadow: 0 0 0 10px rgba(13, 110, 253, 0);
+        }
+    }
+
+    .timeline-label {
+        margin-top: 8px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: #6c757d;
+        text-align: center;
+        max-width: 70px;
+    }
+
+    .timeline-step.completed .timeline-label,
+    .timeline-step.current .timeline-label {
+        color: #212529;
+    }
+
+    .timeline-line {
+        flex: 1;
+        height: 3px;
+        background: #dee2e6;
+        margin: 0 5px;
+        margin-bottom: 28px;
+    }
+
+        .timeline-line.completed {
+            background: #198754;
+        }
+
+    /* Responsive */
+    @@media (max-width: 576px) {
+        .timeline-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1rem;
+        }
+
+        .timeline-label {
+            font-size: 0.65rem;
+            max-width: 50px;
+        }
+    }
+</style>

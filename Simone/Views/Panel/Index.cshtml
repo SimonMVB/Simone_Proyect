@@ -42,16 +42,13 @@
         }
 
         @@keyframes fadeIn {
-            from
+            from {
+                opacity: 0;
+            }
 
-        {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-
+            to {
+                opacity: 1;
+            }
         }
 
         .panel-container {
@@ -71,18 +68,15 @@
         }
 
         @@keyframes slideDown {
-            from
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
 
-        {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .breadcrumb {
@@ -130,18 +124,15 @@
         }
 
         @@keyframes zoomIn {
-            from
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
 
-        {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .page-title {
@@ -176,6 +167,34 @@
             margin-top: 1rem;
         }
 
+        /* Section Divider */
+        .section-divider {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+            padding: 0.5rem 0;
+        }
+
+            .section-divider h2 {
+                font-size: 1.1rem;
+                font-weight: 700;
+                color: var(--panel-dark);
+                margin: 0;
+                white-space: nowrap;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .section-divider::after {
+                content: "";
+                flex: 1;
+                height: 2px;
+                background: linear-gradient(90deg, var(--panel-border), transparent);
+            }
+
         /* Dashboard Grid */
         .dashboard-grid {
             display: grid;
@@ -202,6 +221,14 @@
                 box-shadow: var(--panel-shadow-lg);
                 border-left-color: var(--panel-accent);
             }
+
+            .module-card.card-envios {
+                border-left-color: #00bcd4;
+            }
+
+                .module-card.card-envios:hover {
+                    border-left-color: #00acc1;
+                }
 
         .card-header {
             display: flex;
@@ -320,6 +347,39 @@
                 color: white;
             }
 
+        .btn-cyan {
+            background: linear-gradient(135deg, #00bcd4, #00acc1);
+            color: white;
+        }
+
+            .btn-cyan:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(0, 188, 212, 0.35);
+                color: white;
+            }
+
+        .btn-purple {
+            background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+            color: white;
+        }
+
+            .btn-purple:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(156, 39, 176, 0.35);
+                color: white;
+            }
+
+        .btn-deep-purple {
+            background: linear-gradient(135deg, #673ab7, #512da8);
+            color: white;
+        }
+
+            .btn-deep-purple:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(103, 58, 183, 0.35);
+                color: white;
+            }
+
         /* Badge Chip */
         .badge-chip {
             display: inline-flex;
@@ -400,33 +460,27 @@
 
         /* Responsive */
         @@media (max-width: 991px) {
-            .dashboard-grid
-
-        {
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        }
-
+            .dashboard-grid {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
         }
 
         @@media (max-width: 768px) {
-            .page-header
+            .page-header {
+                padding: 1.5rem;
+            }
 
-        {
-            padding: 1.5rem;
-        }
+            .page-title {
+                font-size: 1.5rem;
+            }
 
-        .page-title {
-            font-size: 1.5rem;
-        }
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
 
-        .dashboard-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .quick-actions-grid {
-            grid-template-columns: 1fr;
-        }
-
+            .quick-actions-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* Focus Visible */
@@ -438,13 +492,10 @@
 
         /* Reduced Motion */
         @@media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after
-
-        {
-            animation-duration: 0.01ms !important;
-            transition-duration: 0.01ms !important;
-        }
-
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
         }
     </style>
 }
@@ -514,6 +565,10 @@
                         <i class="fa-solid fa-boxes"></i>
                         <span>Productos</span>
                     </a>
+                    <a href="@Url.Action("EnviosConsolidados", "Panel")" class="quick-btn">
+                        <i class="fa-solid fa-box"></i>
+                        <span>Envíos</span>
+                    </a>
                     <a href="/Logs" class="quick-btn">
                         <i class="fa-solid fa-clock-rotate-left"></i>
                         <span>Ver Logs</span>
@@ -526,6 +581,13 @@
         <div class="dashboard-grid">
             @if (isAdmin)
             {
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN: GESTIÓN DE USUARIOS Y TIENDAS -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-users-gear"></i> Usuarios y Tiendas</h2>
+                </div>
+
                 <!-- ADMIN: Usuarios -->
                 <div class="module-card">
                     <div class="card-header">
@@ -548,6 +610,13 @@
                             <span>Ver Usuarios</span>
                         </a>
                     </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN: CATÁLOGO -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-store"></i> Catálogo</h2>
                 </div>
 
                 <!-- ADMIN: Productos -->
@@ -577,7 +646,7 @@
                 <!-- ADMIN: Categorías -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #4caf50, #66bb6a);">
                             <i class="fa-solid fa-folder"></i>
                         </div>
                         <div class="card-title-section">
@@ -601,7 +670,7 @@
                 <!-- ADMIN: Subcategorías -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #ff9800, #ffa726);">
                             <i class="fa-solid fa-tags"></i>
                         </div>
                         <div class="card-title-section">
@@ -621,9 +690,11 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- ADMIN: Atributos -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #2196f3, #42a5f5);">
                             <i class="fa-solid fa-sliders-h"></i>
                         </div>
                         <div class="card-title-section">
@@ -634,7 +705,6 @@
                     <div class="card-body">
                         <p class="card-description">
                             Configura atributos personalizados por categoría estilo Amazon/MercadoLibre.
-                            Define campos como Largo, Material, Color, etc.
                         </p>
                     </div>
                     <div class="card-footer">
@@ -648,7 +718,7 @@
                 <!-- ADMIN: Proveedores -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #ff9800, #f57c00);">
                             <i class="fa-solid fa-truck"></i>
                         </div>
                         <div class="card-title-section">
@@ -667,6 +737,140 @@
                             <span>Ver Proveedores</span>
                         </a>
                     </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN: SISTEMA DE ENVÍOS -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-truck-fast"></i> Sistema de Envíos</h2>
+                </div>
+
+                <!-- ADMIN: Hubs de Envío -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #00bcd4, #00acc1);">
+                            <i class="fa-solid fa-warehouse"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Hubs de Envío</h3>
+                            <p class="card-subtitle">Centros de consolidación</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Administra los centros donde se reciben y agrupan los paquetes de múltiples tiendas.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-cyan" asp-controller="Panel" asp-action="Hubs">
+                            <i class="fa-solid fa-warehouse"></i>
+                            <span>Ver Hubs</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ADMIN: Alianzas de Envío -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #9c27b0, #7b1fa2);">
+                            <i class="fa-solid fa-handshake"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Alianzas de Envío</h3>
+                            <p class="card-subtitle">Grupos de tiendas</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Agrupa tiendas en alianzas para compartir tarifas de envío y consolidar pedidos.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-purple" asp-controller="Panel" asp-action="Alianzas">
+                            <i class="fa-solid fa-handshake"></i>
+                            <span>Ver Alianzas</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ADMIN: Tarifas de Envío -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #ff9800, #f57c00);">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Tarifas de Envío</h3>
+                            <p class="card-subtitle">Precios por destino</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Configura tarifas de envío por provincia/ciudad para alianzas y tiendas individuales.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-warning" asp-controller="Panel" asp-action="TarifasEnvio">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                            <span>Ver Tarifas</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ADMIN: Envíos Consolidados -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #4caf50, #388e3c);">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Envíos Consolidados</h3>
+                            <p class="card-subtitle">Paquetes agrupados</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Gestiona los envíos que agrupan pedidos de múltiples tiendas en un solo paquete.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-success" asp-controller="Panel" asp-action="EnviosConsolidados">
+                            <i class="fa-solid fa-box"></i>
+                            <span>Ver Envíos</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ADMIN: SubPedidos -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #673ab7, #512da8);">
+                            <i class="fa-solid fa-store"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">SubPedidos</h3>
+                            <p class="card-subtitle">Pedidos por tienda</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Monitorea los pedidos individuales de cada tienda y su estado de preparación.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-deep-purple" asp-controller="Panel" asp-action="SubPedidos">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Ver SubPedidos</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN: FINANZAS Y REPORTES -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-chart-pie"></i> Finanzas y Reportes</h2>
                 </div>
 
                 <!-- ADMIN: Cuentas Bancarias -->
@@ -702,34 +906,10 @@
                     </div>
                 </div>
 
-                <!-- ADMIN: Registros -->
-                <div class="module-card">
-                    <div class="card-header">
-                        <div class="card-icon">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                        </div>
-                        <div class="card-title-section">
-                            <h3 class="card-title">Registros</h3>
-                            <p class="card-subtitle">Auditoría del sistema</p>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-description">
-                            Revisa los logs de actividad y auditoría del sistema completo.
-                        </p>
-                    </div>
-                    <div class="card-footer">
-                        <a href="/Logs" class="card-btn btn-primary">
-                            <i class="fa-solid fa-file-lines"></i>
-                            <span>Ver Logs</span>
-                        </a>
-                    </div>
-                </div>
-
                 <!-- ADMIN: Reportes -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #4caf50, #66bb6a);">
                             <i class="fa-solid fa-chart-bar"></i>
                         </div>
                         <div class="card-title-section">
@@ -749,9 +929,47 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN: SISTEMA -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-cog"></i> Sistema</h2>
+                </div>
+
+                <!-- ADMIN: Registros -->
+                <div class="module-card">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #607d8b, #78909c);">
+                            <i class="fa-solid fa-clock-rotate-left"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Registros</h3>
+                            <p class="card-subtitle">Auditoría del sistema</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Revisa los logs de actividad y auditoría del sistema completo.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="/Logs" class="card-btn btn-primary" style="background: linear-gradient(135deg, #607d8b, #78909c);">
+                            <i class="fa-solid fa-file-lines"></i>
+                            <span>Ver Logs</span>
+                        </a>
+                    </div>
+                </div>
             }
             else if (isVendedor)
             {
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- VENDEDOR: MI TIENDA -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-store"></i> Mi Tienda</h2>
+                </div>
+
                 <!-- VENDEDOR: Productos -->
                 <div class="module-card">
                     <div class="card-header">
@@ -779,7 +997,7 @@
                 <!-- VENDEDOR: Subcategorías -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #ff9800, #ffa726);">
                             <i class="fa-solid fa-tags"></i>
                         </div>
                         <div class="card-title-section">
@@ -790,7 +1008,6 @@
                     <div class="card-body">
                         <p class="card-description">
                             Crea y administra subcategorías <strong>solo de tu tienda</strong>.
-                            Validación por vendedor, categoría y nombre.
                         </p>
                     </div>
                     <div class="card-footer">
@@ -801,10 +1018,73 @@
                     </div>
                 </div>
 
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- VENDEDOR: PEDIDOS Y ENVÍOS -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-truck-fast"></i> Pedidos y Envíos</h2>
+                </div>
+
+                <!-- VENDEDOR: Mis SubPedidos -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #673ab7, #512da8);">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Mis Pedidos</h3>
+                            <p class="card-subtitle">Pedidos para preparar</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Gestiona los pedidos asignados a tu tienda. Prepara y envía al Hub.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-deep-purple" asp-controller="Vendedor" asp-action="MisSubPedidos">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            <span>Ver Pedidos</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- VENDEDOR: Tarifas de Envío -->
+                <div class="module-card card-envios">
+                    <div class="card-header">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #00bcd4, #00acc1);">
+                            <i class="fa-solid fa-truck-fast"></i>
+                        </div>
+                        <div class="card-title-section">
+                            <h3 class="card-title">Tarifas de Envío</h3>
+                            <p class="card-subtitle">Por provincia / ciudad</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-description">
+                            Define el costo de envío según destino. Crea reglas por <strong>provincia</strong>
+                            o específicas por <strong>ciudad</strong>.
+                        </p>
+                    </div>
+                    <div class="card-footer">
+                        <a class="card-btn btn-cyan" asp-controller="Vendedor" asp-action="Envios">
+                            <i class="fa-solid fa-truck-fast"></i>
+                            <span>Configurar Envíos</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- VENDEDOR: FINANZAS -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <div class="section-divider">
+                    <h2><i class="fa-solid fa-chart-pie"></i> Finanzas</h2>
+                </div>
+
                 <!-- VENDEDOR: Reportes -->
                 <div class="module-card">
                     <div class="card-header">
-                        <div class="card-icon">
+                        <div class="card-icon" style="background: linear-gradient(135deg, #4caf50, #66bb6a);">
                             <i class="fa-solid fa-chart-bar"></i>
                         </div>
                         <div class="card-title-section">
@@ -858,31 +1138,6 @@
                         </a>
                     </div>
                 </div>
-
-                <!-- VENDEDOR: Tarifas de Envío -->
-                <div class="module-card">
-                    <div class="card-header">
-                        <div class="card-icon">
-                            <i class="fa-solid fa-truck-fast"></i>
-                        </div>
-                        <div class="card-title-section">
-                            <h3 class="card-title">Tarifas de Envío</h3>
-                            <p class="card-subtitle">Por provincia / ciudad</p>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <p class="card-description">
-                            Define el costo de envío según destino. Crea reglas por <strong>provincia</strong>
-                            o específicas por <strong>ciudad</strong>. Prioridad: Ciudad &gt; Provincia.
-                        </p>
-                    </div>
-                    <div class="card-footer">
-                        <a class="card-btn btn-primary" asp-controller="Vendedor" asp-action="Envios">
-                            <i class="fa-solid fa-truck-fast"></i>
-                            <span>Configurar Envíos</span>
-                        </a>
-                    </div>
-                </div>
             }
         </div>
     </div>
@@ -890,7 +1145,7 @@
 
 @section Scripts {
     <script>
-        (function() {
+        (function () {
             'use strict';
             console.log('✓ Panel initialized');
         })();

@@ -1,0 +1,338 @@
+@model Simone.Models.SubPedido
+@{
+    ViewData["Title"] = $"SubPedido {Model.Codigo}";
+    var estados = new[] { "Pendiente", "Preparando", "Listo", "EnCaminoHub", "EnHub", "Entregado", "Cancelado" };
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="@Url.Action("SubPedidos")" class="btn btn-outline-secondary btn-sm mb-2">
+                <i class="bi bi-arrow-left me-1"></i>Volver
+            </a>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-shop me-2"></i>@Model.Codigo
+            </h1>
+            <p class="text-muted mb-0">
+                Tienda: <strong>@(Model.Vendedor?.Nombre ?? "Sin asignar")</strong>
+            </p>
+        </div>
+        <div>
+            @{
+                var badgeClass = Model.Estado switch
+                {
+                    "Pendiente" => "bg-warning text-dark",
+                    "Preparando" => "bg-info",
+                    "Listo" => "bg-primary",
+                    "EnCaminoHub" => "bg-purple",
+                    "EnHub" => "bg-success",
+                    "Entregado" => "bg-success",
+                    "Cancelado" => "bg-danger",
+                    _ => "bg-secondary"
+                };
+            }
+            <span class="badge @badgeClass fs-5">@Model.Estado</span>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        <!-- Info Principal -->
+        <div class="col-lg-8">
+            <!-- Envío Consolidado -->
+            @if (Model.Envio != null)
+            {
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0"><i class="bi bi-box-seam me-2"></i>Envío Consolidado</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p class="mb-1">
+                                    <strong>Código:</strong>
+                                    <a href="@Url.Action("DetalleEnvioConsolidado", new { id = Model.EnvioId })">
+                                        @Model.Envio.Codigo
+                                    </a>
+                                </p>
+                                <p class="mb-1"><strong>Cliente:</strong> @(Model.Envio.Cliente?.NombreCompleto ?? "N/A")</p>
+                                <p class="mb-0">
+                                    <strong>Estado Envío:</strong>
+                                    <span class="badge bg-secondary">@Model.Envio.Estado</span>
+                                </p>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1"><strong>Destino:</strong> @Model.Envio.Provincia, @Model.Envio.Ciudad</p>
+                                <p class="mb-1"><strong>Dirección:</strong> @Model.Envio.DireccionEntrega</p>
+                                <p class="mb-0"><strong>Teléfono:</strong> @Model.Envio.TelefonoContacto</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Items del SubPedido -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-bag me-2"></i>Productos</h5>
+                    <span class="badge bg-primary">@Model.Items.Count items</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:60px"></th>
+                                    <th>Producto</th>
+                                    <th>SKU</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-end">Precio Unit.</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(item.ImagenPath))
+                                            {
+                                                <img src="@item.ImagenPath" alt="" class="rounded" style="width:50px; height:50px; object-fit:cover;" />
+                                            }
+                                            else
+                                            {
+                                                <div class="bg-light rounded d-flex align-items-center justify-content-center"
+                                                     style="width:50px; height:50px;">
+                                                    <i class="bi bi-image text-muted"></i>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td>
+                                            <strong>@item.NombreProducto</strong>
+                                            @if (!string.IsNullOrEmpty(item.Color) || !string.IsNullOrEmpty(item.Talla))
+                                            {
+                                                <br>
+                                                @if (!string.IsNullOrEmpty(item.Color))
+                                                {
+                                                    <span class="badge bg-light text-dark">@item.Color</span>
+                                                }
+                                                @if (!string.IsNullOrEmpty(item.Talla))
+                                                {
+                                                    <span class="badge bg-light text-dark">@item.Talla</span>
+                                                }
+                                            }
+                                        </td>
+                                        <td><code>@item.SKU</code></td>
+                                        <td class="text-center">@item.Cantidad</td>
+                                        <td class="text-end">$@item.PrecioUnitario.ToString("N2")</td>
+                                        <td class="text-end"><strong>$@item.Subtotal.ToString("N2")</strong></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Subtotal Productos:</strong></td>
+                                    <td class="text-end"><strong>$@Model.Subtotal.ToString("N2")</strong></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-end">Envío Proporcional:</td>
+                                    <td class="text-end">$@Model.CostoEnvioProporcional.ToString("N2")</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td colspan="5" class="text-end"><strong>TOTAL:</strong></td>
+                                    <td class="text-end"><strong class="fs-5">$@Model.Total.ToString("N2")</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Historial de Estados</h5>
+                </div>
+                <div class="card-body p-0">
+                    @if (Model.Historial.Any())
+                    {
+                        <div class="timeline p-3">
+                            @foreach (var h in Model.Historial.OrderByDescending(x => x.FechaCambio))
+                            {
+                                var iconClass = h.EstadoNuevo switch
+                                {
+                                    "Pendiente" => "bi-hourglass text-warning",
+                                    "Preparando" => "bi-box-seam text-info",
+                                    "Listo" => "bi-check-circle text-primary",
+                                    "EnCaminoHub" => "bi-truck text-purple",
+                                    "EnHub" => "bi-building text-success",
+                                    "Entregado" => "bi-check2-all text-success",
+                                    "Cancelado" => "bi-x-circle text-danger",
+                                    _ => "bi-circle text-secondary"
+                                };
+
+                                <div class="timeline-item mb-3 pb-3 border-bottom">
+                                    <div class="d-flex">
+                                        <div class="me-3">
+                                            <i class="bi @iconClass fs-4"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-content-between">
+                                                <strong>@h.EstadoAnterior → @h.EstadoNuevo</strong>
+                                                <small class="text-muted">@h.FechaCambio.ToString("dd/MM/yyyy HH:mm")</small>
+                                            </div>
+                                            <small class="text-muted">
+                                                Por: @h.TipoUsuario
+                                                @if (!string.IsNullOrEmpty(h.UsuarioId))
+                                                {
+                                                    <span>(@h.UsuarioId.Substring(0, Math.Min(8, h.UsuarioId.Length))...)</span>
+                                                }
+                                            </small>
+                                            @if (!string.IsNullOrEmpty(h.Comentario))
+                                            {
+                                                <p class="mb-0 mt-1 text-muted fst-italic">"@h.Comentario"</p>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4">
+                            <p class="text-muted mb-0">Sin historial de cambios</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Lateral -->
+        <div class="col-lg-4">
+            <!-- Fechas -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-calendar3 me-2"></i>Fechas</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Creación:</span>
+                            <span>@Model.FechaCreacion.ToString("dd/MM/yyyy HH:mm")</span>
+                        </li>
+                        @if (Model.FechaPreparacionInicio.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Inicio preparación:</span>
+                                <span>@Model.FechaPreparacionInicio.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                        @if (Model.FechaListo.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Listo:</span>
+                                <span>@Model.FechaListo.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                        @if (Model.FechaEnvioHub.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Enviado a Hub:</span>
+                                <span>@Model.FechaEnvioHub.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                        @if (Model.FechaRecepcionHub.HasValue)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Recibido en Hub:</span>
+                                <span class="text-success">@Model.FechaRecepcionHub.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Info Adicional -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Peso estimado:</span>
+                            <span>@Model.PesoEstimadoKg.ToString("N2") kg</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="text-muted">Tienda:</span>
+                            <span>@(Model.Vendedor?.Nombre ?? "-")</span>
+                        </li>
+                    </ul>
+                    @if (!string.IsNullOrEmpty(Model.NotasVendedor))
+                    {
+                        <div class="alert alert-info mt-3 mb-0">
+                            <small><strong>Nota vendedor:</strong> @Model.NotasVendedor</small>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.NotasHub))
+                    {
+                        <div class="alert alert-warning mt-2 mb-0">
+                            <small><strong>Nota hub:</strong> @Model.NotasHub</small>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Acciones -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Acciones</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" asp-action="CambiarEstadoSubPedido">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="subPedidoId" value="@Model.SubPedidoId" />
+                        <label class="form-label">Cambiar Estado</label>
+                        <select name="nuevoEstado" class="form-select mb-2">
+                            @foreach (var e in estados)
+                            {
+                                <option value="@e" selected="@(Model.Estado == e)">@e</option>
+                            }
+                        </select>
+                        <textarea name="comentario" class="form-control mb-2" rows="2" placeholder="Comentario (opcional)"></textarea>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-check-lg me-1"></i>Actualizar Estado
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+</style>

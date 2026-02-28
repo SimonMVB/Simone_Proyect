@@ -1,0 +1,420 @@
+@model List<Simone.Models.TarifaEnvioAlianza>
+@{
+    ViewData["Title"] = "Tarifas de Envío";
+    var alianzas = ViewBag.Alianzas as List<Simone.Models.AlianzaEnvio> ?? new List<Simone.Models.AlianzaEnvio>();
+    var vendedoresSinAlianza = ViewBag.VendedoresSinAlianza as List<Simone.Models.Vendedor> ?? new List<Simone.Models.Vendedor>();
+    var filtroAlianzaId = ViewBag.FiltroAlianzaId as int?;
+    var filtroVendedorId = ViewBag.FiltroVendedorId as int?;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-truck me-2"></i>Tarifas de Envío
+            </h1>
+            <p class="text-muted mb-0">Gestiona las tarifas por destino para alianzas y tiendas individuales</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearTarifa">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Tarifa
+        </button>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Filtrar por Alianza</label>
+                    <select name="alianzaId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Todas las alianzas --</option>
+                        @foreach (var a in alianzas)
+                        {
+                            <option value="@a.AlianzaId" selected="@(filtroAlianzaId == a.AlianzaId)">@a.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Filtrar por Tienda (sin alianza)</label>
+                    <select name="vendedorId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Todas las tiendas --</option>
+                        @foreach (var v in vendedoresSinAlianza)
+                        {
+                            <option value="@v.VendedorId" selected="@(filtroVendedorId == v.VendedorId)">@v.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <a href="@Url.Action("TarifasEnvio")" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i>Limpiar filtros
+                    </a>
+                    @if (alianzas.Count > 1)
+                    {
+                        <button type="button" class="btn btn-outline-info ms-2" data-bs-toggle="modal" data-bs-target="#modalDuplicar">
+                            <i class="bi bi-copy me-1"></i>Duplicar tarifas
+                        </button>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Tarifas -->
+    <div class="card">
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Alianza / Tienda</th>
+                                <th>Provincia</th>
+                                <th>Ciudad</th>
+                                <th class="text-end">Precio Base</th>
+                                <th class="text-end">Peso Incluido</th>
+                                <th class="text-end">$/Kg Extra</th>
+                                <th class="text-center">Días Est.</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var t in Model)
+                            {
+                                <tr class="@(t.Activo ? "" : "table-secondary")">
+                                    <td>
+                                        @if (t.Alianza != null)
+                                        {
+                                            <span class="badge bg-primary me-1">Alianza</span>
+                                            @t.Alianza.Nombre
+                                        }
+                                        else if (t.Vendedor != null)
+                                        {
+                                            <span class="badge bg-info me-1">Tienda</span>
+                                            @t.Vendedor.Nombre
+                                        }
+                                    </td>
+                                    <td><strong>@t.Provincia</strong></td>
+                                    <td>@(t.Ciudad ?? "<em class='text-muted'>Toda la provincia</em>")</td>
+                                    <td class="text-end">$@t.PrecioBase.ToString("N2")</td>
+                                    <td class="text-end">@t.PesoIncluidoKg.ToString("N1") kg</td>
+                                    <td class="text-end">$@t.PrecioPorKgExtra.ToString("N2")</td>
+                                    <td class="text-center">@t.DiasEntregaEstimados</td>
+                                    <td class="text-center">
+                                        @if (t.Activo)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary me-1"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalEditarTarifa"
+                                                data-id="@t.TarifaId"
+                                                data-provincia="@t.Provincia"
+                                                data-ciudad="@t.Ciudad"
+                                                data-preciobase="@t.PrecioBase"
+                                                data-pesoincluidokg="@t.PesoIncluidoKg"
+                                                data-precioporkgextra="@t.PrecioPorKgExtra"
+                                                data-diasentrega="@t.DiasEntregaEstimados"
+                                                data-activo="@t.Activo.ToString().ToLower()">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <form method="post" asp-action="EliminarTarifa" class="d-inline"
+                                              onsubmit="return confirm('¿Eliminar esta tarifa?');">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="tarifaId" value="@t.TarifaId" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No hay tarifas registradas</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCrearTarifa">
+                        <i class="bi bi-plus-lg me-1"></i>Crear primera tarifa
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear Tarifa -->
+<div class="modal fade" id="modalCrearTarifa" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="CrearTarifa">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-lg me-2"></i>Nueva Tarifa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Tipo: Alianza o Tienda -->
+                    <div class="mb-3">
+                        <label class="form-label">Asignar a <span class="text-danger">*</span></label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <select name="alianzaId" id="crearAlianzaId" class="form-select" onchange="toggleTipoTarifa('crear')">
+                                    <option value="">-- Alianza --</option>
+                                    @foreach (var a in alianzas)
+                                    {
+                                        <option value="@a.AlianzaId">@a.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <select name="vendedorId" id="crearVendedorId" class="form-select" onchange="toggleTipoTarifa('crear')">
+                                    <option value="">-- Tienda individual --</option>
+                                    @foreach (var v in vendedoresSinAlianza)
+                                    {
+                                        <option value="@v.VendedorId">@v.Nombre</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                        <small class="text-muted">Selecciona Alianza O Tienda, no ambos</small>
+                    </div>
+
+                    <hr />
+
+                    <!-- Destino -->
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Provincia <span class="text-danger">*</span></label>
+                            <input type="text" name="provincia" class="form-control" required maxlength="100" placeholder="Ej: Pichincha" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Ciudad</label>
+                            <input type="text" name="ciudad" class="form-control" maxlength="100" placeholder="Vacío = toda la provincia" />
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Precios -->
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <label class="form-label">Precio Base <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="precioBase" class="form-control" required min="0" step="0.01" value="5.00" />
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Peso Incluido</label>
+                            <div class="input-group">
+                                <input type="number" name="pesoIncluidoKg" class="form-control" min="0" step="0.1" value="2.0" />
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">$/Kg Extra</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="precioPorKgExtra" class="form-control" min="0" step="0.01" value="1.00" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <label class="form-label">Días de entrega estimados</label>
+                        <input type="number" name="diasEntregaEstimados" class="form-control" min="1" max="30" value="3" style="width: 100px;" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Tarifa -->
+<div class="modal fade" id="modalEditarTarifa" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="EditarTarifa">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="tarifaId" id="editarTarifaId" />
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil me-2"></i>Editar Tarifa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Destino -->
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label">Provincia <span class="text-danger">*</span></label>
+                            <input type="text" name="provincia" id="editarProvincia" class="form-control" required maxlength="100" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Ciudad</label>
+                            <input type="text" name="ciudad" id="editarCiudad" class="form-control" maxlength="100" placeholder="Vacío = toda la provincia" />
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Precios -->
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <label class="form-label">Precio Base <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="precioBase" id="editarPrecioBase" class="form-control" required min="0" step="0.01" />
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">Peso Incluido</label>
+                            <div class="input-group">
+                                <input type="number" name="pesoIncluidoKg" id="editarPesoIncluido" class="form-control" min="0" step="0.1" />
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label">$/Kg Extra</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" name="precioPorKgExtra" id="editarPrecioPorKgExtra" class="form-control" min="0" step="0.01" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-6">
+                            <label class="form-label">Días de entrega</label>
+                            <input type="number" name="diasEntregaEstimados" id="editarDiasEntrega" class="form-control" min="1" max="30" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Estado</label>
+                            <div class="form-check form-switch mt-2">
+                                <input type="checkbox" name="activo" id="editarActivo" class="form-check-input" value="true" />
+                                <label class="form-check-label" for="editarActivo">Activo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Duplicar Tarifas -->
+<div class="modal fade" id="modalDuplicar" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" asp-action="DuplicarTarifasAlianza">
+                @Html.AntiForgeryToken()
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-copy me-2"></i>Duplicar Tarifas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Copia todas las tarifas de una alianza a otra. No sobrescribe tarifas existentes.</p>
+                    <div class="mb-3">
+                        <label class="form-label">Alianza origen</label>
+                        <select name="alianzaOrigenId" class="form-select" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var a in alianzas)
+                            {
+                                <option value="@a.AlianzaId">@a.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Alianza destino</label>
+                        <select name="alianzaDestinoId" class="form-select" required>
+                            <option value="">-- Seleccionar --</option>
+                            @foreach (var a in alianzas)
+                            {
+                                <option value="@a.AlianzaId">@a.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="bi bi-copy me-1"></i>Duplicar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Toggle entre Alianza y Tienda (no ambos)
+        function toggleTipoTarifa(prefix) {
+            const alianzaSelect = document.getElementById(prefix + 'AlianzaId');
+            const vendedorSelect = document.getElementById(prefix + 'VendedorId');
+
+            if (alianzaSelect.value) {
+                vendedorSelect.value = '';
+                vendedorSelect.disabled = true;
+            } else if (vendedorSelect.value) {
+                alianzaSelect.value = '';
+                alianzaSelect.disabled = true;
+            } else {
+                alianzaSelect.disabled = false;
+                vendedorSelect.disabled = false;
+            }
+        }
+
+        // Cargar datos en modal editar
+        document.getElementById('modalEditarTarifa').addEventListener('show.bs.modal', function (e) {
+            const btn = e.relatedTarget;
+            document.getElementById('editarTarifaId').value = btn.dataset.id;
+            document.getElementById('editarProvincia').value = btn.dataset.provincia;
+            document.getElementById('editarCiudad').value = btn.dataset.ciudad || '';
+            document.getElementById('editarPrecioBase').value = btn.dataset.preciobase;
+            document.getElementById('editarPesoIncluido').value = btn.dataset.pesoincluidokg;
+            document.getElementById('editarPrecioPorKgExtra').value = btn.dataset.precioporkgextra;
+            document.getElementById('editarDiasEntrega').value = btn.dataset.diasentrega;
+            document.getElementById('editarActivo').checked = btn.dataset.activo === 'true';
+        });
+    </script>
+}

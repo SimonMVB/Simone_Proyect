@@ -13,80 +13,85 @@ namespace Simone.Data
         {
         }
 
-        // ✅ Tablas del sistema / Identity
+        // ==================== IDENTITY / USUARIOS ====================
         public DbSet<Usuario> Usuarios { get; set; }
 
-        // ✅ Tablas del dominio (existentes)
-        public DbSet<ProductoImagen> ProductoImagenes { get; set; }
+        // ==================== LOGS Y AUDITORÍA ====================
         public DbSet<ActividadUsuario> ActividadesUsuarios { get; set; }
         public DbSet<LogIniciosSesion> LogIniciosSesion { get; set; }
-        public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
-        public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
         public DbSet<LogActividad> LogsActividad { get; set; }
+        public DbSet<AuditoriaProductos> AuditoriaProductos { get; set; }
+
+        // ==================== CATÁLOGO Y PRODUCTOS ====================
+        public DbSet<Categorias> Categorias { get; set; }
+        public DbSet<Subcategorias> Subcategorias { get; set; }
+        public DbSet<Producto> Productos { get; set; }
+        public DbSet<ProductoImagen> ProductoImagenes { get; set; }
+        public DbSet<ProductoVariante> ProductoVariantes { get; set; }
+        public DbSet<ImagenesProductos> ImagenesProductos { get; set; }
+        public DbSet<HistorialPrecios> HistorialPrecios { get; set; }
+        public DbSet<Reseñas> Reseñas { get; set; }
+        public DbSet<Favorito> Favoritos { get; set; }
+
+        // ==================== ATRIBUTOS DINÁMICOS ====================
+        public DbSet<CategoriaAtributo> CategoriaAtributos { get; set; } = null!;
+        public DbSet<ProductoAtributoValor> ProductoAtributoValores { get; set; } = null!;
+
+        // ==================== INVENTARIO ====================
+        public DbSet<MovimientosInventario> MovimientosInventario { get; set; }
+        public DbSet<CatalogoEstados> CatalogoEstados { get; set; }
+
+        // ==================== CARRITO ====================
         public DbSet<Carrito> Carrito { get; set; }
         public DbSet<CarritoDetalle> CarritoDetalle { get; set; }
-        public DbSet<CatalogoEstados> CatalogoEstados { get; set; }
-        public DbSet<Categorias> Categorias { get; set; }
-        public DbSet<Promocion> Promociones { get; set; }
-        public DbSet<ClientesProgramas> ClientesProgramas { get; set; }
-        public DbSet<Comisiones> Comisiones { get; set; }
-        public DbSet<Compras> Compras { get; set; }
-        public DbSet<CuponesUsados> CuponesUsados { get; set; }
-        public DbSet<DetallesCompra> DetallesCompra { get; set; }
+
+        // ==================== PEDIDOS Y VENTAS ====================
+        public DbSet<Pedido> Pedidos { get; set; }
         public DbSet<DetallesPedido> DetallesPedido { get; set; }
+        public DbSet<PedidoHistorial> PedidosHistorial { get; set; } = null!;
+        public DbSet<Ventas> Ventas { get; set; }
         public DbSet<DetalleVentas> DetalleVentas { get; set; }
         public DbSet<Devoluciones> Devoluciones { get; set; } = default!;
-        public DbSet<Empleados> Empleados { get; set; }
-        public DbSet<Gastos> Gastos { get; set; }
-        public DbSet<HistorialPrecios> HistorialPrecios { get; set; }
-        public DbSet<ImagenesProductos> ImagenesProductos { get; set; }
-        public DbSet<MovimientosInventario> MovimientosInventario { get; set; }
-        public DbSet<Pedido> Pedidos { get; set; }
-        public DbSet<Producto> Productos { get; set; }
-        public DbSet<ProgramasFidelizacion> ProgramasFidelizacion { get; set; }
-        public DbSet<Proveedores> Proveedores { get; set; }
-        public DbSet<Reseñas> Reseñas { get; set; }
-        public DbSet<Subcategorias> Subcategorias { get; set; }
-        public DbSet<Ventas> Ventas { get; set; }
-        public DbSet<Favorito> Favoritos { get; set; }
         public DbSet<VentaReversion> VentaReversiones { get; set; }
+
+        // ==================== SISTEMA DE ENVÍOS CONSOLIDADOS ====================
+        public DbSet<HubEnvio> HubsEnvio { get; set; } = null!;
+        public DbSet<AlianzaEnvio> AlianzasEnvio { get; set; } = null!;
+        public DbSet<TarifaEnvioAlianza> TarifasEnvioAlianza { get; set; } = null!;
         public DbSet<PesoCategoria> PesosCategorias { get; set; } = null!;
         public DbSet<ConfiguracionEnvioTienda> ConfiguracionesEnvioTienda { get; set; } = null!;
+        public DbSet<EnvioConsolidado> EnviosConsolidados { get; set; } = null!;
+        public DbSet<SubPedido> SubPedidos { get; set; } = null!;
+        public DbSet<SubPedidoItem> SubPedidoItems { get; set; } = null!;
+        public DbSet<SubPedidoHistorial> SubPedidoHistorial { get; set; } = null!;
 
-        // ✅ Multi-vendedor
+        // ==================== MULTI-VENDEDOR ====================
         public DbSet<Vendedor> Vendedores { get; set; }
         public DbSet<Banco> Bancos { get; set; }
         public DbSet<CuentaBancaria> CuentasBancarias { get; set; }
         public DbSet<ContactoTienda> ContactosTiendas { get; set; }
 
-        public DbSet<TarifaEnvioAlianza> TarifasEnvioAlianza { get; set; } = null!;
-
-        // ✅ Hubs de envío (consolidación)
-        public DbSet<HubEnvio> HubsEnvio { get; set; } = null!;
-
-        public DbSet<AlianzaEnvio> AlianzasEnvio { get; set; } = null!;
-        // ✅ Variantes de producto (Color+Talla)
-
-        public DbSet<ProductoVariante> ProductoVariantes { get; set; }
-
-        // ==================== VENTAS Y COMISIONES ====================
+        // ==================== COMISIONES ====================
         public DbSet<ConfiguracionComision> ConfiguracionesComision { get; set; } = null!;
         public DbSet<PagoComision> PagosComision { get; set; } = null!;
         public DbSet<PagoComisionDetalle> PagosComisionDetalle { get; set; } = null!;
-        public DbSet<PedidoHistorial> PedidosHistorial { get; set; } = null!;
+        public DbSet<Comisiones> Comisiones { get; set; }
 
-        // ==================== ATRIBUTOS DINÁMICOS (Fusionado) ====================
-        // ❌ ELIMINADO: DbSet<Categoria> CategoriasEnterprise (ahora todo está en Categorias)
+        // ==================== COMPRAS Y PROVEEDORES ====================
+        public DbSet<Compras> Compras { get; set; }
+        public DbSet<DetallesCompra> DetallesCompra { get; set; }
+        public DbSet<Proveedores> Proveedores { get; set; }
 
-        /// <summary>
-        /// Atributos personalizados por categoría (Material, Talla, Color, etc.)
-        /// </summary>
-        public DbSet<CategoriaAtributo> CategoriaAtributos { get; set; } = null!;
+        // ==================== PROMOCIONES Y FIDELIZACIÓN ====================
+        public DbSet<Promocion> Promociones { get; set; }
+        public DbSet<CuponesUsados> CuponesUsados { get; set; }
+        public DbSet<ProgramasFidelizacion> ProgramasFidelizacion { get; set; }
+        public DbSet<ClientesProgramas> ClientesProgramas { get; set; }
 
-        /// <summary>
-        /// Valores de atributos en productos
-        /// </summary>
-        public DbSet<ProductoAtributoValor> ProductoAtributoValores { get; set; } = null!;
+        // ==================== EMPLEADOS ====================
+        public DbSet<Empleados> Empleados { get; set; }
+        public DbSet<AsistenciaEmpleados> AsistenciaEmpleados { get; set; }
+        public DbSet<Gastos> Gastos { get; set; }
 
         // ==================== FIN DbSets ====================
 
@@ -94,9 +99,9 @@ namespace Simone.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // ------------------------------------------------------------
-            // 0) Usuario → configuración de cédula e índices + Asociación Tienda
-            // ------------------------------------------------------------
+            // ============================================================
+            // USUARIO
+            // ============================================================
             modelBuilder.Entity<Usuario>(entity =>
             {
                 entity.Property(u => u.Cedula)
@@ -118,15 +123,9 @@ namespace Simone.Data
                       .OnDelete(DeleteBehavior.SetNull);
             });
 
-            // ------------------------------------------------------------
-            // 1) Claves primarias compuestas (N:M) + FKs
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Devoluciones>()
-               .HasOne(d => d.DetalleVenta)
-               .WithMany(v => v.Devoluciones)
-               .HasForeignKey(d => d.DetalleVentaID)
-               .OnDelete(DeleteBehavior.Cascade);
-
+            // ============================================================
+            // CLAVES COMPUESTAS (N:M)
+            // ============================================================
             modelBuilder.Entity<ClientesProgramas>(entity =>
             {
                 entity.HasKey(cp => new { cp.UsuarioId, cp.ProgramaID });
@@ -157,9 +156,97 @@ namespace Simone.Data
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // ------------------------------------------------------------
-            // 2) Producto → índices básicos + navegación ampliada
-            // ------------------------------------------------------------
+            // ============================================================
+            // CATEGORÍAS
+            // ============================================================
+            modelBuilder.Entity<Categorias>(entity =>
+            {
+                entity.ToTable("Categorias");
+                entity.HasKey(c => c.CategoriaID);
+
+                // Jerarquía auto-referencial
+                entity.HasOne(c => c.CategoriaPadre)
+                      .WithMany(c => c.CategoriasHijas)
+                      .HasForeignKey(c => c.CategoriaPadreID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(c => c.Nombre).IsRequired().HasMaxLength(100);
+                entity.Property(c => c.Slug).HasMaxLength(150);
+                entity.Property(c => c.Path).HasMaxLength(500);
+                entity.Property(c => c.Descripcion).HasMaxLength(2000);
+                entity.Property(c => c.MetaDescripcion).HasMaxLength(300);
+                entity.Property(c => c.MetaKeywords).HasMaxLength(500);
+                entity.Property(c => c.IconoClass).HasMaxLength(100);
+                entity.Property(c => c.ImagenPath).HasMaxLength(300);
+                entity.Property(c => c.ImagenThumbnail).HasMaxLength(300);
+                entity.Property(c => c.ConversionRate).HasColumnType("decimal(5,4)");
+                entity.Property(c => c.TrendingScore).HasColumnType("decimal(10,2)");
+
+                entity.HasIndex(c => c.Slug).HasDatabaseName("IX_Categorias_Slug");
+                entity.HasIndex(c => c.Activo).HasDatabaseName("IX_Categorias_Activo");
+                entity.HasIndex(c => c.MostrarEnMenu).HasDatabaseName("IX_Categorias_MostrarEnMenu");
+                entity.HasIndex(c => c.Destacada).HasDatabaseName("IX_Categorias_Destacada");
+                entity.HasIndex(c => new { c.CategoriaPadreID, c.Orden }).HasDatabaseName("IX_Categorias_Padre_Orden");
+
+                entity.Ignore(c => c.NombreCompleto);
+                entity.Ignore(c => c.Breadcrumbs);
+                entity.Ignore(c => c.Url);
+                entity.Ignore(c => c.TieneCategoriasHijas);
+                entity.Ignore(c => c.TieneSubcategorias);
+                entity.Ignore(c => c.EsRaiz);
+                entity.Ignore(c => c.EsHoja);
+                entity.Ignore(c => c.TotalSubcategorias);
+                entity.Ignore(c => c.TotalProductosDirectos);
+                entity.Ignore(c => c.TotalProductos);
+                entity.Ignore(c => c.TotalAtributos);
+            });
+
+            // ============================================================
+            // SUBCATEGORÍAS
+            // ============================================================
+            modelBuilder.Entity<Subcategorias>(entity =>
+            {
+                entity.ToTable("Subcategorias");
+                entity.HasKey(s => s.SubcategoriaID);
+
+                entity.HasOne(s => s.Categoria)
+                      .WithMany(c => c.Subcategoria)
+                      .HasForeignKey(s => s.CategoriaID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(s => s.Usuario)
+                      .WithMany()
+                      .HasForeignKey(s => s.VendedorID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(s => s.NombreSubcategoria).IsRequired().HasMaxLength(100);
+                entity.Property(s => s.Slug).HasMaxLength(150);
+                entity.Property(s => s.Descripcion).HasMaxLength(500);
+                entity.Property(s => s.VendedorID).HasMaxLength(450);
+                entity.Property(s => s.IconoClass).HasMaxLength(100);
+                entity.Property(s => s.ImagenPath).HasMaxLength(300);
+                entity.Property(s => s.MetaDescripcion).HasMaxLength(300);
+                entity.Property(s => s.MetaKeywords).HasMaxLength(500);
+
+                entity.HasIndex(s => new { s.VendedorID, s.CategoriaID, s.NombreSubcategoria })
+                      .IsUnique()
+                      .HasDatabaseName("IX_Subcategorias_Vendedor_Categoria_Nombre");
+                entity.HasIndex(s => s.Slug).HasDatabaseName("IX_Subcategorias_Slug");
+                entity.HasIndex(s => s.Activo).HasDatabaseName("IX_Subcategorias_Activo");
+
+                entity.Ignore(s => s.NombreCompleto);
+                entity.Ignore(s => s.TotalProductos);
+                entity.Ignore(s => s.TotalProductosActivos);
+                entity.Ignore(s => s.TieneProductos);
+                entity.Ignore(s => s.Url);
+                entity.Ignore(s => s.EsDeVendedor);
+                entity.Ignore(s => s.EsGlobal);
+                entity.Ignore(s => s.NombreVendedor);
+            });
+
+            // ============================================================
+            // PRODUCTO
+            // ============================================================
             modelBuilder.Entity<Producto>(entity =>
             {
                 entity.HasIndex(p => new { p.CategoriaID, p.SubcategoriaID });
@@ -186,179 +273,9 @@ namespace Simone.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ------------------------------------------------------------
-            // ⭐ CATEGORÍAS (Fusionado - con jerarquía y atributos)
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Categorias>(entity =>
-            {
-                entity.ToTable("Categorias");
-
-                entity.HasKey(c => c.CategoriaID);
-
-                // Jerarquía auto-referencial (opcional)
-                entity.HasOne(c => c.CategoriaPadre)
-                      .WithMany(c => c.CategoriasHijas)
-                      .HasForeignKey(c => c.CategoriaPadreID)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                // Propiedades
-                entity.Property(c => c.Nombre)
-                      .IsRequired()
-                      .HasMaxLength(100);
-
-                entity.Property(c => c.Slug)
-                      .HasMaxLength(150);
-
-                entity.Property(c => c.Path)
-                      .HasMaxLength(500);
-
-                entity.Property(c => c.Descripcion)
-                      .HasMaxLength(2000);
-
-                entity.Property(c => c.MetaDescripcion)
-                      .HasMaxLength(300);
-
-                entity.Property(c => c.MetaKeywords)
-                      .HasMaxLength(500);
-
-                entity.Property(c => c.IconoClass)
-                      .HasMaxLength(100);
-
-                entity.Property(c => c.ImagenPath)
-                      .HasMaxLength(300);
-
-                entity.Property(c => c.ImagenThumbnail)
-                      .HasMaxLength(300);
-
-                // Analytics
-                entity.Property(c => c.ConversionRate)
-                      .HasColumnType("decimal(5,4)");
-
-                entity.Property(c => c.TrendingScore)
-                      .HasColumnType("decimal(10,2)");
-
-                // Índices para performance
-                entity.HasIndex(c => c.Slug)
-                      .HasDatabaseName("IX_Categorias_Slug");
-
-                entity.HasIndex(c => c.Activo)
-                      .HasDatabaseName("IX_Categorias_Activo");
-
-                entity.HasIndex(c => c.MostrarEnMenu)
-                      .HasDatabaseName("IX_Categorias_MostrarEnMenu");
-
-                entity.HasIndex(c => c.Destacada)
-                      .HasDatabaseName("IX_Categorias_Destacada");
-
-                entity.HasIndex(c => new { c.CategoriaPadreID, c.Orden })
-                      .HasDatabaseName("IX_Categorias_Padre_Orden");
-
-                // Ignorar propiedades calculadas
-                entity.Ignore(c => c.NombreCompleto);
-                entity.Ignore(c => c.Breadcrumbs);
-                entity.Ignore(c => c.Url);
-                entity.Ignore(c => c.TieneCategoriasHijas);
-                entity.Ignore(c => c.TieneSubcategorias);
-                entity.Ignore(c => c.EsRaiz);
-                entity.Ignore(c => c.EsHoja);
-                entity.Ignore(c => c.TotalSubcategorias);
-                entity.Ignore(c => c.TotalProductosDirectos);
-                entity.Ignore(c => c.TotalProductos);
-                entity.Ignore(c => c.TotalAtributos);
-            });
-
-            // ------------------------------------------------------------
-            // ⭐ SUBCATEGORÍAS (Mejorado)
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Subcategorias>(entity =>
-            {
-                entity.ToTable("Subcategorias");
-
-                entity.HasKey(s => s.SubcategoriaID);
-
-                entity.HasOne(s => s.Categoria)
-                      .WithMany(c => c.Subcategoria)
-                      .HasForeignKey(s => s.CategoriaID)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.Property(s => s.VendedorID)
-                      .HasMaxLength(450);
-
-                entity.HasOne(s => s.Usuario)
-                      .WithMany()
-                      .HasForeignKey(s => s.VendedorID)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                // Propiedades
-                entity.Property(s => s.NombreSubcategoria)
-                      .IsRequired()
-                      .HasMaxLength(100);
-
-                entity.Property(s => s.Slug)
-                      .HasMaxLength(150);
-
-                entity.Property(s => s.Descripcion)
-                      .HasMaxLength(500);
-
-                entity.Property(s => s.IconoClass)
-                      .HasMaxLength(100);
-
-                entity.Property(s => s.ImagenPath)
-                      .HasMaxLength(300);
-
-                entity.Property(s => s.MetaDescripcion)
-                      .HasMaxLength(300);
-
-                entity.Property(s => s.MetaKeywords)
-                      .HasMaxLength(500);
-
-                // Índices
-                entity.HasIndex(s => new { s.VendedorID, s.CategoriaID, s.NombreSubcategoria })
-                      .IsUnique()
-                      .HasDatabaseName("IX_Subcategorias_Vendedor_Categoria_Nombre");
-
-                entity.HasIndex(s => s.Slug)
-                      .HasDatabaseName("IX_Subcategorias_Slug");
-
-                entity.HasIndex(s => s.Activo)
-                      .HasDatabaseName("IX_Subcategorias_Activo");
-
-                // Ignorar propiedades calculadas
-                entity.Ignore(s => s.NombreCompleto);
-                entity.Ignore(s => s.TotalProductos);
-                entity.Ignore(s => s.TotalProductosActivos);
-                entity.Ignore(s => s.TieneProductos);
-                entity.Ignore(s => s.Url);
-                entity.Ignore(s => s.EsDeVendedor);
-                entity.Ignore(s => s.EsGlobal);
-                entity.Ignore(s => s.NombreVendedor);
-            });
-
-            modelBuilder.Entity<Reseñas>()
-                .HasOne(r => r.Usuario)
-                .WithMany()
-                .HasForeignKey(r => r.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Reseñas>()
-                .HasOne(r => r.Producto)
-                .WithMany(p => p.Reseñas)
-                .HasForeignKey(r => r.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<MovimientosInventario>()
-                .HasOne(mi => mi.Producto)
-                .WithMany(p => p.MovimientosInventario)
-                .HasForeignKey(mi => mi.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Producto)
-                .WithMany(p => p.DetalleVentas)
-                .HasForeignKey(dv => dv.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // ===== ProductoVariante =====
+            // ============================================================
+            // PRODUCTO VARIANTE
+            // ============================================================
             modelBuilder.Entity<ProductoVariante>(entity =>
             {
                 entity.HasKey(v => v.ProductoVarianteID);
@@ -376,13 +293,14 @@ namespace Simone.Data
                 entity.Property(v => v.Talla).HasMaxLength(20);
                 entity.Property(v => v.SKU).HasMaxLength(50);
                 entity.Property(v => v.ImagenPath).HasMaxLength(300);
-
                 entity.Property(v => v.PrecioCompra).HasColumnType("decimal(18,2)");
                 entity.Property(v => v.PrecioVenta).HasColumnType("decimal(18,2)");
                 entity.Property(v => v.Stock).HasDefaultValue(0);
             });
 
-            // ===== ProductoImagen =====
+            // ============================================================
+            // PRODUCTO IMAGEN
+            // ============================================================
             modelBuilder.Entity<ProductoImagen>(entity =>
             {
                 entity.HasKey(i => i.ProductoImagenID);
@@ -399,31 +317,264 @@ namespace Simone.Data
                 entity.Property(i => i.Orden).HasDefaultValue(0);
             });
 
-            // ------------------------------------------------------------
-            // 3) Ventas + Detalles
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Ventas>()
-                .HasOne(v => v.Usuario)
-                .WithMany()
-                .HasForeignKey(v => v.UsuarioId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // ============================================================
+            // CATEGORIA ATRIBUTO
+            // ============================================================
+            modelBuilder.Entity<CategoriaAtributo>(entity =>
+            {
+                entity.ToTable("CategoriaAtributos");
+                entity.HasKey(e => e.AtributoID);
 
-            modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Venta)
-                .WithMany(v => v.DetalleVentas)
-                .HasForeignKey(dv => dv.VentaID)
-                .OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Categoria)
+                      .WithMany(c => c.Atributos)
+                      .HasForeignKey(e => e.CategoriaID)
+                      .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<DetalleVentas>()
-                .HasOne(dv => dv.Producto)
-                .WithMany(p => p.DetalleVentas)
-                .HasForeignKey(dv => dv.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(e => e.Nombre).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.NombreTecnico).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Descripcion).HasMaxLength(300);
+                entity.Property(e => e.TipoCampo).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.OpcionesJson).HasMaxLength(2000);
+                entity.Property(e => e.Unidad).HasMaxLength(20);
+                entity.Property(e => e.IconoClass).HasMaxLength(100);
+                entity.Property(e => e.Grupo).HasMaxLength(100);
+                entity.Property(e => e.PatronValidacion).HasMaxLength(200);
+                entity.Property(e => e.MensajeError).HasMaxLength(200);
+                entity.Property(e => e.ValorMinimo).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.ValorMaximo).HasColumnType("decimal(18,2)");
 
+                entity.HasIndex(e => new { e.CategoriaID, e.Orden }).HasDatabaseName("IX_CategoriaAtributo_Categoria_Orden");
+                entity.HasIndex(e => new { e.CategoriaID, e.NombreTecnico }).IsUnique().HasDatabaseName("IX_CategoriaAtributo_Categoria_NombreTecnico_Unique");
+                entity.HasIndex(e => e.Filtrable).HasDatabaseName("IX_CategoriaAtributo_Filtrable");
+                entity.HasIndex(e => e.Activo).HasDatabaseName("IX_CategoriaAtributo_Activo");
 
-            // ------------------------------------------------------------
-            // ⭐ HUB DE ENVÍO
-            // ------------------------------------------------------------
+                entity.Ignore(e => e.OpcionesLista);
+                entity.Ignore(e => e.TieneOpciones);
+                entity.Ignore(e => e.RequiereValidacionNumerica);
+                entity.Ignore(e => e.EsSeleccion);
+                entity.Ignore(e => e.NombreCategoria);
+                entity.Ignore(e => e.TotalProductos);
+                entity.Ignore(e => e.TieneRango);
+                entity.Ignore(e => e.DescripcionRango);
+            });
+
+            // ============================================================
+            // PRODUCTO ATRIBUTO VALOR
+            // ============================================================
+            modelBuilder.Entity<ProductoAtributoValor>(entity =>
+            {
+                entity.ToTable("ProductoAtributoValores");
+                entity.HasKey(e => e.ValorID);
+
+                entity.HasOne(e => e.Producto)
+                      .WithMany(p => p.AtributosValores)
+                      .HasForeignKey(e => e.ProductoID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Atributo)
+                      .WithMany(a => a.ValoresProductos)
+                      .HasForeignKey(e => e.AtributoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.Valor).IsRequired().HasColumnType("nvarchar(max)");
+                entity.Property(e => e.ValorMostrable).HasColumnType("nvarchar(500)");
+
+                entity.HasIndex(e => new { e.ProductoID, e.AtributoID }).IsUnique().HasDatabaseName("IX_ProductoAtributoValores_Producto_Atributo_Unique");
+                entity.HasIndex(e => e.AtributoID).HasDatabaseName("IX_ProductoAtributoValores_Atributo");
+
+                entity.Ignore(e => e.ValorFormateado);
+                entity.Ignore(e => e.ValorNumerico);
+                entity.Ignore(e => e.ValorComoLista);
+                entity.Ignore(e => e.ValorComoNumero);
+                entity.Ignore(e => e.ValorComoBooleano);
+                entity.Ignore(e => e.ValorComoFecha);
+                entity.Ignore(e => e.NombreAtributo);
+                entity.Ignore(e => e.TipoCampo);
+                entity.Ignore(e => e.Unidad);
+                entity.Ignore(e => e.EstaVacio);
+                entity.Ignore(e => e.EsObligatorio);
+            });
+
+            // ============================================================
+            // RESEÑAS
+            // ============================================================
+            modelBuilder.Entity<Reseñas>(entity =>
+            {
+                entity.HasOne(r => r.Usuario)
+                      .WithMany()
+                      .HasForeignKey(r => r.UsuarioId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(r => r.Producto)
+                      .WithMany(p => p.Reseñas)
+                      .HasForeignKey(r => r.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ============================================================
+            // MOVIMIENTOS INVENTARIO
+            // ============================================================
+            modelBuilder.Entity<MovimientosInventario>(entity =>
+            {
+                entity.HasOne(mi => mi.Producto)
+                      .WithMany(p => p.MovimientosInventario)
+                      .HasForeignKey(mi => mi.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ============================================================
+            // CARRITO
+            // ============================================================
+            modelBuilder.Entity<Carrito>(entity =>
+            {
+                entity.HasOne(c => c.Usuario)
+                      .WithMany()
+                      .HasForeignKey(c => c.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Property(c => c.FechaCreacion).HasDefaultValueSql("GETUTCDATE()");
+            });
+
+            modelBuilder.Entity<CarritoDetalle>(entity =>
+            {
+                entity.HasOne(cd => cd.Carrito)
+                      .WithMany(c => c.CarritoDetalles)
+                      .HasForeignKey(cd => cd.CarritoID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(cd => cd.Producto)
+                      .WithMany(p => p.CarritoDetalles)
+                      .HasForeignKey(cd => cd.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(cd => cd.FechaAgregado).HasDefaultValueSql("GETUTCDATE()");
+            });
+
+            // ============================================================
+            // VENTAS
+            // ============================================================
+            modelBuilder.Entity<Ventas>(entity =>
+            {
+                entity.HasOne(v => v.Usuario)
+                      .WithMany()
+                      .HasForeignKey(v => v.UsuarioId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<DetalleVentas>(entity =>
+            {
+                entity.HasOne(dv => dv.Venta)
+                      .WithMany(v => v.DetalleVentas)
+                      .HasForeignKey(dv => dv.VentaID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(dv => dv.Producto)
+                      .WithMany(p => p.DetalleVentas)
+                      .HasForeignKey(dv => dv.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Devoluciones>(entity =>
+            {
+                entity.HasOne(d => d.DetalleVenta)
+                      .WithMany(v => v.Devoluciones)
+                      .HasForeignKey(d => d.DetalleVentaID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ============================================================
+            // PEDIDO
+            // ============================================================
+            modelBuilder.Entity<Pedido>(entity =>
+            {
+                entity.HasKey(e => e.PedidoID);
+
+                entity.HasOne(e => e.Usuario)
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vendedor)
+                      .WithMany()
+                      .HasForeignKey(e => e.VendedorId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CostoEnvio).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Descuento).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Impuestos).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Total).HasColumnType("decimal(18,2)");
+
+                entity.HasIndex(e => e.NumeroOrden).HasDatabaseName("IX_Pedidos_NumeroOrden");
+                entity.HasIndex(e => e.UsuarioId).HasDatabaseName("IX_Pedidos_Usuario");
+                entity.HasIndex(e => e.EstadoPedido).HasDatabaseName("IX_Pedidos_Estado");
+                entity.HasIndex(e => e.FechaPedido).HasDatabaseName("IX_Pedidos_Fecha");
+
+                entity.Ignore(e => e.CantidadProductos);
+                entity.Ignore(e => e.CantidadItems);
+                entity.Ignore(e => e.EstaPagado);
+                entity.Ignore(e => e.EstaCancelado);
+                entity.Ignore(e => e.PuedeCancelarse);
+                entity.Ignore(e => e.PuedeEnviarse);
+                entity.Ignore(e => e.EstadoPedidoClase);
+                entity.Ignore(e => e.EstadoPagoClase);
+                entity.Ignore(e => e.EstadoPedidoIcono);
+                entity.Ignore(e => e.DiasDesdeCreacion);
+            });
+
+            // ============================================================
+            // DETALLES PEDIDO
+            // ============================================================
+            modelBuilder.Entity<DetallesPedido>(entity =>
+            {
+                entity.HasOne(e => e.Pedido)
+                      .WithMany(p => p.DetallesPedido)
+                      .HasForeignKey(e => e.PedidoID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Producto)
+                      .WithMany(p => p.DetallesPedido)
+                      .HasForeignKey(e => e.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PrecioOriginal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Descuento).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PorcentajeComision).HasColumnType("decimal(5,2)");
+                entity.Property(e => e.MontoComision).HasColumnType("decimal(18,2)");
+
+                entity.Ignore(e => e.TieneDescuento);
+                entity.Ignore(e => e.PorcentajeDescuento);
+                entity.Ignore(e => e.EsDevolucion);
+                entity.Ignore(e => e.EstaCancelado);
+                entity.Ignore(e => e.EsNormal);
+                entity.Ignore(e => e.NombreMostrar);
+                entity.Ignore(e => e.DescripcionCompleta);
+            });
+
+            // ============================================================
+            // PEDIDO HISTORIAL
+            // ============================================================
+            modelBuilder.Entity<PedidoHistorial>(entity =>
+            {
+                entity.ToTable("PedidosHistorial");
+                entity.HasKey(e => e.HistorialId);
+
+                entity.HasOne(e => e.Pedido)
+                      .WithMany(p => p.Historial)
+                      .HasForeignKey(e => e.PedidoID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Usuario)
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // ============================================================
+            // HUB DE ENVÍO
+            // ============================================================
             modelBuilder.Entity<HubEnvio>(entity =>
             {
                 entity.ToTable("HubsEnvio");
@@ -438,24 +589,13 @@ namespace Simone.Data
                 entity.HasIndex(e => e.Activo).HasDatabaseName("IX_HubsEnvio_Activo");
                 entity.HasIndex(e => new { e.Provincia, e.Ciudad }).HasDatabaseName("IX_HubsEnvio_Ubicacion");
 
-                // Ignorar propiedades calculadas
                 entity.Ignore(e => e.TotalVendedores);
                 entity.Ignore(e => e.TotalResponsables);
             });
 
-            // Vendedor → Hub
-            modelBuilder.Entity<Vendedor>(entity =>
-            {
-                entity.HasOne(v => v.Hub)
-                      .WithMany(h => h.Vendedores)
-                      .HasForeignKey(v => v.HubId)
-                      .OnDelete(DeleteBehavior.SetNull);
-            });
-
-
-            // ------------------------------------------------------------
-            // ⭐ ALIANZA DE ENVÍO
-            // ------------------------------------------------------------
+            // ============================================================
+            // ALIANZA DE ENVÍO
+            // ============================================================
             modelBuilder.Entity<AlianzaEnvio>(entity =>
             {
                 entity.ToTable("AlianzasEnvio");
@@ -475,7 +615,9 @@ namespace Simone.Data
                 entity.Ignore(e => e.TotalVendedores);
             });
 
-            // Vendedor → Alianza
+            // ============================================================
+            // VENDEDOR (Hub + Alianza)
+            // ============================================================
             modelBuilder.Entity<Vendedor>(entity =>
             {
                 entity.HasOne(v => v.Hub)
@@ -489,12 +631,9 @@ namespace Simone.Data
                       .OnDelete(DeleteBehavior.SetNull);
             });
 
-
-
-
-            // ------------------------------------------------------------
-            // ⭐ TARIFA ENVÍO ALIANZA
-            // ------------------------------------------------------------
+            // ============================================================
+            // TARIFA ENVÍO ALIANZA
+            // ============================================================
             modelBuilder.Entity<TarifaEnvioAlianza>(entity =>
             {
                 entity.ToTable("TarifasEnvioAlianza");
@@ -516,21 +655,17 @@ namespace Simone.Data
                       .HasForeignKey(e => e.VendedorId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasIndex(e => new { e.AlianzaId, e.Provincia, e.Ciudad })
-                      .HasDatabaseName("IX_TarifasEnvio_Alianza_Destino");
-
-                entity.HasIndex(e => new { e.VendedorId, e.Provincia, e.Ciudad })
-                      .HasDatabaseName("IX_TarifasEnvio_Vendedor_Destino");
+                entity.HasIndex(e => new { e.AlianzaId, e.Provincia, e.Ciudad }).HasDatabaseName("IX_TarifasEnvio_Alianza_Destino");
+                entity.HasIndex(e => new { e.VendedorId, e.Provincia, e.Ciudad }).HasDatabaseName("IX_TarifasEnvio_Vendedor_Destino");
 
                 entity.Ignore(e => e.EsDeAlianza);
                 entity.Ignore(e => e.EsDeVendedor);
                 entity.Ignore(e => e.DestinoCompleto);
             });
 
-
-            // ------------------------------------------------------------
-            // ⭐ PESO CATEGORÍA
-            // ------------------------------------------------------------
+            // ============================================================
+            // PESO CATEGORÍA
+            // ============================================================
             modelBuilder.Entity<PesoCategoria>(entity =>
             {
                 entity.ToTable("PesosCategorias");
@@ -554,19 +689,16 @@ namespace Simone.Data
                       .HasForeignKey(e => e.CategoriaId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasIndex(e => new { e.AlianzaId, e.CategoriaId })
-                      .HasDatabaseName("IX_PesosCategorias_Alianza_Categoria");
-
-                entity.HasIndex(e => new { e.VendedorId, e.CategoriaId })
-                      .HasDatabaseName("IX_PesosCategorias_Vendedor_Categoria");
+                entity.HasIndex(e => new { e.AlianzaId, e.CategoriaId }).HasDatabaseName("IX_PesosCategorias_Alianza_Categoria");
+                entity.HasIndex(e => new { e.VendedorId, e.CategoriaId }).HasDatabaseName("IX_PesosCategorias_Vendedor_Categoria");
 
                 entity.Ignore(e => e.EsDeAlianza);
                 entity.Ignore(e => e.NombreCategoria);
             });
 
-            // ------------------------------------------------------------
-            // ⭐ CONFIGURACIÓN ENVÍO TIENDA
-            // ------------------------------------------------------------
+            // ============================================================
+            // CONFIGURACIÓN ENVÍO TIENDA
+            // ============================================================
             modelBuilder.Entity<ConfiguracionEnvioTienda>(entity =>
             {
                 entity.ToTable("ConfiguracionesEnvioTienda");
@@ -597,206 +729,183 @@ namespace Simone.Data
                 entity.Ignore(e => e.TieneEnvioGratis);
                 entity.Ignore(e => e.TieneDescuentoVolumen);
             });
-            // ------------------------------------------------------------
-            // 4) Compras + Detalles + Proveedores
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Compras>()
-                .HasOne(c => c.Proveedor)
-                .WithMany()
-                .HasForeignKey(c => c.ProveedorID)
-                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<DetallesCompra>()
-                .HasOne(dc => dc.Compra)
-                .WithMany(c => c.DetallesCompra)
-                .HasForeignKey(dc => dc.CompraID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<DetallesCompra>()
-                .HasOne(dc => dc.Producto)
-                .WithMany(p => p.DetallesCompra)
-                .HasForeignKey(dc => dc.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // ------------------------------------------------------------
-            // 5) Carrito
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Carrito>()
-                .HasOne(c => c.Usuario)
-                .WithMany()
-                .HasForeignKey(c => c.UsuarioId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Carrito)
-                .WithMany(c => c.CarritoDetalles)
-                .HasForeignKey(cd => cd.CarritoID)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            modelBuilder.Entity<CarritoDetalle>()
-                .HasOne(cd => cd.Producto)
-                .WithMany(p => p.CarritoDetalles)
-                .HasForeignKey(cd => cd.ProductoID)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<Carrito>()
-                .Property(c => c.FechaCreacion)
-                .HasDefaultValueSql("GETUTCDATE()");
-
-            modelBuilder.Entity<CarritoDetalle>()
-                .Property(cd => cd.FechaAgregado)
-                .HasDefaultValueSql("GETUTCDATE()");
-
-            // ------------------------------------------------------------
-            // 6) Logs
-            // ------------------------------------------------------------
-            modelBuilder.Entity<LogIniciosSesion>(entity =>
+            // ============================================================
+            // ENVÍO CONSOLIDADO
+            // ============================================================
+            modelBuilder.Entity<EnvioConsolidado>(entity =>
             {
-                entity.HasKey(l => l.LogID);
-                entity.Property(l => l.Usuario).IsRequired().HasMaxLength(150);
-                entity.Property(l => l.FechaInicio).HasColumnType("datetime");
-                entity.Property(l => l.Exitoso).IsRequired(false);
-            });
+                entity.ToTable("EnviosConsolidados");
+                entity.HasKey(e => e.EnvioId);
 
-            modelBuilder.Entity<ActividadUsuario>()
-                .HasOne(a => a.Usuario)
-                .WithMany(u => u.Actividades)
-                .HasForeignKey(a => a.UsuarioId)
-                .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(e => e.Codigo).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.ClienteId).IsRequired().HasMaxLength(450);
+                entity.Property(e => e.Provincia).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Ciudad).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.DireccionEntrega).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.TelefonoContacto).HasMaxLength(20);
+                entity.Property(e => e.ReferenciaEntrega).HasMaxLength(300);
+                entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.NumeroGuia).HasMaxLength(100);
+                entity.Property(e => e.Transportista).HasMaxLength(100);
+                entity.Property(e => e.NotasCliente).HasMaxLength(500);
+                entity.Property(e => e.NotasInternas).HasMaxLength(500);
 
-            // ------------------------------------------------------------
-            // ⭐ CATEGORIA ATRIBUTO (Ahora apunta a Categorias fusionado)
-            // ------------------------------------------------------------
-            modelBuilder.Entity<CategoriaAtributo>(entity =>
-            {
-                entity.ToTable("CategoriaAtributos");
+                entity.Property(e => e.CostoEnvioTotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.DescuentoEnvio).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CostoEnvioFinal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PesoTotalKg).HasColumnType("decimal(18,3)");
 
-                entity.HasKey(e => e.AtributoID);
+                // Relación 1:1 con Pedido
+                entity.HasOne(e => e.Pedido)
+                      .WithOne(p => p.EnvioConsolidado)
+                      .HasForeignKey<EnvioConsolidado>(e => e.PedidoId)
+                      .OnDelete(DeleteBehavior.SetNull);
 
-                // ✅ CAMBIO: Ahora apunta a Categorias (no a Categoria enterprise)
-                entity.HasOne(e => e.Categoria)
-                      .WithMany(c => c.Atributos)
-                      .HasForeignKey(e => e.CategoriaID)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                // Propiedades
-                entity.Property(e => e.Nombre)
-                      .IsRequired()
-                      .HasMaxLength(100);
-
-                entity.Property(e => e.NombreTecnico)
-                      .IsRequired()
-                      .HasMaxLength(100);
-
-                entity.Property(e => e.Descripcion)
-                      .HasMaxLength(300);
-
-                entity.Property(e => e.TipoCampo)
-                      .IsRequired()
-                      .HasMaxLength(50);
-
-                entity.Property(e => e.OpcionesJson)
-                      .HasMaxLength(2000);
-
-                entity.Property(e => e.Unidad)
-                      .HasMaxLength(20);
-
-                entity.Property(e => e.IconoClass)
-                      .HasMaxLength(100);
-
-                entity.Property(e => e.Grupo)
-                      .HasMaxLength(100);
-
-                entity.Property(e => e.PatronValidacion)
-                      .HasMaxLength(200);
-
-                entity.Property(e => e.MensajeError)
-                      .HasMaxLength(200);
-
-                entity.Property(e => e.ValorMinimo)
-                      .HasColumnType("decimal(18,2)");
-
-                entity.Property(e => e.ValorMaximo)
-                      .HasColumnType("decimal(18,2)");
-
-                // Índices
-                entity.HasIndex(e => new { e.CategoriaID, e.Orden })
-                      .HasDatabaseName("IX_CategoriaAtributo_Categoria_Orden");
-
-                entity.HasIndex(e => new { e.CategoriaID, e.NombreTecnico })
-                      .IsUnique()
-                      .HasDatabaseName("IX_CategoriaAtributo_Categoria_NombreTecnico_Unique");
-
-                entity.HasIndex(e => e.Filtrable)
-                      .HasDatabaseName("IX_CategoriaAtributo_Filtrable");
-
-                entity.HasIndex(e => e.Activo)
-                      .HasDatabaseName("IX_CategoriaAtributo_Activo");
-
-                // Ignorar propiedades calculadas
-                entity.Ignore(e => e.OpcionesLista);
-                entity.Ignore(e => e.TieneOpciones);
-                entity.Ignore(e => e.RequiereValidacionNumerica);
-                entity.Ignore(e => e.EsSeleccion);
-                entity.Ignore(e => e.NombreCategoria);
-                entity.Ignore(e => e.TotalProductos);
-                entity.Ignore(e => e.TieneRango);
-                entity.Ignore(e => e.DescripcionRango);
-            });
-
-            // ------------------------------------------------------------
-            // ⭐ PRODUCTO ATRIBUTO VALOR
-            // ------------------------------------------------------------
-            modelBuilder.Entity<ProductoAtributoValor>(entity =>
-            {
-                entity.ToTable("ProductoAtributoValores");
-
-                entity.HasKey(e => e.ValorID);
-
-                // Relación con Producto (CASCADE delete)
-                entity.HasOne(e => e.Producto)
-                      .WithMany(p => p.AtributosValores)
-                      .HasForeignKey(e => e.ProductoID)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                // Relación con CategoriaAtributo (RESTRICT delete)
-                entity.HasOne(e => e.Atributo)
-                      .WithMany(a => a.ValoresProductos)
-                      .HasForeignKey(e => e.AtributoID)
+                entity.HasOne(e => e.Cliente)
+                      .WithMany()
+                      .HasForeignKey(e => e.ClienteId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Propiedades
-                entity.Property(e => e.Valor)
-                      .IsRequired()
-                      .HasColumnType("nvarchar(max)");
+                entity.HasOne(e => e.Hub)
+                      .WithMany()
+                      .HasForeignKey(e => e.HubId)
+                      .OnDelete(DeleteBehavior.SetNull);
 
-                entity.Property(e => e.ValorMostrable)
-                      .HasColumnType("nvarchar(500)");
+                entity.HasIndex(e => e.Codigo).IsUnique().HasDatabaseName("IX_EnviosConsolidados_Codigo");
+                entity.HasIndex(e => e.ClienteId).HasDatabaseName("IX_EnviosConsolidados_Cliente");
+                entity.HasIndex(e => e.Estado).HasDatabaseName("IX_EnviosConsolidados_Estado");
+                entity.HasIndex(e => e.FechaCreacion).HasDatabaseName("IX_EnviosConsolidados_Fecha");
+                entity.HasIndex(e => e.HubId).HasDatabaseName("IX_EnviosConsolidados_Hub");
 
-                // Índice único: Un producto solo puede tener UN valor por atributo
-                entity.HasIndex(e => new { e.ProductoID, e.AtributoID })
-                      .IsUnique()
-                      .HasDatabaseName("IX_ProductoAtributoValores_Producto_Atributo_Unique");
-
-                entity.HasIndex(e => e.AtributoID)
-                      .HasDatabaseName("IX_ProductoAtributoValores_Atributo");
-
-                // Ignorar propiedades calculadas
-                entity.Ignore(e => e.ValorFormateado);
-                entity.Ignore(e => e.ValorNumerico);
-                entity.Ignore(e => e.ValorComoLista);
-                entity.Ignore(e => e.ValorComoNumero);
-                entity.Ignore(e => e.ValorComoBooleano);
-                entity.Ignore(e => e.ValorComoFecha);
-                entity.Ignore(e => e.NombreAtributo);
-                entity.Ignore(e => e.TipoCampo);
-                entity.Ignore(e => e.Unidad);
-                entity.Ignore(e => e.EstaVacio);
-                entity.Ignore(e => e.EsObligatorio);
+                entity.Ignore(e => e.TotalSubPedidos);
+                entity.Ignore(e => e.TotalTiendas);
+                entity.Ignore(e => e.TotalProductos);
+                entity.Ignore(e => e.TodosEnHub);
+                entity.Ignore(e => e.PuedeEnviarse);
+                entity.Ignore(e => e.EstadoDisplay);
+                entity.Ignore(e => e.EstadoColor);
+                entity.Ignore(e => e.EstadoIcono);
             });
-            // ------------------------------------------------------------
-            // ⭐ CONFIGURACIÓN COMISIONES
-            // ------------------------------------------------------------
+
+            // ============================================================
+            // SUBPEDIDO
+            // ============================================================
+            modelBuilder.Entity<SubPedido>(entity =>
+            {
+                entity.ToTable("SubPedidos");
+                entity.HasKey(e => e.SubPedidoId);
+
+                entity.Property(e => e.Codigo).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Estado).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.NotasVendedor).HasMaxLength(500);
+                entity.Property(e => e.NotasHub).HasMaxLength(500);
+
+                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CostoEnvioProporcional).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Total).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PesoEstimadoKg).HasColumnType("decimal(18,3)");
+
+                entity.HasOne(e => e.Envio)
+                      .WithMany(e => e.SubPedidos)
+                      .HasForeignKey(e => e.EnvioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Vendedor)
+                      .WithMany()
+                      .HasForeignKey(e => e.VendedorId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Alianza)
+                      .WithMany()
+                      .HasForeignKey(e => e.AlianzaId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.Codigo).IsUnique().HasDatabaseName("IX_SubPedidos_Codigo");
+                entity.HasIndex(e => e.EnvioId).HasDatabaseName("IX_SubPedidos_Envio");
+                entity.HasIndex(e => e.VendedorId).HasDatabaseName("IX_SubPedidos_Vendedor");
+                entity.HasIndex(e => e.Estado).HasDatabaseName("IX_SubPedidos_Estado");
+
+                entity.Ignore(e => e.TotalItems);
+                entity.Ignore(e => e.TotalLineas);
+                entity.Ignore(e => e.NombreTienda);
+                entity.Ignore(e => e.EstadoDisplay);
+                entity.Ignore(e => e.EstadoColor);
+                entity.Ignore(e => e.EstadoIcono);
+            });
+
+            // ============================================================
+            // SUBPEDIDO ITEM
+            // ============================================================
+            modelBuilder.Entity<SubPedidoItem>(entity =>
+            {
+                entity.ToTable("SubPedidoItems");
+                entity.HasKey(e => e.ItemId);
+
+                entity.Property(e => e.NombreProducto).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.SKU).HasMaxLength(100);
+                entity.Property(e => e.Color).HasMaxLength(50);
+                entity.Property(e => e.Talla).HasMaxLength(50);
+                entity.Property(e => e.ImagenPath).HasMaxLength(300);
+
+                entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.PesoUnitarioKg).HasColumnType("decimal(18,3)");
+                entity.Property(e => e.PesoTotalKg).HasColumnType("decimal(18,3)");
+
+                entity.HasOne(e => e.SubPedido)
+                      .WithMany(s => s.Items)
+                      .HasForeignKey(e => e.SubPedidoId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Producto)
+                      .WithMany()
+                      .HasForeignKey(e => e.ProductoId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Variante)
+                      .WithMany()
+                      .HasForeignKey(e => e.VarianteId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.SubPedidoId).HasDatabaseName("IX_SubPedidoItems_SubPedido");
+            });
+
+            // ============================================================
+            // SUBPEDIDO HISTORIAL
+            // ============================================================
+            modelBuilder.Entity<SubPedidoHistorial>(entity =>
+            {
+                entity.ToTable("SubPedidoHistorial");
+                entity.HasKey(e => e.HistorialId);
+
+                entity.Property(e => e.EstadoAnterior).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.EstadoNuevo).IsRequired().HasMaxLength(50);
+                entity.Property(e => e.Comentario).HasMaxLength(500);
+                entity.Property(e => e.UsuarioId).HasMaxLength(450);
+                entity.Property(e => e.TipoUsuario).HasMaxLength(50);
+
+                entity.HasOne(e => e.SubPedido)
+                      .WithMany(s => s.Historial)
+                      .HasForeignKey(e => e.SubPedidoId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Usuario)
+                      .WithMany()
+                      .HasForeignKey(e => e.UsuarioId)
+                      .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasIndex(e => e.SubPedidoId).HasDatabaseName("IX_SubPedidoHistorial_SubPedido");
+                entity.HasIndex(e => e.FechaCambio).HasDatabaseName("IX_SubPedidoHistorial_Fecha");
+
+                entity.Ignore(e => e.CambioResumen);
+                entity.Ignore(e => e.IconoCambio);
+                entity.Ignore(e => e.ColorCambio);
+            });
+
+            // ============================================================
+            // CONFIGURACIÓN COMISIONES
+            // ============================================================
             modelBuilder.Entity<ConfiguracionComision>(entity =>
             {
                 entity.ToTable("ConfiguracionesComision");
@@ -821,9 +930,9 @@ namespace Simone.Data
                 entity.Ignore(e => e.PorcentajeTexto);
             });
 
-            // ------------------------------------------------------------
-            // ⭐ PAGO COMISIONES
-            // ------------------------------------------------------------
+            // ============================================================
+            // PAGO COMISIONES
+            // ============================================================
             modelBuilder.Entity<PagoComision>(entity =>
             {
                 entity.ToTable("PagosComision");
@@ -868,68 +977,49 @@ namespace Simone.Data
                 entity.Property(e => e.ComisionPedido).HasColumnType("decimal(18,2)");
             });
 
-            // ------------------------------------------------------------
-            // ⭐ PEDIDO HISTORIAL
-            // ------------------------------------------------------------
-            modelBuilder.Entity<PedidoHistorial>(entity =>
+            // ============================================================
+            // COMPRAS
+            // ============================================================
+            modelBuilder.Entity<Compras>(entity =>
             {
-                entity.ToTable("PedidosHistorial");
-                entity.HasKey(e => e.HistorialId);
-
-                entity.HasOne(e => e.Pedido)
-          .WithMany(p => p.Historial)
-          .HasForeignKey(e => e.PedidoID)
-          .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(e => e.Usuario)
+                entity.HasOne(c => c.Proveedor)
                       .WithMany()
-                      .HasForeignKey(e => e.UsuarioId)
-                      .OnDelete(DeleteBehavior.SetNull);
+                      .HasForeignKey(c => c.ProveedorID)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ------------------------------------------------------------
-            // ⭐ PEDIDO (Mejorado)
-            // ------------------------------------------------------------
-            modelBuilder.Entity<Pedido>(entity =>
+            modelBuilder.Entity<DetallesCompra>(entity =>
             {
-                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.CostoEnvio).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Descuento).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Impuestos).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Total).HasColumnType("decimal(18,2)");
+                entity.HasOne(dc => dc.Compra)
+                      .WithMany(c => c.DetallesCompra)
+                      .HasForeignKey(dc => dc.CompraID)
+                      .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Ignore(e => e.CantidadProductos);
-                entity.Ignore(e => e.CantidadItems);
-                entity.Ignore(e => e.EstaPagado);
-                entity.Ignore(e => e.EstaCancelado);
-                entity.Ignore(e => e.PuedeCancelarse);
-                entity.Ignore(e => e.PuedeEnviarse);
-                entity.Ignore(e => e.EstadoPedidoClase);
-                entity.Ignore(e => e.EstadoPagoClase);
-                entity.Ignore(e => e.EstadoPedidoIcono);
-                entity.Ignore(e => e.DiasDesdeCreacion);
+                entity.HasOne(dc => dc.Producto)
+                      .WithMany(p => p.DetallesCompra)
+                      .HasForeignKey(dc => dc.ProductoID)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
-            // ------------------------------------------------------------
-            // ⭐ DETALLES PEDIDO (Mejorado)
-            // ------------------------------------------------------------
-            modelBuilder.Entity<DetallesPedido>(entity =>
+            // ============================================================
+            // LOGS
+            // ============================================================
+            modelBuilder.Entity<LogIniciosSesion>(entity =>
             {
-                entity.Property(e => e.PrecioUnitario).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.PrecioOriginal).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Descuento).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Subtotal).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.PorcentajeComision).HasColumnType("decimal(5,2)");
-                entity.Property(e => e.MontoComision).HasColumnType("decimal(18,2)");
-
-                entity.Ignore(e => e.TieneDescuento);
-                entity.Ignore(e => e.PorcentajeDescuento);
-                entity.Ignore(e => e.EsDevolucion);
-                entity.Ignore(e => e.EstaCancelado);
-                entity.Ignore(e => e.EsNormal);
-                entity.Ignore(e => e.NombreMostrar);
-                entity.Ignore(e => e.DescripcionCompleta);
+                entity.HasKey(l => l.LogID);
+                entity.Property(l => l.Usuario).IsRequired().HasMaxLength(150);
+                entity.Property(l => l.FechaInicio).HasColumnType("datetime");
+                entity.Property(l => l.Exitoso).IsRequired(false);
             });
+
+            modelBuilder.Entity<ActividadUsuario>(entity =>
+            {
+                entity.HasOne(a => a.Usuario)
+                      .WithMany(u => u.Actividades)
+                      .HasForeignKey(a => a.UsuarioId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // ==================== FIN CONFIGURACIÓN ====================
         }
     }

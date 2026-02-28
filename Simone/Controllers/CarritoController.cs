@@ -16,8 +16,7 @@ namespace Simone.Controllers
 {
     /// <summary>
     /// Controlador de carrito de compras
-    /// Versión optimizada con mejores prácticas empresariales
-    /// ACTUALIZADO: Añadido CartPartial para actualización AJAX del carrito
+    /// Versión optimizada con integración de EnvioConsolidadoService
     /// </summary>
     [Route("Carrito")]
     public class CarritoController : Controller
@@ -28,6 +27,7 @@ namespace Simone.Controllers
         private readonly UserManager<Usuario> _userManager;
         private readonly ICarritoService _carritoService;
         private readonly EnviosCarritoService _enviosCarrito;
+        private readonly IEnvioConsolidadoService _envioConsolidadoService;
         private readonly IMemoryCache _cache;
         private readonly ILogger<CarritoController> _logger;
 
@@ -36,6 +36,7 @@ namespace Simone.Controllers
             UserManager<Usuario> userManager,
             ICarritoService carritoService,
             EnviosCarritoService enviosCarrito,
+            IEnvioConsolidadoService envioConsolidadoService,
             IMemoryCache cache,
             ILogger<CarritoController> logger)
         {
@@ -43,6 +44,7 @@ namespace Simone.Controllers
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _carritoService = carritoService ?? throw new ArgumentNullException(nameof(carritoService));
             _enviosCarrito = enviosCarrito ?? throw new ArgumentNullException(nameof(enviosCarrito));
+            _envioConsolidadoService = envioConsolidadoService ?? throw new ArgumentNullException(nameof(envioConsolidadoService));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -146,14 +148,12 @@ namespace Simone.Controllers
         {
             if (cantidad < CANTIDAD_MINIMA)
             {
-                return ValidationResult.Failure(
-                    $"La cantidad mínima es {CANTIDAD_MINIMA}");
+                return ValidationResult.Failure($"La cantidad mínima es {CANTIDAD_MINIMA}");
             }
 
             if (cantidad > CANTIDAD_MAXIMA_POR_PRODUCTO)
             {
-                return ValidationResult.Failure(
-                    $"La cantidad máxima por producto es {CANTIDAD_MAXIMA_POR_PRODUCTO}");
+                return ValidationResult.Failure($"La cantidad máxima por producto es {CANTIDAD_MAXIMA_POR_PRODUCTO}");
             }
 
             return ValidationResult.Success();
@@ -250,8 +250,7 @@ namespace Simone.Controllers
                         detalles = await _carritoService.LoadCartDetails(carrito.CarritoID);
 
                         _logger.LogInformation(
-                            "Carrito cargado. Usuario: {UserId}, Items: {Count}, " +
-                            "Total: {Total:C}",
+                            "Carrito cargado. Usuario: {UserId}, Items: {Count}, Total: {Total:C}",
                             usuario.Id,
                             detalles.Count,
                             detalles.Sum(d => d.Precio * d.Cantidad));
@@ -322,8 +321,7 @@ namespace Simone.Controllers
                 var resultado = await _enviosCarrito.CalcularAsync(vendedorIds, provincia!, ciudad);
 
                 _logger.LogDebug(
-                    "Envíos calculados. Vendedores: {Count}, Total: {Total:C}, " +
-                    "Destino: {Provincia}/{Ciudad}",
+                    "Envíos calculados. Vendedores: {Count}, Total: {Total:C}, Destino: {Provincia}/{Ciudad}",
                     vendedorIds.Count,
                     resultado.TotalEnvio,
                     provincia,
@@ -333,11 +331,8 @@ namespace Simone.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error al calcular envíos. Provincia: {Provincia}, Ciudad: {Ciudad}",
-                    provincia,
-                    ciudad);
+                _logger.LogError(ex, "Error al calcular envíos. Provincia: {Provincia}, Ciudad: {Ciudad}",
+                    provincia, ciudad);
 
                 return (0m, new Dictionary<string, decimal>(),
                     new List<string> { "Error al calcular costos de envío" });
@@ -356,7 +351,6 @@ namespace Simone.Controllers
         [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
         public async Task<IActionResult> CartInfo()
         {
-            // SEGURIDAD: Este endpoint solo debe ser llamado por AJAX
             if (!EsAjax())
             {
                 _logger.LogWarning("Intento de acceder a CartInfo sin AJAX");
@@ -396,7 +390,6 @@ namespace Simone.Controllers
         /// <summary>
         /// GET: /Carrito/CartPartial
         /// Devuelve el partial view del contenido del carrito para AJAX
-        /// NUEVO: Permite actualizar el contenido del carrito sin recargar la página
         /// </summary>
         [HttpGet("CartPartial", Name = "Carrito_Partial")]
         [ResponseCache(Location = ResponseCacheLocation.None, NoStore = true)]
@@ -445,14 +438,12 @@ namespace Simone.Controllers
             int cantidad = CANTIDAD_DEFAULT,
             int? productoVarianteId = null)
         {
-            // Validar cantidad
             var validacionCantidad = ValidarCantidad(cantidad);
             if (!validacionCantidad.IsValid)
             {
                 return ResponderError(validacionCantidad.ErrorMessage!);
             }
 
-            // Validar usuario autenticado
             var usuario = await ObtenerUsuarioActualAsync();
             if (usuario == null)
             {
@@ -468,27 +459,22 @@ namespace Simone.Controllers
 
             try
             {
-                // Obtener producto
                 var producto = await _context.Productos
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.ProductoID == productoId);
 
                 if (producto == null)
                 {
-                    _logger.LogWarning(
-                        "Intento de agregar producto inexistente. ProductoId: {ProductoId}",
-                        productoId);
+                    _logger.LogWarning("Intento de agregar producto inexistente. ProductoId: {ProductoId}", productoId);
                     return ResponderError("Producto no encontrado.");
                 }
 
-                // Validar stock disponible
                 var validacionStock = await ValidarStockDisponibleAsync(producto, cantidad, productoVarianteId);
                 if (!validacionStock.IsValid)
                 {
                     return ResponderError(validacionStock.ErrorMessage!);
                 }
 
-                // Agregar al carrito
                 var agregado = await _carritoService.AnadirProducto(
                     producto,
                     usuario,
@@ -498,15 +484,11 @@ namespace Simone.Controllers
                 if (!agregado)
                 {
                     _logger.LogWarning(
-                        "Falló agregar producto al carrito. ProductoId: {ProductoId}, " +
-                        "UsuarioId: {UsuarioId}, Cantidad: {Cantidad}",
-                        productoId,
-                        usuario.Id,
-                        cantidad);
+                        "Falló agregar producto al carrito. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}, Cantidad: {Cantidad}",
+                        productoId, usuario.Id, cantidad);
                     return ResponderError("No se pudo agregar el producto al carrito.");
                 }
 
-                // Obtener resumen actualizado
                 var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
                 var detalles = carrito != null
                     ? await _carritoService.LoadCartDetails(carrito.CarritoID)
@@ -514,14 +496,8 @@ namespace Simone.Controllers
                 var resumen = CalcularResumen(detalles);
 
                 _logger.LogInformation(
-                    "Producto agregado al carrito. ProductoId: {ProductoId}, " +
-                    "UsuarioId: {UsuarioId}, Cantidad: {Cantidad}, " +
-                    "Total items: {TotalItems}, Total: {Total:C}",
-                    productoId,
-                    usuario.Id,
-                    cantidad,
-                    resumen.Cantidad,
-                    resumen.Total);
+                    "Producto agregado al carrito. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}, Cantidad: {Cantidad}, Total items: {TotalItems}, Total: {Total:C}",
+                    productoId, usuario.Id, cantidad, resumen.Cantidad, resumen.Total);
 
                 if (EsAjax())
                 {
@@ -539,20 +515,13 @@ namespace Simone.Controllers
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning(
-                    ex,
-                    "Operación inválida al agregar producto. ProductoId: {ProductoId}",
-                    productoId);
+                _logger.LogWarning(ex, "Operación inválida al agregar producto. ProductoId: {ProductoId}", productoId);
                 return ResponderError(ex.Message);
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error al agregar producto al carrito. ProductoId: {ProductoId}, " +
-                    "UsuarioId: {UsuarioId}",
-                    productoId,
-                    usuario?.Id);
+                _logger.LogError(ex, "Error al agregar producto al carrito. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}",
+                    productoId, usuario?.Id);
                 return ResponderError("Error inesperado al agregar el producto.");
             }
         }
@@ -565,15 +534,7 @@ namespace Simone.Controllers
             int cantidad,
             int? productoVarianteId)
         {
-            // TODO: Implementar validación de stock según tu lógica de negocio
-            // Por ahora, asumimos que siempre hay stock
-            // En producción, deberías verificar:
-            // - Stock en Producto o ProductoVariante
-            // - Stock reservado en otros carritos
-            // - Stock en pedidos pendientes
-
-            await Task.CompletedTask; // Placeholder para async
-
+            await Task.CompletedTask;
             return ValidationResult.Success();
         }
 
@@ -592,15 +553,10 @@ namespace Simone.Controllers
             int cantidad,
             int? productoId = null)
         {
-            // Validar cantidad
             var validacionCantidad = ValidarCantidad(cantidad);
             if (!validacionCantidad.IsValid)
             {
-                return Json(new
-                {
-                    ok = false,
-                    error = validacionCantidad.ErrorMessage
-                });
+                return Json(new { ok = false, error = validacionCantidad.ErrorMessage });
             }
 
             try
@@ -612,15 +568,11 @@ namespace Simone.Controllers
                 if (!ok)
                 {
                     _logger.LogWarning(
-                        "Falló actualizar cantidad. CarritoDetalleId: {Id}, " +
-                        "Cantidad: {Cantidad}, Error: {Error}",
-                        carritoDetalleId,
-                        cantidad,
-                        error);
+                        "Falló actualizar cantidad. CarritoDetalleId: {Id}, Cantidad: {Cantidad}, Error: {Error}",
+                        carritoDetalleId, cantidad, error);
                     return Json(new { ok = false, error });
                 }
 
-                // Obtener resumen actualizado
                 var usuario = await ObtenerUsuarioActualAsync();
                 var carrito = usuario != null
                     ? await _carritoService.GetByUsuarioIdAsync(usuario.Id)
@@ -631,13 +583,8 @@ namespace Simone.Controllers
                 var resumen = CalcularResumen(detalles);
 
                 _logger.LogInformation(
-                    "Cantidad actualizada. CarritoDetalleId: {Id}, " +
-                    "Nueva cantidad: {Cantidad}, Subtotal línea: {Subtotal:C}, " +
-                    "Total carrito: {Total:C}",
-                    carritoDetalleId,
-                    cantidad,
-                    lineSubtotal,
-                    resumen.Total);
+                    "Cantidad actualizada. CarritoDetalleId: {Id}, Nueva cantidad: {Cantidad}, Subtotal línea: {Subtotal:C}, Total carrito: {Total:C}",
+                    carritoDetalleId, cantidad, lineSubtotal, resumen.Total);
 
                 return Json(new
                 {
@@ -649,16 +596,9 @@ namespace Simone.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error al actualizar cantidad. CarritoDetalleId: {Id}, Cantidad: {Cantidad}",
-                    carritoDetalleId,
-                    cantidad);
-                return Json(new
-                {
-                    ok = false,
-                    error = "Error al actualizar la cantidad"
-                });
+                _logger.LogError(ex, "Error al actualizar cantidad. CarritoDetalleId: {Id}, Cantidad: {Cantidad}",
+                    carritoDetalleId, cantidad);
+                return Json(new { ok = false, error = "Error al actualizar la cantidad" });
             }
         }
 
@@ -682,12 +622,9 @@ namespace Simone.Controllers
 
                 if (!eliminado)
                 {
-                    _logger.LogWarning(
-                        "Falló eliminar producto del carrito. CarritoDetalleId: {Id}",
-                        carritoDetalleId);
+                    _logger.LogWarning("Falló eliminar producto del carrito. CarritoDetalleId: {Id}", carritoDetalleId);
                 }
 
-                // Obtener resumen actualizado
                 var usuario = await ObtenerUsuarioActualAsync();
                 var carrito = usuario != null
                     ? await _carritoService.GetByUsuarioIdAsync(usuario.Id)
@@ -698,11 +635,8 @@ namespace Simone.Controllers
                 var resumen = CalcularResumen(detalles);
 
                 _logger.LogInformation(
-                    "Producto eliminado del carrito. CarritoDetalleId: {Id}, " +
-                    "Items restantes: {Count}, Total: {Total:C}",
-                    carritoDetalleId,
-                    resumen.Cantidad,
-                    resumen.Total);
+                    "Producto eliminado del carrito. CarritoDetalleId: {Id}, Items restantes: {Count}, Total: {Total:C}",
+                    carritoDetalleId, resumen.Cantidad, resumen.Total);
 
                 if (EsAjax())
                 {
@@ -711,32 +645,20 @@ namespace Simone.Controllers
                         ok = eliminado,
                         count = resumen.Cantidad,
                         total = resumen.Total,
-                        message = eliminado
-                            ? "Producto eliminado correctamente"
-                            : "No se pudo eliminar el producto"
+                        message = eliminado ? "Producto eliminado correctamente" : "No se pudo eliminar el producto"
                     });
                 }
 
-                TempData["MensajeExito"] = eliminado
-                    ? "Producto eliminado del carrito."
-                    : "No se pudo eliminar el producto.";
-
+                TempData["MensajeExito"] = eliminado ? "Producto eliminado del carrito." : "No se pudo eliminar el producto.";
                 return RedirectToAction(nameof(VerCarrito));
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error al eliminar producto del carrito. CarritoDetalleId: {Id}",
-                    carritoDetalleId);
+                _logger.LogError(ex, "Error al eliminar producto del carrito. CarritoDetalleId: {Id}", carritoDetalleId);
 
                 if (EsAjax())
                 {
-                    return Json(new
-                    {
-                        ok = false,
-                        error = "Error al eliminar el producto"
-                    });
+                    return Json(new { ok = false, error = "Error al eliminar el producto" });
                 }
 
                 TempData["MensajeError"] = "Error al eliminar el producto.";
@@ -771,11 +693,8 @@ namespace Simone.Controllers
                     GuardarCupon(cupon);
 
                     _logger.LogInformation(
-                        "Cupón aplicado. Código: {Codigo}, Descuento: {Descuento:C}, " +
-                        "Usuario: {UsuarioId}",
-                        cupon.CodigoCupon,
-                        cupon.Descuento,
-                        User.Identity?.Name);
+                        "Cupón aplicado. Código: {Codigo}, Descuento: {Descuento:C}, Usuario: {UsuarioId}",
+                        cupon.CodigoCupon, cupon.Descuento, User.Identity?.Name);
 
                     if (EsAjax())
                     {
@@ -793,10 +712,7 @@ namespace Simone.Controllers
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "Intento de aplicar cupón inválido o expirado. Código: {Codigo}",
-                        codigoCupon);
-
+                    _logger.LogWarning("Intento de aplicar cupón inválido o expirado. Código: {Codigo}", codigoCupon);
                     EliminarCupon();
                     return ResponderCuponInvalido("El cupón ingresado no es válido o ha expirado.");
                 }
@@ -820,17 +736,11 @@ namespace Simone.Controllers
             {
                 EliminarCupon();
 
-                _logger.LogInformation(
-                    "Cupón eliminado. Usuario: {UsuarioId}",
-                    User.Identity?.Name);
+                _logger.LogInformation("Cupón eliminado. Usuario: {UsuarioId}", User.Identity?.Name);
 
                 if (EsAjax())
                 {
-                    return Json(new
-                    {
-                        ok = true,
-                        message = "Cupón eliminado correctamente"
-                    });
+                    return Json(new { ok = true, message = "Cupón eliminado correctamente" });
                 }
 
                 TempData["MensajeExito"] = "Cupón eliminado correctamente.";
@@ -857,7 +767,6 @@ namespace Simone.Controllers
         {
             var ahora = DateTime.UtcNow;
 
-            // Intentar obtener de cache
             var promocionesActivas = await _cache.GetOrCreateAsync(
                 CACHE_KEY_PROMOCIONES,
                 async entry =>
@@ -896,16 +805,17 @@ namespace Simone.Controllers
 
         /// <summary>
         /// POST: /Carrito/ConfirmarCompra
-        /// Procesa la compra del carrito
+        /// Procesa la compra del carrito y crea el envío consolidado
         /// </summary>
         [HttpPost("ConfirmarCompra", Name = "Carrito_ConfirmarCompra")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarCompra(
             string? EnvioProvincia,
             string? EnvioCiudad,
+            string? EnvioDireccion,
+            string? EnvioTelefono,
             decimal? EnvioPrecio)
         {
-            // Validar usuario autenticado
             var usuario = await ObtenerUsuarioActualAsync();
             if (usuario == null)
             {
@@ -920,9 +830,7 @@ namespace Simone.Controllers
                 var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
                 if (carrito == null)
                 {
-                    _logger.LogWarning(
-                        "Intento de confirmar compra sin carrito. UsuarioId: {UsuarioId}",
-                        usuario.Id);
+                    _logger.LogWarning("Intento de confirmar compra sin carrito. UsuarioId: {UsuarioId}", usuario.Id);
                     TempData["MensajeError"] = "Tu carrito está vacío.";
                     return RedirectToAction(nameof(VerCarrito));
                 }
@@ -931,9 +839,7 @@ namespace Simone.Controllers
                 var detalles = await _carritoService.LoadCartDetails(carrito.CarritoID);
                 if (!detalles.Any())
                 {
-                    _logger.LogWarning(
-                        "Intento de confirmar compra con carrito vacío. UsuarioId: {UsuarioId}",
-                        usuario.Id);
+                    _logger.LogWarning("Intento de confirmar compra con carrito vacío. UsuarioId: {UsuarioId}", usuario.Id);
                     TempData["MensajeError"] = "Tu carrito está vacío.";
                     return RedirectToAction(nameof(VerCarrito));
                 }
@@ -941,21 +847,16 @@ namespace Simone.Controllers
                 var totalCompra = detalles.Sum(d => d.Precio * d.Cantidad);
 
                 _logger.LogInformation(
-                    "Iniciando procesamiento de compra. UsuarioId: {UsuarioId}, " +
-                    "Items: {Items}, Total: {Total:C}",
-                    usuario.Id,
-                    detalles.Count,
-                    totalCompra);
+                    "Iniciando procesamiento de compra. UsuarioId: {UsuarioId}, Items: {Items}, Total: {Total:C}",
+                    usuario.Id, detalles.Count, totalCompra);
 
                 // Procesar carrito (crear venta, actualizar stock, etc.)
                 var procesado = await _carritoService.ProcessCartDetails(carrito.CarritoID, usuario);
 
                 if (!procesado)
                 {
-                    _logger.LogError(
-                        "Falló procesar carrito. UsuarioId: {UsuarioId}, CarritoId: {CarritoId}",
-                        usuario.Id,
-                        carrito.CarritoID);
+                    _logger.LogError("Falló procesar carrito. UsuarioId: {UsuarioId}, CarritoId: {CarritoId}",
+                        usuario.Id, carrito.CarritoID);
                     TempData["MensajeError"] = "No se pudo procesar la compra. Por favor, intenta nuevamente.";
                     return RedirectToAction(nameof(VerCarrito));
                 }
@@ -970,31 +871,60 @@ namespace Simone.Controllers
                     .Select(v => v.VentaID)
                     .FirstOrDefaultAsync();
 
-                _logger.LogInformation(
-                    "Compra procesada exitosamente. UsuarioId: {UsuarioId}, " +
-                    "VentaId: {VentaId}, Total: {Total:C}",
-                    usuario.Id,
-                    ventaId,
-                    totalCompra);
+                // ✅ Crear envío consolidado automáticamente
+                string? codigoEnvio = null;
+                if (ventaId > 0)
+                {
+                    try
+                    {
+                        var envio = await _envioConsolidadoService.ProcesarVentaAsync(
+                            ventaId,
+                            EnvioProvincia ?? usuario.Provincia,
+                            EnvioCiudad ?? usuario.Ciudad,
+                            EnvioDireccion ?? usuario.Direccion,
+                            EnvioTelefono ?? usuario.Telefono);
 
-                TempData["MensajeExito"] = "¡Gracias por tu compra! Tu pedido ha sido procesado exitosamente.";
+                        if (envio != null)
+                        {
+                            codigoEnvio = envio.Codigo;
+                            _logger.LogInformation(
+                                "Envío consolidado creado. VentaId: {VentaId}, EnvioId: {EnvioId}, Codigo: {Codigo}",
+                                ventaId, envio.EnvioId, envio.Codigo);
+                        }
+                    }
+                    catch (Exception exEnvio)
+                    {
+                        // No fallar la compra si el envío falla, solo logear
+                        _logger.LogError(exEnvio, "Error al crear envío consolidado. VentaId: {VentaId}", ventaId);
+                    }
+                }
+
+                _logger.LogInformation(
+                    "Compra procesada exitosamente. UsuarioId: {UsuarioId}, VentaId: {VentaId}, Total: {Total:C}",
+                    usuario.Id, ventaId, totalCompra);
+
+                // Mensaje de éxito con código de envío si existe
+                if (!string.IsNullOrEmpty(codigoEnvio))
+                {
+                    TempData["MensajeExito"] = $"¡Gracias por tu compra! Tu código de seguimiento es: {codigoEnvio}";
+                    TempData["CodigoEnvio"] = codigoEnvio;
+                }
+                else
+                {
+                    TempData["MensajeExito"] = "¡Gracias por tu compra! Tu pedido ha sido procesado exitosamente.";
+                }
+
                 return RedirectToAction(nameof(ConfirmacionCompra), new { id = ventaId });
             }
             catch (InvalidOperationException ex)
             {
-                _logger.LogWarning(
-                    ex,
-                    "Operación inválida al confirmar compra. UsuarioId: {UsuarioId}",
-                    usuario.Id);
+                _logger.LogWarning(ex, "Operación inválida al confirmar compra. UsuarioId: {UsuarioId}", usuario.Id);
                 TempData["MensajeError"] = ex.Message;
                 return RedirectToAction(nameof(VerCarrito));
             }
             catch (Exception ex)
             {
-                _logger.LogError(
-                    ex,
-                    "Error al confirmar compra. UsuarioId: {UsuarioId}",
-                    usuario.Id);
+                _logger.LogError(ex, "Error al confirmar compra. UsuarioId: {UsuarioId}", usuario.Id);
                 TempData["MensajeError"] = "Error inesperado al procesar la compra. Por favor, contacta a soporte.";
                 return RedirectToAction(nameof(VerCarrito));
             }
@@ -1002,37 +932,50 @@ namespace Simone.Controllers
 
         /// <summary>
         /// GET: /Carrito/ConfirmacionCompra/{id}
-        /// Vista de confirmación de compra
+        /// Vista de confirmación de compra con detalles del envío
         /// </summary>
         [HttpGet("ConfirmacionCompra/{id:int}", Name = "Carrito_Confirmacion")]
         public async Task<IActionResult> ConfirmacionCompra(int id)
         {
             try
             {
-                // Validar que la venta exista y pertenezca al usuario
                 var usuario = await ObtenerUsuarioActualAsync();
                 if (usuario == null)
                 {
                     return RedirectToAction("Index", "Home");
                 }
 
-                var ventaExiste = await _context.Ventas
-                    .AnyAsync(v => v.VentaID == id && v.UsuarioId == usuario.Id);
+                // Obtener venta con detalles
+                var venta = await _context.Ventas
+                    .Include(v => v.DetalleVentas)
+                        .ThenInclude(d => d.Producto)
+                    .FirstOrDefaultAsync(v => v.VentaID == id && v.UsuarioId == usuario.Id);
 
-                if (!ventaExiste)
+                if (venta == null)
                 {
                     _logger.LogWarning(
-                        "Intento de acceso a venta inexistente o no autorizada. " +
-                        "VentaId: {VentaId}, UsuarioId: {UsuarioId}",
-                        id,
-                        usuario.Id);
+                        "Intento de acceso a venta inexistente o no autorizada. VentaId: {VentaId}, UsuarioId: {UsuarioId}",
+                        id, usuario.Id);
                     return RedirectToAction("Index", "Home");
                 }
 
+                // Obtener envío consolidado asociado
+                var envio = await _context.EnviosConsolidados
+                    .Include(e => e.SubPedidos)
+                        .ThenInclude(sp => sp.Vendedor)
+                    .Include(e => e.SubPedidos)
+                        .ThenInclude(sp => sp.Items)
+                    .Include(e => e.Hub)
+                    .FirstOrDefaultAsync(e => e.VentaId == id);
+
+                ViewBag.Venta = venta;
+                ViewBag.Envio = envio;
+                ViewBag.CodigoEnvio = TempData["CodigoEnvio"] ?? envio?.Codigo;
+                ViewBag.MensajeExito = TempData["MensajeExito"];
+
                 _logger.LogInformation(
-                    "Vista de confirmación cargada. VentaId: {VentaId}, UsuarioId: {UsuarioId}",
-                    id,
-                    usuario.Id);
+                    "Vista de confirmación cargada. VentaId: {VentaId}, UsuarioId: {UsuarioId}, EnvioId: {EnvioId}",
+                    id, usuario.Id, envio?.EnvioId);
 
                 return View(id);
             }

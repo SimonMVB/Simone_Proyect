@@ -1,0 +1,212 @@
+@model List<Simone.Models.SubPedido>
+@{
+    ViewData["Title"] = "SubPedidos";
+    var vendedores = ViewBag.Vendedores as List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ?? new List<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem>();
+    var estados = ViewBag.Estados as string[] ?? Array.Empty<string>();
+    var filtroEstado = ViewBag.FiltroEstado as string;
+    var filtroVendedorId = ViewBag.FiltroVendedorId as int?;
+}
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">
+                <i class="bi bi-shop me-2"></i>SubPedidos
+            </h1>
+            <p class="text-muted mb-0">Pedidos individuales por tienda</p>
+        </div>
+        <div>
+            <span class="badge bg-primary fs-6">@Model.Count subpedidos</span>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["MensajeExito"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle me-2"></i>@TempData["MensajeExito"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["MensajeError"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle me-2"></i>@TempData["MensajeError"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Filtros -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select name="estado" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Todos --</option>
+                        @foreach (var e in estados)
+                        {
+                            <option value="@e" selected="@(filtroEstado == e)">@e</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Tienda</label>
+                    <select name="vendedorId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Todas --</option>
+                        @foreach (var v in vendedores)
+                        {
+                            <option value="@v.Value" selected="@(filtroVendedorId.ToString() == v.Value)">@v.Text</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <a href="@Url.Action("SubPedidos")" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-lg me-1"></i>Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resumen por Estado -->
+    <div class="row mb-4">
+        @{
+            var porEstado = Model.GroupBy(s => s.Estado).ToDictionary(g => g.Key, g => g.Count());
+        }
+        @foreach (var e in estados)
+        {
+            var count = porEstado.GetValueOrDefault(e, 0);
+            var colorClass = e switch
+            {
+                "Pendiente" => "warning",
+                "Preparando" => "info",
+                "Listo" => "primary",
+                "EnCaminoHub" => "purple",
+                "EnHub" => "success",
+                "Entregado" => "success",
+                "Cancelado" => "danger",
+                _ => "secondary"
+            };
+            <div class="col">
+                <div class="card text-center border-@colorClass">
+                    <div class="card-body py-2">
+                        <h4 class="mb-0 text-@colorClass">@count</h4>
+                        <small class="text-muted">@e</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Tabla -->
+    <div class="card">
+        <div class="card-body p-0">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Tienda</th>
+                                <th>Envío Consolidado</th>
+                                <th class="text-center">Items</th>
+                                <th class="text-end">Total</th>
+                                <th class="text-center">Estado</th>
+                                <th>Fecha</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var sp in Model)
+                            {
+                                var badgeClass = sp.Estado switch
+                                {
+                                    "Pendiente" => "bg-warning text-dark",
+                                    "Preparando" => "bg-info",
+                                    "Listo" => "bg-primary",
+                                    "EnCaminoHub" => "bg-purple",
+                                    "EnHub" => "bg-success",
+                                    "Entregado" => "bg-success",
+                                    "Cancelado" => "bg-danger",
+                                    _ => "bg-secondary"
+                                };
+
+                                <tr>
+                                    <td>
+                                        <strong class="font-monospace">@sp.Codigo</strong>
+                                    </td>
+                                    <td>
+                                        @if (sp.Vendedor != null)
+                                        {
+                                            <span>@sp.Vendedor.Nombre</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (sp.Envio != null)
+                                        {
+                                            <a href="@Url.Action("DetalleEnvioConsolidado", new { id = sp.EnvioId })"
+                                               class="text-decoration-none">
+                                                <i class="bi bi-box-seam me-1"></i>@sp.Envio.Codigo
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">@sp.Items.Count</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <strong>$@sp.Total.ToString("N2")</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge @badgeClass">@sp.Estado</span>
+                                    </td>
+                                    <td>
+                                        <small>@sp.FechaCreacion.ToString("dd/MM/yyyy")</small>
+                                        <br><small class="text-muted">@sp.FechaCreacion.ToString("HH:mm")</small>
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="@Url.Action("DetalleSubPedido", new { id = sp.SubPedidoId })"
+                                           class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> Ver
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox display-4 text-muted"></i>
+                    <p class="text-muted mt-2">No hay subpedidos</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-purple {
+        background-color: #6f42c1 !important;
+    }
+
+    .text-purple {
+        color: #6f42c1 !important;
+    }
+
+    .border-purple {
+        border-color: #6f42c1 !important;
+    }
+</style>

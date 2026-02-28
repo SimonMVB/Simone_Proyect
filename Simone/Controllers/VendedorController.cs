@@ -1415,5 +1415,217 @@ namespace Simone.Controllers
         }
 
         #endregion
+        #region Mis SubPedidos (Vendedor)
+
+        /// <summary>
+        /// GET: /Vendedor/MisSubPedidos
+        /// Lista los SubPedidos asignados a la tienda del vendedor
+        /// </summary>
+        [HttpGet("MisSubPedidos")]
+        public async Task<IActionResult> MisSubPedidos(string? estado, CancellationToken ct = default)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user?.VendedorId == null)
+                {
+                    TempData["MensajeError"] = "No tienes una tienda asignada.";
+                    return RedirectToAction("Index", "Panel");
+                }
+
+                var vendedorId = user.VendedorId.Value;
+
+                _logger.LogInformation("MisSubPedidos solicitado. VendedorId: {VendedorId}, Estado: {Estado}",
+                    vendedorId, estado);
+
+                var query = _context.SubPedidos
+                    .AsNoTracking()
+                    .Include(sp => sp.Envio)
+                        .ThenInclude(e => e!.Cliente)
+                    .Include(sp => sp.Items)
+                    .Where(sp => sp.VendedorId == vendedorId);
+
+                if (!string.IsNullOrWhiteSpace(estado))
+                    query = query.Where(sp => sp.Estado == estado);
+
+                var subPedidos = await query
+                    .OrderByDescending(sp => sp.FechaCreacion)
+                    .Take(50)
+                    .ToListAsync(ct);
+
+                // Conteo por estado
+                var conteoEstados = await _context.SubPedidos
+                    .AsNoTracking()
+                    .Where(sp => sp.VendedorId == vendedorId)
+                    .GroupBy(sp => sp.Estado)
+                    .Select(g => new { Estado = g.Key, Count = g.Count() })
+                    .ToListAsync(ct);
+
+                ViewBag.ConteoEstados = conteoEstados.ToDictionary(x => x.Estado, x => x.Count);
+                ViewBag.FiltroEstado = estado;
+                ViewBag.Estados = new[] { "Pendiente", "Preparando", "Listo", "EnCaminoHub", "EnHub", "Entregado", "Cancelado" };
+
+                return View(subPedidos);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar MisSubPedidos");
+                TempData["MensajeError"] = "Error al cargar los pedidos.";
+                return View(new List<SubPedido>());
+            }
+        }
+
+        /// <summary>
+        /// GET: /Vendedor/SubPedido/{id}
+        /// Detalle de un SubPedido del vendedor
+        /// </summary>
+        [HttpGet("SubPedido/{id:int}")]
+        public async Task<IActionResult> SubPedidoDetalle(int id, CancellationToken ct = default)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user?.VendedorId == null)
+                {
+                    TempData["MensajeError"] = "No tienes una tienda asignada.";
+                    return RedirectToAction("Index", "Panel");
+                }
+
+                var vendedorId = user.VendedorId.Value;
+
+                var subPedido = await _context.SubPedidos
+                    .AsNoTracking()
+                    .Include(sp => sp.Envio)
+                        .ThenInclude(e => e!.Cliente)
+                    .Include(sp => sp.Envio)
+                        .ThenInclude(e => e!.Hub)
+                    .Include(sp => sp.Items)
+                        .ThenInclude(i => i.Producto)
+                    .Include(sp => sp.Historial.OrderByDescending(h => h.FechaCambio))
+                    .AsSplitQuery()
+                    .FirstOrDefaultAsync(sp => sp.SubPedidoId == id && sp.VendedorId == vendedorId, ct);
+
+                if (subPedido == null)
+                {
+                    TempData["MensajeError"] = "Pedido no encontrado o no pertenece a tu tienda.";
+                    return RedirectToAction(nameof(MisSubPedidos));
+                }
+
+                ViewBag.Estados = new[] { "Pendiente", "Preparando", "Listo", "EnCaminoHub" };
+
+                return View(subPedido);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cargar SubPedidoDetalle. SubPedidoId: {SubPedidoId}", id);
+                TempData["MensajeError"] = "Error al cargar el detalle.";
+                return RedirectToAction(nameof(MisSubPedidos));
+            }
+        }
+
+        /// <summary>
+        /// POST: /Vendedor/CambiarEstadoSubPedido
+        /// Cambia el estado de un SubPedido (solo estados permitidos para vendedor)
+        /// </summary>
+        [HttpPost("CambiarEstadoSubPedido"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> CambiarEstadoSubPedido(int subPedidoId, string nuevoEstado, string? notasVendedor, CancellationToken ct = default)
+        {
+            try
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user?.VendedorId == null)
+                {
+                    TempData["MensajeError"] = "No tienes una tienda asignada.";
+                    return RedirectToAction("Index", "Panel");
+                }
+
+                var vendedorId = user.VendedorId.Value;
+
+                // Estados permitidos para el vendedor
+                var estadosPermitidos = new[] { "Pendiente", "Preparando", "Listo", "EnCaminoHub" };
+                if (!estadosPermitidos.Contains(nuevoEstado))
+                {
+                    TempData["MensajeError"] = "No tienes permiso para cambiar a ese estado.";
+                    return RedirectToAction(nameof(SubPedidoDetalle), new { id = subPedidoId });
+                }
+
+                var subPedido = await _context.SubPedidos
+                    .Include(sp => sp.Historial)
+                    .FirstOrDefaultAsync(sp => sp.SubPedidoId == subPedidoId && sp.VendedorId == vendedorId, ct);
+
+                if (subPedido == null)
+                {
+                    TempData["MensajeError"] = "Pedido no encontrado o no pertenece a tu tienda.";
+                    return RedirectToAction(nameof(MisSubPedidos));
+                }
+
+                var estadoAnterior = subPedido.Estado;
+
+                // Registrar en historial
+                subPedido.Historial.Add(new SubPedidoHistorial
+                {
+                    SubPedidoId = subPedidoId,
+                    EstadoAnterior = estadoAnterior,
+                    EstadoNuevo = nuevoEstado,
+                    Comentario = notasVendedor?.Trim(),
+                    UsuarioId = user.Id,
+                    TipoUsuario = "Vendedor",
+                    FechaCambio = DateTime.UtcNow
+                });
+
+                // Actualizar estado y fechas
+                subPedido.Estado = nuevoEstado;
+
+                if (nuevoEstado == "Preparando" && !subPedido.FechaPreparacionInicio.HasValue)
+                    subPedido.FechaPreparacionInicio = DateTime.UtcNow;
+
+                if (nuevoEstado == "Listo" && !subPedido.FechaListo.HasValue)
+                    subPedido.FechaListo = DateTime.UtcNow;
+
+                if (nuevoEstado == "EnCaminoHub" && !subPedido.FechaEnvioHub.HasValue)
+                    subPedido.FechaEnvioHub = DateTime.UtcNow;
+
+                if (!string.IsNullOrWhiteSpace(notasVendedor))
+                    subPedido.NotasVendedor = notasVendedor.Trim();
+
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation("Vendedor cambió estado de SubPedido. SubPedidoId: {SubPedidoId}, De: {Anterior}, A: {Nuevo}, VendedorId: {VendedorId}",
+                    subPedidoId, estadoAnterior, nuevoEstado, vendedorId);
+
+                TempData["MensajeExito"] = $"Estado actualizado a '{nuevoEstado}'.";
+
+                return RedirectToAction(nameof(SubPedidoDetalle), new { id = subPedidoId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al cambiar estado de subpedido. SubPedidoId: {SubPedidoId}", subPedidoId);
+                TempData["MensajeError"] = "Error al cambiar el estado.";
+                return RedirectToAction(nameof(MisSubPedidos));
+            }
+        }
+
+        /// <summary>
+        /// POST: /Vendedor/MarcarListoParaHub
+        /// Acción rápida para marcar como Listo para enviar al Hub
+        /// </summary>
+        [HttpPost("MarcarListoParaHub"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarcarListoParaHub(int subPedidoId, CancellationToken ct = default)
+        {
+            return await CambiarEstadoSubPedido(subPedidoId, "Listo", "Pedido listo para enviar al Hub", ct);
+        }
+
+        /// <summary>
+        /// POST: /Vendedor/MarcarEnviadoAHub
+        /// Acción rápida para marcar como enviado al Hub
+        /// </summary>
+        [HttpPost("MarcarEnviadoAHub"), ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarcarEnviadoAHub(int subPedidoId, CancellationToken ct = default)
+        {
+            return await CambiarEstadoSubPedido(subPedidoId, "EnCaminoHub", "Pedido enviado al Hub", ct);
+        }
+
+        #endregion
     }
+
 }
