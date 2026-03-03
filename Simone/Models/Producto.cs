@@ -50,6 +50,68 @@ namespace Simone.Models
         [Required]
         public int Stock { get; set; }
 
+
+        // ==================== DATOS DE ENVÍO (Obligatorio para cálculos) ====================
+
+        /// <summary>
+        /// Peso del producto en kilogramos (obligatorio para cálculo de envío)
+        /// </summary>
+        [Required(ErrorMessage = "El peso es obligatorio para calcular costos de envío")]
+        [Column(TypeName = "decimal(10,3)")]
+        [Range(0.001, 999.999, ErrorMessage = "El peso debe estar entre 0.001 y 999.999 kg")]
+        public decimal Peso { get; set; }
+
+        /// <summary>
+        /// Alto del producto en centímetros (opcional)
+        /// </summary>
+        [Column(TypeName = "decimal(10,2)")]
+        [Range(0.01, 9999.99, ErrorMessage = "El alto debe estar entre 0.01 y 9999.99 cm")]
+        public decimal? Alto { get; set; }
+
+        /// <summary>
+        /// Ancho del producto en centímetros (opcional)
+        /// </summary>
+        [Column(TypeName = "decimal(10,2)")]
+        [Range(0.01, 9999.99, ErrorMessage = "El ancho debe estar entre 0.01 y 9999.99 cm")]
+        public decimal? Ancho { get; set; }
+
+        /// <summary>
+        /// Largo del producto en centímetros (opcional)
+        /// </summary>
+        [Column(TypeName = "decimal(10,2)")]
+        [Range(0.01, 9999.99, ErrorMessage = "El largo debe estar entre 0.01 y 9999.99 cm")]
+        public decimal? Largo { get; set; }
+
+        // ==================== PROPIEDADES CALCULADAS - ENVÍO ====================
+
+        /// <summary>
+        /// Volumen del producto en cm³ (si tiene dimensiones)
+        /// </summary>
+        [NotMapped]
+        public decimal? VolumenCm3 =>
+            (Alto.HasValue && Ancho.HasValue && Largo.HasValue)
+                ? Alto.Value * Ancho.Value * Largo.Value
+                : null;
+
+        /// <summary>
+        /// Peso volumétrico (para transportistas que cobran por volumen)
+        /// Fórmula estándar: (Alto × Ancho × Largo) / 5000
+        /// </summary>
+        [NotMapped]
+        public decimal? PesoVolumetrico =>
+            VolumenCm3.HasValue
+                ? Math.Round(VolumenCm3.Value / 5000m, 3)
+                : null;
+
+        /// <summary>
+        /// Peso facturable (el mayor entre peso real y volumétrico)
+        /// </summary>
+        [NotMapped]
+        public decimal PesoFacturable =>
+            PesoVolumetrico.HasValue
+                ? Math.Max(Peso, PesoVolumetrico.Value)
+                : Peso;
+
         // ==================== FOREIGN KEYS ====================
 
         /// <summary>

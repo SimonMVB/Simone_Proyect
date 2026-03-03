@@ -1873,45 +1873,84 @@ namespace Simone.Controllers
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> CrearTiendaSimple(string nombre, CancellationToken ct = default)
         {
-            // SEGURIDAD: Este endpoint solo debe ser llamado por AJAX
-            if (!EsAjax())
-            {
-                _logger.LogWarning("Intento de acceder a CrearTiendaSimple sin AJAX");
-                TempData["MensajeError"] = "Este endpoint solo acepta solicitudes AJAX";
-                return RedirectToAction(nameof(Usuarios));
-            }
-
             try
             {
+                // Obtener lista de tiendas (siempre la necesitamos para el dropdown)
+                var tiendas = await _context.Vendedores
+                    .Where(v => v.Activo)
+                    .OrderBy(v => v.Nombre)
+                    .Select(v => new { value = v.VendedorId.ToString(), text = v.Nombre })
+                    .ToListAsync(ct);
+
                 if (string.IsNullOrWhiteSpace(nombre))
                 {
-                    _logger.LogWarning("Intento de crear tienda sin nombre");
-                    return Json(new { ok = false, msg = "Nombre requerido." });
+                    return Json(new { ok = false, msg = "El nombre es requerido.", tiendas });
                 }
 
-                var vendedor = new Vendedor { Nombre = nombre.Trim() };
-                _context.Vendedores.Add(vendedor);
+                // Verificar si ya existe una tienda con ese nombre
+                var existente = await _context.Vendedores
+                    .FirstOrDefaultAsync(v => v.Nombre.ToLower() == nombre.Trim().ToLower(), ct);
+
+                if (existente != null)
+                {
+                    return Json(new
+                    {
+                        ok = false,
+                        msg = "Ya existe una tienda con ese nombre.",
+                        tiendas,
+                        existingId = existente.VendedorId.ToString(),
+                        existingText = existente.Nombre
+                    });
+                }
+
+                // Crear la nueva tienda
+                var nuevaTienda = new Vendedor
+                {
+                    Nombre = nombre.Trim(),
+                    Activo = true
+                };
+
+                _context.Vendedores.Add(nuevaTienda);
                 await _context.SaveChangesAsync(ct);
 
-                _logger.LogInformation("Tienda creada. TiendaId: {TiendaId}, Nombre: {Nombre}", vendedor.VendedorId, vendedor.Nombre);
-
+                // Invalidar caché de tiendas
                 InvalidarCacheTiendas();
 
-                var tiendas = await ObtenerTiendasConCacheAsync(ct);
+                _logger.LogInformation("Tienda creada. Id: {Id}, Nombre: {Nombre}",
+                    nuevaTienda.VendedorId, nuevaTienda.Nombre);
+
+                // Actualizar lista con la nueva tienda
+                tiendas = await _context.Vendedores
+                    .Where(v => v.Activo)
+                    .OrderBy(v => v.Nombre)
+                    .Select(v => new { value = v.VendedorId.ToString(), text = v.Nombre })
+                    .ToListAsync(ct);
+
                 return Json(new
                 {
                     ok = true,
-                    newId = vendedor.VendedorId.ToString(),
-                    newText = vendedor.Nombre,
-                    tiendas = tiendas.Select(t => new { value = t.Value, text = t.Text })
+                    newId = nuevaTienda.VendedorId.ToString(),
+                    newText = nuevaTienda.Nombre,
+                    tiendas
                 });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al crear tienda. Nombre: {Nombre}", nombre);
-                return Json(new { ok = false, msg = "Error al crear la tienda." });
+
+                // Incluso en error, devolver tiendas existentes
+                var tiendas = await _context.Vendedores
+                    .Where(v => v.Activo)
+                    .OrderBy(v => v.Nombre)
+                    .Select(v => new { value = v.VendedorId.ToString(), text = v.Nombre })
+                    .ToListAsync(ct);
+
+                return Json(new { ok = false, msg = "Error al crear la tienda.", tiendas });
             }
         }
+
+
+
 
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]

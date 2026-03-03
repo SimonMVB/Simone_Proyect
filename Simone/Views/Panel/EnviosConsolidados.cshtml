@@ -133,8 +133,8 @@
                                             @if (!string.IsNullOrEmpty(e.DireccionEntrega))
                                             {
                                                 <br>
-                                    
-                                                <span class="text-muted">@e.DireccionEntrega.Truncate(30)</span>
+
+                                                <span class="text-muted">@(e.DireccionEntrega.Length > 30 ? e.DireccionEntrega.Substring(0, 30) + "..." : e.DireccionEntrega)</span>
                                             }
                                         </small>
                                     </td>

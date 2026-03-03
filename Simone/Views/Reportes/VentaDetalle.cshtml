@@ -123,11 +123,15 @@
 
     var faltaCalle = string.IsNullOrWhiteSpace(calleUsada);
     var faltaCiudad = string.IsNullOrWhiteSpace(ciudadUsada);
+
+    // ==================== URLS PARA FORMULARIOS ====================
+    // Usar URLs directas para evitar problemas con tag helpers
+    var marcarEnviadaUrl = Url.Content("~/Panel/MarcarEnviada");
+    var reportarVentaUrl = Url.Content("~/Panel/ReportarVenta");
 }
 
-
-<link rel="stylesheet" href="~/css/VentaDetalle.css" asp-append-version="true" />
-
+@section Styles {
+    <link rel="stylesheet" href="~/css/VentaDetalle.css" asp-append-version="true" />
 }
 
 <div class="admin-detail-page">
@@ -541,7 +545,8 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="formMarcarEnviado" method="post" asp-controller="Panel" asp-action="MarcarEnviada">
+            <!-- ✅ CORREGIDO: Usar URL directa en lugar de tag helpers -->
+            <form id="formMarcarEnviado" method="post" action="@marcarEnviadaUrl">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="id" value="@Model.VentaID" />
                 <div class="modal-body">
@@ -585,7 +590,8 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="formReportar" method="post" asp-controller="Panel" asp-action="ReportarVenta">
+            <!-- ✅ CORREGIDO: Usar URL directa en lugar de tag helpers -->
+            <form id="formReportar" method="post" action="@reportarVentaUrl">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="ventaId" value="@Model.VentaID" />
                 <div class="modal-body">
@@ -646,7 +652,6 @@
         </div>
     </div>
 </div>
-
 
 @section Scripts {
     <script src="~/js/VentaDetalle.js" asp-append-version="true"></script>

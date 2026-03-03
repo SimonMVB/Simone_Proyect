@@ -11,8 +11,16 @@
     var vId = ViewContext?.HttpContext?.Request?.Query["vId"].ToString();
 
     var detalleRouteName = isVendorContext ? "Vendedor_VentaDetalle" : "Panel_VentaDetalle";
-    var marcarUrl = Url.Action("MarcarEnviada", isVendorContext ? "Vendedor" : "Panel",
-                               isVendorContext ? new { vId = string.IsNullOrWhiteSpace(vId) ? null : vId } : null);
+
+    // ==================== URLs DIRECTAS PARA FORMULARIOS ====================
+    // Usar Url.Content para generar URLs absolutas y evitar problemas con tag helpers
+    var marcarUrl = isVendorContext
+        ? Url.Content("~/Vendedor/MarcarEnviada")
+        : Url.Content("~/Panel/MarcarEnviada");
+
+    var reportarUrl = isVendorContext
+        ? Url.Content("~/Vendedor/ReportarVenta")
+        : Url.Content("~/Panel/ReportarVenta");
 
     var ventas = Model?.ToList() ?? new List<Simone.ViewModels.Reportes.CompradorResumenVM>();
     var totalVentas = ventas.Count;
@@ -815,6 +823,9 @@
                     : (estadoLower.Contains("canc") || estadoLower.Contains("dev")) ? "badge-cancelled"
                     : "badge-default";
 
+                    var yaEnviado = estadoLower.Contains("env");
+                    var yaCancelado = estadoLower.Contains("canc") || estadoLower.Contains("dev");
+
                     <div class="buyer-card" data-venta-id="@v.VentaID">
                         <div class="buyer-info">
                             <div class="avatar-wrapper">
@@ -873,6 +884,7 @@
                             </div>
 
                             <div class="action-buttons">
+                                <!-- ✅ CORREGIDO: Usar URL directa -->
                                 <form method="post"
                                       action="@marcarUrl"
                                       class="js-mark-shipped"
@@ -881,7 +893,7 @@
                                     <input type="hidden" name="id" value="@v.VentaID" />
                                     <button type="submit"
                                             class="btn-shipped"
-                                            @(v.Estado?.Equals("Enviado", StringComparison.OrdinalIgnoreCase) == true ? "disabled" : null)>
+                                            @(yaEnviado || yaCancelado ? "disabled" : null)>
                                         <i class="fa-solid fa-truck-fast"></i>
                                         <span>Enviado</span>
                                     </button>
@@ -898,7 +910,8 @@
                                         data-bs-toggle="modal"
                                         data-bs-target="#modalReportar"
                                         data-venta-id="@v.VentaID"
-                                        data-venta-nombre="@v.Nombre">
+                                        data-venta-nombre="@v.Nombre"
+                                        @(yaCancelado ? "disabled" : null)>
                                     <i class="fa-solid fa-flag"></i>
                                     <span>Reportar</span>
                                 </button>
@@ -922,7 +935,9 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form id="formReportar" method="post" asp-action="ReportarVenta">
+            <!-- ✅ CORREGIDO: Usar URL directa -->
+            <form id="formReportar" method="post" action="@reportarUrl">
+                @Html.AntiForgeryToken()
                 <div class="modal-body">
                     <input type="hidden" name="ventaId" id="reportarVentaId" />
 
@@ -1058,21 +1073,28 @@
                             let json = null;
                             try { json = await res.json(); } catch {}
 
-                            badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
-                            badge.className = 'status-badge badge-shipped estado-texto';
-                            btn.classList.remove('btn-loading');
-                            btn.innerHTML = '<i class="fa-solid fa-check"></i><span>Enviado</span>';
+                            if (json && json.ok !== false) {
+                                badge.textContent = (json && json.estado) ? json.estado : 'Enviado';
+                                badge.className = 'status-badge badge-shipped estado-texto';
+                                btn.classList.remove('btn-loading');
+                                btn.innerHTML = '<i class="fa-solid fa-check"></i><span>Enviado</span>';
+                            } else {
+                                btn.disabled = false;
+                                btn.classList.remove('btn-loading');
+                                btn.innerHTML = prevHTML;
+                                alert(json?.error || 'No se pudo marcar como enviado');
+                            }
                         } else {
                             btn.disabled = false;
                             btn.classList.remove('btn-loading');
                             btn.innerHTML = prevHTML;
-                            alert('No se pudo marcar como enviado');
+                            alert('No se pudo marcar como enviado (Error ' + res.status + ')');
                         }
-                    } catch {
+                    } catch (err) {
                         btn.disabled = false;
                         btn.classList.remove('btn-loading');
                         btn.innerHTML = prevHTML;
-                        alert('Error de red');
+                        alert('Error de red: ' + err.message);
                     }
                 });
             });

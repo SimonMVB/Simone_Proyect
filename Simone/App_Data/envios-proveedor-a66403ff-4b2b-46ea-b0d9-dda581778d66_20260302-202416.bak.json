@@ -1,0 +1,14 @@
+[
+  {
+    "provincia": "Guayas",
+    "ciudad": "Milagro",
+    "precio": 2.30,
+    "activo": true
+  },
+  {
+    "provincia": "Imbabura",
+    "ciudad": "San Miguel de Urcuqu\u00ED",
+    "precio": 4.34,
+    "activo": false
+  }
+]

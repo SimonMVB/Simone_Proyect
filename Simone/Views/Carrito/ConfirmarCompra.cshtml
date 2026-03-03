@@ -84,9 +84,9 @@
                                         <tr>
                                             <td>
                                                 <div class="d-flex align-items-center">
-                                                    @if (!string.IsNullOrEmpty(item.Producto?.ImagenUrl))
+                                                    @if (!string.IsNullOrEmpty(item.Producto?.ImagenPath))
                                                     {
-                                                        <img src="@item.Producto.ImagenUrl" alt=""
+                                                        <img src="@item.Producto.ImagenPath"
                                                              class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
                                                     }
                                                     <span>@(item.Producto?.Nombre ?? "Producto")</span>

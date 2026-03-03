@@ -1,1 +1,78 @@
-﻿
+﻿@{
+    ViewData["Title"] = "Acceso denegado";
+}
+
+<section class="access-denied-page d-flex align-items-center py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-7">
+                <div class="access-card text-center p-4 p-md-5">
+                    <div class="access-icon mx-auto mb-4" aria-hidden="true">🔒</div>
+
+                    <span class="badge access-badge mb-3">Error 403</span>
+
+                    <h1 class="display-6 fw-bold mb-3">Ups... no tienes permiso para entrar aquí</h1>
+                    <p class="lead text-muted mb-4">
+                        Esta sección está protegida y tu cuenta no tiene los permisos necesarios.
+                        Si crees que esto es un error, comunícate con el administrador.
+                    </p>
+
+                    <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mb-4">
+                        <a asp-controller="Home" asp-action="Index" class="btn btn-primary btn-lg px-4">
+                            Volver al inicio
+                        </a>
+                        <a asp-controller="Cuenta" asp-action="Login" class="btn btn-outline-light btn-lg px-4">
+                            Iniciar sesión con otra cuenta
+                        </a>
+                    </div>
+
+                    <div class="small text-light-emphasis">
+                        ¿Necesitas ayuda?
+                        <a asp-controller="Home" asp-action="Nosotros" class="link-info text-decoration-none fw-semibold">
+                            Contáctanos
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .access-denied-page {
+        min-height: calc(100vh - 170px);
+        background: radial-gradient(circle at top right, #2c3e50 0%, #10131a 40%, #090b10 100%);
+    }
+
+    .access-card {
+        border-radius: 1.25rem;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(8px);
+        color: #fff;
+    }
+
+    .access-icon {
+        width: 86px;
+        height: 86px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 2rem;
+        background: linear-gradient(135deg, #ff4d6d, #ff758f);
+        box-shadow: 0 12px 28px rgba(255, 77, 109, .4);
+    }
+
+    .access-badge {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    .access-card .btn-outline-light {
+        border-width: 2px;
+    }
+</style>
