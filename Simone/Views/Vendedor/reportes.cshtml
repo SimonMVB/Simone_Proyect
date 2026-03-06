@@ -5,6 +5,19 @@
     ViewData["Title"] = ViewData["Title"] ?? "Mis ventas";
     var vId = ViewContext?.HttpContext?.Request?.Query["vId"].ToString();
     var totalVendedor = Model?.Sum(x => x.Total) ?? 0m;
+
+    // Determinar contexto: si hay vId o estamos en ruta /Vendedor/, es vendedor
+    var isVendorContext = !string.IsNullOrWhiteSpace(vId) ||
+                          (ViewContext?.HttpContext?.Request?.Path.Value?.Contains("/Vendedor", StringComparison.OrdinalIgnoreCase) ?? false);
+
+    // URLs directas según contexto
+    var marcarUrl = isVendorContext
+        ? Url.Content("~/Vendedor/MarcarEnviada")
+        : Url.Content("~/Panel/MarcarEnviada");
+
+    var reportarUrl = isVendorContext
+        ? Url.Content("~/Vendedor/ReportarVenta")
+        : Url.Content("~/Panel/ReportarVenta");
 }
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
@@ -47,14 +60,18 @@
                         <tbody>
                             @foreach (var r in Model)
                             {
-                                var estado = (r.Estado ?? "").Trim().ToLowerInvariant();
-                                string estadoClass = estado switch
+                                var estadoLower = (r.Estado ?? "").Trim().ToLowerInvariant();
+                                string estadoClass = estadoLower switch
                                 {
                                     "pagado" or "completado" or "entregado" => "bg-success",
                                     "pendiente" or "en proceso" => "bg-warning text-dark",
                                     "cancelado" or "rechazado" => "bg-danger",
+                                    "enviado" => "bg-info",
                                     _ => "bg-secondary"
                                 };
+
+                                var yaEnviado = estadoLower.Contains("env");
+                                var yaCancelado = estadoLower.Contains("canc") || estadoLower.Contains("dev") || estadoLower.Contains("revert");
 
                                 <tr>
                                     <td>@r.VentaID</td>
@@ -80,17 +97,50 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge @estadoClass">@(!string.IsNullOrWhiteSpace(r.Estado) ? r.Estado : "—")</span>
+                                        <span id="estado-badge-@r.VentaID" class="badge @estadoClass">
+                                            @(!string.IsNullOrWhiteSpace(r.Estado) ? r.Estado : "—")
+                                        </span>
                                     </td>
                                     <td>@(!string.IsNullOrWhiteSpace(r.MetodoPago) ? r.MetodoPago : "—")</td>
                                     <td class="text-end fw-semibold">@r.Total.ToString("C")</td>
                                     <td class="text-center">
-                                        <a asp-route="Vendedor_VentaDetalle"
-                                           asp-route-id="@r.VentaID"
-                                           asp-route-vId="@(string.IsNullOrWhiteSpace(vId) ? null : vId)"
-                                           class="btn btn-sm btn-primary">
-                                            <i class="fa-regular fa-eye me-1"></i> Ver detalle
-                                        </a>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <!-- Botón Marcar Enviado -->
+                                            <form action="@marcarUrl" method="post" class="d-inline form-marcar-enviado">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@r.VentaID" />
+                                                @if (!string.IsNullOrWhiteSpace(vId))
+                                                {
+                                                    <input type="hidden" name="vId" value="@vId" />
+                                                }
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-outline-success"
+                                                        title="Marcar como enviado"
+                                                        @(yaEnviado || yaCancelado ? "disabled" : null)>
+                                                    <i class="fa-solid fa-truck-fast"></i> Enviado
+                                                </button>
+                                            </form>
+
+                                            <!-- Botón Ver Detalle -->
+                                            <a asp-route="Vendedor_VentaDetalle"
+                                               asp-route-id="@r.VentaID"
+                                               asp-route-vId="@(string.IsNullOrWhiteSpace(vId) ? null : vId)"
+                                               class="btn btn-sm btn-primary">
+                                                <i class="fa-regular fa-eye me-1"></i> Ver
+                                            </a>
+
+                                            <!-- Botón Reportar -->
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#modalReportar"
+                                                    data-venta-id="@r.VentaID"
+                                                    data-cliente="@r.Nombre"
+                                                    title="Reportar / Revertir venta"
+                                                    @(yaCancelado ? "disabled" : null)>
+                                                <i class="fa-solid fa-flag"></i> Reportar
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -101,3 +151,147 @@
         </div>
     }
 </div>
+
+<!-- Modal Reportar Venta -->
+<div class="modal fade" id="modalReportar" tabindex="-1" aria-labelledby="modalReportarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="modalReportarLabel">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>Reportar Venta
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form id="formReportar" action="@reportarUrl" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ventaId" id="reportarVentaId" />
+                @if (!string.IsNullOrWhiteSpace(vId))
+                {
+                    <input type="hidden" name="vId" value="@vId" />
+                }
+                <div class="modal-body">
+                    <p class="mb-3">
+                        <strong>Venta:</strong> <span id="reportarVentaInfo"></span>
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-list me-1"></i>Motivo de la reversión *</label>
+                        <select name="motivo" id="reportarMotivo" class="form-select" required>
+                            <option value="">Selecciona un motivo...</option>
+                            <option value="devolucion">Devolución del cliente</option>
+                            <option value="deposito_falso">Depósito falso / no verificado</option>
+                            <option value="otro">Otro motivo</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><i class="fa-solid fa-comment me-1"></i>Nota adicional (opcional)</label>
+                        <textarea name="nota" id="reportarNota" class="form-control" rows="3"
+                                  placeholder="Explica brevemente el problema..."></textarea>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="confirmarReversion" required>
+                        <label class="form-check-label text-danger" for="confirmarReversion">
+                            Confirmo que quiero revertir esta venta
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fa-solid fa-xmark me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-danger" id="btnConfirmarReversion">
+                        <i class="fa-solid fa-flag me-1"></i>Confirmar Reversión
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            'use strict';
+
+            // =========================================================================
+            // FIX: Limpiar modal-backdrop huérfanos
+            // =========================================================================
+            function limpiarBackdrops() {
+                var backdrops = document.querySelectorAll('.modal-backdrop');
+                var openModals = document.querySelectorAll('.modal.show');
+
+                if (openModals.length === 0 && backdrops.length > 0) {
+                    backdrops.forEach(function(backdrop) {
+                        backdrop.remove();
+                    });
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }
+            }
+
+            // Limpiar cuando se cierra cualquier modal
+            document.addEventListener('hidden.bs.modal', function(e) {
+                setTimeout(limpiarBackdrops, 150);
+            });
+
+            // =========================================================================
+            // Modal Reportar: cargar datos de la venta
+            // =========================================================================
+            var modalReportar = document.getElementById('modalReportar');
+            if (modalReportar) {
+                modalReportar.addEventListener('show.bs.modal', function(event) {
+                    var button = event.relatedTarget;
+                    if (!button) return;
+
+                    var ventaId = button.getAttribute('data-venta-id');
+                    var cliente = button.getAttribute('data-cliente');
+
+                    document.getElementById('reportarVentaId').value = ventaId;
+                    document.getElementById('reportarVentaInfo').textContent = '#' + ventaId + ' - ' + cliente;
+
+                    // Resetear formulario
+                    document.getElementById('reportarMotivo').value = '';
+                    document.getElementById('reportarNota').value = '';
+                    document.getElementById('confirmarReversion').checked = false;
+                });
+
+                // Limpiar al cerrar
+                modalReportar.addEventListener('hidden.bs.modal', function() {
+                    setTimeout(limpiarBackdrops, 150);
+                });
+            }
+
+            // =========================================================================
+            // Formulario Reportar: cerrar modal antes de enviar
+            // =========================================================================
+            var formReportar = document.getElementById('formReportar');
+            if (formReportar) {
+                formReportar.addEventListener('submit', function(e) {
+                    // Cerrar modal
+                    var modal = bootstrap.Modal.getInstance(modalReportar);
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    // Limpiar backdrop después de un momento
+                    setTimeout(limpiarBackdrops, 300);
+                });
+            }
+
+            // =========================================================================
+            // Formularios Marcar Enviado: limpiar por si acaso
+            // =========================================================================
+            document.querySelectorAll('.form-marcar-enviado').forEach(function(form) {
+                form.addEventListener('submit', function() {
+                    setTimeout(limpiarBackdrops, 300);
+                });
+            });
+
+            console.log('✓ Reportes initialized with backdrop cleanup');
+        })();
+    </script>
+}

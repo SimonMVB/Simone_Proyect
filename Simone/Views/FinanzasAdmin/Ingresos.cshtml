@@ -1,0 +1,231 @@
+@model List<Simone.Services.IngresosPeriodo>
+@{
+    ViewData["Title"] = "Ingresos";
+    var anio  = (int)(ViewBag.Anio ?? DateTime.Now.Year);
+    var anios = ViewBag.Anios as List<int> ?? new List<int> { anio };
+
+    var totalBruto     = Model.Sum(m => m.IngresosBrutos);
+    var totalComisiones= Model.Sum(m => m.Comisiones);
+    var totalVentas    = Model.Sum(m => m.TotalVentas);
+    var mejorMes       = Model.OrderByDescending(m => m.IngresosBrutos).FirstOrDefault();
+    var maxIngreso     = Model.Any() ? Model.Max(m => m.IngresosBrutos) : 1;
+    if (maxIngreso == 0) maxIngreso = 1;
+}
+
+@section Styles {
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+:root{--ink:#0d0f14;--ink-2:#3d4150;--ink-3:#8b90a0;--paper:#f4f3f0;--paper-2:#eceae5;--paper-3:#e2dfd8;--line:#d8d5ce;--accent:#c9472b;--accent-lt:#fdf1ee;--green:#1a7a4a;--green-lt:#edfaf3;--amber:#b45309;--amber-lt:#fef9ec;--r:12px;--r-lg:18px;--sh:0 1px 3px rgba(0,0,0,.06);--ease:cubic-bezier(.4,0,.2,1);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;}
+.fa-wrap{max-width:1400px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.fa-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.75rem;padding-bottom:1.5rem;border-bottom:2px solid var(--ink);}
+.fa-heading-label{font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.25rem;}
+.fa-heading h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1;}
+.fa-nav{display:flex;gap:.3rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.fa-nav-item{display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border-radius:var(--r);font-size:.78rem;font-weight:600;color:var(--ink-2);text-decoration:none;transition:all .15s;}
+.fa-nav-item:hover{background:var(--paper-2);color:var(--ink);}
+.fa-nav-item.active{background:var(--ink);color:var(--paper);}
+
+.anio-selector{display:flex;gap:.3rem;align-items:center;}
+.anio-btn{padding:.45rem .9rem;border:1.5px solid var(--line);border-radius:50px;font-size:.82rem;font-weight:600;color:var(--ink-2);text-decoration:none;transition:all .15s;}
+.anio-btn.active,.anio-btn:hover{border-color:var(--ink);color:var(--ink);background:var(--paper-2);}
+.anio-btn.active{background:var(--ink);color:var(--paper);}
+
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.75rem;}
+@@media(max-width:900px){.summary-grid{grid-template-columns:repeat(2,1fr);}}
+.sum-card{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1.2rem 1.4rem;box-shadow:var(--sh);}
+.sum-label{font-size:.67rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.4rem;}
+.sum-value{font-family:'Syne',sans-serif;font-size:1.9rem;font-weight:700;letter-spacing:-.03em;color:var(--ink);}
+.sum-sub{font-size:.75rem;color:var(--ink-3);margin-top:.3rem;}
+
+/* CHART VISUAL */
+.chart-anual{display:flex;align-items:flex-end;gap:8px;height:180px;padding:0 .5rem 1rem;border-bottom:2px solid var(--line);margin-bottom:1rem;overflow-x:auto;}
+.chart-col{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:60px;flex:1;height:100%;justify-content:flex-end;}
+.chart-col-label{font-size:.68rem;color:var(--ink-3);font-weight:500;white-space:nowrap;}
+.chart-col-val{font-size:.65rem;color:var(--ink-2);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.chart-col-bar{width:100%;border-radius:4px 4px 0 0;background:var(--accent);opacity:.75;min-height:3px;transition:opacity .15s;animation:barUp .6s var(--ease) both;transform-origin:bottom;}
+@@keyframes barUp{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.chart-col-bar.mejor{background:var(--green);opacity:1;}
+.chart-col:hover .chart-col-bar{opacity:1;}
+.chart-col.mejor .chart-col-label{color:var(--green);font-weight:700;}
+
+/* TABLA MENSUAL */
+.tabla-wrap{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);}
+.fa-table{width:100%;border-collapse:collapse;}
+.fa-table th{font-size:.67rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--line);background:var(--paper-2);white-space:nowrap;}
+.fa-table td{padding:.8rem 1rem;font-size:.83rem;color:var(--ink-2);border-bottom:1px solid var(--paper-2);vertical-align:middle;}
+.fa-table tr:last-child td{border-bottom:none;}
+.fa-table tr:hover td{background:var(--paper-2);}
+.fa-table tr.mejor-mes td{background:var(--green-lt);}
+.fa-table tr.mejor-mes .td-best{color:var(--green);font-weight:700;}
+
+.td-num{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);}
+.td-green{color:var(--green);font-weight:700;}
+.td-gray{color:var(--ink-3);}
+.td-month{font-weight:700;font-size:.9rem;color:var(--ink);}
+
+.var-badge{display:inline-flex;align-items:center;padding:.15rem .45rem;border-radius:4px;font-size:.7rem;font-weight:700;}
+.var-up{background:var(--green-lt);color:var(--green);}
+.var-down{background:var(--accent-lt);color:var(--accent);}
+.var-flat{background:var(--paper-3);color:var(--ink-3);}
+
+.mini-bar-bg{width:80px;height:5px;background:var(--paper-3);border-radius:3px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:.4rem;}
+.mini-bar{height:100%;background:var(--accent);border-radius:3px;}
+</style>
+}
+
+<div class="fa-wrap">
+    <div class="fa-topbar">
+        <div class="fa-heading">
+            <span class="fa-heading-label">Centro Financiero</span>
+            <h1>Ingresos @anio</h1>
+        </div>
+        <div class="anio-selector">
+            @foreach (var a in anios)
+            {
+                <a href="/FinanzasAdmin/Ingresos?anio=@a"
+                   class="anio-btn @(a == anio ? "active" : "")">@a</a>
+            }
+        </div>
+    </div>
+
+    <nav class="fa-nav">
+        <a href="/FinanzasAdmin"            class="fa-nav-item">Dashboard</a>
+        <a href="/FinanzasAdmin/Ingresos"   class="fa-nav-item active">Ingresos</a>
+        <a href="/FinanzasAdmin/Ventas"     class="fa-nav-item">Ventas</a>
+        <a href="/FinanzasAdmin/Vendedores" class="fa-nav-item">Vendedores</a>
+        <a href="/FinanzasAdmin/Productos"  class="fa-nav-item">Productos</a>
+        <a href="/FinanzasAdmin/Clientes"   class="fa-nav-item">Clientes</a>
+    </nav>
+
+    <!-- RESUMEN ANUAL -->
+    <div class="summary-grid">
+        <div class="sum-card">
+            <div class="sum-label">Ingresos Brutos @anio</div>
+            <div class="sum-value">$@totalBruto.ToString("N0")</div>
+            <div class="sum-sub">Total del año</div>
+        </div>
+        <div class="sum-card">
+            <div class="sum-label">Comisiones Plataforma</div>
+            <div class="sum-value" style="color:var(--green)">$@totalComisiones.ToString("N0")</div>
+            <div class="sum-sub">10% de los ingresos</div>
+        </div>
+        <div class="sum-card">
+            <div class="sum-label">Total Ventas</div>
+            <div class="sum-value">@totalVentas</div>
+            <div class="sum-sub">Órdenes en el año</div>
+        </div>
+        <div class="sum-card">
+            <div class="sum-label">Mejor Mes</div>
+            <div class="sum-value" style="color:var(--green)">@(mejorMes?.Label ?? "—")</div>
+            <div class="sum-sub">$@(mejorMes?.IngresosBrutos.ToString("N0") ?? "0")</div>
+        </div>
+    </div>
+
+    <!-- GRÁFICO BARRAS ANUAL -->
+    <div class="tabla-wrap" style="margin-bottom:1rem;padding:1.4rem 1.4rem .5rem">
+        <div style="font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:1rem">
+            Ingresos mensuales — @anio
+        </div>
+        <div class="chart-anual">
+            @foreach (var (m, i) in Model.Select((m, i) => (m, i)))
+            {
+                var pct = maxIngreso > 0 ? (int)(m.IngresosBrutos / maxIngreso * 100) : 0;
+                var esMejor = mejorMes?.Label == m.Label;
+                <div class="chart-col @(esMejor ? "mejor" : "")" style="animation-delay:@(i * 0.04)s">
+                    <div class="chart-col-val">
+                        @if (m.IngresosBrutos > 0) { @("$" + (m.IngresosBrutos / 1000).ToString("F0") + "k") }
+                    </div>
+                    <div class="chart-col-bar @(esMejor ? "mejor" : "")"
+                         style="height:@(Math.Max(pct, m.IngresosBrutos > 0 ? 3 : 0))%;animation-delay:@(i * 0.04)s"></div>
+                    <div class="chart-col-label">@m.Label</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- TABLA DETALLE MENSUAL -->
+    <div class="tabla-wrap">
+        <div style="overflow-x:auto">
+            <table class="fa-table">
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>Ventas</th>
+                        <th>Ingresos Brutos</th>
+                        <th>Comisión (10%)</th>
+                        <th>Neto Vendedores</th>
+                        <th>Ticket Promedio</th>
+                        <th>% del año</th>
+                        <th>vs mes anterior</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var m     = Model[i];
+                        var prev  = i > 0 ? Model[i - 1] : null;
+                        var esMejor = mejorMes?.Label == m.Label;
+                        var pctAnio = totalBruto > 0
+                            ? (int)(m.IngresosBrutos / totalBruto * 100) : 0;
+                        decimal varPct = 0;
+                        if (prev != null && prev.IngresosBrutos > 0)
+                            varPct = Math.Round((m.IngresosBrutos - prev.IngresosBrutos) / prev.IngresosBrutos * 100, 1);
+                        string varClass = varPct > 0 ? "var-up" : varPct < 0 ? "var-down" : "var-flat";
+                        string varStr   = varPct > 0 ? $"+{varPct}%" : varPct < 0 ? $"{varPct}%" : "—";
+
+                        <tr class="@(esMejor ? "mejor-mes" : "")">
+                            <td>
+                                <span class="td-month @(esMejor ? "td-best" : "")">
+                                    @m.Label
+                                    @if (esMejor) { <span style="margin-left:.3rem;font-size:.7rem">★ mejor</span> }
+                                </span>
+                            </td>
+                            <td><span class="td-num @(m.TotalVentas == 0 ? "td-gray" : "")">@m.TotalVentas</span></td>
+                            <td>
+                                <span class="td-num @(m.IngresosBrutos == 0 ? "td-gray" : "")">
+                                    $@m.IngresosBrutos.ToString("N2")
+                                </span>
+                                <div class="mini-bar-bg">
+                                    <div class="mini-bar" style="width:@pctAnio%"></div>
+                                </div>
+                            </td>
+                            <td><span class="td-green @(m.Comisiones == 0 ? "td-gray" : "")">$@m.Comisiones.ToString("N2")</span></td>
+                            <td><span class="td-num @(m.IngresosBrutos == 0 ? "td-gray" : "")">$@((m.IngresosBrutos - m.Comisiones).ToString("N2"))</span></td>
+                            <td><span class="td-num @(m.TicketPromedio == 0 ? "td-gray" : "")">
+                                @(m.TicketPromedio > 0 ? "$" + m.TicketPromedio.ToString("N2") : "—")
+                            </span></td>
+                            <td>
+                                @if (pctAnio > 0) {
+                                    <span style="font-weight:600">@pctAnio%</span>
+                                } else {
+                                    <span class="td-gray">0%</span>
+                                }
+                            </td>
+                            <td>
+                                @if (prev != null && prev.IngresosBrutos > 0) {
+                                    <span class="var-badge @varClass">@varStr</span>
+                                } else {
+                                    <span class="td-gray">—</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr style="background:var(--paper-2)">
+                        <td style="font-weight:700;font-size:.82rem;padding:.85rem 1rem">TOTAL @anio</td>
+                        <td><span class="td-num">@totalVentas</span></td>
+                        <td><span class="td-num">$@totalBruto.ToString("N2")</span></td>
+                        <td><span class="td-green">$@totalComisiones.ToString("N2")</span></td>
+                        <td><span class="td-num">$@((totalBruto - totalComisiones).ToString("N2"))</span></td>
+                        <td><span class="td-num">@(totalVentas > 0 ? "$" + (totalBruto / totalVentas).ToString("N2") : "—")</span></td>
+                        <td><span class="td-num">100%</span></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>

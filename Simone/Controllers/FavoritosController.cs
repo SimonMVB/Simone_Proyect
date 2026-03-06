@@ -94,11 +94,12 @@ namespace Simone.Controllers
                     userId);
 
                 var favoritos = await _context.Favoritos
-                    .AsNoTracking()
-                    .Include(f => f.Producto)
-                    .Where(f => f.UsuarioId == userId)
-                    .OrderByDescending(f => f.FechaGuardado)
-                    .ToListAsync(ct);
+    .AsNoTracking()
+    .Include(f => f.Producto)
+        .ThenInclude(p => p!.Variantes)
+    .Where(f => f.UsuarioId == userId)
+    .OrderByDescending(f => f.FechaGuardado)
+    .ToListAsync(ct);
 
                 _logger.LogDebug(
                     "Favoritos cargados. UsuarioId: {UsuarioId}, Count: {Count}",

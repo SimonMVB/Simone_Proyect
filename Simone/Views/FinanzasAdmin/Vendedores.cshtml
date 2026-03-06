@@ -1,0 +1,257 @@
+@model List<Simone.Services.VendedorResumen>
+@{
+    ViewData["Title"] = "Vendedores";
+    var periodo  = ViewBag.Periodo  as string ?? "mes";
+    var desde    = ViewBag.Desde    as string ?? "";
+    var hasta    = ViewBag.Hasta    as string ?? "";
+    var busqueda = ViewBag.Busqueda as string ?? "";
+
+    var totalIngresos    = Model.Sum(v => v.IngresosBrutos);
+    var totalComisiones  = Model.Sum(v => v.Comisiones);
+    var totalVentas      = Model.Sum(v => v.TotalVentas);
+    var totalUnidades    = Model.Sum(v => v.UnidadesVendidas);
+}
+
+@section Styles {
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+:root {
+    --ink:#0d0f14;--ink-2:#3d4150;--ink-3:#8b90a0;
+    --paper:#f4f3f0;--paper-2:#eceae5;--paper-3:#e2dfd8;--line:#d8d5ce;
+    --accent:#c9472b;--accent-lt:#fdf1ee;
+    --green:#1a7a4a;--green-lt:#edfaf3;
+    --amber:#b45309;--amber-lt:#fef9ec;
+    --blue:#1d4ed8;--blue-lt:#eff6ff;
+    --r:12px;--r-lg:18px;
+    --sh:0 1px 3px rgba(0,0,0,.06);--sh-md:0 4px 20px rgba(0,0,0,.07);
+    --ease:cubic-bezier(.4,0,.2,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;}
+.fa-wrap{max-width:1400px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.fa-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.75rem;padding-bottom:1.5rem;border-bottom:2px solid var(--ink);}
+.fa-heading-label{font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.25rem;}
+.fa-heading h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1;}
+.fa-nav{display:flex;gap:.3rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.fa-nav-item{display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border-radius:var(--r);font-size:.78rem;font-weight:600;color:var(--ink-2);text-decoration:none;transition:all .15s;}
+.fa-nav-item:hover{background:var(--paper-2);color:var(--ink);}
+.fa-nav-item.active{background:var(--ink);color:var(--paper);}
+
+/* RESUMEN */
+.resumen-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem;}
+@@media(max-width:900px){.resumen-grid{grid-template-columns:repeat(2,1fr);}}
+@@media(max-width:480px){.resumen-grid{grid-template-columns:1fr;}}
+.res-card{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1.2rem 1.4rem;box-shadow:var(--sh);}
+.res-label{font-size:.67rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.4rem;}
+.res-value{font-family:'Syne',sans-serif;font-size:1.8rem;font-weight:700;letter-spacing:-.03em;color:var(--ink);}
+.res-sub{font-size:.75rem;color:var(--ink-3);margin-top:.3rem;}
+
+/* FILTRO */
+.filtros-bar{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:1.25rem;padding:1rem 1.2rem;background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh);}
+.filtros-bar input,.filtros-bar select{padding:.5rem .8rem;border:1.5px solid var(--line);border-radius:var(--r);font-family:'Space Grotesk',sans-serif;font-size:.8rem;color:var(--ink);background:var(--paper);height:36px;}
+.filtros-bar input:focus,.filtros-bar select:focus{outline:none;border-color:var(--ink);}
+.btn-filtrar{padding:.5rem 1.1rem;background:var(--ink);color:var(--paper);border:none;border-radius:var(--r);font-family:'Space Grotesk',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;height:36px;display:flex;align-items:center;gap:.4rem;}
+.btn-filtrar:hover{opacity:.85;}
+.btn-limpiar{padding:.5rem .8rem;background:none;border:1.5px solid var(--line);border-radius:var(--r);font-size:.78rem;font-weight:600;color:var(--ink-3);cursor:pointer;height:36px;text-decoration:none;display:flex;align-items:center;transition:all .15s;}
+.btn-limpiar:hover{border-color:var(--accent);color:var(--accent);}
+
+/* TABLA */
+.tabla-wrap{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);}
+.fa-table{width:100%;border-collapse:collapse;}
+.fa-table th{font-size:.67rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--line);background:var(--paper-2);white-space:nowrap;}
+.fa-table td{padding:.85rem 1rem;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--paper-2);vertical-align:middle;}
+.fa-table tr:last-child td{border-bottom:none;}
+.fa-table tr:hover td{background:var(--paper-2);}
+
+.td-rank{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800;color:var(--paper-3);width:40px;text-align:center;}
+.td-rank.top1{color:#d4af37;}
+.td-rank.top2{color:#9ca3af;}
+.td-rank.top3{color:#cd7f32;}
+
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;}
+.vendedor-info{display:flex;align-items:center;gap:.75rem;}
+.vend-name{font-weight:600;color:var(--ink);}
+.vend-email{font-size:.72rem;color:var(--ink-3);}
+
+.td-num{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);}
+.td-green{color:var(--green);font-weight:700;}
+.td-sub{font-size:.72rem;color:var(--ink-3);display:block;margin-top:1px;}
+
+/* BARRA DE PROGRESO INLINE */
+.prog-wrap{display:flex;align-items:center;gap:.5rem;}
+.prog-bar-bg{width:80px;height:5px;background:var(--paper-3);border-radius:3px;overflow:hidden;flex-shrink:0;}
+.prog-bar{height:100%;background:var(--accent);border-radius:3px;}
+
+.badge{display:inline-flex;align-items:center;padding:.2rem .55rem;border-radius:50px;font-size:.68rem;font-weight:700;}
+.badge-green{background:var(--green-lt);color:var(--green);}
+.badge-gray{background:var(--paper-3);color:var(--ink-3);}
+
+.btn-ver{padding:.35rem .75rem;border:1.5px solid var(--line);border-radius:6px;font-size:.75rem;font-weight:600;color:var(--ink-2);background:none;cursor:pointer;text-decoration:none;transition:all .15s;white-space:nowrap;}
+.btn-ver:hover{border-color:var(--ink);color:var(--ink);background:var(--paper-2);}
+
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--ink-3);}
+.empty-state p{font-size:.85rem;}
+</style>
+}
+
+<div class="fa-wrap">
+    <div class="fa-topbar">
+        <div class="fa-heading">
+            <span class="fa-heading-label">Centro Financiero</span>
+            <h1>Vendedores</h1>
+        </div>
+    </div>
+
+    <nav class="fa-nav">
+        <a href="/FinanzasAdmin"            class="fa-nav-item">Dashboard</a>
+        <a href="/FinanzasAdmin/Ingresos"   class="fa-nav-item">Ingresos</a>
+        <a href="/FinanzasAdmin/Ventas"     class="fa-nav-item">Ventas</a>
+        <a href="/FinanzasAdmin/Vendedores" class="fa-nav-item active">Vendedores</a>
+        <a href="/FinanzasAdmin/Productos"  class="fa-nav-item">Productos</a>
+        <a href="/FinanzasAdmin/Clientes"   class="fa-nav-item">Clientes</a>
+    </nav>
+
+    <!-- RESUMEN -->
+    <div class="resumen-grid">
+        <div class="res-card">
+            <div class="res-label">Ingresos Totales</div>
+            <div class="res-value">$@totalIngresos.ToString("N0")</div>
+            <div class="res-sub">Brutos en el período</div>
+        </div>
+        <div class="res-card">
+            <div class="res-label">Comisiones Plataforma</div>
+            <div class="res-value" style="color:var(--green)">$@totalComisiones.ToString("N0")</div>
+            <div class="res-sub">10% de los ingresos</div>
+        </div>
+        <div class="res-card">
+            <div class="res-label">Total Órdenes</div>
+            <div class="res-value">@totalVentas</div>
+            <div class="res-sub">Ventas combinadas</div>
+        </div>
+        <div class="res-card">
+            <div class="res-label">Unidades Vendidas</div>
+            <div class="res-value">@totalUnidades.ToString("N0")</div>
+            <div class="res-sub">Entre @Model.Count vendedores</div>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <form method="get" action="/FinanzasAdmin/Vendedores">
+        <div class="filtros-bar">
+            <input type="text" name="busqueda" value="@busqueda" placeholder="Buscar vendedor..." />
+            <label style="font-size:.75rem;font-weight:600;color:var(--ink-3)">Desde</label>
+            <input type="date" name="desde" value="@desde" />
+            <label style="font-size:.75rem;font-weight:600;color:var(--ink-3)">Hasta</label>
+            <input type="date" name="hasta" value="@hasta" />
+            <button type="submit" class="btn-filtrar">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Filtrar
+            </button>
+            @foreach (var p in new[] { ("mes","Mes"), ("trimestre","Trimestre"), ("anio","Año") })
+            {
+                <a href="/FinanzasAdmin/Vendedores?periodo=@p.Item1"
+                   style="padding:.45rem .8rem;border:1.5px solid @(periodo==p.Item1?"var(--ink)":"var(--line)");border-radius:var(--r);font-size:.75rem;font-weight:600;color:@(periodo==p.Item1?"var(--ink)":"var(--ink-3)");text-decoration:none;display:flex;align-items:center;height:36px;">@p.Item2</a>
+            }
+            @if (!string.IsNullOrEmpty(busqueda))
+            {
+                <a href="/FinanzasAdmin/Vendedores" class="btn-limpiar">Limpiar</a>
+            }
+        </div>
+    </form>
+
+    <!-- TABLA -->
+    <div class="tabla-wrap">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <p>No hay vendedores con actividad en este período.</p>
+            </div>
+        }
+        else
+        {
+            <div style="overflow-x:auto">
+                <table class="fa-table">
+                    <thead>
+                        <tr>
+                            <th style="width:50px">#</th>
+                            <th>Vendedor</th>
+                            <th>Ventas</th>
+                            <th>Unidades</th>
+                            <th>Ingresos Brutos</th>
+                            <th>Comisión plataforma</th>
+                            <th>Neto Vendedor</th>
+                            <th>Productos activos</th>
+                            <th>Última venta</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (v, i) in Model.Select((v, i) => (v, i)))
+                        {
+                            var rank = i + 1;
+                            var rankClass = rank == 1 ? "top1" : rank == 2 ? "top2" : rank == 3 ? "top3" : "";
+                            var inicial = v.NombreVendedor.Length > 0
+                                ? v.NombreVendedor[0].ToString().ToUpper() : "?";
+                            var pct = totalIngresos > 0
+                                ? (int)(v.IngresosBrutos / totalIngresos * 100) : 0;
+
+                            <tr>
+                                <td><span class="td-rank @rankClass">@rank</span></td>
+                                <td>
+                                    <div class="vendedor-info">
+                                        <div class="avatar">@inicial</div>
+                                        <div>
+                                            <div class="vend-name">@v.NombreVendedor</div>
+                                            <div class="vend-email">@v.Email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="td-num">@v.TotalVentas</span></td>
+                                <td><span class="td-num">@v.UnidadesVendidas</span></td>
+                                <td>
+                                    <div class="prog-wrap">
+                                        <span class="td-num">$@v.IngresosBrutos.ToString("N2")</span>
+                                        <div class="prog-bar-bg">
+                                            <div class="prog-bar" style="width:@pct%"></div>
+                                        </div>
+                                        <span style="font-size:.7rem;color:var(--ink-3)">@pct%</span>
+                                    </div>
+                                </td>
+                                <td><span class="td-green">$@v.Comisiones.ToString("N2")</span></td>
+                                <td><span class="td-num">$@v.IngresoNeto.ToString("N2")</span></td>
+                                <td>
+                                    <span class="badge badge-gray">@v.ProductosActivos</span>
+                                </td>
+                                <td>
+                                    @if (v.UltimaVenta.HasValue) {
+                                        <span>@v.UltimaVenta.Value.ToString("dd/MM/yyyy")</span>
+                                        <span class="td-sub">@((DateTime.UtcNow - v.UltimaVenta.Value).Days) días atrás</span>
+                                    } else {
+                                        <span style="color:var(--ink-3)">—</span>
+                                    }
+                                </td>
+                                <td>
+                                    <a href="/FinanzasAdmin/Ventas?vendedorId=@v.VendedorId&periodo=@periodo"
+                                       class="btn-ver">Ver ventas</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="background:var(--paper-2)">
+                            <td colspan="2" style="font-weight:700;font-size:.8rem;padding:.85rem 1rem">
+                                TOTALES (@Model.Count vendedores)
+                            </td>
+                            <td><span class="td-num">@totalVentas</span></td>
+                            <td><span class="td-num">@totalUnidades</span></td>
+                            <td><span class="td-num">$@totalIngresos.ToString("N2")</span></td>
+                            <td><span class="td-green">$@totalComisiones.ToString("N2")</span></td>
+                            <td><span class="td-num">$@(totalIngresos - totalComisiones).ToString("N2")</span></td>
+                            <td colspan="3"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </div>
+</div>

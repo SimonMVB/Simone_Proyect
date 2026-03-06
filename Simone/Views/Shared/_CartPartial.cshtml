@@ -2,268 +2,285 @@
 @using System.Globalization
 @{
     Layout = null;
-
     var culture = CultureInfo.CreateSpecificCulture("es-EC");
-    var cartItems = Model?.ToList() ?? new List<Simone.Models.CarritoDetalle>();
-    var hasItems = cartItems.Any();
-    var itemCount = cartItems.Sum(x => x.Cantidad);
-    var totalAmount = cartItems.Sum(x => x.Precio * x.Cantidad);
+    var items = Model?.ToList() ?? new List<Simone.Models.CarritoDetalle>();
+    var hasItems = items.Any();
+    var itemCount = items.Sum(x => x.Cantidad);
+    var totalAmount = items.Sum(x => x.Precio * x.Cantidad);
     var defaultImg = Url.Content("~/images/Productos/default.jpg");
 
-    string GetImageUrl(Simone.Models.CarritoDetalle item) =>
-        !string.IsNullOrWhiteSpace(item?.Variante?.ImagenPath) ? item.Variante.ImagenPath :
-        !string.IsNullOrWhiteSpace(item?.Producto?.ImagenPath) ? item.Producto.ImagenPath : defaultImg;
+    string ImgUrl(Simone.Models.CarritoDetalle i) =>
+        !string.IsNullOrWhiteSpace(i?.Variante?.ImagenPath) ? i.Variante.ImagenPath :
+        !string.IsNullOrWhiteSpace(i?.Producto?.ImagenPath) ? i.Producto.ImagenPath : defaultImg;
 
-    string GetItemName(Simone.Models.CarritoDetalle item) =>
-        item?.Producto?.Nombre ?? "Producto";
+    string ItemName(Simone.Models.CarritoDetalle i) => i?.Producto?.Nombre ?? "Producto";
 }
 
-<div id="mini-cart" class="cart-partial">
+@* CSRF token oculto para AJAX *@
+<input type="hidden" id="cp-csrf" name="__RequestVerificationToken"
+       value="@Html.AntiForgeryToken().ToString()" />
+@* Nota: usamos un input dedicado, el valor real se obtiene con el helper de abajo *@
+@Html.AntiForgeryToken()
 
-    <!-- Header -->
-    <div class="cart-header">
-        <div class="d-flex align-items-center justify-content-between">
-            <h2 class="cart-title">
-                <i class="fa-solid fa-shopping-bag"></i>
-                Mis artículos
-            </h2>
-            <span class="cart-badge-count" data-cart-count>@itemCount</span>
-        </div>
+<div id="mini-cart" class="cp-root">
+
+    <div class="cp-header">
+        <span class="cp-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /><path d="M16 10a4 4 0 01-8 0" /></svg>
+            Mis artículos
+        </span>
+        <span class="cp-badge" data-cart-count>@itemCount</span>
     </div>
 
     @if (!hasItems)
     {
-        <!-- Estado vacío -->
-        <div class="cart-empty">
-            <div class="cart-empty-icon">
-                <i class="fa-solid fa-cart-shopping"></i>
+        <div class="cp-empty">
+            <div class="cp-empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61H19a2 2 0 001.99-1.74l1.38-9.26H6" /></svg>
             </div>
-            <h3>Tu carrito está vacío</h3>
-            <p>¡Explora nuestros productos!</p>
-            <a href="@Url.Action("Catalogo", "Compras")" class="btn-explore">
-                <i class="fa-solid fa-store me-2"></i>
-                Explorar productos
-            </a>
+            <p class="cp-empty-title">Tu carrito está vacío</p>
+            <p class="cp-empty-sub">¡Explora nuestros productos!</p>
+            <a href="@Url.Action("Catalogo", "Compras")" class="cp-btn-explore">Explorar tienda</a>
         </div>
     }
     else
     {
-        <!-- Lista de productos -->
-        <div class="cart-items">
-            @foreach (var item in cartItems)
+        <ul class="cp-list" id="cp-list" role="list">
+            @foreach (var item in items)
             {
-                var subtotal = item.Precio * item.Cantidad;
-                var hasVariant = item.Variante != null &&
-                (!string.IsNullOrWhiteSpace(item.Variante.Color) || !string.IsNullOrWhiteSpace(item.Variante.Talla));
+                var sub = item.Precio * item.Cantidad;
+                var variant = item.Variante;
+                var varText = variant != null
+                ? string.Join(" / ", new[] { variant.Color?.Trim(), variant.Talla?.Trim() }.Where(s => !string.IsNullOrWhiteSpace(s)))
+                : "";
 
-                <div class="cart-item" data-item-id="@item.CarritoDetalleID">
-
-                    <!-- Imagen -->
+                <li class="cp-item" data-item-id="@item.CarritoDetalleID" role="listitem">
                     <a href="@Url.Action("VerProducto", "Compras", new { productoID = item.ProductoID })"
-                       class="cart-item-img">
-                        <img src="@GetImageUrl(item)"
-                             alt="@GetItemName(item)"
-                             loading="lazy"
-                             onerror="this.src='@defaultImg'" />
+                       class="cp-img-wrap">
+                        <img src="@ImgUrl(item)" alt="@ItemName(item)"
+                             loading="lazy" onerror="this.src='@defaultImg'" />
                     </a>
 
-                    <!-- Info -->
-                    <div class="cart-item-info">
+                    <div class="cp-info">
                         <a href="@Url.Action("VerProducto", "Compras", new { productoID = item.ProductoID })"
-                           class="cart-item-name">
-                            @GetItemName(item)
-                        </a>
+                           class="cp-name">@ItemName(item)</a>
 
-                        @if (hasVariant)
+                        @if (!string.IsNullOrEmpty(varText))
                         {
-                            <span class="cart-item-variant">
-                                @(item.Variante!.Color)@((!string.IsNullOrWhiteSpace(item.Variante.Color) && !string.IsNullOrWhiteSpace(item.Variante.Talla)) ? " / " : "")@(item.Variante.Talla)
-                            </span>
+                            <span class="cp-variant">@varText</span>
                         }
 
-                        <div class="cart-item-meta">
-                            <span>Cant: <strong>@item.Cantidad</strong></span>
-                            <span>@item.Precio.ToString("C2", culture)</span>
+                        <div class="cp-bottom">
+                            <div class="cp-qty-ctrl" data-detail-id="@item.CarritoDetalleID" data-product-id="@item.ProductoID">
+                                <button class="cp-qty-btn" data-action="minus" aria-label="Disminuir cantidad" type="button">−</button>
+                                <span class="cp-qty-val" data-qty>@item.Cantidad</span>
+                                <button class="cp-qty-btn" data-action="plus" aria-label="Aumentar cantidad" type="button">+</button>
+                            </div>
+
+                            <span class="cp-price" data-unit-price="@item.Precio.ToString("F2", CultureInfo.InvariantCulture)">
+                                $<span data-subtotal>@sub.ToString("F2", CultureInfo.InvariantCulture)</span>
+                            </span>
                         </div>
                     </div>
 
-                    <!-- Subtotal y eliminar con FORM (para AJAX) -->
-                    <div class="cart-item-actions">
-                        <span class="cart-item-subtotal">@subtotal.ToString("C2", culture)</span>
-
-                        <form class="remove-form"
-                              asp-controller="Carrito"
-                              asp-action="EliminarDelCarrito"
-                              method="post"
-                              data-ajax="true">
-                            <input type="hidden" name="carritoDetalleId" value="@item.CarritoDetalleID" />
-                            <button type="submit" class="btn-remove" title="Eliminar">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
+                    <button class="cp-remove"
+                            type="button"
+                            data-remove-id="@item.CarritoDetalleID"
+                            data-product-id="@item.ProductoID"
+                            aria-label="Eliminar @ItemName(item)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    </button>
+                </li>
             }
-        </div>
+        </ul>
 
-        <!-- Resumen -->
-        <div class="cart-summary">
-            <div class="cart-summary-row">
+        <div class="cp-footer">
+            <div class="cp-subtotal-row">
                 <span>Subtotal</span>
-                <span class="cart-summary-total" data-cart-total>@totalAmount.ToString("C2", culture)</span>
+                <strong class="cp-total-val" data-cart-total>$@totalAmount.ToString("F2", CultureInfo.InvariantCulture)</strong>
             </div>
-            <p class="cart-summary-note">
-                <i class="fa-solid fa-truck me-1"></i>
-                Envío calculado en checkout
+            <p class="cp-shipping-note">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" /><polygon points="16 8 20 8 23 11 23 16 16 16 16 8" /><circle cx="5.5" cy="18.5" r="2.5" /><circle cx="18.5" cy="18.5" r="2.5" /></svg>
+                Envío calculado en el checkout
             </p>
+            <div class="cp-actions">
 
-            <div class="cart-summary-actions">
-                <a href="@Url.Action("Resumen", "Compras")" class="btn-checkout">
-                    <i class="fa-solid fa-lock me-2"></i>
-                    Proceder al pago
-                </a>
-                <a href="@Url.Action("Catalogo", "Compras")" class="btn-continue">
-                    Continuar comprando
+                <a href="@Url.Action("Resumen", "Compras")" class="cp-btn-checkout">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" /></svg>
+                    Pagar ahora
                 </a>
             </div>
         </div>
+
+        <div class="cp-feedback" id="cp-feedback" aria-live="polite"></div>
     }
 </div>
 
 <style>
-    .cart-partial {
-        --cart-primary: #e8b4b8;
-        --cart-primary-dark: #d89da2;
-        --cart-danger: #ef4444;
-        --cart-text: #1f2937;
-        --cart-text-muted: #6b7280;
-        --cart-border: #e5e7eb;
-        --cart-bg-hover: #f9fafb;
-        font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
-        color: var(--cart-text);
+    .cp-root {
+        --cp-accent: #c9472b;
+        --cp-accent-lt: #fdecea;
+        --cp-success: #166534;
+        --cp-success-lt: #dcfce7;
+        --cp-text: #1c1917;
+        --cp-text-2: #78716c;
+        --cp-border: #e7e5e4;
+        --cp-bg: #fafaf9;
+        --cp-radius: 10px;
+        font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+        font-size: 14px;
+        color: var(--cp-text);
+        min-width: 300px;
     }
 
-    .cart-header {
-        padding: 0 0 1rem;
-        border-bottom: 1px solid var(--cart-border);
-        margin-bottom: 1rem;
+    /* Header */
+    .cp-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 0.875rem;
+        border-bottom: 1px solid var(--cp-border);
+        margin-bottom: 0.875rem;
     }
 
-    .cart-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin: 0;
+    .cp-title {
         display: flex;
         align-items: center;
         gap: 0.5rem;
-    }
-
-        .cart-title i {
-            color: var(--cart-primary-dark);
-        }
-
-    .cart-badge-count {
-        background: var(--cart-primary);
-        color: #fff;
-        font-size: 0.75rem;
         font-weight: 600;
-        padding: 0.25rem 0.6rem;
+        font-size: 0.9rem;
+    }
+
+    .cp-badge {
+        background: var(--cp-accent);
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 0.15rem 0.55rem;
         border-radius: 50px;
-        min-width: 24px;
+        min-width: 22px;
         text-align: center;
+        line-height: 1.6;
     }
 
-    .cart-empty {
+    /* Empty */
+    .cp-empty {
         text-align: center;
-        padding: 2rem 1rem;
+        padding: 2rem 0.5rem;
     }
 
-    .cart-empty-icon {
-        width: 70px;
-        height: 70px;
-        background: linear-gradient(135deg, var(--cart-primary), var(--cart-primary-dark));
+    .cp-empty-icon {
+        width: 56px;
+        height: 56px;
+        background: var(--cp-bg);
+        border: 1.5px dashed var(--cp-border);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 1rem;
+        margin: 0 auto 0.875rem;
+        color: var(--cp-text-2);
     }
 
-        .cart-empty-icon i {
-            font-size: 1.75rem;
-            color: #fff;
-        }
-
-    .cart-empty h3 {
-        font-size: 1rem;
+    .cp-empty-title {
         font-weight: 600;
-        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+        margin: 0 0 0.25rem;
     }
 
-    .cart-empty p {
-        font-size: 0.85rem;
-        color: var(--cart-text-muted);
-        margin-bottom: 1rem;
+    .cp-empty-sub {
+        font-size: 0.775rem;
+        color: var(--cp-text-2);
+        margin: 0 0 1rem;
     }
 
-    .btn-explore {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.5rem 1rem;
-        background: var(--cart-primary);
+    .cp-btn-explore {
+        display: inline-block;
+        padding: 0.5rem 1.25rem;
+        background: var(--cp-accent);
         color: #fff;
         border-radius: 50px;
-        font-size: 0.85rem;
-        font-weight: 500;
+        font-size: 0.8rem;
+        font-weight: 600;
         text-decoration: none;
+        transition: opacity 0.15s;
     }
 
-        .btn-explore:hover {
-            background: var(--cart-primary-dark);
+        .cp-btn-explore:hover {
+            opacity: 0.88;
             color: #fff;
         }
 
-    .cart-items {
-        max-height: 300px;
+    /* List */
+    .cp-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 310px;
         overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: var(--cp-border) transparent;
     }
 
-    .cart-item {
+        .cp-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .cp-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .cp-list::-webkit-scrollbar-thumb {
+            background: var(--cp-border);
+            border-radius: 2px;
+        }
+
+    /* Item */
+    .cp-item {
         display: flex;
-        gap: 0.75rem;
+        gap: 0.7rem;
         padding: 0.75rem 0;
-        border-bottom: 1px solid var(--cart-border);
-        transition: all 0.3s ease;
+        border-bottom: 1px solid var(--cp-border);
+        position: relative;
+        transition: opacity 0.25s, transform 0.25s;
     }
 
-        .cart-item:last-child {
+        .cp-item:last-child {
             border-bottom: none;
         }
 
-        .cart-item.removing {
+        .cp-item.is-removing {
             opacity: 0;
-            transform: translateX(50px);
-            max-height: 0;
-            padding: 0;
-            overflow: hidden;
+            transform: translateX(16px);
+            pointer-events: none;
         }
 
-    .cart-item-img {
+        .cp-item.is-loading {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+    /* Image */
+    .cp-img-wrap {
         flex-shrink: 0;
-        width: 60px;
-        height: 60px;
-        border-radius: 8px;
+        width: 52px;
+        height: 52px;
+        border-radius: 7px;
         overflow: hidden;
-        background: var(--cart-bg-hover);
+        background: var(--cp-bg);
+        border: 1px solid var(--cp-border);
+        display: block;
     }
 
-        .cart-item-img img {
+        .cp-img-wrap img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: block;
         }
 
-    .cart-item-info {
+    /* Info */
+    .cp-info {
         flex: 1;
         min-width: 0;
         display: flex;
@@ -271,262 +288,414 @@
         gap: 0.2rem;
     }
 
-    .cart-item-name {
-        font-size: 0.85rem;
+    .cp-name {
+        font-size: 0.8rem;
         font-weight: 500;
-        color: var(--cart-text);
+        color: var(--cp-text);
         text-decoration: none;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        line-height: 1.35;
     }
 
-        .cart-item-name:hover {
-            color: var(--cart-primary-dark);
+        .cp-name:hover {
+            color: var(--cp-accent);
         }
 
-    .cart-item-variant {
-        font-size: 0.7rem;
-        color: var(--cart-text-muted);
-        background: var(--cart-bg-hover);
-        padding: 0.1rem 0.4rem;
+    .cp-variant {
+        font-size: 0.68rem;
+        color: var(--cp-text-2);
+        background: var(--cp-bg);
+        border: 1px solid var(--cp-border);
         border-radius: 4px;
+        padding: 0.1rem 0.4rem;
         width: fit-content;
     }
 
-    .cart-item-meta {
+    /* Bottom row: qty + price */
+    .cp-bottom {
         display: flex;
-        gap: 0.5rem;
-        font-size: 0.75rem;
-        color: var(--cart-text-muted);
-    }
-
-        .cart-item-meta strong {
-            color: var(--cart-text);
-        }
-
-    .cart-item-actions {
-        flex-shrink: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
+        align-items: center;
         justify-content: space-between;
+        margin-top: 0.2rem;
+        gap: 0.5rem;
     }
 
-    .cart-item-subtotal {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: var(--cart-primary-dark);
+    /* Qty controls */
+    .cp-qty-ctrl {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        border: 1px solid var(--cp-border);
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--cp-bg);
     }
 
-    .remove-form {
-        margin: 0;
-        padding: 0;
-    }
-
-    .btn-remove {
-        width: 26px;
-        height: 26px;
+    .cp-qty-btn {
+        width: 24px;
+        height: 24px;
         border: none;
         background: transparent;
-        color: var(--cart-text-muted);
-        border-radius: 6px;
+        color: var(--cp-text-2);
+        cursor: pointer;
+        font-size: 0.95rem;
+        line-height: 1;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.12s, color 0.12s;
+        user-select: none;
+    }
+
+        .cp-qty-btn:hover {
+            background: var(--cp-border);
+            color: var(--cp-text);
+        }
+
+        .cp-qty-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+    .cp-qty-val {
+        min-width: 22px;
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--cp-text);
+        padding: 0 2px;
+        border-left: 1px solid var(--cp-border);
+        border-right: 1px solid var(--cp-border);
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+    }
+
+    /* Price */
+    .cp-price {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--cp-text);
+        white-space: nowrap;
+    }
+
+    /* Remove button */
+    .cp-remove {
+        position: absolute;
+        top: 0.625rem;
+        right: 0;
+        width: 22px;
+        height: 22px;
+        border: none;
+        background: transparent;
+        color: var(--cp-text-2);
+        border-radius: 5px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        transition: all 0.2s;
+        transition: background 0.15s, color 0.15s;
+        flex-shrink: 0;
     }
 
-        .btn-remove:hover {
-            background: #fef2f2;
-            color: var(--cart-danger);
+        .cp-remove:hover {
+            background: var(--cp-accent-lt);
+            color: var(--cp-accent);
         }
-
-        .btn-remove:disabled {
-            opacity: 0.5;
-            cursor: wait;
-        }
-
-    .cart-summary {
-        margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 2px solid var(--cart-border);
+    /* Offset info/bottom row so remove btn doesn't overlap */
+    .cp-info {
+        padding-right: 1.5rem;
     }
 
-    .cart-summary-row {
+    /* Footer */
+    .cp-footer {
+        border-top: 1px solid var(--cp-border);
+        padding-top: 0.875rem;
+        margin-top: 0.875rem;
+    }
+
+    .cp-subtotal-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.35rem;
+        font-size: 0.85rem;
     }
 
-        .cart-summary-row span:first-child {
-            font-weight: 500;
-        }
-
-    .cart-summary-total {
-        font-size: 1.2rem;
+    .cp-total-val {
+        font-size: 1.05rem;
         font-weight: 700;
-        color: var(--cart-primary-dark);
     }
 
-    .cart-summary-note {
+    .cp-shipping-note {
         font-size: 0.7rem;
-        color: var(--cart-text-muted);
-        margin-bottom: 1rem;
+        color: var(--cp-text-2);
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+        margin: 0 0 0.875rem;
     }
 
-    .cart-summary-actions {
+    .cp-actions {
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
     }
 
-    .btn-checkout {
+    .cp-btn-checkout {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0.7rem 1rem;
-        background: linear-gradient(135deg, var(--cart-primary), var(--cart-primary-dark));
+        gap: 0.4rem;
+        padding: 0.625rem;
+        background: var(--cp-accent);
         color: #fff;
-        border-radius: 10px;
-        font-size: 0.875rem;
-        font-weight: 600;
+        border-radius: 8px;
+        font-size: 0.825rem;
+        font-weight: 700;
         text-decoration: none;
+        transition: opacity 0.15s, transform 0.15s;
     }
 
-        .btn-checkout:hover {
+        .cp-btn-checkout:hover {
+            opacity: 0.9;
             color: #fff;
-            box-shadow: 0 4px 15px rgba(232, 180, 184, 0.4);
+            transform: translateY(-1px);
         }
 
-    .btn-view-cart {
+    .cp-btn-cart {
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0.6rem 1rem;
-        background: transparent;
-        color: var(--cart-text);
-        border: 1px solid var(--cart-border);
-        border-radius: 10px;
-        font-size: 0.8rem;
+        padding: 0.55rem;
+        border: 1px solid var(--cp-border);
+        border-radius: 8px;
+        font-size: 0.775rem;
         font-weight: 500;
+        color: var(--cp-text-2);
         text-decoration: none;
+        transition: border-color 0.15s, color 0.15s;
     }
 
-        .btn-view-cart:hover {
-            background: var(--cart-bg-hover);
-            border-color: var(--cart-primary);
-            color: var(--cart-text);
+        .cp-btn-cart:hover {
+            border-color: var(--cp-accent);
+            color: var(--cp-accent);
         }
 
-    .btn-continue {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 0.5rem;
-        color: var(--cart-text-muted);
+    /* Feedback toast */
+    .cp-feedback {
+        position: relative;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .cp-toast {
         font-size: 0.75rem;
-        text-decoration: none;
+        font-weight: 500;
+        padding: 0.45rem 0.75rem;
+        border-radius: 6px;
+        margin-top: 0.5rem;
+        animation: cpFadeIn 0.2s ease;
     }
 
-        .btn-continue:hover {
-            color: var(--cart-primary-dark);
+        .cp-toast.ok {
+            background: var(--cp-success-lt);
+            color: var(--cp-success);
         }
+
+        .cp-toast.err {
+            background: var(--cp-accent-lt);
+            color: var(--cp-accent);
+        }
+    @@keyframes cpFadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
 </style>
 
 <script>
-    (function() {
+    (function () {
         'use strict';
 
-        const cartPartial = document.getElementById('mini-cart');
-        if (!cartPartial) return;
+        const root = document.getElementById('mini-cart');
+        if (!root) return;
 
-        // Formatear moneda
-        const formatCurrency = (amount) => new Intl.NumberFormat('es-EC', {
-            style: 'currency', currency: 'USD'
-        }).format(amount);
+        // ── CSRF token ──────────────────────────────────────────────
+        // El AntiForgeryToken helper de Razor genera un <input hidden>
+        // en el DOM; lo buscamos en el documento completo.
+        const getToken = () =>
+            document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
 
-        // Actualizar badges globales
-        const updateBadges = (count) => {
+        // ── Helpers ─────────────────────────────────────────────────
+        const fmt = n => '$' + Number(n || 0).toFixed(2);
+
+        function showFeedback(msg, isOk) {
+            const fb = document.getElementById('cp-feedback');
+            if (!fb) return;
+            fb.innerHTML = `<div class="cp-toast ${isOk ? 'ok' : 'err'}">${msg}</div>`;
+            setTimeout(() => { if (fb) fb.innerHTML = ''; }, 3000);
+        }
+
+        function updateGlobalBadges(count, total) {
+            // Badge de cantidad
             document.querySelectorAll('[data-cart-count], .cart-count, .cart-badge').forEach(el => {
                 el.textContent = count;
+                el.style.display = count > 0 ? '' : 'none';
             });
-        };
+            // Badge local del partial
+            root.querySelector('.cp-badge')?.['textContent'] !== undefined &&
+                (root.querySelector('.cp-badge').textContent = count);
 
-        // Actualizar totales
-        const updateTotals = (total) => {
-            document.querySelectorAll('[data-cart-total]').forEach(el => {
-                el.textContent = formatCurrency(total);
+            // Total global (navbar, etc.)
+            const totalFmt = fmt(total);
+            document.querySelectorAll('[data-cart-total], #cartTotal, .cart-total').forEach(el => {
+                el.textContent = totalFmt;
             });
-        };
+        }
 
-        // Manejar forms con AJAX
-        cartPartial.querySelectorAll('.remove-form[data-ajax="true"]').forEach(form => {
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
+        function recomputeLocalTotal() {
+            let sum = 0;
+            root.querySelectorAll('.cp-item:not(.is-removing)').forEach(item => {
+                const qty   = parseInt(item.querySelector('[data-qty]')?.textContent || 0);
+                const price = parseFloat(item.querySelector('[data-unit-price]')?.dataset.unitPrice || 0);
+                sum += qty * price;
+            });
+            const totalEl = root.querySelector('[data-cart-total]');
+            if (totalEl) totalEl.textContent = fmt(sum);
+            return sum;
+        }
 
-                const btn = this.querySelector('.btn-remove');
-                const item = this.closest('.cart-item');
-
-                if (!btn || !item) return;
-
-                // Deshabilitar botón
-                btn.disabled = true;
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-                try {
-                    // Usar FormData del form - INCLUYE el token CSRF automáticamente
-                    const formData = new FormData(this);
-
-                    const response = await fetch(this.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        credentials: 'same-origin'
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Error del servidor');
-                    }
-
-                    const data = await response.json();
-
-                    if (data.ok) {
-                        // Animar y eliminar
-                        item.classList.add('removing');
-
-                        setTimeout(() => {
-                            item.remove();
-                            updateBadges(data.count);
-                            updateTotals(data.total);
-
-                            // Actualizar badge local
-                            const localBadge = cartPartial.querySelector('.cart-badge-count');
-                            if (localBadge) localBadge.textContent = data.count;
-
-                            // Si no hay más items, recargar
-                            if (!cartPartial.querySelector('.cart-item')) {
-                                location.reload();
-                            }
-                        }, 300);
-                    } else {
-                        throw new Error(data.error || 'No se pudo eliminar');
-                    }
-
-                } catch (error) {
-                    console.error('Error:', error);
-                    btn.disabled = false;
-                    btn.innerHTML = originalHtml;
-                    alert('No se pudo eliminar el producto. Intenta de nuevo.');
+        // ── AJAX helper ─────────────────────────────────────────────
+        async function postAjax(url, params) {
+            const body = new URLSearchParams(params);
+            body.append('__RequestVerificationToken', getToken());
+            const r = await fetch(url, {
+                method: 'POST',
+                body,
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+        }
+
+        // ── ELIMINAR ────────────────────────────────────────────────
+        root.addEventListener('click', async e => {
+            const btn = e.target.closest('[data-remove-id]');
+            if (!btn) return;
+
+            const detalleId = btn.dataset.removeId;
+            const productoId = btn.dataset.productId;
+            const item = root.querySelector(`.cp-item[data-item-id="${detalleId}"]`);
+            if (!item) return;
+
+            btn.disabled = true;
+            item.classList.add('is-loading');
+
+            try {
+                const data = await postAjax('/Carrito/EliminarDelCarrito', {
+                    carritoDetalleId: detalleId,
+                    productoId: productoId
+                });
+
+                if (data.ok) {
+                    item.classList.replace('is-loading', 'is-removing');
+                    setTimeout(() => {
+                        item.remove();
+                        updateGlobalBadges(data.count, data.total);
+                        recomputeLocalTotal();
+
+                        // Si no quedan items → recargar el offcanvas/dropdown (o toda la página)
+                        if (!root.querySelector('.cp-item')) {
+                            location.reload();
+                        }
+                    }, 260);
+                } else {
+                    throw new Error(data.error || 'Error al eliminar');
+                }
+            } catch (err) {
+                item.classList.remove('is-loading');
+                btn.disabled = false;
+                showFeedback(err.message || 'No se pudo eliminar', false);
+            }
+        });
+
+        // ── CAMBIAR CANTIDAD ────────────────────────────────────────
+        root.addEventListener('click', async e => {
+            const btn = e.target.closest('.cp-qty-btn');
+            if (!btn) return;
+
+            const ctrl    = btn.closest('.cp-qty-ctrl');
+            const item    = ctrl?.closest('.cp-item');
+            if (!ctrl || !item) return;
+
+            const detalleId  = ctrl.dataset.detailId;
+            const productoId = ctrl.dataset.productId;
+            const qtyEl      = ctrl.querySelector('[data-qty]');
+            const priceEl    = item.querySelector('[data-unit-price]');
+            const subtotalEl = item.querySelector('[data-subtotal]');
+
+            const currentQty = parseInt(qtyEl?.textContent || 1);
+            const delta      = btn.dataset.action === 'plus' ? 1 : -1;
+            const newQty     = Math.max(1, currentQty + delta);
+
+            if (newQty === currentQty) return; // ya está en 1 y se intenta bajar
+
+            // Optimistic UI
+            if (qtyEl) qtyEl.textContent = newQty;
+            const unitPrice = parseFloat(priceEl?.dataset.unitPrice || 0);
+            if (subtotalEl) subtotalEl.textContent = (newQty * unitPrice).toFixed(2);
+            recomputeLocalTotal();
+
+            item.classList.add('is-loading');
+
+            try {
+                const data = await postAjax('/Carrito/ActualizarCarrito', {
+                    carritoDetalleId: detalleId,
+                    productoId: productoId,
+                    cantidad: newQty
+                });
+
+                if (data.ok) {
+                    // Confirmar con valores del servidor
+                    if (subtotalEl) subtotalEl.textContent = Number(data.lineSubtotal || newQty * unitPrice).toFixed(2);
+                    updateGlobalBadges(data.count, data.total);
+                    recomputeLocalTotal();
+                } else {
+                    // Revertir optimistic UI
+                    if (qtyEl) qtyEl.textContent = currentQty;
+                    if (subtotalEl) subtotalEl.textContent = (currentQty * unitPrice).toFixed(2);
+                    recomputeLocalTotal();
+                    showFeedback(data.error || 'No se pudo actualizar', false);
+                }
+            } catch (err) {
+                if (qtyEl) qtyEl.textContent = currentQty;
+                if (subtotalEl) subtotalEl.textContent = (currentQty * unitPrice).toFixed(2);
+                recomputeLocalTotal();
+                showFeedback('Error de conexión', false);
+            } finally {
+                item.classList.remove('is-loading');
+            }
         });
 
         console.log('✓ Cart partial ready');

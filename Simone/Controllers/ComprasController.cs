@@ -528,6 +528,9 @@ namespace Simone.Controllers
             }
         }
 
+
+
+
         /// <summary>
         /// GET: /Compras/SearchProducts
         /// Búsqueda AJAX de productos para el buscador inteligente del navbar
@@ -2157,5 +2160,6 @@ namespace Simone.Controllers
         }
 
         #endregion
+
     }
 }

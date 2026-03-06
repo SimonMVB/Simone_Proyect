@@ -419,6 +419,8 @@
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' || e.key === 'Esc') {
                     panelManager.closeAll();
+                    // También limpiar modales
+                    modalManager.forceCleanup();
                 }
             });
 
@@ -440,6 +442,8 @@
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) {
                     cartManager.updateBadge();
+                    // Limpiar cualquier backdrop huérfano al volver a la pestaña
+                    modalManager.forceCleanup();
                 }
             });
 
@@ -469,32 +473,158 @@
 
     // ======= BOOTSTRAP MODAL FIXES =======
     const modalManager = {
-        initialize: () => {
-            // Prevenir problemas con múltiples backdrops
-            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                const originalModal = bootstrap.Modal.prototype.constructor;
+        /**
+         * Limpieza completa y forzada de TODOS los overlays y backdrops
+         */
+        forceCleanup: () => {
+            const openModals = document.querySelectorAll('.modal.show');
 
-                bootstrap.Modal = class extends originalModal {
-                    _showBackdrop() {
-                        super._showBackdrop();
-                        // Asegurar z-index correcto
-                        const backdrop = document.querySelector('.modal-backdrop');
-                        if (backdrop) {
-                            backdrop.style.zIndex = '1079';
-                        }
+            // Si no hay modales abiertos, limpiar TODO
+            if (openModals.length === 0) {
+                // 1. Eliminar TODOS los modal-backdrop
+                document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+
+                // 2. Ocultar el global-overlay (el que tiene el blur)
+                const globalOverlay = document.getElementById('globalOverlay');
+                if (globalOverlay) {
+                    globalOverlay.classList.remove('show');
+                    globalOverlay.setAttribute('aria-hidden', 'true');
+                }
+
+                // 3. Restaurar el body completamente
+                document.body.classList.remove('modal-open', 'no-scroll');
+                document.body.style.removeProperty('padding-right');
+                document.body.style.removeProperty('overflow');
+                document.body.style.removeProperty('position');
+                document.body.style.removeProperty('width');
+                document.body.style.removeProperty('height');
+
+                // 4. Asegurar que no hay paneles abiertos que no deberían estar
+                const sidebar = document.getElementById('sidebar');
+                const cartPanel = document.getElementById('cartPanel');
+
+                if (sidebar && !sidebar.classList.contains('show') &&
+                    cartPanel && !cartPanel.classList.contains('show')) {
+                    // Ningún panel abierto, asegurar que overlay está oculto
+                    if (globalOverlay) {
+                        globalOverlay.classList.remove('show');
                     }
-                };
-            }
+                }
 
-            // Limpiar backdrops al cerrar modales
-            document.addEventListener('hidden.bs.modal', () => {
+                console.log('✓ Modal cleanup completed');
+            }
+        },
+
+        /**
+         * Limpiar backdrops extras (cuando hay más de los necesarios)
+         */
+        cleanupExtraBackdrops: () => {
+            const openModals = document.querySelectorAll('.modal.show');
+            const backdrops = document.querySelectorAll('.modal-backdrop');
+
+            // Si hay más backdrops que modales, eliminar los extras
+            if (backdrops.length > openModals.length) {
+                for (let i = openModals.length; i < backdrops.length; i++) {
+                    backdrops[i].remove();
+                }
+            }
+        },
+
+        initialize: () => {
+            // Mantener el orden de capas por defecto de Bootstrap
+            document.addEventListener('shown.bs.modal', () => {
+                const visibleModals = document.querySelectorAll('.modal.show');
                 const backdrops = document.querySelectorAll('.modal-backdrop');
-                if (backdrops.length > 1) {
-                    backdrops.forEach((backdrop, index) => {
-                        if (index > 0) backdrop.remove();
-                    });
+
+                visibleModals.forEach((modal, index) => {
+                    modal.style.zIndex = String(1055 + index * 20);
+                });
+
+                backdrops.forEach((backdrop, index) => {
+                    backdrop.style.zIndex = String(1050 + index * 20);
+                });
+            });
+
+            // Limpiar al cerrar modales
+            document.addEventListener('hidden.bs.modal', () => {
+                // Múltiples intentos de limpieza para asegurar
+                setTimeout(() => modalManager.forceCleanup(), 100);
+                setTimeout(() => modalManager.forceCleanup(), 300);
+                setTimeout(() => modalManager.forceCleanup(), 500);
+            });
+
+            // Interceptar envío de formularios dentro de modales
+            document.addEventListener('submit', (e) => {
+                const modal = e.target.closest('.modal');
+                if (modal) {
+                    // Cerrar el modal inmediatamente
+                    try {
+                        const bsModal = bootstrap.Modal.getInstance(modal);
+                        if (bsModal) {
+                            bsModal.hide();
+                        }
+                    } catch (err) {
+                        // Bootstrap no disponible, cerrar manualmente
+                        modal.classList.remove('show');
+                        modal.style.display = 'none';
+                        modal.setAttribute('aria-hidden', 'true');
+                    }
+
+                    // Limpiar todo después
+                    setTimeout(() => modalManager.forceCleanup(), 50);
+                    setTimeout(() => modalManager.forceCleanup(), 200);
+                    setTimeout(() => modalManager.forceCleanup(), 400);
                 }
             });
+
+            // Observer para detectar y eliminar backdrops huérfanos
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        // Si se añade un backdrop pero no hay modal abierto
+                        if (node.nodeType === 1 && node.classList?.contains('modal-backdrop')) {
+                            setTimeout(() => {
+                                const openModals = document.querySelectorAll('.modal.show');
+                                if (openModals.length === 0) {
+                                    node.remove();
+                                    modalManager.forceCleanup();
+                                }
+                            }, 100);
+                        }
+                    });
+                });
+            });
+
+            observer.observe(document.body, { childList: true, subtree: false });
+
+            // Verificación periódica cada 3 segundos
+            setInterval(() => {
+                const openModals = document.querySelectorAll('.modal.show');
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                const globalOverlay = document.getElementById('globalOverlay');
+                const sidebar = document.getElementById('sidebar');
+                const cartPanel = document.getElementById('cartPanel');
+
+                const sidebarOpen = sidebar?.classList.contains('show');
+                const cartOpen = cartPanel?.classList.contains('show');
+
+                // Si hay backdrops pero no modales, limpiar
+                if (openModals.length === 0 && backdrops.length > 0) {
+                    console.warn('Detectados backdrops huérfanos, limpiando...');
+                    modalManager.forceCleanup();
+                }
+
+                // Si el globalOverlay está visible pero no hay paneles ni modales abiertos
+                if (globalOverlay?.classList.contains('show') &&
+                    !sidebarOpen && !cartOpen && openModals.length === 0) {
+                    console.warn('GlobalOverlay huérfano detectado, limpiando...');
+                    modalManager.forceCleanup();
+                }
+            }, 3000);
+
+            // Exponer función de limpieza globalmente
+            window.cleanupModalBackdrops = modalManager.forceCleanup;
+            window.forceCleanupAll = modalManager.forceCleanup;
         }
     };
 
@@ -528,12 +658,17 @@
             // Cargar datos iniciales
             cartManager.updateBadge();
 
+            // Limpiar cualquier residuo al cargar la página
+            modalManager.forceCleanup();
+
             // Exponer API global
             window.NeoAgora = {
                 panels: panelManager,
                 cart: cartManager,
                 utils: utils,
-                version: '1.0.0'
+                modals: modalManager,
+                cleanup: modalManager.forceCleanup,
+                version: '1.0.2'
             };
 
             console.log('✓ Layout inicializado correctamente');

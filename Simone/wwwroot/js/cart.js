@@ -22,9 +22,9 @@ const Cart = {
             remove: '/Carrito/EliminarDelCarrito'
         },
         selectors: {
-            badge: '[data-cart-count], .cart-count, .cart-badge, #cartCount',
+            badge: '[data-cart-count], .cart-count, .cart-badge, #cartCount, #cart-count',
             panel: '#cartPanel, #cartOffcanvas, .cart-panel, .offcanvas-cart',
-            panelBody: '.offcanvas-body, .cart-panel-body, .cart-items',
+            panelBody: '#cart-content, .offcanvas-body, .cart-panel-body, .cart-items',
             total: '[data-cart-total], .cart-total, #cartTotal',
             itemList: '.cart-items-list, .cart-products'
         },
@@ -110,6 +110,45 @@ const Cart = {
             setTimeout(() => badge.classList.remove('pulse'), 300);
         });
     },
+
+
+    async refreshCartBadge() {
+        try {
+            const response = await fetch(CONFIG.endpoints.cartInfo, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+
+            // Actualizar contador
+            const countElements = document.querySelectorAll('#cartCount, #cart-count, .cart-count');
+            countElements.forEach(el => {
+                if (data.count != null) {
+                    el.textContent = data.count;
+                    el.style.display = data.count > 0 ? '' : 'none';
+                }
+            });
+
+            // Actualizar total
+            const totalElements = document.querySelectorAll('#cartTotal, #cart-total, .cart-total');
+            totalElements.forEach(el => {
+                if (data.subtotal != null) {
+                    el.textContent = Utils.formatCurrency(data.subtotal);
+                }
+            });
+
+            // ✅ AGREGAR ESTO: Disparar evento para que Cart.js actualice el panel
+            document.dispatchEvent(new CustomEvent('cart:updated'));
+
+        } catch (error) {
+            console.error('Error refreshing cart badge:', error);
+        }
+    }
 
     /**
      * Establece el total en los elementos correspondientes

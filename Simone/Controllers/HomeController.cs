@@ -83,6 +83,16 @@ namespace Simone.Controllers
             {
                 var destacados = await ObtenerProductosDestacadosAsync(ct);
 
+                // Cargar categorías para la sección de categorías del Home
+                var categoriasDb = await _context.Categorias
+                    .AsNoTracking()
+                    .OrderBy(c => c.Nombre)
+                    .Select(c => new { c.CategoriaID, c.Nombre })
+                    .ToListAsync(ct);
+
+                ViewBag.CategoriasHome = categoriasDb
+                    .ToDictionary(c => c.Nombre, c => c.CategoriaID);
+
                 _logger.LogInformation(
                     "Página de inicio cargada. Productos destacados: {Count}",
                     destacados.Count);
@@ -94,6 +104,7 @@ namespace Simone.Controllers
                 _logger.LogError(ex, "Error al cargar página de inicio");
 
                 // Retornar vista vacía en caso de error
+                ViewBag.CategoriasHome = new Dictionary<string, int>();
                 return View(new List<Producto>());
             }
         }

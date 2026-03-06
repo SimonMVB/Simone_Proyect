@@ -154,6 +154,7 @@ builder.Services.AddScoped<LogService>();
 // VENTAS Y COMISIONES
 // ────────────────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ComisionService>();
+builder.Services.AddScoped<FinanzasAdminService>();
 
 
 // ============================================================================

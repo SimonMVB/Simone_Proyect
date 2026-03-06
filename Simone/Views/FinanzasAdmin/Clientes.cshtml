@@ -1,0 +1,215 @@
+@model List<Simone.Services.ClienteResumen>
+@{
+    ViewData["Title"] = "Clientes";
+    var periodo    = ViewBag.Periodo    as string ?? "mes";
+    var desde      = ViewBag.Desde     as string ?? "";
+    var hasta      = ViewBag.Hasta     as string ?? "";
+    var busqueda   = ViewBag.Busqueda  as string ?? "";
+    var filtroTipo = ViewBag.FiltroTipo as string ?? "";
+
+    var totalClientes    = Model.Count;
+    var nuevos           = Model.Count(c => !c.EsRecurrente);
+    var recurrentes      = Model.Count(c => c.EsRecurrente);
+    var inactivos        = Model.Count(c => c.DiasDesdeUltimaCompra > 30);
+    var totalGastado     = Model.Sum(c => c.TotalGastado);
+    var ticketProm       = totalClientes > 0 ? totalGastado / totalClientes : 0;
+}
+
+@section Styles {
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+:root{--ink:#0d0f14;--ink-2:#3d4150;--ink-3:#8b90a0;--paper:#f4f3f0;--paper-2:#eceae5;--paper-3:#e2dfd8;--line:#d8d5ce;--accent:#c9472b;--accent-lt:#fdf1ee;--green:#1a7a4a;--green-lt:#edfaf3;--amber:#b45309;--amber-lt:#fef9ec;--blue:#1d4ed8;--blue-lt:#eff6ff;--r:12px;--r-lg:18px;--sh:0 1px 3px rgba(0,0,0,.06);--ease:cubic-bezier(.4,0,.2,1);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Space Grotesk',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;}
+.fa-wrap{max-width:1400px;margin:0 auto;padding:2rem 1.5rem 4rem;}
+.fa-topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-bottom:1.75rem;padding-bottom:1.5rem;border-bottom:2px solid var(--ink);}
+.fa-heading-label{font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:.25rem;}
+.fa-heading h1{font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;letter-spacing:-.03em;line-height:1;}
+.fa-nav{display:flex;gap:.3rem;margin-bottom:1.5rem;flex-wrap:wrap;}
+.fa-nav-item{display:flex;align-items:center;gap:.4rem;padding:.5rem .9rem;border-radius:var(--r);font-size:.78rem;font-weight:600;color:var(--ink-2);text-decoration:none;transition:all .15s;}
+.fa-nav-item:hover{background:var(--paper-2);color:var(--ink);}
+.fa-nav-item.active{background:var(--ink);color:var(--paper);}
+
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:1rem;margin-bottom:1.5rem;}
+@@media(max-width:900px){.kpi-row{grid-template-columns:repeat(3,1fr);}}
+@@media(max-width:520px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+.kpi-mini{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);padding:1rem 1.2rem;box-shadow:var(--sh);cursor:pointer;text-decoration:none;display:block;transition:all .15s;}
+.kpi-mini:hover,.kpi-mini.active{border-color:var(--ink);background:var(--paper-2);}
+.kpi-mini.active{border-color:var(--accent);background:var(--accent-lt);}
+.kpi-mini-label{font-size:.65rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin-bottom:.3rem;}
+.kpi-mini-val{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:700;letter-spacing:-.03em;color:var(--ink);}
+.kpi-mini.active .kpi-mini-val{color:var(--accent);}
+
+.filtros-bar{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap;margin-bottom:1.25rem;padding:1rem 1.2rem;background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh);}
+.filtros-bar input{padding:.5rem .8rem;border:1.5px solid var(--line);border-radius:var(--r);font-family:'Space Grotesk',sans-serif;font-size:.8rem;color:var(--ink);background:var(--paper);height:36px;min-width:200px;}
+.filtros-bar input:focus{outline:none;border-color:var(--ink);}
+.btn-filtrar{padding:.5rem 1.1rem;background:var(--ink);color:var(--paper);border:none;border-radius:var(--r);font-family:'Space Grotesk',sans-serif;font-size:.8rem;font-weight:600;cursor:pointer;height:36px;display:flex;align-items:center;gap:.4rem;}
+.btn-filtrar:hover{opacity:.85;}
+.btn-limpiar{padding:.5rem .8rem;background:none;border:1.5px solid var(--line);border-radius:var(--r);font-size:.78rem;font-weight:600;color:var(--ink-3);cursor:pointer;height:36px;text-decoration:none;display:flex;align-items:center;transition:all .15s;}
+.btn-limpiar:hover{border-color:var(--accent);color:var(--accent);}
+
+.tabla-wrap{background:var(--paper);border:1.5px solid var(--line);border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh);}
+.fa-table{width:100%;border-collapse:collapse;}
+.fa-table th{font-size:.67rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);padding:.75rem 1rem;text-align:left;border-bottom:2px solid var(--line);background:var(--paper-2);white-space:nowrap;}
+.fa-table td{padding:.8rem 1rem;font-size:.82rem;color:var(--ink-2);border-bottom:1px solid var(--paper-2);vertical-align:middle;}
+.fa-table tr:last-child td{border-bottom:none;}
+.fa-table tr:hover td{background:var(--paper-2);}
+
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--ink);color:var(--paper);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.82rem;flex-shrink:0;}
+.avatar.new{background:var(--green);}
+.cliente-info{display:flex;align-items:center;gap:.75rem;}
+.cli-name{font-weight:600;color:var(--ink);}
+.cli-email{font-size:.72rem;color:var(--ink-3);}
+
+.td-num{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);}
+.td-green{color:var(--green);font-weight:700;}
+.td-sub{font-size:.72rem;color:var(--ink-3);display:block;margin-top:1px;}
+
+.badge{display:inline-flex;align-items:center;padding:.2rem .55rem;border-radius:50px;font-size:.68rem;font-weight:700;}
+.badge-green{background:var(--green-lt);color:var(--green);}
+.badge-blue{background:var(--blue-lt);color:var(--blue);}
+.badge-amber{background:var(--amber-lt);color:var(--amber);}
+.badge-gray{background:var(--paper-3);color:var(--ink-3);}
+
+.inactivo-warn{color:var(--amber);font-weight:600;}
+.btn-ver{padding:.35rem .75rem;border:1.5px solid var(--line);border-radius:6px;font-size:.75rem;font-weight:600;color:var(--ink-2);background:none;cursor:pointer;text-decoration:none;transition:all .15s;white-space:nowrap;}
+.btn-ver:hover{border-color:var(--ink);color:var(--ink);background:var(--paper-2);}
+
+.empty-state{text-align:center;padding:4rem 2rem;color:var(--ink-3);}
+</style>
+}
+
+<div class="fa-wrap">
+    <div class="fa-topbar">
+        <div class="fa-heading">
+            <span class="fa-heading-label">Centro Financiero</span>
+            <h1>Clientes</h1>
+        </div>
+    </div>
+
+    <nav class="fa-nav">
+        <a href="/FinanzasAdmin"            class="fa-nav-item">Dashboard</a>
+        <a href="/FinanzasAdmin/Ingresos"   class="fa-nav-item">Ingresos</a>
+        <a href="/FinanzasAdmin/Ventas"     class="fa-nav-item">Ventas</a>
+        <a href="/FinanzasAdmin/Vendedores" class="fa-nav-item">Vendedores</a>
+        <a href="/FinanzasAdmin/Productos"  class="fa-nav-item">Productos</a>
+        <a href="/FinanzasAdmin/Clientes"   class="fa-nav-item active">Clientes</a>
+    </nav>
+
+    <!-- KPIs CLICABLES COMO FILTRO -->
+    <div class="kpi-row">
+        <a href="/FinanzasAdmin/Clientes?periodo=@periodo" class="kpi-mini @(string.IsNullOrEmpty(filtroTipo) ? "active" : "")">
+            <div class="kpi-mini-label">Total</div>
+            <div class="kpi-mini-val">@totalClientes</div>
+        </a>
+        <a href="/FinanzasAdmin/Clientes?periodo=@periodo&filtroTipo=nuevos" class="kpi-mini @(filtroTipo=="nuevos" ? "active" : "")">
+            <div class="kpi-mini-label">Nuevos</div>
+            <div class="kpi-mini-val" style="color:var(--green)">@nuevos</div>
+        </a>
+        <a href="/FinanzasAdmin/Clientes?periodo=@periodo&filtroTipo=recurrentes" class="kpi-mini @(filtroTipo=="recurrentes" ? "active" : "")">
+            <div class="kpi-mini-label">Recurrentes</div>
+            <div class="kpi-mini-val" style="color:var(--blue)">@recurrentes</div>
+        </a>
+        <a href="/FinanzasAdmin/Clientes?periodo=@periodo&filtroTipo=inactivos" class="kpi-mini @(filtroTipo=="inactivos" ? "active" : "")">
+            <div class="kpi-mini-label">Inactivos +30d</div>
+            <div class="kpi-mini-val" style="color:var(--amber)">@inactivos</div>
+        </a>
+        <div class="kpi-mini">
+            <div class="kpi-mini-label">Gasto promedio</div>
+            <div class="kpi-mini-val">$@ticketProm.ToString("N0")</div>
+        </div>
+    </div>
+
+    <!-- FILTROS -->
+    <form method="get" action="/FinanzasAdmin/Clientes">
+        <input type="hidden" name="periodo" value="@periodo" />
+        <input type="hidden" name="filtroTipo" value="@filtroTipo" />
+        <div class="filtros-bar">
+            <input type="text" name="busqueda" value="@busqueda" placeholder="Buscar nombre o email..." />
+            <label style="font-size:.75rem;font-weight:600;color:var(--ink-3)">Desde</label>
+            <input type="date" name="desde" value="@desde" style="min-width:unset" />
+            <label style="font-size:.75rem;font-weight:600;color:var(--ink-3)">Hasta</label>
+            <input type="date" name="hasta" value="@hasta" style="min-width:unset" />
+            <button type="submit" class="btn-filtrar">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Filtrar
+            </button>
+            @if (!string.IsNullOrEmpty(busqueda))
+            {
+                <a href="/FinanzasAdmin/Clientes?periodo=@periodo" class="btn-limpiar">Limpiar</a>
+            }
+        </div>
+    </form>
+
+    <!-- TABLA -->
+    <div class="tabla-wrap">
+        @if (!Model.Any())
+        {
+            <div class="empty-state"><p>No hay clientes que coincidan con el filtro.</p></div>
+        }
+        else
+        {
+            <div style="overflow-x:auto">
+                <table class="fa-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Compras</th>
+                            <th>Total gastado</th>
+                            <th>Ticket promedio</th>
+                            <th>Primera compra</th>
+                            <th>Última compra</th>
+                            <th>Inactividad</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model)
+                        {
+                            var inicial = c.Nombre.Length > 0 ? c.Nombre[0].ToString().ToUpper() : "?";
+                            var inact = c.DiasDesdeUltimaCompra;
+                            <tr>
+                                <td>
+                                    <div class="cliente-info">
+                                        <div class="avatar @(!c.EsRecurrente ? "new" : "")">@inicial</div>
+                                        <div>
+                                            <div class="cli-name">@c.Nombre</div>
+                                            <div class="cli-email">@c.Email</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (c.EsRecurrente) {
+                                        <span class="badge badge-blue">Recurrente</span>
+                                    } else {
+                                        <span class="badge badge-green">Nuevo</span>
+                                    }
+                                </td>
+                                <td><span class="td-num">@c.TotalCompras</span></td>
+                                <td><span class="td-green">$@c.TotalGastado.ToString("N2")</span></td>
+                                <td><span class="td-num">$@c.TicketPromedio.ToString("N2")</span></td>
+                                <td>
+                                    <span>@c.PrimeraCompra.ToString("dd/MM/yyyy")</span>
+                                </td>
+                                <td>
+                                    <span>@c.UltimaCompra.ToString("dd/MM/yyyy")</span>
+                                </td>
+                                <td>
+                                    <span class="@(inact > 30 ? "inactivo-warn" : "")">
+                                        @inact días
+                                        @if (inact > 60) { <span class="badge badge-amber" style="margin-left:.3rem">Inactivo</span> }
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="/FinanzasAdmin/Ventas?busqueda=@Uri.EscapeDataString(c.Email)"
+                                       class="btn-ver">Ver ventas</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

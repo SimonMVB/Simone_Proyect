@@ -21,7 +21,7 @@ namespace Simone.Controllers
     /// Gestiona visualización de ventas, detalles y reversiones
     /// Versión optimizada con mejores prácticas empresariales
     /// </summary>
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Roles = "Administrador,Vendedor")]
     [Route("Panel")]
     [AutoValidateAntiforgeryToken]
     public class ReportesController : Controller

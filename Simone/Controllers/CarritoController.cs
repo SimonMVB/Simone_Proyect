@@ -425,70 +425,115 @@ namespace Simone.Controllers
 
         #endregion
 
-        #region Mutaciones - Agregar al Carrito
+        #region Agregar desde Card del Catálogo
 
         /// <summary>
-        /// POST: /Carrito/AgregarAlCarrito
-        /// Agrega un producto al carrito
+        /// POST: /Carrito/AgregarDesdeCard
+        /// Agrega un producto al carrito desde el catálogo (quick add)
+        /// Compatible con form-urlencoded (catalogo.js)
         /// </summary>
-        [HttpPost("AgregarAlCarrito", Name = "Carrito_Agregar")]
+        [HttpPost("AgregarDesdeCard", Name = "Carrito_AgregarDesdeCard")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AgregarAlCarrito(
-            int productoId,
-            int cantidad = CANTIDAD_DEFAULT,
-            int? productoVarianteId = null)
+        public async Task<IActionResult> AgregarDesdeCard(
+            int productoID,
+            int? varianteID = null,
+            int cantidad = 1)
         {
-            var validacionCantidad = ValidarCantidad(cantidad);
-            if (!validacionCantidad.IsValid)
+            // Validar cantidad
+            if (cantidad <= 0) cantidad = 1;
+            if (cantidad > CANTIDAD_MAXIMA_POR_PRODUCTO)
             {
-                return ResponderError(validacionCantidad.ErrorMessage!);
+                return Json(new { success = false, message = $"Cantidad máxima permitida: {CANTIDAD_MAXIMA_POR_PRODUCTO}" });
             }
 
+            // Validar usuario autenticado
             var usuario = await ObtenerUsuarioActualAsync();
             if (usuario == null)
             {
-                _logger.LogWarning("Intento de agregar al carrito sin autenticación");
-
-                if (EsAjax())
-                {
-                    return Json(new { ok = false, needLogin = true, error = "Debes iniciar sesión" });
-                }
-
-                return ResponderError("Debes iniciar sesión para agregar productos al carrito.");
+                _logger.LogWarning("Intento de agregar al carrito sin autenticación desde card");
+                return Json(new { success = false, needLogin = true, message = "Debes iniciar sesión para comprar" });
             }
 
             try
             {
+                // Obtener producto con variantes
                 var producto = await _context.Productos
+                    .Include(p => p.Variantes)
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.ProductoID == productoId);
+                    .FirstOrDefaultAsync(p => p.ProductoID == productoID);
 
                 if (producto == null)
                 {
-                    _logger.LogWarning("Intento de agregar producto inexistente. ProductoId: {ProductoId}", productoId);
-                    return ResponderError("Producto no encontrado.");
+                    _logger.LogWarning("Producto no encontrado. ProductoId: {ProductoId}", productoID);
+                    return Json(new { success = false, message = "Producto no encontrado" });
                 }
 
-                var validacionStock = await ValidarStockDisponibleAsync(producto, cantidad, productoVarianteId);
-                if (!validacionStock.IsValid)
+                int? varianteIdFinal = varianteID;
+
+                // Si el producto tiene variantes
+                if (producto.Variantes != null && producto.Variantes.Any())
                 {
-                    return ResponderError(validacionStock.ErrorMessage!);
+                    if (varianteID.HasValue)
+                    {
+                        var variante = producto.Variantes.FirstOrDefault(v => v.ProductoVarianteID == varianteID.Value);
+                        if (variante == null)
+                        {
+                            return Json(new { success = false, message = "Variante no encontrada" });
+                        }
+                        if (variante.Stock < cantidad)
+                        {
+                            return Json(new
+                            {
+                                success = false,
+                                message = variante.Stock == 0
+                                    ? "Esta combinación está agotada"
+                                    : $"Solo hay {variante.Stock} unidades disponibles"
+                            });
+                        }
+                        varianteIdFinal = variante.ProductoVarianteID;
+                    }
+                    else
+                    {
+                        // Buscar la primera variante con stock
+                        var primeraConStock = producto.Variantes.FirstOrDefault(v => v.Stock > 0);
+                        if (primeraConStock == null)
+                        {
+                            return Json(new { success = false, message = "Producto agotado" });
+                        }
+                        varianteIdFinal = primeraConStock.ProductoVarianteID;
+                    }
+                }
+                else
+                {
+                    // Producto sin variantes - validar stock directo
+                    if (producto.Stock < cantidad)
+                    {
+                        return Json(new
+                        {
+                            success = false,
+                            message = producto.Stock == 0
+                                ? "Producto agotado"
+                                : $"Solo hay {producto.Stock} unidades disponibles"
+                        });
+                    }
                 }
 
+                // Agregar al carrito
                 var agregado = await _carritoService.AnadirProducto(
                     producto,
                     usuario,
                     cantidad,
-                    productoVarianteId);
+                    varianteIdFinal);
 
                 if (!agregado)
                 {
                     _logger.LogWarning(
-                        "Falló agregar producto al carrito. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}, Cantidad: {Cantidad}",
-                        productoId, usuario.Id, cantidad);
-                    return ResponderError("No se pudo agregar el producto al carrito.");
+                        "Falló agregar producto desde card. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}",
+                        productoID, usuario.Id);
+                    return Json(new { success = false, message = "No se pudo agregar el producto" });
                 }
 
+                // Obtener resumen actualizado
                 var carrito = await _carritoService.GetByUsuarioIdAsync(usuario.Id);
                 var detalles = carrito != null
                     ? await _carritoService.LoadCartDetails(carrito.CarritoID)
@@ -496,35 +541,27 @@ namespace Simone.Controllers
                 var resumen = CalcularResumen(detalles);
 
                 _logger.LogInformation(
-                    "Producto agregado al carrito. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}, Cantidad: {Cantidad}, Total items: {TotalItems}, Total: {Total:C}",
-                    productoId, usuario.Id, cantidad, resumen.Cantidad, resumen.Total);
+                    "Producto agregado desde card. ProductoId: {ProductoId}, VarianteId: {VarianteId}, Usuario: {UsuarioId}",
+                    productoID, varianteIdFinal, usuario.Id);
 
-                if (EsAjax())
+                return Json(new
                 {
-                    return Json(new
-                    {
-                        ok = true,
-                        count = resumen.Cantidad,
-                        total = resumen.Total,
-                        message = "Producto agregado correctamente"
-                    });
-                }
-
-                TempData["MensajeExito"] = "Producto agregado al carrito correctamente.";
-                return RedirectToAction(nameof(VerCarrito));
-            }
-            catch (InvalidOperationException ex)
-            {
-                _logger.LogWarning(ex, "Operación inválida al agregar producto. ProductoId: {ProductoId}", productoId);
-                return ResponderError(ex.Message);
+                    success = true,
+                    count = resumen.Cantidad,
+                    total = resumen.Total,
+                    message = "¡Producto añadido al carrito!"
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al agregar producto al carrito. ProductoId: {ProductoId}, UsuarioId: {UsuarioId}",
-                    productoId, usuario?.Id);
-                return ResponderError("Error inesperado al agregar el producto.");
+                _logger.LogError(ex,
+                    "Error al agregar producto desde card. ProductoId: {ProductoId}",
+                    productoID);
+                return Json(new { success = false, message = "Error al procesar la solicitud" });
             }
         }
+
+        #endregion
 
         /// <summary>
         /// Valida que haya stock disponible para la cantidad solicitada
@@ -538,7 +575,6 @@ namespace Simone.Controllers
             return ValidationResult.Success();
         }
 
-        #endregion
 
         #region Mutaciones - Actualizar Carrito
 

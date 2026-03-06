@@ -909,16 +909,10 @@
                             <h1 class="product-title">@Model.Nombre</h1>
                             <div class="product-meta">
                                 <div class="product-rating">
-                                    <div class="rating-stars" role="img" aria-label="Calificación 4.2 de 5 estrellas">
-                                        <i class="fa-solid fa-star"></i>
-                                        <i class="fa-solid fa-star"></i>
-                                        <i class="fa-solid fa-star"></i>
-                                        <i class="fa-solid fa-star"></i>
-                                        <i class="fa-regular fa-star"></i>
-                                    </div>
-                                    <span class="rating-count">(42 reseñas)</span>
+                                   
+                                    
                                 </div>
-                                <div class="product-sku text-muted">SKU: @Model.ProductoID</div>
+                                
                             </div>
                         </div>
 
@@ -1048,20 +1042,6 @@
                             </form>
                         </div>
 
-                        <div class="social-share">
-                            <a href="#" class="share-btn" aria-label="Compartir en Facebook">
-                                <i class="fa-brands fa-facebook-f"></i>
-                            </a>
-                            <a href="#" class="share-btn" aria-label="Compartir en Instagram">
-                                <i class="fa-brands fa-instagram"></i>
-                            </a>
-                            <a href="#" class="share-btn" aria-label="Compartir en WhatsApp">
-                                <i class="fa-brands fa-whatsapp"></i>
-                            </a>
-                            <a href="#" class="share-btn" aria-label="Copiar enlace">
-                                <i class="fa-solid fa-link"></i>
-                            </a>
-                        </div>
 
                         <div class="features-grid">
                             <div class="feature-item">
@@ -1076,10 +1056,6 @@
                             <div class="feature-item">
                                 <div class="feature-icon">
                                     <i class="fa-solid fa-arrows-rotate"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-bold">Devoluciones</div>
-                                    <div class="small text-muted">7 días</div>
                                 </div>
                             </div>
                             <div class="feature-item">
@@ -1145,36 +1121,7 @@
                         </div>
                     </div>
 
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#collapseShipping">
-                                <i class="fa-solid fa-truck me-2"></i> Envío y Devoluciones
-                            </button>
-                        </h2>
-                        <div id="collapseShipping" class="accordion-collapse collapse">
-                            <div class="accordion-body">
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6 class="fw-bold mb-3">Política de Envío:</h6>
-                                        <ul class="list-unstyled">
-                                            <li class="mb-2"><i class="fa-solid fa-shipping-fast text-primary me-2"></i> Envío gratuito >$50</li>
-                                            <li class="mb-2"><i class="fa-solid fa-clock text-primary me-2"></i> 24-48 horas hábiles</li>
-                                        </ul>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <h6 class="fw-bold mb-3">Devoluciones:</h6>
-                                        <ul class="list-unstyled">
-                                            <li class="mb-2"><i class="fa-solid fa-rotate text-success me-2"></i> 7 días para cambios</li>
-                                            <li class="mb-2"><i class="fa-solid fa-tag text-success me-2"></i> Producto en perfecto estado</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -1273,33 +1220,61 @@
                 baseStock: @stockTotal
             };
 
+            console.log('CONFIG:', CONFIG);
+            console.log('Variants:', CONFIG.variants);
+
             // ============================================================
-            // ELEMENTOS DEL DOM
+            // ELEMENTOS DEL DOM - IDs CORREGIDOS PARA COINCIDIR CON HTML
             // ============================================================
             const elements = {
-                mainImg: document.getElementById('mainProductImage'),
-                thumbnails: document.querySelectorAll('.thumb-img'),
-                zoomLens: document.querySelector('.zoom-lens'),
-                zoomResult: document.querySelector('.zoom-result'),
-                quantityInput: document.getElementById('quantity'),
-                btnMinus: document.querySelector('.qty-btn.minus'),
-                btnPlus: document.querySelector('.qty-btn.plus'),
+                // Galería - IDs del HTML
+                mainImg: document.getElementById('mainImg'),
+                thumbItems: document.querySelectorAll('.thumb-item'),
+
+                // Cantidad - IDs del HTML
+                quantityInput: document.getElementById('Cantidad'),
+                quantityHidden: document.getElementById('CantidadHidden'),
+                btnMinus: document.getElementById('btnMinus'),
+                btnPlus: document.getElementById('btnPlus'),
+
+                // Stock y precio - IDs del HTML
                 stockBadge: document.getElementById('stockBadge'),
                 stockInfo: document.getElementById('stockInfo'),
-                priceEl: document.getElementById('productPrice'),
-                formAdd: document.getElementById('addToCartForm'),
-                btnAdd: document.getElementById('btnAddToCart'),
-                btnAddText: document.querySelector('#btnAddToCart .btn-text'),
-                varHidden: document.getElementById('productoVarianteId'),
+                priceEl: document.getElementById('priceValue'),
+
+                // Formulario - IDs del HTML
+                formAdd: document.getElementById('formAdd'),
+                btnAdd: document.getElementById('btnAdd'),
+                btnAddText: document.getElementById('btnAddText'),
+                varHidden: document.getElementById('ProductoVarianteID'),
+
+                // Variantes - IDs del HTML
                 colorOptions: document.getElementById('colorOptions'),
                 tallaOptions: document.getElementById('tallaOptions'),
-                selectedColorText: document.getElementById('selectedColor'),
-                selectedTallaText: document.getElementById('selectedTalla'),
+                selectedColorText: document.getElementById('selectedColorText'),
+                selectedTallaText: document.getElementById('selectedTallaText'),
+
+                // Favoritos - IDs del HTML
                 favForm: document.getElementById('favForm'),
-                btnFav: document.getElementById('btnFavorite'),
+                btnFav: document.getElementById('btnFav'),
+
+                // Sticky cart - IDs del HTML
                 stickyCart: document.getElementById('stickyCart'),
-                stickyAddBtn: document.getElementById('stickyAddBtn')
+                stickyAddBtn: document.getElementById('stickyAddBtn'),
+                stickyPrice: document.getElementById('stickyPrice')
             };
+
+            // Debug: verificar qué elementos se encontraron
+            console.log('=== ELEMENTOS ENCONTRADOS ===');
+            Object.keys(elements).forEach(key => {
+                const el = elements[key];
+                const found = el ? (el.length !== undefined ? el.length > 0 : true) : false;
+                if (!found) {
+                    console.warn(`❌ ${key}: NO ENCONTRADO`);
+                } else {
+                    console.log(`✓ ${key}: OK`);
+                }
+            });
 
             // ============================================================
             // ESTADO
@@ -1314,64 +1289,39 @@
             // GALERÍA
             // ============================================================
             function initGallery() {
-                if (!elements.mainImg || !elements.thumbnails.length) return;
+                if (!elements.mainImg || !elements.thumbItems.length) {
+                    console.log('Galería: sin miniaturas o imagen principal');
+                    return;
+                }
 
-                elements.thumbnails.forEach(thumb => {
+                elements.thumbItems.forEach(thumb => {
                     thumb.addEventListener('click', function() {
-                        elements.thumbnails.forEach(t => t.classList.remove('active'));
+                        elements.thumbItems.forEach(t => t.classList.remove('active'));
                         this.classList.add('active');
-                        elements.mainImg.src = this.dataset.full || this.src;
+                        const src = this.dataset.src || this.querySelector('img')?.src;
+                        if (src) elements.mainImg.src = src;
+                    });
+
+                    thumb.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            this.click();
+                        }
                     });
                 });
 
-                // Zoom en hover (solo desktop)
-                if (window.innerWidth >= 992 && elements.zoomLens && elements.zoomResult) {
-                    initZoom();
-                }
-            }
-
-            function initZoom() {
-                const container = elements.mainImg.closest('.main-image-container');
-                if (!container) return;
-
-                container.addEventListener('mouseenter', () => {
-                    elements.zoomLens.style.display = 'block';
-                    elements.zoomResult.style.display = 'block';
-                    elements.zoomResult.style.backgroundImage = `url(${elements.mainImg.src})`;
-                });
-
-                container.addEventListener('mouseleave', () => {
-                    elements.zoomLens.style.display = 'none';
-                    elements.zoomResult.style.display = 'none';
-                });
-
-                container.addEventListener('mousemove', (e) => {
-                    const rect = container.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-
-                    const lensW = elements.zoomLens.offsetWidth / 2;
-                    const lensH = elements.zoomLens.offsetHeight / 2;
-
-                    let posX = Math.max(lensW, Math.min(x, rect.width - lensW));
-                    let posY = Math.max(lensH, Math.min(y, rect.height - lensH));
-
-                    elements.zoomLens.style.left = `${posX - lensW}px`;
-                    elements.zoomLens.style.top = `${posY - lensH}px`;
-
-                    const zoomLevel = 2;
-                    const bgX = (posX / rect.width) * 100;
-                    const bgY = (posY / rect.height) * 100;
-
-                    elements.zoomResult.style.backgroundPosition = `${bgX}% ${bgY}%`;
-                    elements.zoomResult.style.backgroundSize = `${rect.width * zoomLevel}px ${rect.height * zoomLevel}px`;
-                });
+                console.log('✓ Galería inicializada');
             }
 
             // ============================================================
             // CANTIDAD
             // ============================================================
             function updateQuantity() {
+                if (!elements.quantityInput) {
+                    console.warn('quantityInput no encontrado');
+                    return;
+                }
+
                 const min = parseInt(elements.quantityInput.min) || 1;
                 const max = parseInt(elements.quantityInput.max) || 99;
                 let val = parseInt(elements.quantityInput.value) || 1;
@@ -1380,255 +1330,431 @@
                 elements.quantityInput.value = val;
                 state.quantity = val;
 
+                if (elements.quantityHidden) {
+                    elements.quantityHidden.value = val;
+                }
+
                 if (elements.btnMinus) elements.btnMinus.disabled = val <= min;
                 if (elements.btnPlus) elements.btnPlus.disabled = val >= max;
             }
 
-            elements.btnMinus?.addEventListener('click', () => {
-                elements.quantityInput.value = Math.max(1, parseInt(elements.quantityInput.value) - 1);
-                updateQuantity();
-            });
+            if (elements.btnMinus) {
+                elements.btnMinus.addEventListener('click', () => {
+                    elements.quantityInput.value = Math.max(1, parseInt(elements.quantityInput.value) - 1);
+                    updateQuantity();
+                });
+            }
 
-            elements.btnPlus?.addEventListener('click', () => {
-                const max = parseInt(elements.quantityInput.max) || 99;
-                elements.quantityInput.value = Math.min(max, parseInt(elements.quantityInput.value) + 1);
-                updateQuantity();
-            });
+            if (elements.btnPlus) {
+                elements.btnPlus.addEventListener('click', () => {
+                    const max = parseInt(elements.quantityInput.max) || 99;
+                    elements.quantityInput.value = Math.min(max, parseInt(elements.quantityInput.value) + 1);
+                    updateQuantity();
+                });
+            }
 
-            elements.quantityInput?.addEventListener('change', updateQuantity);
+            if (elements.quantityInput) {
+                elements.quantityInput.addEventListener('change', updateQuantity);
+                elements.quantityInput.addEventListener('input', updateQuantity);
+            }
 
             // ============================================================
-            // VARIANTES
+            // VARIANTES - FUNCIONES HELPER
             // ============================================================
             function getUniqueColors() {
-                return CONFIG.variants
+                const colors = CONFIG.variants
                     .map(v => v.color)
                     .filter((c, i, arr) => c && arr.indexOf(c) === i);
+                console.log('Colores únicos:', colors);
+                return colors;
             }
 
             function getTallasByColor(color) {
-                return CONFIG.variants
+                const tallas = CONFIG.variants
                     .filter(v => v.color === color && v.talla)
                     .map(v => v.talla)
                     .filter((t, i, arr) => arr.indexOf(t) === i);
+                console.log('Tallas para', color + ':', tallas);
+                return tallas;
             }
 
             function getVariantByColorAndTalla(color, talla) {
-                return CONFIG.variants.find(v => v.color === color && v.talla === talla);
+                const variant = CONFIG.variants.find(v => v.color === color && v.talla === talla);
+                return variant;
             }
 
             function getColorValue(colorName) {
+                if (!colorName) return '#6b7280';
                 const map = {
                     'rojo': '#dc2626', 'azul': '#2563eb', 'verde': '#16a34a',
                     'amarillo': '#eab308', 'negro': '#000000', 'blanco': '#ffffff',
                     'rosa': '#ec4899', 'morado': '#9333ea', 'gris': '#6b7280',
-                    'naranja': '#ea580c', 'marron': '#92400e', 'beige': '#fef3c7'
+                    'naranja': '#ea580c', 'marron': '#92400e', 'beige': '#fef3c7',
+                    'celeste': '#38bdf8', 'turquesa': '#14b8a6', 'coral': '#f87171',
+                    'vino': '#881337', 'dorado': '#d97706', 'plateado': '#9ca3af'
                 };
                 return map[colorName.toLowerCase()] || '#6b7280';
             }
 
+            // ============================================================
+            // RENDERIZAR OPCIONES DE COLOR
+            // ============================================================
             function renderColorOptions() {
-                if (!CONFIG.hasVariants || !elements.colorOptions) return;
+                console.log('=== renderColorOptions ===');
+                console.log('hasVariants:', CONFIG.hasVariants);
+                console.log('colorOptions element:', elements.colorOptions);
+
+                if (!CONFIG.hasVariants) {
+                    console.log('No hay variantes, saliendo');
+                    return;
+                }
+
+                if (!elements.colorOptions) {
+                    console.error('❌ Elemento colorOptions NO ENCONTRADO');
+                    return;
+                }
+
                 elements.colorOptions.innerHTML = '';
                 const colors = getUniqueColors();
-                colors.forEach(color => {
-                    const id = `color_${color.replace(/\s+/g, '_').toLowerCase()}`;
+
+                if (colors.length === 0) {
+                    console.log('No hay colores en las variantes');
+                    elements.colorOptions.innerHTML = '<p class="text-muted">No hay colores disponibles</p>';
+                    return;
+                }
+
+                console.log('Renderizando', colors.length, 'colores');
+
+                colors.forEach((color, index) => {
+                    const id = `color_${index}_${color.replace(/\s+/g, '_').toLowerCase()}`;
+                    const colorHex = getColorValue(color);
+                    const isWhite = color.toLowerCase() === 'blanco';
+
                     const div = document.createElement('div');
                     div.className = 'variant-option';
                     div.innerHTML = `
-                        <input type="radio" name="color" id="${id}" value="${color}" class="variant-input">
+                        <input type="radio" name="variantColor" id="${id}" value="${color}" class="variant-input">
                         <label for="${id}" class="variant-label">
-                            <span class="color-swatch" style="background-color: ${getColorValue(color)}"></span>
+                            <span class="color-swatch" style="background-color: ${colorHex}; border: ${isWhite ? '2px solid #ccc' : '2px solid transparent'};"></span>
                             ${color}
                         </label>
                     `;
                     elements.colorOptions.appendChild(div);
                 });
 
-                elements.colorOptions.querySelectorAll('.variant-input').forEach(input => {
+                // Event listeners para colores
+                const colorInputs = elements.colorOptions.querySelectorAll('.variant-input');
+                console.log('Inputs de color creados:', colorInputs.length);
+
+                colorInputs.forEach(input => {
                     input.addEventListener('change', function() {
+                        console.log('Color seleccionado:', this.value);
                         state.selectedColor = this.value;
-                        elements.selectedColorText.textContent = state.selectedColor;
+                        if (elements.selectedColorText) {
+                            elements.selectedColorText.textContent = state.selectedColor;
+                        }
                         renderTallaOptions();
                         updateVariantSelection();
                     });
                 });
 
-                const first = elements.colorOptions.querySelector('.variant-input');
-                if (first) {
-                    first.checked = true;
-                    state.selectedColor = first.value;
-                    elements.selectedColorText.textContent = state.selectedColor;
+                // Seleccionar el primer color automáticamente
+                const firstColor = elements.colorOptions.querySelector('.variant-input');
+                if (firstColor) {
+                    firstColor.checked = true;
+                    state.selectedColor = firstColor.value;
+                    if (elements.selectedColorText) {
+                        elements.selectedColorText.textContent = state.selectedColor;
+                    }
+                    console.log('Primer color auto-seleccionado:', state.selectedColor);
                     renderTallaOptions();
                 }
             }
 
+            // ============================================================
+            // RENDERIZAR OPCIONES DE TALLA
+            // ============================================================
             function renderTallaOptions() {
-                if (!CONFIG.hasVariants || !elements.tallaOptions || !state.selectedColor) return;
+                console.log('=== renderTallaOptions ===');
+                console.log('selectedColor:', state.selectedColor);
+                console.log('tallaOptions element:', elements.tallaOptions);
+
+                if (!CONFIG.hasVariants) {
+                    console.log('No hay variantes');
+                    return;
+                }
+
+                if (!elements.tallaOptions) {
+                    console.error('❌ Elemento tallaOptions NO ENCONTRADO');
+                    return;
+                }
+
+                if (!state.selectedColor) {
+                    console.log('No hay color seleccionado');
+                    elements.tallaOptions.innerHTML = '<p class="text-muted">Primero selecciona un color</p>';
+                    return;
+                }
+
                 elements.tallaOptions.innerHTML = '';
                 const tallas = getTallasByColor(state.selectedColor);
-                tallas.forEach(talla => {
+
+                if (tallas.length === 0) {
+                    elements.tallaOptions.innerHTML = '<p class="text-muted">No hay tallas para este color</p>';
+                    return;
+                }
+
+                console.log('Renderizando', tallas.length, 'tallas');
+
+                tallas.forEach((talla, index) => {
                     const variant = getVariantByColorAndTalla(state.selectedColor, talla);
-                    const id = `talla_${talla.replace(/\s+/g, '_').toLowerCase()}`;
-                    const disabled = !variant || variant.stock <= 0;
+                    const id = `talla_${index}_${talla.replace(/\s+/g, '_').toLowerCase()}`;
+                    const stock = variant ? parseInt(variant.stock) || 0 : 0;
+                    const disabled = stock <= 0;
+
                     const div = document.createElement('div');
                     div.className = 'variant-option';
                     div.innerHTML = `
-                        <input type="radio" name="talla" id="${id}" value="${talla}"
+                        <input type="radio" name="variantTalla" id="${id}" value="${talla}"
                                ${disabled ? 'disabled' : ''} class="variant-input">
-                        <label for="${id}" class="variant-label">
+                        <label for="${id}" class="variant-label ${disabled ? 'disabled' : ''}">
                             ${talla}
-                            ${disabled ? '<br><small class="text-danger">Agotado</small>' : ''}
+                            ${disabled ? '<br><small class="text-danger">Agotado</small>' : `<br><small class="text-success">(${stock} disp.)</small>`}
                         </label>
                     `;
                     elements.tallaOptions.appendChild(div);
                 });
 
-                elements.tallaOptions.querySelectorAll('.variant-input:not(:disabled)').forEach(input => {
+                // Event listeners para tallas
+                const tallaInputs = elements.tallaOptions.querySelectorAll('.variant-input:not(:disabled)');
+                console.log('Inputs de talla habilitados:', tallaInputs.length);
+
+                tallaInputs.forEach(input => {
                     input.addEventListener('change', function() {
+                        console.log('Talla seleccionada:', this.value);
                         state.selectedTalla = this.value;
-                        elements.selectedTallaText.textContent = state.selectedTalla;
+                        if (elements.selectedTallaText) {
+                            elements.selectedTallaText.textContent = state.selectedTalla;
+                        }
                         updateVariantSelection();
                     });
                 });
 
+                // Seleccionar la primera talla disponible automáticamente
                 const firstAvailable = elements.tallaOptions.querySelector('.variant-input:not(:disabled)');
                 if (firstAvailable) {
                     firstAvailable.checked = true;
                     state.selectedTalla = firstAvailable.value;
-                    elements.selectedTallaText.textContent = state.selectedTalla;
+                    if (elements.selectedTallaText) {
+                        elements.selectedTallaText.textContent = state.selectedTalla;
+                    }
+                    console.log('Primera talla auto-seleccionada:', state.selectedTalla);
                 } else {
                     state.selectedTalla = null;
-                    elements.selectedTallaText.textContent = 'Selecciona';
+                    if (elements.selectedTallaText) {
+                        elements.selectedTallaText.textContent = 'No disponible';
+                    }
                 }
+
                 updateVariantSelection();
             }
 
+            // ============================================================
+            // ACTUALIZAR SELECCIÓN DE VARIANTE
+            // ============================================================
             function updateVariantSelection() {
+                console.log('=== updateVariantSelection ===');
+                console.log('Color:', state.selectedColor, 'Talla:', state.selectedTalla);
+
                 if (!CONFIG.hasVariants) return;
+
                 const variant = getVariantByColorAndTalla(state.selectedColor, state.selectedTalla);
+                console.log('Variante encontrada:', variant);
+
                 if (!variant) {
-                    elements.stockBadge.innerHTML = '<span class="badge bg-secondary">Selecciona combinación</span>';
-                    elements.stockInfo.innerHTML = '<i class="fa-solid fa-info-circle"></i><span>Selecciona color y talla</span>';
-                    elements.stockInfo.className = 'stock-info';
-                    elements.btnAdd.disabled = true;
-                    elements.btnAddText.textContent = 'Selecciona combinación';
-                    elements.varHidden.value = '';
+                    // No hay variante seleccionada
+                    if (elements.stockBadge) {
+                        elements.stockBadge.innerHTML = '<span class="badge bg-secondary">Selecciona combinación</span>';
+                    }
+                    if (elements.stockInfo) {
+                        elements.stockInfo.innerHTML = '<i class="fa-solid fa-info-circle"></i><span>Selecciona color y talla para ver disponibilidad</span>';
+                        elements.stockInfo.className = 'stock-info';
+                    }
+                    if (elements.btnAdd) {
+                        elements.btnAdd.disabled = true;
+                    }
+                    if (elements.btnAddText) {
+                        elements.btnAddText.textContent = 'Selecciona variante';
+                    }
+                    if (elements.varHidden) {
+                        elements.varHidden.value = '';
+                    }
                     return;
                 }
 
+                // Hay variante seleccionada
                 const stock = parseInt(variant.stock) || 0;
                 const price = variant.precio != null ? parseFloat(variant.precio) : parseFloat(CONFIG.basePrice);
 
-                if (stock <= 0) {
-                    elements.stockBadge.innerHTML = '<span class="badge bg-danger">Agotado</span>';
-                    elements.stockInfo.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Agotado temporalmente</span>';
-                    elements.stockInfo.className = 'stock-info stock-out';
-                } else if (stock <= 5) {
-                    elements.stockBadge.innerHTML = `<span class="badge bg-warning">¡Quedan ${stock}!</span>`;
-                    elements.stockInfo.innerHTML = `<i class="fa-solid fa-exclamation-triangle"></i><span>¡Últimas ${stock} unidades!</span>`;
-                    elements.stockInfo.className = 'stock-info stock-low';
-                } else {
-                    elements.stockBadge.innerHTML = '<span class="badge bg-success">En stock</span>';
-                    elements.stockInfo.innerHTML = '<i class="fa-solid fa-check-circle"></i><span>Disponible - Listo para enviar</span>';
-                    elements.stockInfo.className = 'stock-info stock-available';
+                console.log('Stock:', stock, 'Precio:', price);
+
+                // Actualizar badge de stock
+                if (elements.stockBadge) {
+                    if (stock <= 0) {
+                        elements.stockBadge.innerHTML = '<span class="badge bg-danger">Agotado</span>';
+                    } else if (stock <= 5) {
+                        elements.stockBadge.innerHTML = `<span class="badge bg-warning text-dark">¡Solo ${stock}!</span>`;
+                    } else {
+                        elements.stockBadge.innerHTML = '<span class="badge bg-success">En stock</span>';
+                    }
                 }
 
+                // Actualizar info de stock
+                if (elements.stockInfo) {
+                    if (stock <= 0) {
+                        elements.stockInfo.innerHTML = '<i class="fa-solid fa-times-circle"></i><span>Producto agotado temporalmente</span>';
+                        elements.stockInfo.className = 'stock-info stock-out';
+                    } else if (stock <= 5) {
+                        elements.stockInfo.innerHTML = `<i class="fa-solid fa-exclamation-triangle"></i><span>¡Últimas ${stock} unidades!</span>`;
+                        elements.stockInfo.className = 'stock-info stock-low';
+                    } else {
+                        elements.stockInfo.innerHTML = '<i class="fa-solid fa-check-circle"></i><span>Disponible - Listo para enviar</span>';
+                        elements.stockInfo.className = 'stock-info stock-available';
+                    }
+                }
+
+                // Actualizar precio
                 if (elements.priceEl) {
                     elements.priceEl.textContent = price.toFixed(2);
                 }
+                if (elements.stickyPrice) {
+                    elements.stickyPrice.textContent = '$' + price.toFixed(2);
+                }
 
+                // Actualizar imagen si la variante tiene una
                 if (variant.img && elements.mainImg) {
                     elements.mainImg.src = variant.img;
                 }
 
-                elements.quantityInput.setAttribute('max', stock > 0 ? stock : 1);
+                // Actualizar límite de cantidad
+                if (elements.quantityInput) {
+                    elements.quantityInput.setAttribute('max', stock > 0 ? stock : 1);
+                    if (parseInt(elements.quantityInput.value) > stock) {
+                        elements.quantityInput.value = stock > 0 ? stock : 1;
+                    }
+                }
                 updateQuantity();
-                elements.btnAdd.disabled = stock <= 0;
-                elements.btnAddText.textContent = stock > 0 ? 'Añadir al carrito' : 'Sin stock';
-                elements.varHidden.value = stock > 0 ? variant.id : '';
+
+                // Actualizar botón de añadir
+                if (elements.btnAdd) {
+                    elements.btnAdd.disabled = stock <= 0;
+                }
+                if (elements.btnAddText) {
+                    elements.btnAddText.textContent = stock > 0 ? 'Añadir al carrito' : 'Sin stock';
+                }
+
+                // Guardar ID de variante
+                if (elements.varHidden) {
+                    elements.varHidden.value = stock > 0 ? variant.id : '';
+                    console.log('ID de variante guardado:', elements.varHidden.value);
+                }
             }
 
             // ============================================================
-            // AÑADIR AL CARRITO - CORREGIDO
+            // AÑADIR AL CARRITO
             // ============================================================
-            elements.formAdd?.addEventListener('submit', async function(e) {
-                e.preventDefault();
+            if (elements.formAdd) {
+                elements.formAdd.addEventListener('submit', async function(e) {
+                    e.preventDefault();
 
-                if (CONFIG.hasVariants && !elements.varHidden.value) {
-                    showToast('error', 'Selecciona color y talla');
-                    return;
-                }
-
-                const originalHtml = elements.btnAdd.innerHTML;
-                elements.btnAdd.disabled = true;
-                elements.btnAdd.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Añadiendo...';
-
-                try {
-                    const response = await fetch(elements.formAdd.action, {
-                        method: 'POST',
-                        body: new FormData(elements.formAdd),
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin'
-                    });
-
-                    const data = await response.json();
-
-                    if (data.ok) {
-                        showToast('success', 'Producto añadido al carrito');
-
-                        // ✅ Actualizar badge inmediatamente con los datos de la respuesta
-                        if (data.count !== undefined) {
-                            updateAllBadges(data.count);
-                        }
-
-                        // ✅ Actualizar total si viene en la respuesta
-                        if (data.total !== undefined) {
-                            updateAllTotals(data.total);
-                        }
-
-                        // ✅ Refrescar el panel del carrito (offcanvas/sidebar)
-                        await refreshCartPanel();
-
-                    } else if (data.needLogin) {
-                        window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
-                    } else {
-                        showToast('error', data.error || 'Error al añadir');
+                    // Sincronizar cantidad
+                    if (elements.quantityHidden && elements.quantityInput) {
+                        elements.quantityHidden.value = elements.quantityInput.value;
                     }
-                } catch (error) {
-                    console.error('Add to cart error:', error);
-                    showToast('error', 'Error de conexión');
-                } finally {
-                    elements.btnAdd.disabled = CONFIG.hasVariants ? !elements.varHidden.value : false;
-                    elements.btnAdd.innerHTML = originalHtml;
-                }
-            });
+
+                    if (CONFIG.hasVariants && (!elements.varHidden || !elements.varHidden.value)) {
+                        showToast('error', 'Por favor selecciona color y talla');
+                        return;
+                    }
+
+                    const originalText = elements.btnAddText?.textContent || 'Añadir al carrito';
+                    if (elements.btnAdd) elements.btnAdd.disabled = true;
+                    if (elements.btnAddText) elements.btnAddText.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Añadiendo...';
+
+                    try {
+                        const formData = new FormData(elements.formAdd);
+
+                        console.log('Enviando formulario:');
+                        for (let [key, value] of formData.entries()) {
+                            console.log(`  ${key}: ${value}`);
+                        }
+
+                        const response = await fetch(elements.formAdd.action, {
+                            method: 'POST',
+                            body: formData,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                            credentials: 'same-origin'
+                        });
+
+                        const data = await response.json();
+                        console.log('Respuesta:', data);
+
+                        if (data.ok) {
+                            showToast('success', '¡Producto añadido al carrito!');
+                            if (data.count !== undefined) {
+                                updateAllBadges(data.count);
+                            }
+                            await refreshCartPanel();
+                        } else if (data.needLogin) {
+                            window.location.href = '/Cuenta/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                        } else {
+                            showToast('error', data.error || 'Error al añadir al carrito');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showToast('error', 'Error de conexión. Intenta de nuevo.');
+                    } finally {
+                        if (elements.btnAdd) {
+                            elements.btnAdd.disabled = CONFIG.hasVariants ? !elements.varHidden?.value : false;
+                        }
+                        if (elements.btnAddText) {
+                            elements.btnAddText.textContent = originalText;
+                        }
+                    }
+                });
+            }
 
             // ============================================================
             // FAVORITOS
             // ============================================================
-            elements.favForm?.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const icon = elements.btnFav.querySelector('i');
-                const wasFavorite = icon.classList.contains('fa-solid');
-                try {
-                    const response = await fetch(elements.favForm.action, {
-                        method: 'POST',
-                        body: new FormData(elements.favForm),
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    if (response.ok) {
-                        if (wasFavorite) {
-                            icon.classList.replace('fa-solid', 'fa-regular');
-                        } else {
-                            icon.classList.replace('fa-regular', 'fa-solid');
+            if (elements.favForm) {
+                elements.favForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const icon = elements.btnFav?.querySelector('i');
+                    if (!icon) return;
+
+                    const wasFavorite = icon.classList.contains('fa-solid');
+
+                    try {
+                        const response = await fetch(elements.favForm.action, {
+                            method: 'POST',
+                            body: new FormData(elements.favForm),
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
+
+                        if (response.ok) {
+                            if (wasFavorite) {
+                                icon.classList.replace('fa-solid', 'fa-regular');
+                                showToast('success', 'Eliminado de favoritos');
+                            } else {
+                                icon.classList.replace('fa-regular', 'fa-solid');
+                                showToast('success', 'Agregado a favoritos');
+                            }
                         }
-                        showToast('success', wasFavorite ? 'Eliminado de favoritos' : 'Agregado a favoritos');
+                    } catch (error) {
+                        showToast('error', 'Error al actualizar favoritos');
                     }
-                } catch (error) {
-                    showToast('error', 'Error al actualizar favoritos');
-                }
-            });
+                });
+            }
 
             // ============================================================
             // COMPARTIR
@@ -1638,131 +1764,87 @@
                     e.preventDefault();
                     const url = window.location.href;
                     const title = document.title;
+
                     if (this.querySelector('.fa-link')) {
                         navigator.clipboard.writeText(url).then(() => {
-                            showToast('success', 'Enlace copiado');
+                            showToast('success', '¡Enlace copiado!');
                         });
                     } else if (this.querySelector('.fa-facebook-f')) {
-                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
                     } else if (this.querySelector('.fa-whatsapp')) {
                         window.open(`https://wa.me/?text=${encodeURIComponent(title + ' ' + url)}`, '_blank');
+                    } else if (this.querySelector('.fa-instagram')) {
+                        navigator.clipboard.writeText(url).then(() => {
+                            showToast('success', 'Enlace copiado. Compártelo en Instagram.');
+                        });
                     }
                 });
             });
 
             // ============================================================
-            // STICKY ADD TO CART
+            // STICKY CART
             // ============================================================
             let lastScroll = 0;
             window.addEventListener('scroll', () => {
-                // Verificar que stickyCart existe antes de acceder a classList
                 if (!elements.stickyCart) return;
 
                 const currentScroll = window.pageYOffset;
-                if (currentScroll > 500 && currentScroll > lastScroll) {
+                if (currentScroll > 600) {
                     elements.stickyCart.classList.add('visible');
-                    elements.stickyCart.setAttribute('aria-hidden', 'false');
-                } else if (currentScroll < lastScroll - 50 || currentScroll < 500) {
+                } else {
                     elements.stickyCart.classList.remove('visible');
-                    elements.stickyCart.setAttribute('aria-hidden', 'true');
                 }
                 lastScroll = currentScroll;
-            });
+            }, { passive: true });
 
-            elements.stickyAddBtn?.addEventListener('click', () => {
-                elements.btnAdd.click();
-            });
+            if (elements.stickyAddBtn) {
+                elements.stickyAddBtn.addEventListener('click', () => {
+                    elements.formAdd?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                });
+            }
 
             // ============================================================
-            // UTILIDADES - TOAST
+            // UTILIDADES
             // ============================================================
             function showToast(type, message) {
-                const toastEl = type === 'success' ? document.getElementById('toastSuccess') : document.getElementById('toastError');
+                const toastEl = document.getElementById(type === 'success' ? 'toastSuccess' : 'toastError');
                 if (toastEl) {
-                    const toastMsg = toastEl.querySelector('.toast-body span');
-                    if (toastMsg) toastMsg.textContent = message;
-                    new bootstrap.Toast(toastEl).show();
-                }
-            }
+                    const msgEl = toastEl.querySelector('.toast-body span');
+                    if (msgEl) msgEl.textContent = message;
 
-            // ============================================================
-            // UTILIDADES - ACTUALIZAR BADGES (CORREGIDO)
-            // ============================================================
-            function updateAllBadges(count) {
-                document.querySelectorAll('[data-cart-count], .cart-count, .cart-badge').forEach(badge => {
-                    badge.textContent = count;
-                    // Animación de pulso
-                    badge.style.animation = 'none';
-                    badge.offsetHeight; // Trigger reflow
-                    badge.style.animation = 'cartPulse 0.3s ease-in-out';
-                });
-            }
-
-            function updateAllTotals(total) {
-                const formatted = new Intl.NumberFormat('es-EC', {
-                    style: 'currency',
-                    currency: 'USD'
-                }).format(total);
-
-                document.querySelectorAll('[data-cart-total], .cart-total').forEach(el => {
-                    el.textContent = formatted;
-                });
-            }
-
-            // ============================================================
-            // ACTUALIZAR BADGE DEL CARRITO (CORREGIDO)
-            // ============================================================
-            async function updateCartBadge() {
-                try {
-                    // ✅ URL CORREGIDA: /Carrito/CartInfo (no /Compras/CartInfo)
-                    const response = await fetch('/Carrito/CartInfo', {
-                        method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin'
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        updateAllBadges(data.count || 0);
-                        updateAllTotals(data.subtotal || 0);
+                    if (typeof bootstrap !== 'undefined') {
+                        new bootstrap.Toast(toastEl, { delay: 3000 }).show();
                     }
-                } catch (error) {
-                    console.error('Cart badge update error:', error);
+                } else {
+                    console.log(`[${type}] ${message}`);
                 }
             }
 
-            // ============================================================
-            // REFRESCAR PANEL DEL CARRITO (NUEVO)
-            // ============================================================
+            function updateAllBadges(count) {
+                const selectors = ['#cart-count', '.cart-count', '.cart-badge', '[data-cart-count]'];
+                selectors.forEach(sel => {
+                    document.querySelectorAll(sel).forEach(badge => {
+                        badge.textContent = count;
+                        badge.style.animation = 'none';
+                        badge.offsetHeight;
+                        badge.style.animation = 'cartPulse 0.3s ease-in-out';
+                    });
+                });
+            }
+
             async function refreshCartPanel() {
                 try {
-                    const panels = document.querySelectorAll('#cartPanel, #cartOffcanvas, .offcanvas-cart, [data-cart-panel]');
-
-                    if (panels.length === 0) {
-                        console.log('No cart panel found');
-                        return;
-                    }
-
-                    const response = await fetch('/Carrito/CartPartial', {
-                        method: 'GET',
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                        credentials: 'same-origin'
-                    });
-
-                    if (response.ok) {
-                        const html = await response.text();
-
-                        panels.forEach(panel => {
-                            const body = panel.querySelector('.offcanvas-body, .cart-panel-body, .cart-content');
-                            if (body) {
-                                body.innerHTML = html;
-                            }
+                    const cartContent = document.getElementById('cart-content');
+                    if (cartContent) {
+                        const response = await fetch('/Compras/Mini', {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         });
-
-                        console.log('✓ Cart panel refreshed');
+                        if (response.ok) {
+                            cartContent.innerHTML = await response.text();
+                        }
                     }
-                } catch (error) {
-                    console.error('Cart panel refresh error:', error);
+                } catch (e) {
+                    console.log('Cart refresh skipped');
                 }
             }
 
@@ -1770,15 +1852,24 @@
             // INICIALIZACIÓN
             // ============================================================
             function init() {
+                console.log('=== INICIALIZANDO PÁGINA DE PRODUCTO ===');
+                console.log('Tiene variantes:', CONFIG.hasVariants);
+                console.log('Total variantes:', CONFIG.variants.length);
+
                 initGallery();
                 updateQuantity();
+
                 if (CONFIG.hasVariants) {
+                    console.log('Renderizando opciones de variantes...');
                     renderColorOptions();
+                } else {
+                    console.log('Producto sin variantes');
                 }
-                updateCartBadge();
-                console.log('✓ Product page initialized');
+
+                console.log('✓ Página de producto inicializada');
             }
 
+            // Ejecutar cuando el DOM esté listo
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {

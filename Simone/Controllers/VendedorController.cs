@@ -1414,6 +1414,238 @@ namespace Simone.Controllers
             }
         }
 
+
+        /// <summary>
+        /// POST: /Vendedor/MarcarEnviada
+        /// Marca una venta como enviada (solo si el vendedor tiene productos en esa venta)
+        /// </summary>
+        [HttpPost("MarcarEnviada")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> MarcarEnviada(
+            int id,
+            [FromQuery] string? vId = null,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                var vendorId = CurrentVendorId(vId);
+
+                _logger.LogInformation(
+                    "Vendedor marcando venta como enviada. VentaId: {VentaId}, VendorId: {VendorId}",
+                    id,
+                    vendorId);
+
+                // Verificar que la venta existe y tiene productos del vendedor
+                var tieneProductos = await _context.DetalleVentas
+                    .AnyAsync(dv => dv.VentaID == id &&
+                             dv.Producto != null &&
+                             dv.Producto.VendedorID == vendorId, ct);
+
+                if (!tieneProductos)
+                {
+                    _logger.LogWarning(
+                        "Vendedor intentó marcar venta sin sus productos. VentaId: {VentaId}, VendorId: {VendorId}",
+                        id,
+                        vendorId);
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return Json(new { ok = false, error = MSG_ERROR_VENTA_NO_ENCONTRADA });
+
+                    TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_VENTA_NO_ENCONTRADA;
+                    return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+                }
+
+                var venta = await _context.Ventas.FirstOrDefaultAsync(v => v.VentaID == id, ct);
+                if (venta == null)
+                {
+                    _logger.LogWarning("Venta no encontrada. VentaId: {VentaId}", id);
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return Json(new { ok = false, error = MSG_ERROR_VENTA_NO_ENCONTRADA });
+
+                    TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_VENTA_NO_ENCONTRADA;
+                    return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+                }
+
+                venta.Estado = "Enviado";
+                await _context.SaveChangesAsync(ct);
+
+                _logger.LogInformation(
+                    "Venta marcada como enviada por vendedor. VentaId: {VentaId}, VendorId: {VendorId}",
+                    id,
+                    vendorId);
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return Json(new { ok = true, estado = venta.Estado });
+
+                TempData[VIEWBAG_MENSAJE_EXITO] = "Venta marcada como enviada.";
+                return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al marcar venta como enviada. VentaId: {VentaId}", id);
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return Json(new { ok = false, error = "Error al actualizar la venta." });
+
+                TempData[VIEWBAG_MENSAJE_ERROR] = "Error al marcar como enviada.";
+                return RedirectToAction(nameof(Reportes));
+            }
+        }
+
+        /// <summary>
+        /// POST: /Vendedor/ReportarVenta
+        /// Reversa una venta: repone stocks y marca como cancelada
+        /// Solo puede afectar ventas que tengan productos del vendedor
+        /// </summary>
+        [HttpPost("ReportarVenta")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ReportarVenta(
+            int ventaId,
+            string motivo,
+            string? nota,
+            [FromQuery] string? vId = null,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                var vendorId = CurrentVendorId(vId);
+
+                if (ventaId <= 0 || string.IsNullOrWhiteSpace(motivo))
+                {
+                    _logger.LogWarning(
+                        "Datos inválidos para reportar venta. VentaId: {VentaId}, Motivo: {Motivo}",
+                        ventaId,
+                        motivo ?? "null");
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return Json(new { ok = false, error = "Datos inválidos." });
+
+                    TempData[VIEWBAG_MENSAJE_ERROR] = "Datos inválidos.";
+                    return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+                }
+
+                _logger.LogInformation(
+                    "Vendedor iniciando reversión de venta. VentaId: {VentaId}, VendorId: {VendorId}, Motivo: {Motivo}",
+                    ventaId,
+                    vendorId,
+                    motivo);
+
+                // Verificar que la venta existe y tiene productos del vendedor
+                var venta = await _context.Ventas
+                    .Include(v => v.DetalleVentas).ThenInclude(d => d.Producto)
+                    .FirstOrDefaultAsync(v => v.VentaID == ventaId, ct);
+
+                if (venta == null)
+                {
+                    _logger.LogWarning("Venta no encontrada. VentaId: {VentaId}", ventaId);
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return Json(new { ok = false, error = MSG_ERROR_VENTA_NO_ENCONTRADA });
+
+                    TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_VENTA_NO_ENCONTRADA;
+                    return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+                }
+
+                // Solo puede revertir si tiene productos en esta venta
+                var misDetalles = (venta.DetalleVentas ?? new List<DetalleVentas>())
+                    .Where(d => d.Producto != null && d.Producto.VendedorID == vendorId)
+                    .ToList();
+
+                if (misDetalles.Count == 0)
+                {
+                    _logger.LogWarning(
+                        "Vendedor intentó revertir venta sin sus productos. VentaId: {VentaId}, VendorId: {VendorId}",
+                        ventaId,
+                        vendorId);
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return Json(new { ok = false, error = MSG_ERROR_SIN_PRODUCTOS_VENDEDOR });
+
+                    TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_SIN_PRODUCTOS_VENDEDOR;
+                    return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+                }
+
+                var estado = (venta.Estado ?? string.Empty).ToLowerInvariant();
+                if (estado.Contains("cancel"))
+                {
+                    _logger.LogWarning(
+                        "Intento de revertir venta ya cancelada. VentaId: {VentaId}",
+                        ventaId);
+
+                    if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                        return Json(new { ok = false, error = "La venta ya está cancelada." });
+
+                    TempData[VIEWBAG_MENSAJE_ERROR] = "La venta ya está cancelada.";
+                    return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+                }
+
+                await using var tx = await _context.Database.BeginTransactionAsync(ct);
+
+                // Reponer stock SOLO de los productos del vendedor
+                foreach (var d in misDetalles)
+                {
+                    if (d.Producto != null)
+                    {
+                        d.Producto.Stock += d.Cantidad;
+                    }
+                }
+
+                // Registrar devoluciones
+                var motivoCanon = motivo.Trim().ToLowerInvariant() switch
+                {
+                    "devolucion" => "devolucion",
+                    "deposito_falso" => "deposito_falso",
+                    _ => "otro"
+                };
+
+                var textoMotivo = string.IsNullOrWhiteSpace(nota)
+                    ? motivoCanon
+                    : $"{motivoCanon}: {nota.Trim()}";
+
+                foreach (var d in misDetalles)
+                {
+                    _context.Devoluciones.Add(new Devoluciones
+                    {
+                        DetalleVentaID = d.DetalleVentaID,
+                        FechaDevolucion = DateTime.UtcNow,
+                        Motivo = textoMotivo,
+                        CantidadDevuelta = d.Cantidad,
+                        Aprobada = true
+                    });
+                }
+
+                // Marcar la venta como cancelada
+                venta.Estado = "Cancelada (revertida)";
+
+                await _context.SaveChangesAsync(ct);
+                await tx.CommitAsync(ct);
+
+                _logger.LogInformation(
+                    "Venta revertida por vendedor. VentaId: {VentaId}, VendorId: {VendorId}, Motivo: {Motivo}, ProductosRevertidos: {Count}",
+                    ventaId,
+                    vendorId,
+                    motivo,
+                    misDetalles.Count);
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return Json(new { ok = true });
+
+                TempData[VIEWBAG_MENSAJE_EXITO] = "La venta fue revertida y el stock repuesto.";
+                return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al revertir venta. VentaId: {VentaId}", ventaId);
+
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                    return Json(new { ok = false, error = "No se pudo revertir la venta." });
+
+                TempData[VIEWBAG_MENSAJE_ERROR] = "No se pudo revertir la venta.";
+                return RedirectToAction(nameof(Reportes));
+            }
+        }
+
         #endregion
         #region Mis SubPedidos (Vendedor)
 

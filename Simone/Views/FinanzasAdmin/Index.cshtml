@@ -1,0 +1,994 @@
+@model Simone.Services.DashboardKPIs
+@{
+    ViewData["Title"] = "Centro Financiero";
+    var desde = ViewBag.Desde as string ?? "";
+    var hasta = ViewBag.Hasta as string ?? "";
+    var periodo = ViewBag.Periodo as string ?? "mes";
+    int alertPendientes = 0;
+    int alertSinComp = 0;
+    decimal alertTotal = 0;
+    try
+    {
+        var al = ((int, int, decimal))ViewBag.Alertas;
+        alertPendientes = al.Item1;
+        alertSinComp = al.Item2;
+        alertTotal = al.Item3;
+    }
+    catch { }
+
+    string Pct(decimal v) => (v >= 0 ? "+" : "") + v.ToString("F1") + "%";
+    string PctClass(decimal v) => v >= 0 ? "kpi-up" : "kpi-down";
+}
+
+@section Styles {
+    <style>
+        @@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@700;800&display=swap');
+
+        :root {
+            --ink: #0d0f14;
+            --ink-2: #3d4150;
+            --ink-3: #8b90a0;
+            --paper: #f4f3f0;
+            --paper-2: #eceae5;
+            --paper-3: #e2dfd8;
+            --line: #d8d5ce;
+            --accent: #c9472b;
+            --accent-2: #e8603f;
+            --accent-lt: #fdf1ee;
+            --green: #1a7a4a;
+            --green-lt: #edfaf3;
+            --amber: #b45309;
+            --amber-lt: #fef9ec;
+            --blue: #1d4ed8;
+            --blue-lt: #eff6ff;
+            --r: 12px;
+            --r-lg: 18px;
+            --sh: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+            --sh-md: 0 4px 20px rgba(0,0,0,.07);
+            --sh-lg: 0 8px 40px rgba(0,0,0,.10);
+            --ease: cubic-bezier(.4,0,.2,1);
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            font-size: 14px;
+        }
+
+        /* ── LAYOUT ── */
+        .fa-wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* ── TOP BAR ── */
+        .fa-topbar {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid var(--ink);
+        }
+
+        .fa-heading {
+            display: flex;
+            flex-direction: column;
+            gap: .3rem;
+        }
+
+        .fa-heading-label {
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        .fa-heading h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -.03em;
+            line-height: 1;
+            color: var(--ink);
+        }
+
+        .fa-heading-sub {
+            font-size: .8rem;
+            color: var(--ink-3);
+            margin-top: .2rem;
+        }
+
+        /* ── PERÍODO SELECTOR ── */
+        .fa-period {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            flex-wrap: wrap;
+        }
+
+        .fa-period-btn {
+            padding: .45rem .9rem;
+            border: 1.5px solid var(--line);
+            border-radius: 50px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: .78rem;
+            font-weight: 500;
+            color: var(--ink-2);
+            background: var(--paper);
+            cursor: pointer;
+            transition: all .15s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+        }
+
+            .fa-period-btn:hover {
+                border-color: var(--ink);
+                color: var(--ink);
+            }
+
+            .fa-period-btn.active {
+                background: var(--ink);
+                color: var(--paper);
+                border-color: var(--ink);
+            }
+
+        /* ── ALERTAS ── */
+        .fa-alert {
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+            padding: .7rem 1.1rem;
+            background: var(--amber-lt);
+            border: 1px solid #fde68a;
+            border-radius: var(--r);
+            font-size: .8rem;
+            color: var(--amber);
+            font-weight: 500;
+            margin-bottom: 1.5rem;
+            animation: slideDown .35s var(--ease);
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        .fa-alert svg {
+            flex-shrink: 0;
+        }
+
+        .fa-alert a {
+            color: var(--amber);
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        /* ── KPI GRID ── */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @@media(max-width:1100px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2,1fr);
+            }
+        }
+
+        @@media(max-width:560px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .kpi-card {
+            background: var(--paper);
+            border: 1.5px solid var(--line);
+            border-radius: var(--r-lg);
+            padding: 1.4rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+            box-shadow: var(--sh);
+            transition: transform .2s var(--ease), box-shadow .2s;
+            animation: kpiIn .4s var(--ease) both;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .kpi-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: var(--accent);
+                opacity: 0;
+                transition: opacity .2s;
+            }
+
+            .kpi-card:hover {
+                transform: translateY(-3px);
+                box-shadow: var(--sh-md);
+            }
+
+                .kpi-card:hover::before {
+                    opacity: 1;
+                }
+
+            .kpi-card.green::before {
+                background: var(--green);
+            }
+
+            .kpi-card.blue::before {
+                background: var(--blue);
+            }
+
+            .kpi-card.amber::before {
+                background: var(--amber);
+            }
+
+        @@keyframes kpiIn {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .kpi-card:nth-child(1) {
+            animation-delay: .05s;
+        }
+
+        .kpi-card:nth-child(2) {
+            animation-delay: .10s;
+        }
+
+        .kpi-card:nth-child(3) {
+            animation-delay: .15s;
+        }
+
+        .kpi-card:nth-child(4) {
+            animation-delay: .20s;
+        }
+
+        .kpi-card:nth-child(5) {
+            animation-delay: .25s;
+        }
+
+        .kpi-card:nth-child(6) {
+            animation-delay: .30s;
+        }
+
+        .kpi-card:nth-child(7) {
+            animation-delay: .35s;
+        }
+
+        .kpi-card:nth-child(8) {
+            animation-delay: .40s;
+        }
+
+        .kpi-label {
+            font-size: .68rem;
+            font-weight: 600;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--ink-3);
+        }
+
+        .kpi-value {
+            font-family: 'Syne', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -.03em;
+            line-height: 1;
+            color: var(--ink);
+        }
+
+            .kpi-value.sm {
+                font-size: 1.5rem;
+            }
+
+        .kpi-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            margin-top: .25rem;
+        }
+
+        .kpi-up {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--green);
+        }
+
+        .kpi-down {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .kpi-vs {
+            font-size: .72rem;
+            color: var(--ink-3);
+        }
+
+        /* ── SECCIÓN ROW ── */
+        .fa-row {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+            .fa-row.col-2 {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .fa-row.col-3 {
+                grid-template-columns: 2fr 1fr;
+            }
+
+        @@media(max-width: 900px) {
+            .fa-row.col-2, .fa-row.col-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ── PANEL ── */
+        .fa-panel {
+            background: var(--paper);
+            border: 1.5px solid var(--line);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            box-shadow: var(--sh);
+        }
+
+        .fa-panel-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.1rem 1.4rem;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .fa-panel-title {
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .07em;
+            text-transform: uppercase;
+            color: var(--ink-2);
+        }
+
+        .fa-panel-link {
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: .3rem;
+        }
+
+            .fa-panel-link:hover {
+                text-decoration: underline;
+            }
+
+        .fa-panel-body {
+            padding: 1.2rem 1.4rem;
+        }
+
+        /* ── GRÁFICO BARRAS (CSS-only) ── */
+        .chart-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 120px;
+            padding-bottom: .5rem;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .chart-bar-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 3px;
+            height: 100%;
+            position: relative;
+        }
+
+        .chart-bar {
+            width: 100%;
+            background: var(--accent);
+            border-radius: 3px 3px 0 0;
+            opacity: .75;
+            min-height: 2px;
+            transition: opacity .15s;
+            animation: barGrow .6s var(--ease) both;
+            transform-origin: bottom;
+        }
+
+        @@keyframes barGrow {
+            from {
+                transform: scaleY(0)
+            }
+
+            to {
+                transform: scaleY(1)
+            }
+        }
+
+        .chart-bar:hover {
+            opacity: 1;
+        }
+
+        .chart-bar-wrap:hover .chart-tooltip {
+            opacity: 1;
+            transform: translateY(-4px);
+        }
+
+        .chart-tooltip {
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%) translateY(0);
+            background: var(--ink);
+            color: var(--paper);
+            font-size: .65rem;
+            font-weight: 600;
+            padding: .2rem .45rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: all .15s;
+            z-index: 10;
+        }
+
+        .chart-labels {
+            display: flex;
+            gap: 3px;
+            margin-top: .4rem;
+        }
+
+        .chart-label {
+            flex: 1;
+            text-align: center;
+            font-size: .55rem;
+            color: var(--ink-3);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ── TABLA ── */
+        .fa-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+            .fa-table th {
+                font-size: .67rem;
+                font-weight: 700;
+                letter-spacing: .07em;
+                text-transform: uppercase;
+                color: var(--ink-3);
+                padding: .6rem .8rem;
+                text-align: left;
+                border-bottom: 1px solid var(--line);
+                white-space: nowrap;
+            }
+
+            .fa-table td {
+                padding: .7rem .8rem;
+                font-size: .82rem;
+                color: var(--ink-2);
+                border-bottom: 1px solid var(--paper-2);
+                vertical-align: middle;
+            }
+
+            .fa-table tr:last-child td {
+                border-bottom: none;
+            }
+
+            .fa-table tr:hover td {
+                background: var(--paper-2);
+            }
+
+            .fa-table .td-main {
+                font-weight: 600;
+                color: var(--ink);
+            }
+
+            .fa-table .td-num {
+                font-weight: 700;
+                color: var(--ink);
+                font-variant-numeric: tabular-nums;
+            }
+
+            .fa-table .td-sub {
+                font-size: .72rem;
+                color: var(--ink-3);
+            }
+
+        /* ── BADGE ── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: .2rem .55rem;
+            border-radius: 50px;
+            font-size: .68rem;
+            font-weight: 700;
+            letter-spacing: .03em;
+        }
+
+        .badge-green {
+            background: var(--green-lt);
+            color: var(--green);
+        }
+
+        .badge-red {
+            background: var(--accent-lt);
+            color: var(--accent);
+        }
+
+        .badge-amber {
+            background: var(--amber-lt);
+            color: var(--amber);
+        }
+
+        .badge-blue {
+            background: var(--blue-lt);
+            color: var(--blue);
+        }
+
+        .badge-gray {
+            background: var(--paper-3);
+            color: var(--ink-3);
+        }
+
+        /* ── MÉTODOS DE PAGO ── */
+        .metodo-list {
+            display: flex;
+            flex-direction: column;
+            gap: .65rem;
+        }
+
+        .metodo-item {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+        }
+
+        .metodo-bar-bg {
+            flex: 1;
+            height: 6px;
+            background: var(--paper-3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .metodo-bar {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 3px;
+            animation: barW .7s var(--ease) both;
+        }
+
+        @@keyframes barW {
+            from {
+                width: 0
+            }
+        }
+
+        .metodo-name {
+            font-size: .78rem;
+            font-weight: 600;
+            min-width: 100px;
+        }
+
+        .metodo-pct {
+            font-size: .75rem;
+            color: var(--ink-3);
+            font-weight: 600;
+            min-width: 38px;
+            text-align: right;
+        }
+
+        .metodo-amt {
+            font-size: .78rem;
+            font-weight: 700;
+            color: var(--ink);
+            min-width: 70px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── STAT MINI ── */
+        .stat-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .6rem 0;
+            border-bottom: 1px solid var(--paper-3);
+        }
+
+            .stat-row:last-child {
+                border-bottom: none;
+            }
+
+        .stat-label {
+            font-size: .8rem;
+            color: var(--ink-2);
+        }
+
+        .stat-value {
+            font-size: .9rem;
+            font-weight: 700;
+            color: var(--ink);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ── NAV LATERAL (tabs) ── */
+        .fa-nav {
+            display: flex;
+            gap: .3rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .fa-nav-item {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .55rem 1rem;
+            border-radius: var(--r);
+            font-size: .8rem;
+            font-weight: 600;
+            color: var(--ink-2);
+            text-decoration: none;
+            transition: all .15s;
+            border: 1.5px solid transparent;
+        }
+
+            .fa-nav-item:hover {
+                background: var(--paper-2);
+                color: var(--ink);
+            }
+
+            .fa-nav-item.active {
+                background: var(--ink);
+                color: var(--paper);
+                border-color: var(--ink);
+            }
+
+            .fa-nav-item svg {
+                opacity: .7;
+            }
+
+            .fa-nav-item.active svg {
+                opacity: 1;
+            }
+
+        @@media(max-width:640px) {
+            .fa-heading h1 {
+                font-size: 1.6rem;
+            }
+
+            .kpi-value {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+}
+
+<div class="fa-wrap">
+
+    <!-- TOP BAR -->
+    <div class="fa-topbar">
+        <div class="fa-heading">
+            <span class="fa-heading-label">Panel Administrativo</span>
+            <h1>Centro Financiero</h1>
+            <span class="fa-heading-sub">
+                @DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy", new System.Globalization.CultureInfo("es-EC"))
+            </span>
+        </div>
+        <div class="fa-period">
+            @foreach (var p in new[] { ("hoy", "Hoy"), ("semana", "7 días"), ("mes", "Este mes"), ("trimestre", "Trimestre"), ("anio", "Este año") })
+            {
+                <a href="?periodo=@p.Item1"
+                   class="fa-period-btn @(periodo == p.Item1 ? "active" : "")">@p.Item2</a>
+            }
+        </div>
+    </div>
+
+    <!-- ALERTA si hay pendientes -->
+    @if (alertPendientes > 0)
+    {
+        <div class="fa-alert">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+            <span>
+                <strong>@alertPendientes venta@(alertPendientes != 1 ? "s" : "") pendiente@(alertPendientes != 1 ? "s" : "")</strong>
+                por procesar — Total: <strong>$@alertTotal.ToString("F2")</strong>.
+                @if (alertSinComp > 0)
+                {
+                    <span>@alertSinComp sin comprobante.</span>
+                }
+                <a href="/FinanzasAdmin/Ventas?estado=Pendiente">Ver ahora →</a>
+            </span>
+        </div>
+    }
+
+    <!-- NAV -->
+    <nav class="fa-nav">
+        <a href="/FinanzasAdmin" class="fa-nav-item active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+            Dashboard
+        </a>
+        <a href="/FinanzasAdmin/Ingresos" class="fa-nav-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
+            Ingresos
+        </a>
+        <a href="/FinanzasAdmin/Ventas" class="fa-nav-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /></svg>
+            Ventas
+        </a>
+        <a href="/FinanzasAdmin/Vendedores" class="fa-nav-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></svg>
+            Vendedores
+        </a>
+        <a href="/FinanzasAdmin/Productos" class="fa-nav-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" /></svg>
+            Productos
+        </a>
+        <a href="/FinanzasAdmin/Clientes" class="fa-nav-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+            Clientes
+        </a>
+        <a href="/FinanzasAdmin/ExportarVentas?periodo=@periodo" class="fa-nav-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+            Exportar CSV
+        </a>
+    </nav>
+
+    <!-- KPIs PRINCIPALES -->
+    <div class="kpi-grid">
+        <!-- Ingresos brutos -->
+        <div class="kpi-card">
+            <span class="kpi-label">Ingresos Brutos</span>
+            <span class="kpi-value">$@Model.IngresosBrutos.ToString("N2")</span>
+            <div class="kpi-footer">
+                <span class="@PctClass(Model.PorcentajeCambioIngresos)">@Pct(Model.PorcentajeCambioIngresos)</span>
+                <span class="kpi-vs">vs período anterior</span>
+            </div>
+        </div>
+        <!-- Comisiones -->
+        <div class="kpi-card green">
+            <span class="kpi-label">Comisiones Plataforma</span>
+            <span class="kpi-value">$@Model.ComisionesTotal.ToString("N2")</span>
+            <div class="kpi-footer">
+                <span class="@PctClass(Model.PorcentajeCambioComisiones)">@Pct(Model.PorcentajeCambioComisiones)</span>
+                <span class="kpi-vs">vs período anterior</span>
+            </div>
+        </div>
+        <!-- Total ventas -->
+        <div class="kpi-card blue">
+            <span class="kpi-label">Total Ventas</span>
+            <span class="kpi-value">@Model.TotalVentas</span>
+            <div class="kpi-footer">
+                <span class="@PctClass(Model.TotalVentasAnterior > 0 ? (decimal)(Model.TotalVentas - Model.TotalVentasAnterior) / Model.TotalVentasAnterior * 100 : 0)">
+                    @(Model.TotalVentasAnterior > 0 ? Pct((decimal)(Model.TotalVentas - Model.TotalVentasAnterior) / Model.TotalVentasAnterior * 100) : "—")
+                </span>
+                <span class="kpi-vs">vs período anterior</span>
+            </div>
+        </div>
+        <!-- Ticket promedio -->
+        <div class="kpi-card amber">
+            <span class="kpi-label">Ticket Promedio</span>
+            <span class="kpi-value">$@Model.TicketPromedio.ToString("N2")</span>
+            <div class="kpi-footer">
+                <span class="@PctClass(Model.TicketPromedioAnterior > 0 ? (Model.TicketPromedio - Model.TicketPromedioAnterior) / Model.TicketPromedioAnterior * 100 : 0)">
+                    @(Model.TicketPromedioAnterior > 0 ? Pct((Model.TicketPromedio - Model.TicketPromedioAnterior) / Model.TicketPromedioAnterior * 100) : "—")
+                </span>
+                <span class="kpi-vs">vs período anterior</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs SECUNDARIOS -->
+    <div class="kpi-grid" style="margin-bottom:1.5rem">
+        <div class="kpi-card">
+            <span class="kpi-label">Pendientes</span>
+            <span class="kpi-value sm" style="color:var(--amber)">@Model.VentasPendientes</span>
+            <div class="kpi-footer"><span class="kpi-vs">Requieren acción</span></div>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-label">Completadas</span>
+            <span class="kpi-value sm" style="color:var(--green)">@Model.VentasCompletadas</span>
+            <div class="kpi-footer"><span class="kpi-vs">Entregadas</span></div>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-label">Vendedores Activos</span>
+            <span class="kpi-value sm">@Model.VendedoresActivos</span>
+            <div class="kpi-footer"><span class="kpi-vs">Con ventas en el período</span></div>
+        </div>
+        <div class="kpi-card">
+            <span class="kpi-label">Unidades Vendidas</span>
+            <span class="kpi-value sm">@Model.ProductosVendidos</span>
+            <div class="kpi-footer"><span class="kpi-vs">@Model.ProductosDistintos SKUs distintos</span></div>
+        </div>
+    </div>
+
+    <!-- GRÁFICO + MÉTODOS DE PAGO -->
+    <div class="fa-row col-3" style="margin-bottom:1rem">
+
+        <!-- Gráfico de ingresos diarios -->
+        <div class="fa-panel">
+            <div class="fa-panel-head">
+                <span class="fa-panel-title">Ingresos diarios</span>
+                <a href="/FinanzasAdmin/Ingresos" class="fa-panel-link">
+                    Ver detalle
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </a>
+            </div>
+            <div class="fa-panel-body">
+                @{
+                    var maxVal = Model.IngresosDiarios.Any()
+                    ? Model.IngresosDiarios.Max(x => x.Valor) : 1;
+                    if (maxVal == 0) maxVal = 1;
+                    // Mostrar solo cada N labels para no amontonar
+                    var totalDias = Model.IngresosDiarios.Count;
+                    var step = totalDias > 20 ? 5 : totalDias > 10 ? 3 : 1;
+                }
+                <div class="chart-bars">
+                    @foreach (var (pt, i) in Model.IngresosDiarios.Select((p, i) => (p, i)))
+                    {
+                        var h2 = maxVal > 0 ? (int)(pt.Valor / maxVal * 100) : 0;
+                        <div class="chart-bar-wrap" style="animation-delay:@(i * 0.02)s">
+                            <div class="chart-tooltip">$@pt.Valor.ToString("N0") (@pt.Cantidad)</div>
+                            <div class="chart-bar" style="height:@h2%;animation-delay:@(i * 0.02)s"></div>
+                        </div>
+                    }
+                </div>
+                <div class="chart-labels">
+                    @foreach (var (pt, i) in Model.IngresosDiarios.Select((p, i) => (p, i)))
+                    {
+                        <span class="chart-label">@(i % step == 0 ? pt.Label : "")</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Métodos de pago -->
+        <div class="fa-panel">
+            <div class="fa-panel-head">
+                <span class="fa-panel-title">Métodos de pago</span>
+            </div>
+            <div class="fa-panel-body">
+                @if (Model.MetodosPago.Any())
+                {
+                    <div class="metodo-list">
+                        @foreach (var m in Model.MetodosPago)
+                        {
+                            <div class="metodo-item">
+                                <span class="metodo-name">@m.Metodo</span>
+                                <div class="metodo-bar-bg">
+                                    <div class="metodo-bar" style="width:@m.Porcentaje%"></div>
+                                </div>
+                                <span class="metodo-pct">@m.Porcentaje%</span>
+                                <span class="metodo-amt">$@m.Total.ToString("N0")</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p style="color:var(--ink-3);font-size:.82rem;text-align:center;padding:1rem 0">Sin datos en este período</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- CLIENTES + ESTADO VENTAS -->
+    <div class="fa-row col-2">
+        <!-- Clientes -->
+        <div class="fa-panel">
+            <div class="fa-panel-head">
+                <span class="fa-panel-title">Clientes</span>
+                <a href="/FinanzasAdmin/Clientes" class="fa-panel-link">
+                    Ver todos
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </a>
+            </div>
+            <div class="fa-panel-body">
+                <div class="stat-row">
+                    <span class="stat-label">Total con compras</span>
+                    <span class="stat-value">@Model.ClientesTotales</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">
+                        <span class="badge badge-green">Nuevos</span>
+                    </span>
+                    <span class="stat-value" style="color:var(--green)">@Model.ClientesNuevos</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">
+                        <span class="badge badge-blue">Recurrentes</span>
+                    </span>
+                    <span class="stat-value" style="color:var(--blue)">@Model.ClientesRecurrentes</span>
+                </div>
+                @if (Model.ClientesTotales > 0)
+                {
+                    var pctRec = (decimal)Model.ClientesRecurrentes / Model.ClientesTotales * 100;
+                    <div class="stat-row">
+                        <span class="stat-label">Tasa de retención</span>
+                        <span class="stat-value">@pctRec.ToString("F1")%</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Estado de ventas -->
+        <div class="fa-panel">
+            <div class="fa-panel-head">
+                <span class="fa-panel-title">Estado de ventas</span>
+                <a href="/FinanzasAdmin/Ventas" class="fa-panel-link">
+                    Ver todas
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></svg>
+                </a>
+            </div>
+            <div class="fa-panel-body">
+                <div class="stat-row">
+                    <span class="stat-label"><span class="badge badge-amber">Pendientes</span></span>
+                    <span class="stat-value" style="color:var(--amber)">@Model.VentasPendientes</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label"><span class="badge badge-green">Completadas</span></span>
+                    <span class="stat-value" style="color:var(--green)">@Model.VentasCompletadas</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label"><span class="badge badge-red">Canceladas</span></span>
+                    <span class="stat-value" style="color:var(--accent)">@Model.VentasCanceladas</span>
+                </div>
+                @if (Model.TotalVentas > 0)
+                {
+                    var pctComp = (decimal)Model.VentasCompletadas / Model.TotalVentas * 100;
+                    <div class="stat-row">
+                        <span class="stat-label">Tasa de éxito</span>
+                        <span class="stat-value" style="color:var(--green)">@pctComp.ToString("F1")%</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+</div>

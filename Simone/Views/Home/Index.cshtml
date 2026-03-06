@@ -3,272 +3,1082 @@
 @{
     ViewData["Title"] = "Inicio";
     var culture = new CultureInfo("es-EC");
+    var productos = Model?.ToList() ?? new List<Simone.Models.Producto>();
 }
 
-<!-- Banner principal -->
-<div class="container-fluid px-0">
-    <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel" aria-label="Promociones principales">
-        <div class="carousel-inner">
-            <div class="carousel-item active position-relative">
-                <img src="~/images/Home/vestidos_home.jpg"
-                     asp-append-version="true"
-                     class="d-block w-100 banner-img"
-                     alt="Colección de vestidos"
-                     fetchpriority="high"
-                     decoding="async" />
-                <div class="carousel-caption d-flex flex-column justify-content-center align-items-center h-100">
-                    <h1 class="display-4 fw-bold text-white text-shadow mb-3">
-                        Descubre Nuestra Colección de Vestidos
-                    </h1>
-                    <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Vestidos"
-                       class="btn btn-lg btn-light shadow"
-                       aria-label="Ver vestidos">
-                        Ver vestidos
+@section Styles {
+    <style>
+        /* ========== VARIABLES ========== */
+        :root {
+            --home-primary: #e91e63;
+            --home-primary-light: #f48fb1;
+            --home-primary-dark: #c2185b;
+            --home-secondary: #9c27b0;
+            --home-accent: #ff4081;
+            --home-gold: #d4af37;
+            --home-dark: #0a0a0a;
+            --home-light: #fafafa;
+            --home-gradient: linear-gradient(135deg, var(--home-primary) 0%, var(--home-secondary) 50%, var(--home-primary-dark) 100%);
+            --home-gradient-gold: linear-gradient(135deg, #d4af37 0%, #f5d998 50%, #d4af37 100%);
+            --home-shadow: 0 20px 60px rgba(233, 30, 99, 0.15);
+            --home-shadow-lg: 0 30px 80px rgba(0, 0, 0, 0.2);
+            --font-display: 'Playfair Display', Georgia, serif;
+            --font-body: 'Poppins', -apple-system, sans-serif;
+        }
+
+        /* ========== IMPORTS ========== */
+        @@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        /* ========== BASE ========== */
+        .home-page {
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            background: var(--home-light);
+        }
+
+        /* ========== HERO SECTION ========== */
+        .hero-section {
+            position: relative;
+            min-height: 85vh;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            background: var(--home-dark);
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+        }
+
+            .hero-bg img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                opacity: 0.7;
+                filter: brightness(0.6) saturate(1.2);
+                transition: transform 8s ease-out;
+            }
+
+        .hero-section:hover .hero-bg img {
+            transform: scale(1.05);
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(233,30,99,0.3) 50%, rgba(0,0,0,0.8) 100%);
+            z-index: 2;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 3;
+            text-align: center;
+            color: white;
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--home-gradient-gold);
+            color: var(--home-dark);
+            padding: 0.5rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            text-shadow: 2px 4px 20px rgba(0,0,0,0.5);
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+            .hero-title span {
+                background: var(--home-gradient);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2vw, 1.35rem);
+            font-weight: 300;
+            opacity: 0.9;
+            margin-bottom: 2.5rem;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fadeInUp 1s ease-out 0.6s both;
+        }
+
+        .btn-hero {
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .btn-hero-primary {
+            background: var(--home-gradient);
+            color: white;
+            border: none;
+            box-shadow: 0 10px 40px rgba(233, 30, 99, 0.4);
+        }
+
+            .btn-hero-primary:hover {
+                transform: translateY(-4px) scale(1.02);
+                box-shadow: 0 20px 50px rgba(233, 30, 99, 0.5);
+                color: white;
+            }
+
+        .btn-hero-outline {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.5);
+        }
+
+            .btn-hero-outline:hover {
+                background: white;
+                color: var(--home-dark);
+                border-color: white;
+                transform: translateY(-4px);
+            }
+
+        /* Scroll indicator */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 3;
+            animation: bounce 2s infinite;
+        }
+
+            .scroll-indicator i {
+                font-size: 2rem;
+                color: rgba(255,255,255,0.6);
+            }
+
+        /* ========== PROMO BANNER ========== */
+        .promo-banner {
+            background: var(--home-dark);
+            padding: 4rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .promo-banner::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -50%;
+                width: 200%;
+                height: 100%;
+                background: repeating-linear-gradient( 90deg, transparent, transparent 50px, rgba(233,30,99,0.03) 50px, rgba(233,30,99,0.03) 100px );
+                animation: slidePattern 20s linear infinite;
+            }
+
+        @@keyframes slidePattern {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(100px);
+            }
+        }
+
+        .promo-content {
+            position: relative;
+            text-align: center;
+            color: white;
+        }
+
+        .promo-tag {
+            display: inline-block;
+            background: var(--home-accent);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        .promo-title {
+            font-family: var(--font-display);
+            font-size: clamp(1.75rem, 4vw, 3rem);
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .promo-subtitle {
+            font-size: 1.1rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+        }
+
+            .promo-subtitle .highlight {
+                color: var(--home-gold);
+                font-weight: 600;
+            }
+
+        .btn-promo {
+            background: var(--home-gradient-gold);
+            color: var(--home-dark);
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.3);
+        }
+
+            .btn-promo:hover {
+                transform: translateY(-3px) scale(1.05);
+                box-shadow: 0 15px 40px rgba(212, 175, 55, 0.4);
+                color: var(--home-dark);
+            }
+
+        /* ========== CATEGORIES ========== */
+        .categories-section {
+            padding: 5rem 0;
+            background: white;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 3.5rem;
+        }
+
+        .section-tag {
+            display: inline-block;
+            color: var(--home-primary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 700;
+            color: var(--home-dark);
+            margin-bottom: 1rem;
+        }
+
+        .section-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1.5rem;
+        }
+
+        .category-card {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            aspect-ratio: 1;
+            text-decoration: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+            .category-card:hover {
+                transform: translateY(-10px) scale(1.02);
+                box-shadow: var(--home-shadow-lg);
+            }
+
+            .category-card img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                transition: transform 0.6s ease;
+            }
+
+            .category-card:hover img {
+                transform: scale(1.15);
+            }
+
+        .category-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.8) 100%);
+            display: flex;
+            align-items: flex-end;
+            padding: 1.5rem;
+            transition: background 0.3s ease;
+        }
+
+        .category-card:hover .category-overlay {
+            background: linear-gradient(180deg, rgba(233,30,99,0.2) 0%, rgba(0,0,0,0.9) 100%);
+        }
+
+        .category-name {
+            color: white;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transform: translateY(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .category-card:hover .category-name {
+            transform: translateY(0);
+        }
+
+        /* ========== FEATURED PRODUCTS ========== */
+        .products-section {
+            padding: 5rem 0;
+            background: linear-gradient(180deg, #f8f9fa 0%, #fff 100%);
+        }
+
+        .products-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .products-header-left {
+            flex: 1;
+        }
+
+        .btn-view-all {
+            background: var(--home-dark);
+            color: white;
+            padding: 0.875rem 2rem;
+            border-radius: 50px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+            .btn-view-all:hover {
+                background: var(--home-primary);
+                color: white;
+                transform: translateX(5px);
+            }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+            .product-card:hover {
+                transform: translateY(-12px);
+                box-shadow: 0 25px 60px rgba(233,30,99,0.15);
+            }
+
+        .product-image-wrapper {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.1);
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            background: var(--home-accent);
+            color: white;
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 2;
+        }
+
+            .product-badge.out-of-stock {
+                background: #757575;
+            }
+
+        .product-quick-actions {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .product-card:hover .product-quick-actions {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .quick-action-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            color: var(--home-dark);
+            text-decoration: none;
+        }
+
+            .quick-action-btn:hover {
+                background: var(--home-primary);
+                color: white;
+                transform: scale(1.1);
+            }
+
+        .product-info {
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .product-category {
+            color: var(--home-primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .product-name {
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--home-dark);
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+            .product-name a {
+                color: inherit;
+                text-decoration: none;
+                transition: color 0.3s ease;
+            }
+
+                .product-name a:hover {
+                    color: var(--home-primary);
+                }
+
+        .product-price {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .price-current {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--home-dark);
+        }
+
+        .price-old {
+            font-size: 1rem;
+            color: #999;
+            text-decoration: line-through;
+        }
+
+        .btn-add-cart {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            background: var(--home-dark);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+            .btn-add-cart:hover {
+                background: var(--home-gradient);
+                color: white;
+                transform: scale(1.02);
+            }
+
+        /* Empty state */
+        .empty-products {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .empty-icon {
+            width: 120px;
+            height: 120px;
+            background: var(--home-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 3rem;
+            color: white;
+        }
+
+        .empty-title {
+            font-family: var(--font-display);
+            font-size: 1.75rem;
+            font-weight: 600;
+            color: var(--home-dark);
+            margin-bottom: 0.75rem;
+        }
+
+        .empty-text {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        /* ========== FEATURES ========== */
+        .features-section {
+            padding: 4rem 0;
+            background: var(--home-dark);
+            color: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .feature-item {
+            text-align: center;
+            padding: 2rem 1rem;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            transition: all 0.3s ease;
+        }
+
+            .feature-item:hover {
+                background: rgba(255,255,255,0.1);
+                transform: translateY(-5px);
+            }
+
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            background: var(--home-gradient);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            font-size: 1.75rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-text {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+
+        /* ========== ANIMATIONS ========== */
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            40% {
+                transform: translateX(-50%) translateY(-15px);
+            }
+
+            60% {
+                transform: translateX(-50%) translateY(-7px);
+            }
+        }
+
+        @@keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        /* Intersection Observer animations */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+            .animate-on-scroll.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        /* ========== RESPONSIVE ========== */
+        @@media (max-width: 1199px) {
+            .categories-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @@media (max-width: 991px) {
+            .hero-section {
+                min-height: 70vh;
+            }
+
+            .categories-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @@media (max-width: 767px) {
+            .hero-section {
+                min-height: 60vh;
+            }
+
+            .categories-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .products-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+
+            .product-info {
+                padding: 1rem;
+            }
+
+            .product-name {
+                font-size: 1rem;
+            }
+
+            .price-current {
+                font-size: 1.25rem;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 1rem;
+            }
+
+            .feature-item {
+                padding: 1.5rem 1rem;
+            }
+        }
+
+        @@media (max-width: 575px) {
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn-hero {
+                width: 100%;
+                max-width: 280px;
+                justify-content: center;
+            }
+
+            .products-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+
+        /* ========== REDUCED MOTION ========== */
+        @@media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+}
+
+<div class="home-page">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-bg">
+            <img src="~/images/Home/vestidos_home.jpg"
+                 asp-append-version="true"
+                 alt="Colección Neo Ágora"
+                 fetchpriority="high"
+                 decoding="async"
+                 onerror="this.style.display='none';" />
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <i class="fa-solid fa-sparkles"></i>
+                Nueva Colección 2026
+            </div>
+            <h1 class="hero-title">
+                Descubre Tu <span>Estilo Único</span>
+            </h1>
+            <p class="hero-subtitle">
+                Moda exclusiva que define tu personalidad. Piezas únicas para mujeres que marcan tendencia.
+            </p>
+            <div class="hero-buttons">
+                <a asp-controller="Compras" asp-action="Catalogo" class="btn-hero btn-hero-primary">
+                    <i class="fa-solid fa-bag-shopping"></i>
+                    Explorar Colección
+                </a>
+                <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Vestidos" class="btn-hero btn-hero-outline">
+                    <i class="fa-solid fa-heart"></i>
+                    Ver Vestidos
+                </a>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <i class="fa-solid fa-chevron-down"></i>
+        </div>
+    </section>
+
+    <!-- Promo Banner -->
+    <section class="promo-banner">
+        <div class="container">
+            <div class="promo-content">
+                <span class="promo-tag">🔥 Oferta Especial</span>
+                <h2 class="promo-title">Body's Irresistibles</h2>
+                <p class="promo-subtitle">
+                    Llévate el segundo body con <span class="highlight">envío totalmente gratis</span>
+                </p>
+                <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Body's" class="btn-promo">
+                    <i class="fa-solid fa-fire"></i>
+                    Aprovechar Oferta
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="categories-section">
+        <div class="container">
+            <div class="section-header animate-on-scroll">
+                <span class="section-tag">Categorías</span>
+                <h2 class="section-title">Explora por Estilo</h2>
+                <p class="section-subtitle">
+                    Encuentra exactamente lo que buscas entre nuestra selección curada de moda femenina
+                </p>
+            </div>
+
+            <div class="categories-grid">
+                @{
+                    var categorias = new[] {
+                                new { Nombre = "Vestidos", Imagen = "vestidos.png" },
+                                new { Nombre = "Blusas", Imagen = "blusas.png" },
+                                new { Nombre = "Tops", Imagen = "tops.png" },
+                                new { Nombre = "Body's", Imagen = "Bodys.png" },
+                                new { Nombre = "Conjuntos", Imagen = "conjuntos.png" },
+                                new { Nombre = "Faldas", Imagen = "faldas.png" },
+                                new { Nombre = "Pantalones", Imagen = "Pantalones.png" },
+                                new { Nombre = "Jeans", Imagen = "Jeans.png" },
+                                new { Nombre = "Trajes de Baño", Imagen = "Traje_de_bano.png" },
+                                new { Nombre = "Bolsas", Imagen = "bolsas.png" }
+                                };
+                }
+
+                @foreach (var cat in categorias)
+                {
+                    <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="@cat.Nombre"
+                       class="category-card animate-on-scroll">
+                        <img src="~/images/Categorias_slider/@cat.Imagen"
+                             asp-append-version="true"
+                             alt="@cat.Nombre"
+                             loading="lazy"
+                             decoding="async"
+                             onerror="this.src='/images/placeholder-category.jpg';" />
+                        <div class="category-overlay">
+                            <span class="category-name">@cat.Nombre</span>
+                        </div>
                     </a>
+                }
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured Products -->
+    <section class="products-section">
+        <div class="container">
+            <div class="products-header">
+                <div class="products-header-left">
+                    <span class="section-tag">Lo Mejor</span>
+                    <h2 class="section-title">Productos Destacados</h2>
+                </div>
+                <a asp-controller="Compras" asp-action="Catalogo" class="btn-view-all">
+                    Ver Todo
+                    <i class="fa-solid fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="products-grid">
+                @if (!productos.Any())
+                {
+                    <div class="empty-products animate-on-scroll">
+                        <div class="empty-icon">
+                            <i class="fa-solid fa-shirt"></i>
+                        </div>
+                        <h3 class="empty-title">Próximamente</h3>
+                        <p class="empty-text">
+                            Estamos preparando una selección increíble de productos para ti
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    @foreach (var producto in productos.Take(8))
+                    {
+                        var agotado = producto.Stock <= 0;
+                        var tieneImagen = !string.IsNullOrWhiteSpace(producto.ImagenPath);
+                        var imagenUrl = tieneImagen ? producto.ImagenPath : "/images/placeholder-product.svg";
+
+                        <article class="product-card animate-on-scroll">
+                            <div class="product-image-wrapper">
+                                @if (agotado)
+                                {
+                                    <span class="product-badge out-of-stock">Agotado</span>
+                                }
+
+                                <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID">
+                                    <img src="@imagenUrl"
+                                         asp-append-version="true"
+                                         alt="@producto.Nombre"
+                                         class="product-image"
+                                         loading="lazy"
+                                         decoding="async"
+                                         onerror="this.src='/images/placeholder-product.svg';" />
+                                </a>
+
+                                <div class="product-quick-actions">
+                                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID"
+                                       class="quick-action-btn" title="Ver detalle">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </a>
+                                    <button type="button" class="quick-action-btn" title="Agregar a favoritos">
+                                        <i class="fa-regular fa-heart"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="product-info">
+                                @if (!string.IsNullOrWhiteSpace(producto.Categoria?.Nombre))
+                                {
+                                    <div class="product-category">@producto.Categoria.Nombre</div>
+                                }
+                                <h3 class="product-name">
+                                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID">
+                                        @producto.Nombre
+                                    </a>
+                                </h3>
+                                <div class="product-price">
+                                    <span class="price-current">@producto.PrecioVenta.ToString("C", culture)</span>
+                                </div>
+                                <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID"
+                                   class="btn-add-cart">
+                                    <i class="fa-solid fa-eye"></i>
+                                    Ver Producto
+                                </a>
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features-section">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-item animate-on-scroll">
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-truck-fast"></i>
+                    </div>
+                    <h4 class="feature-title">Envío Rápido</h4>
+                    <p class="feature-text">Recibe tu pedido en 24-48 horas</p>
+                </div>
+                <div class="feature-item animate-on-scroll">
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h4 class="feature-title">Pago Seguro</h4>
+                    <p class="feature-text">Múltiples métodos de pago protegidos </p>
+                </div>
+
+                <div class="feature-item animate-on-scroll">
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-headset"></i>
+                    </div>
+                    <h4 class="feature-title">Soporte 24/7</h4>
+                    <p class="feature-text">Estamos aquí para ayudarte siempre</p>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 </div>
 
-<!-- Promoción destacada -->
-<div class="container-fluid text-white text-center py-5"
-     style="background: linear-gradient(135deg, #000000, #1a1a1a); animation: fadeIn .9s ease-in;">
-    <div class="container py-4">
-        <h2 class="fw-bold mb-2">Body's irresistibles</h2>
-        <p class="lead mb-4">¡Llévate el segundo body con <span class="text-warning">envío gratis</span>!</p>
-        <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Body's" class="btn btn-warning btn-lg px-4 shadow-sm">
-            <i class="fa-solid fa-bag-shopping me-2"></i> Comprar ahora
-        </a>
-    </div>
-</div>
+@section Scripts {
+    <script>
+        (function() {
+            'use strict';
 
-<!-- Categorías rápidas -->
-<section class="container my-5">
-    <div class="d-flex justify-content-between align-items-end mb-3">
-        <h3 class="fw-bold m-0">Explora por categoría</h3>
-    </div>
+            // Intersection Observer para animaciones al hacer scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
 
-    <div class="row g-3 g-lg-4">
-        <!-- Nota: verifica que los nombres de archivos y acciones coincidan EXACTO en mayúsculas/minúsculas -->
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Blusas" class="cat-card">
-                <img src="~/images/Categorias_slider/blusas.png" asp-append-version="true"
-                     class="cat-img" alt="Blusas" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Blusas</span>
-            </a>
-        </div>
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, index) => {
+                    if (entry.isIntersecting) {
+                        // Añadir delay escalonado para efecto cascada
+                        setTimeout(() => {
+                            entry.target.classList.add('visible');
+                        }, index * 100);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, observerOptions);
 
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Tops" class="cat-card">
-                <img src="~/images/Categorias_slider/tops.png" asp-append-version="true"
-                     class="cat-img" alt="Tops" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Tops</span>
-            </a>
-        </div>
+            // Observar todos los elementos con la clase animate-on-scroll
+            document.querySelectorAll('.animate-on-scroll').forEach(el => {
+                observer.observe(el);
+            });
 
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Body's" class="cat-card">
-                <img src="~/images/Categorias_slider/Bodys.png" asp-append-version="true"
-                     class="cat-img" alt="Body's" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Body's</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <!-- Trajes de Baño -->
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Trajes de Baño" class="cat-card">
-                <img src="~/images/Categorias_slider/Traje_de_bano.png" asp-append-version="true"
-                     class="cat-img" alt="Trajes de baño" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Trajes de Baño</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Conjuntos" class="cat-card">
-                <img src="~/images/Categorias_slider/conjuntos.png" asp-append-version="true"
-                     class="cat-img" alt="Conjuntos" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Conjuntos</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Vestidos" class="cat-card">
-                <img src="~/images/Categorias_slider/vestidos.png" asp-append-version="true"
-                     class="cat-img" alt="Vestidos" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Vestidos</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Faldas" class="cat-card">
-                <img src="~/images/Categorias_slider/faldas.png" asp-append-version="true"
-                     class="cat-img" alt="Faldas" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Faldas</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Pantalones" class="cat-card">
-                <img src="~/images/Categorias_slider/Pantalones.png" asp-append-version="true"
-                     class="cat-img" alt="Pantalones" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Pantalones</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Jeans" class="cat-card">
-                <img src="~/images/Categorias_slider/Jeans.png" asp-append-version="true"
-                     class="cat-img" alt="Jeans" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Jeans</span>
-            </a>
-        </div>
-
-        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-            <a asp-controller="Compras" asp-action="Catalogo" asp-route-categoria="Bolsas" class="cat-card">
-                <img src="~/images/Categorias_slider/bolsas.png" asp-append-version="true"
-                     class="cat-img" alt="Bolsas" loading="lazy" decoding="async"
-                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';">
-                <span class="cat-title">Bolsas</span>
-            </a>
-        </div>
-    </div>
-</section>
-
-<!-- Productos destacados -->
-<section class="container mb-5">
-    <div class="d-flex justify-content-between align-items-end mb-3">
-        <h3 class="fw-bold m-0">Destacados</h3>
-        <a asp-controller="Compras" asp-action="Catalogo" class="btn btn-outline-dark btn-sm">
-            Ver catálogo
-        </a>
-    </div>
-
-    @if (Model == null || !Model.Any())
-    {
-        <div class="text-center text-muted py-5">
-            <i class="fa-regular fa-face-smile-beam fa-2x mb-2"></i>
-            <p class="m-0">Pronto añadiremos productos destacados.</p>
-        </div>
-    }
-    else
-    {
-        <div class="row">
-            @foreach (var producto in Model)
-            {
-                var agotado = producto.Stock <= 0;
-                <div class="col-6 col-md-4 col-lg-3 mb-4">
-                    <article class="card product-card h-100 border-0 shadow-sm">
-                        <div class="position-relative">
-                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID">
-                                <img src="@(string.IsNullOrWhiteSpace(producto.ImagenPath) ? Url.Content("~/images/Categorias_slider/ver_todo.png") : producto.ImagenPath)"
-                                     asp-append-version="true"
-                                     alt="@producto.Nombre"
-                                     class="card-img-top product-img"
-                                     loading="lazy" decoding="async"
-                                     onerror="this.onerror=null;this.src='/images/Categorias_slider/ver_todo.png';" />
-                            </a>
-                            @if (agotado)
-                            {
-                                <span class="badge bg-danger position-absolute top-0 start-0 m-2">Sin stock</span>
-                            }
-                        </div>
-                        <div class="card-body text-center">
-                            <h6 class="card-title text-truncate mb-1" title="@producto.Nombre">@producto.Nombre</h6>
-                            <div class="fw-bold">@producto.PrecioVenta.ToString("C", culture)</div>
-                            <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@producto.ProductoID"
-                               class="btn btn-dark btn-sm mt-2">
-                                <i class="fa-solid fa-eye me-2"></i> Ver detalle
-                            </a>
-                        </div>
-                    </article>
-                </div>
+            // Parallax suave en el hero
+            const heroBg = document.querySelector('.hero-bg img');
+            if (heroBg) {
+                window.addEventListener('scroll', () => {
+                    const scrolled = window.pageYOffset;
+                    if (scrolled < 800) {
+                        heroBg.style.transform = `translateY(${scrolled * 0.3}px)`;
+                    }
+                }, { passive: true });
             }
-        </div>
-    }
-</section>
 
-<!-- Estilos -->
-<style>
-    /* Razor: usa @@ para literales CSS at-rules */
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(-10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .banner-img {
-        height: 520px;
-        object-fit: cover;
-        filter: brightness(75%);
-    }
-
-    .text-shadow {
-        text-shadow: 2px 2px 8px rgba(0,0,0,0.7);
-    }
-
-    /* Categorías */
-    .cat-card {
-        display: block;
-        text-decoration: none;
-        color: inherit;
-        text-align: center;
-        transition: transform .15s ease, box-shadow .15s ease;
-    }
-
-        .cat-card:hover {
-            transform: translateY(-2px);
-        }
-
-    .cat-img {
-        width: 100%;
-        aspect-ratio: 1 / 1;
-        object-fit: cover;
-        border-radius: 12px;
-        box-shadow: 0 4px 18px rgba(0,0,0,.08);
-    }
-
-    .cat-title {
-        display: block;
-        margin-top: .5rem;
-        font-weight: 600;
-    }
-
-    /* Productos */
-    .product-img {
-        height: 240px;
-        object-fit: cover;
-        border-top-left-radius: .5rem;
-        border-top-right-radius: .5rem;
-    }
-
-    .product-card:hover {
-        box-shadow: 0 10px 28px rgba(0,0,0,.12);
-    }
-
-    /* Respeta usuarios con “reduced motion” */
-    @@media (prefers-reduced-motion: reduce) {
-        .banner-img {
-            filter: brightness(75%);
-        }
-
-        .cat-card, .product-card {
-            transition: none;
-        }
-    }
-</style>
+            console.log('✓ Home page initialized');
+        })();
+    </script>
+}

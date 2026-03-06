@@ -1,376 +1,1014 @@
 ﻿@model List<Simone.Models.Favorito>
 @using System.Globalization
+@using System.Text.Json
 @{
     ViewData["Title"] = "Mis Favoritos";
-    var culture = new CultureInfo("es-EC");
+    var culture   = new CultureInfo("es-EC");
+    var items     = Model ?? new List<Simone.Models.Favorito>();
+    var hasItems  = items.Any(f => f.Producto != null);
+    var totalFavs = items.Count(f => f.Producto != null);
+    string Fmt(decimal d) => d.ToString("C2", culture);
+
+    static string ColorHex(string name) {
+        if (string.IsNullOrWhiteSpace(name)) return "#94a3b8";
+        var t = name.Trim();
+        if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")) return t;
+        return t.ToLowerInvariant().Normalize(System.Text.NormalizationForm.FormD) switch {
+            "negro"       => "#1c1c1c", "blanco"    => "#f5f5f5", "gris"       => "#9ca3af",
+            "gris claro"  => "#d1d5db", "gris oscuro"=> "#4b5563","plateado"   => "#c0c0c0",
+            "rojo"        => "#ef4444", "rojo vino" => "#7f1d1d", "granate"    => "#7b1e3c",
+            "burdeos"     => "#6d071a", "coral"     => "#fb7185", "azul"       => "#3b82f6",
+            "azul marino" => "#1e3a5f", "celeste"   => "#7dd3fc", "turquesa"   => "#2dd4bf",
+            "azul rey"    => "#4169e1", "verde"     => "#22c55e", "verde lima" => "#a3e635",
+            "oliva"       => "#65a30d", "esmeralda" => "#10b981", "amarillo"   => "#facc15",
+            "mostaza"     => "#ca8a04", "dorado"    => "#d4af37", "naranja"    => "#f97316",
+            "salmon"      => "#fb923c", "marron"    => "#92400e", "cafe"       => "#92400e",
+            "beige"       => "#e7d4b5", "crema"     => "#fef9c3", "camel"      => "#c19a6b",
+            "morado"      => "#9333ea", "violeta"   => "#7c3aed", "lila"       => "#c084fc",
+            "lavanda"     => "#e9d5ff", "rosa"      => "#f472b6", "fucsia"     => "#e879f9",
+            "rosado"      => "#fbcfe8", _           => "#94a3b8"
+        };
+    }
+
+    // Detectar colores claros para borde visible
+    static bool IsLight(string hex) {
+        if (string.IsNullOrWhiteSpace(hex) || hex.Length < 6) return false;
+        try {
+            var h = hex.TrimStart('#');
+            if (h.Length == 3) h = $"{h[0]}{h[0]}{h[1]}{h[1]}{h[2]}{h[2]}";
+            int r = Convert.ToInt32(h[..2], 16);
+            int g = Convert.ToInt32(h.Substring(2,2), 16);
+            int b = Convert.ToInt32(h.Substring(4,2), 16);
+            return (r * 299 + g * 587 + b * 114) / 1000 > 200;
+        } catch { return false; }
+    }
 }
 
-<section class="container-xl px-3 px-md-4 my-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
-        <h2 class="m-0 fw-bold">Mis Productos Favoritos</h2>
-        @if (Model?.Any() == true)
+@section Styles {
+<style>
+@@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap');
+
+:root {
+    --bg:        #f7f5f2;
+    --surface:   #ffffff;
+    --surface-2: #f3f1ee;
+    --surface-3: #edeae6;
+    --border:    #e8e4df;
+    --border-2:  #d4cfc8;
+    --text:      #1c1917;
+    --text-2:    #78716c;
+    --text-3:    #a8a29e;
+    --accent:    #c9472b;
+    --accent-lt: #fef2f0;
+    --accent-hv: #b03d24;
+    --gold:      #b45309;
+    --gold-lt:   #fef3c7;
+    --success:   #15803d;
+    --success-lt:#f0fdf4;
+    --r-sm:  8px;
+    --r-md:  14px;
+    --r-lg:  20px;
+    --r-xl:  24px;
+    --sh-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --sh-md: 0 4px 16px rgba(0,0,0,.08);
+    --sh-lg: 0 12px 40px rgba(0,0,0,.11);
+    --sh-xl: 0 20px 60px rgba(0,0,0,.13);
+    --ease:  cubic-bezier(.4,0,.2,1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); }
+
+/* ── PAGE ── */
+.fav-page { padding: 2.5rem 0 5rem; animation: pgIn .45s var(--ease); }
+.fav-wrap { max-width: 1320px; margin: 0 auto; padding: 0 1.5rem; }
+@@keyframes pgIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── HEADER ── */
+.fav-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2.25rem;
+    flex-wrap: wrap;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+.fav-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.5rem;
+    font-weight: 400;
+    margin: 0;
+    line-height: 1.1;
+    letter-spacing: -.02em;
+}
+.fav-count-pill {
+    background: var(--accent);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 700;
+    padding: .28rem .75rem;
+    border-radius: 50px;
+    letter-spacing: .03em;
+    transform: translateY(-6px);
+}
+.fav-header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+}
+.fav-header-sub {
+    font-size: .8rem;
+    color: var(--text-3);
+}
+.btn-clear-all {
+    font-size: .75rem;
+    color: var(--text-3);
+    background: none;
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-sm);
+    padding: .35rem .75rem;
+    cursor: pointer;
+    transition: all .2s;
+    font-family: 'DM Sans', sans-serif;
+}
+.btn-clear-all:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-lt); }
+
+/* ── EMPTY STATE ── */
+.fav-empty {
+    text-align: center;
+    padding: 6rem 2rem;
+    animation: pgIn .5s var(--ease);
+}
+.fav-empty-icon {
+    width: 88px; height: 88px;
+    background: var(--surface);
+    border: 2px dashed var(--border-2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.5rem;
+    font-size: 2.25rem;
+    color: var(--text-3);
+    box-shadow: var(--sh-sm);
+}
+.fav-empty h3 {
+    font-size: 1.75rem;
+    font-family: 'DM Serif Display', serif;
+    font-weight: 400;
+    margin: 0 0 .6rem;
+}
+.fav-empty p { color: var(--text-2); font-size: .9rem; margin: 0 0 2rem; }
+.btn-explore {
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .8rem 2rem;
+    background: var(--accent); color: #fff;
+    border-radius: var(--r-lg);
+    font-weight: 600; font-size: .9rem;
+    text-decoration: none;
+    transition: all .2s var(--ease);
+    box-shadow: 0 4px 16px rgba(201,71,43,.25);
+}
+.btn-explore:hover { background: var(--accent-hv); color:#fff; transform:translateY(-2px); box-shadow:0 8px 24px rgba(201,71,43,.35); }
+
+/* ── GRID ── */
+.fav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+}
+@@media(max-width: 960px) { .fav-grid { grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap:1.1rem; } }
+@@media(max-width: 520px)  { .fav-grid { grid-template-columns: 1fr 1fr; gap:.75rem; } }
+
+/* ── CARD ── */
+.fav-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--sh-sm);
+    display: flex; flex-direction: column;
+    transition: transform .35s var(--ease), box-shadow .35s var(--ease), border-color .25s;
+}
+.fav-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--sh-xl);
+    border-color: var(--border-2);
+}
+.fav-card.is-removing {
+    animation: cardOut .32s var(--ease) forwards;
+    pointer-events: none;
+}
+@@keyframes cardOut { to { opacity:0; transform:scale(.93) translateY(8px); } }
+
+/* ── IMAGE ── */
+.fav-card-img {
+    display: block;
+    position: relative;
+    padding-top: 118%;
+    overflow: hidden;
+    background: var(--surface-2);
+    text-decoration: none;
+}
+.fav-card-img img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform .7s var(--ease);
+}
+.fav-card:hover .fav-card-img img { transform: scale(1.07); }
+
+/* Quick view overlay on hover */
+.fav-card-img::after {
+    content: 'Ver producto';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: .7rem;
+    background: linear-gradient(transparent, rgba(0,0,0,.55));
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 600;
+    text-align: center;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: 0;
+    transition: opacity .25s;
+}
+.fav-card:hover .fav-card-img::after { opacity: 1; }
+
+/* ── BADGES ── */
+.badge-new, .badge-out, .badge-sale {
+    position: absolute; top: 10px;
+    font-size: .65rem; font-weight: 700;
+    padding: .22rem .6rem;
+    border-radius: 50px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    pointer-events: none;
+}
+.badge-new  { left: 10px; background: var(--gold-lt); color: var(--gold); border: 1px solid #fcd34d; }
+.badge-out  { left: 10px; background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.badge-sale { left: 10px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+/* ── REMOVE BTN ── */
+.btn-fav-remove {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,.95);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all .2s var(--ease);
+    color: #f43f5e;
+    font-size: .9rem;
+    z-index: 3;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.btn-fav-remove:hover {
+    background: #fff1f2;
+    border-color: #f43f5e;
+    transform: scale(1.12);
+    box-shadow: 0 3px 10px rgba(244,63,94,.2);
+}
+.btn-fav-remove.is-loading { opacity: .5; pointer-events: none; }
+
+/* ── CARD BODY ── */
+.fav-card-body {
+    padding: .95rem 1.05rem .5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+}
+
+.fav-card-vendor {
+    font-size: .65rem;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: .07em;
+}
+
+.fav-card-name {
+    font-size: .875rem;
+    font-weight: 600;
+    color: var(--text);
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.35;
+    transition: color .15s;
+}
+.fav-card-name:hover { color: var(--accent); }
+
+.fav-price-row {
+    display: flex;
+    align-items: baseline;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+.fav-card-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+}
+.fav-price-original {
+    font-size: .8rem;
+    color: var(--text-3);
+    text-decoration: line-through;
+}
+.fav-price-from {
+    font-size: .7rem;
+    color: var(--text-3);
+    font-weight: 400;
+}
+
+/* ── VARIANT SELECTORS ── */
+.fav-variants { display: flex; flex-direction: column; gap: .4rem; margin-top: .3rem; }
+
+.fav-var-label {
+    font-size: .67rem;
+    color: var(--text-3);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+}
+.fav-var-label-val {
+    color: var(--text-2);
+    font-weight: 600;
+    transition: color .15s;
+}
+
+.fav-color-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+
+.fav-cbtn {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    padding: 0; cursor: pointer; outline: none;
+    transition: transform .15s, box-shadow .15s;
+    flex-shrink: 0;
+    position: relative;
+}
+.fav-cbtn:hover { transform: scale(1.2); }
+.fav-cbtn.active {
+    border-color: var(--text) !important;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--text);
+}
+.fav-cbtn.is-light { border-color: var(--border-2); }
+.fav-cbtn.is-light.active { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #a8a29e; }
+
+.fav-size-row { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.fav-tbtn {
+    min-width: 30px; height: 26px;
+    padding: 0 .45rem;
+    border: 1.5px solid var(--border-2);
+    border-radius: 6px;
+    background: var(--surface-2);
+    color: var(--text-2);
+    font-size: .68rem; font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    font-family: 'DM Sans', sans-serif;
+}
+.fav-tbtn:hover:not(:disabled) {
+    border-color: var(--text);
+    color: var(--text);
+    background: var(--surface);
+}
+.fav-tbtn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-lt);
+    font-weight: 700;
+}
+.fav-tbtn:disabled {
+    opacity: .32;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.fav-more { font-size: .65rem; color: var(--text-3); font-weight: 600; }
+
+/* ── CARD FOOTER ── */
+.fav-card-footer { padding: .65rem 1.05rem 1rem; margin-top: auto; }
+
+.btn-add-cart {
+    display: flex; align-items: center; justify-content: center; gap: .45rem;
+    width: 100%;
+    padding: .7rem 1rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--r-md);
+    font-family: 'DM Sans', sans-serif;
+    font-size: .82rem; font-weight: 700;
+    cursor: pointer;
+    transition: all .2s var(--ease);
+    letter-spacing: .01em;
+}
+.btn-add-cart:hover:not(:disabled) {
+    background: var(--accent-hv);
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(201,71,43,.3);
+}
+.btn-add-cart:active:not(:disabled) { transform: translateY(0); }
+.btn-add-cart:disabled {
+    background: var(--surface-2) !important;
+    color: var(--text-3) !important;
+    border: 1px solid var(--border);
+    cursor: not-allowed;
+    box-shadow: none !important;
+    transform: none !important;
+}
+.btn-add-cart.success {
+    background: var(--success) !important;
+    cursor: default;
+}
+
+.btn-out-stock {
+    display: flex; align-items: center; justify-content: center; gap: .45rem;
+    width: 100%; padding: .7rem 1rem;
+    background: var(--surface-2);
+    color: var(--text-3);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    font-size: .82rem; font-weight: 600;
+    cursor: not-allowed;
+}
+
+/* ── SKELETON LOADING ── */
+.fav-card-skel { pointer-events: none; }
+.skel {
+    background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+    background-size: 200% 100%;
+    animation: skel-shimmer 1.4s ease infinite;
+    border-radius: 6px;
+}
+@@keyframes skel-shimmer { to { background-position: -200% 0; } }
+
+/* ── TOAST ── */
+.fav-toast {
+    position: fixed;
+    bottom: 1.75rem; right: 1.75rem;
+    z-index: 9999;
+    display: flex; flex-direction: column; gap: .5rem;
+    pointer-events: none;
+}
+.fav-toast-item {
+    display: flex; align-items: center; gap: .65rem;
+    padding: .8rem 1.2rem;
+    border-radius: var(--r-md);
+    box-shadow: var(--sh-lg);
+    font-size: .825rem; font-weight: 500;
+    animation: tIn .3s var(--ease);
+    max-width: 320px;
+    pointer-events: all;
+    backdrop-filter: blur(8px);
+}
+@@keyframes tIn { from{opacity:0;transform:translateX(20px)} to{opacity:1;transform:translateX(0)} }
+.fav-toast-item.ok  { background: var(--success-lt); color: var(--success); border: 1px solid #86efac; }
+.fav-toast-item.err { background: var(--accent-lt);  color: var(--accent);  border: 1px solid #fca5a5; }
+.fav-toast-item.out { animation: tOut .25s var(--ease) forwards; }
+@@keyframes tOut { to { opacity:0; transform:translateX(20px); max-height:0; padding:0; margin:0; } }
+
+@@media(prefers-reduced-motion:reduce){ *,*::before,*::after{ animation-duration:.01ms!important; transition-duration:.01ms!important; } }
+@@media(max-width:520px){ .fav-card-body{ padding:.7rem .8rem .4rem; } .fav-card-footer{ padding:.5rem .8rem .8rem; } }
+</style>
+}
+
+<div class="fav-page">
+<div class="fav-wrap">
+
+    <!-- Header -->
+    <div class="fav-header">
+        <h1 class="fav-title">Mis favoritos</h1>
+        @if (hasItems)
         {
-            <div class="text-muted small">Tienes <strong id="favCount">@Model.Count</strong> @((Model.Count == 1) ? "producto" : "productos")</div>
+            <span class="fav-count-pill" id="fav-count">@totalFavs</span>
+        }
+        @if (hasItems)
+        {
+            <div class="fav-header-right">
+                <span class="fav-header-sub">@totalFavs producto@(totalFavs != 1 ? "s" : "") guardado@(totalFavs != 1 ? "s" : "")</span>
+            </div>
         }
     </div>
 
-    @if (Model == null || !Model.Any())
+    @if (!hasItems)
     {
-        <div class="text-center py-5">
-            <i class="far fa-heart fa-3x text-secondary mb-3"></i>
-            <h5 class="mb-2">No has agregado productos a favoritos aún</h5>
-            <a asp-controller="Compras" asp-action="Catalogo" class="btn btn-primary mt-2">
-                <i class="fas fa-bag-shopping me-2"></i>Explorar productos
+        <div class="fav-empty">
+            <div class="fav-empty-icon">♡</div>
+            <h3>Aún no tienes favoritos</h3>
+            <p>Guarda los productos que más te gusten para encontrarlos fácilmente.</p>
+            <a asp-controller="Compras" asp-action="Catalogo" class="btn-explore">
+                <i class="fas fa-store" style="font-size:.85rem"></i>
+                Explorar tienda
             </a>
         </div>
     }
     else
     {
-        <div class="products-grid">
-            @foreach (var fav in Model)
+        <form id="af-fav" method="post" style="display:none">@Html.AntiForgeryToken()</form>
+
+        <div class="fav-grid" id="fav-grid">
+            @foreach (var fav in items.Where(f => f.Producto != null))
             {
-                var p = fav.Producto;
-                if (p == null) { continue; }
-                var disponible = p.Stock > 0;
-                var esNuevo = p.FechaAgregado > DateTime.UtcNow.AddDays(-30);
+                var p          = fav.Producto!;
+                var tieneVar   = p.Variantes?.Any() == true;
+                var disponible = p.Stock > 0 || (p.Variantes?.Any(v => v.Stock > 0) == true);
+                var esNuevo    = p.FechaAgregado > DateTime.UtcNow.AddDays(-30);
 
-                <article class="product-card">
-                    <a asp-controller="Compras" asp-action="VerProducto" asp-route-productoID="@p.ProductoID" class="product-link">
-                        <div class="product-image-container">
-                            <img src="@(string.IsNullOrWhiteSpace(p.ImagenPath) ? Url.Content("~/images/placeholder-product.png") : p.ImagenPath)"
-                                 class="product-image"
-                                 alt="@p.Nombre"
-                                 onerror="this.onerror=null;this.src='@Url.Content("~/images/placeholder-product.png")';" />
-                            @if (esNuevo)
-                            {
-                                <div class="product-badge">Nuevo</div>
-                            }
-                            @if (!disponible)
-                            {
-                                <div class="out-of-stock-badge">Agotado</div>
-                            }
-                        </div>
+                // Colores con stock
+                var colDisp = p.Variantes?
+                    .Where(v => !string.IsNullOrWhiteSpace(v.Color) && v.Stock > 0)
+                    .Select(v => v.Color!.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList() ?? new List<string>();
 
-                        <div class="product-info">
-                            <h3 class="product-title" title="@p.Nombre">@p.Nombre</h3>
-                            <div class="product-price">@p.PrecioVenta.ToString("C", culture)</div>
+                // Tallas con stock
+                var talDisp = p.Variantes?
+                    .Where(v => !string.IsNullOrWhiteSpace(v.Talla) && v.Stock > 0)
+                    .Select(v => v.Talla!.Trim())
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList() ?? new List<string>();
 
-                            <div class="product-colors">
-                                @if (!string.IsNullOrWhiteSpace(p.Color))
-                                {
-                                    <span class="color-option" title="@p.Color" style="background-color:@p.Color;"></span>
-                                }
-                                <span class="color-option" style="background-color:#000"></span>
-                                <span class="color-option" style="background-color:#D4AF37"></span>
-                            </div>
-                        </div>
+                // Precio mínimo
+                var precioMin = tieneVar && p.Variantes!.Any(v => v.PrecioVenta > 0)
+                    ? p.Variantes!.Where(v => v.PrecioVenta > 0).Min(v => v.PrecioVenta) ?? p.PrecioVenta
+                    : p.PrecioVenta;
+                var hayDescuento = tieneVar && precioMin < p.PrecioVenta;
+
+                <article class="fav-card"
+                         data-card-id="@p.ProductoID"
+                         data-fav-id="@fav.ProductoId">
+
+                    <!-- Imagen -->
+                    <a asp-controller="Compras"
+                       asp-action="VerProducto"
+                       asp-route-productoID="@p.ProductoID"
+                       class="fav-card-img">
+                        <img src="@(string.IsNullOrWhiteSpace(p.ImagenPath) ? Url.Content("~/images/placeholder-product.png") : p.ImagenPath)"
+                             alt="@p.Nombre"
+                             loading="lazy"
+                             onerror="this.src='@Url.Content("~/images/placeholder-product.png")'" />
+
+                        @if (!disponible) { <span class="badge-out">Agotado</span> }
+                        else if (hayDescuento) { <span class="badge-sale">Oferta</span> }
+                        else if (esNuevo) { <span class="badge-new">Nuevo</span> }
                     </a>
 
-                    <!-- Quitar de favoritos (mismo botón flotante del catálogo) -->
-                    <form method="post" asp-controller="Favoritos" asp-action="Toggle" class="wishlist-form" data-product-id="@p.ProductoID">
-                        @Html.AntiForgeryToken()
-                        <input type="hidden" name="id" value="@p.ProductoID" />
-                        <button type="submit" class="wishlist-btn active" title="Quitar de favoritos">
-                            <i class="fas fa-heart"></i>
-                        </button>
-                    </form>
+                    <!-- Quitar favorito -->
+                    <button class="btn-fav-remove"
+                            type="button"
+                            data-toggle-fav
+                            data-product-id="@p.ProductoID"
+                            title="Quitar de favoritos"
+                            aria-label="Quitar @p.Nombre de favoritos">
+                        <i class="fas fa-heart"></i>
+                    </button>
 
-                    <!-- Añadir al carrito -->
-                    @if (disponible)
-                    {
-                        <form asp-controller="Compras" asp-action="AnadirAlCarrito" method="post" class="add-to-cart-form">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="ProductoID" value="@p.ProductoID" />
-                            <input type="hidden" name="Cantidad" value="1" />
-                            <button type="submit" class="add-to-cart-btn">
-                                <i class="fas fa-shopping-bag"></i> Añadir al carrito
+                    <!-- Body -->
+                    <div class="fav-card-body">
+
+                        @if (!string.IsNullOrWhiteSpace(p.Marca))
+                        {
+                            <span class="fav-card-vendor">@p.Marca</span>
+                        }
+
+                        <a asp-controller="Compras"
+                           asp-action="VerProducto"
+                           asp-route-productoID="@p.ProductoID"
+                           class="fav-card-name">@p.Nombre</a>
+
+                        <!-- Precio -->
+                        <div class="fav-price-row">
+                            <span class="fav-card-price" data-price>
+                                @if (hayDescuento) {
+                                    <span class="fav-price-from">Desde </span>
+                                }
+                                @Fmt(precioMin)
+                            </span>
+                            @if (hayDescuento)
+                            {
+                                <span class="fav-price-original">@Fmt(p.PrecioVenta)</span>
+                            }
+                        </div>
+
+                        <!-- Selectores de variante -->
+                        @if (tieneVar && (colDisp.Any() || talDisp.Any()))
+                        {
+                            <div class="fav-variants">
+                                @if (colDisp.Any())
+                                {
+                                    <div>
+                                        <div class="fav-var-label">
+                                            Color: <span class="fav-var-label-val" data-color-label>—</span>
+                                        </div>
+                                        <div class="fav-color-row">
+                                            @foreach (var c in colDisp.Take(7))
+                                            {
+                                                var hex  = ColorHex(c);
+                                                var light = IsLight(hex);
+                                                <button type="button"
+                                                        class="fav-cbtn@(light ? " is-light" : "")"
+                                                        data-color-select="@c"
+                                                        title="@c"
+                                                        aria-label="@c"
+                                                        style="background:@hex"></button>
+                                            }
+                                            @if (colDisp.Count > 7)
+                                            {
+                                                <span class="fav-more">+@(colDisp.Count - 7)</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                                @if (talDisp.Any())
+                                {
+                                    <div>
+                                        <div class="fav-var-label">
+                                            Talla: <span class="fav-var-label-val" data-size-label>—</span>
+                                        </div>
+                                        <div class="fav-size-row">
+                                            @foreach (var t in talDisp.Take(6))
+                                            {
+                                                <button type="button"
+                                                        class="fav-tbtn"
+                                                        data-size-select="@t"
+                                                        aria-label="Talla @t">@t</button>
+                                            }
+                                            @if (talDisp.Count > 6)
+                                            {
+                                                <span class="fav-more">+@(talDisp.Count - 6)</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                    </div><!-- /body -->
+
+                    <!-- Footer -->
+                    <div class="fav-card-footer">
+                        @if (disponible)
+                        {
+                            <button class="btn-add-cart"
+                                    type="button"
+                                    data-add-to-cart
+                                    data-product-id="@p.ProductoID">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+                                Añadir al carrito
                             </button>
-                        </form>
-                    }
-                    else
+                        }
+                        else
+                        {
+                            <span class="btn-out-stock">
+                                <i class="fas fa-ban" style="font-size:.78rem"></i>
+                                Sin stock
+                            </span>
+                        }
+                    </div>
+
+                    <!-- Variantes JSON para JS -->
+                    @if (tieneVar)
                     {
-                        <button class="add-to-cart-btn" disabled>
-                            <i class="fas fa-times-circle"></i> No hay stock
-                        </button>
+                        <script type="application/json" data-variants-json>@Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            p.Variantes!.Select(v => new {
+                                id     = v.ProductoVarianteID,
+                                color  = v.Color,
+                                talla  = v.Talla,
+                                stock  = v.Stock,
+                                precio = v.PrecioVenta > 0 ? v.PrecioVenta : p.PrecioVenta
+                            }),
+                            new System.Text.Json.JsonSerializerOptions {
+                                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                            }
+                        ))</script>
                     }
+
                 </article>
             }
-        </div>
-    }
-</section>
-
-<style>
-    /* ======= Paleta y base (idéntico al catálogo) ======= */
-    :root {
-        --primary-dark: #2C2C2C;
-        --primary-light: #FFFFFF;
-        --accent-pink: #E8B4B8;
-        --accent-pink-dark: #D49A9F;
-        --accent-purple: #8A6B8F;
-        --accent-gold: #D4AF37;
-        --light-beige: #F8F4F0;
-        --medium-gray: #E8E8E8;
-        --dark-gray: #5A5A5A;
-        --text-color: #5A5A5A;
-        --text-light: #8A8A8A;
-        --shadow-color: rgba(0,0,0,.08);
-        --shadow-hover: rgba(0,0,0,.15);
+        </div><!-- /grid -->
     }
 
-    body {
-        background-color: var(--light-beige);
-    }
+</div>
+</div>
 
-    /* ======= Grid como el catálogo ======= */
-    .products-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill,minmax(250px,1fr));
-        gap: 30px
-    }
-
-    /* ======= Card de producto ======= */
-    .product-card {
-        background: var(--primary-light);
-        border-radius: 16px;
-        overflow: hidden;
-        box-shadow: 0 5px 15px var(--shadow-color);
-        transition: transform .4s ease, box-shadow .4s ease;
-        position: relative
-    }
-
-        .product-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 15px 30px var(--shadow-hover)
-        }
-
-    .product-link {
-        text-decoration: none;
-        color: inherit;
-        display: block
-    }
-
-    .product-image-container {
-        position: relative;
-        padding-top: 120%;
-        overflow: hidden
-    }
-
-    .product-image {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform .7s ease
-    }
-
-    .product-card:hover .product-image {
-        transform: scale(1.08)
-    }
-
-    .product-badge {
-        position: absolute;
-        top: 12px;
-        left: 12px;
-        background: var(--accent-gold);
-        color: var(--primary-dark);
-        padding: 5px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        z-index: 1
-    }
-
-    .out-of-stock-badge {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        background: #e74c3c;
-        color: var(--primary-light);
-        padding: 5px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
-        z-index: 1
-    }
-
-    /* Wishlist flotante (idéntico al catálogo) */
-    .wishlist-form {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        z-index: 2
-    }
-
-    .wishlist-btn {
-        background-color: rgba(255,255,255,.9);
-        border: none;
-        cursor: pointer;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 8px rgba(0,0,0,.1);
-        transition: all .3s ease
-    }
-
-        .wishlist-btn:hover {
-            background: #fff;
-            transform: scale(1.1)
-        }
-
-        .wishlist-btn i {
-            font-size: 18px;
-            color: var(--accent-pink)
-        }
-
-    .product-info {
-        padding: 20px
-    }
-
-    .product-title {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        color: var(--text-color);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis
-    }
-
-    .product-price {
-        font-size: 20px;
-        font-weight: 700;
-        color: var(--accent-purple);
-        margin-bottom: 15px
-    }
-
-    .product-colors {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 15px
-    }
-
-    .color-option {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 1px solid var(--medium-gray);
-        cursor: pointer;
-        transition: transform .2s
-    }
-
-        .color-option:hover {
-            transform: scale(1.2)
-        }
-
-    .add-to-cart-form {
-        margin-top: -6px
-    }
-
-    .add-to-cart-btn {
-        width: 100%;
-        padding: 14px;
-        background: var(--accent-pink);
-        color: #fff;
-        border: none;
-        font-weight: 600;
-        font-size: 15px;
-        cursor: pointer;
-        transition: all .3s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        border-bottom-left-radius: 16px;
-        border-bottom-right-radius: 16px
-    }
-
-        .add-to-cart-btn:hover {
-            background: var(--accent-purple)
-        }
-
-        .add-to-cart-btn[disabled] {
-            background: #ccc;
-            color: #888;
-            cursor: not-allowed
-        }
-
-    /* Responsive (usar @@ en Razor) */
-    @@media (max-width:1100px) {
-        .products-grid {
-            grid-template-columns: repeat(auto-fill,minmax(220px,1fr))
-        }
-    }
-
-    @@media (max-width:768px) {
-        .products-grid {
-            grid-template-columns: repeat(auto-fill,minmax(180px,1fr));
-            gap: 20px
-        }
-    }
-
-    @@media (max-width:576px) {
-        .products-grid {
-            grid-template-columns: 1fr
-        }
-    }
-</style>
-
-<!-- Iconos / tipografías -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- Toast container -->
+<div class="fav-toast" id="fav-toast" aria-live="polite" aria-atomic="false"></div>
 
 @section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-          // Toggle de favoritos (AJAX) y remover card
-          document.querySelectorAll('form.wishlist-form').forEach(form => {
-            form.addEventListener('submit', async (e) => {
-              e.preventDefault();
-              const card = form.closest('.product-card');
-              const data = new FormData(form);
-              try{
-                const res = await fetch(form.action || form.getAttribute('action') || '/Favoritos/Toggle', {
-                  method: 'POST',
-                  headers: { 'X-Requested-With': 'XMLHttpRequest' },
-                  body: data
-                });
-                if(!res.ok) throw new Error('HTTP '+res.status);
-                const json = await res.json();
-                // Controlador devuelve { esFavorito: false } cuando se quita
-                if(json && (json.esFavorito === false || json.ok === true)){
-                  card.style.opacity = .0; card.style.transform = 'translateY(6px)';
-                  setTimeout(() => {
-                    card.remove();
-                    actualizarContador();
-                    if(!document.querySelector('.product-card')){
-                      mostrarVacio();
-                    }
-                  }, 160);
-                }
-              }catch(err){ console.error(err); alert('No se pudo actualizar tus favoritos.'); }
-            });
-          });
+<script>
+(function () {
+    'use strict';
 
-          function actualizarContador(){
-            const cnt = document.getElementById('favCount');
-            if(cnt) cnt.textContent = document.querySelectorAll('.product-card').length;
-          }
-          function mostrarVacio(){
-            const container = document.querySelector('.products-grid')?.parentElement;
-            if(!container) return;
-            container.innerHTML = `
-              <div class="text-center py-5">
-                <i class="far fa-heart fa-3x text-secondary mb-3"></i>
-                <h5 class="mb-2">No has agregado productos a favoritos aún</h5>
-                <a href="/Compras/Catalogo" class="btn btn-primary mt-2">
-                  <i class="fas fa-bag-shopping me-2"></i>Explorar productos
-                </a>
-              </div>`;
-          }
+    const grid      = document.getElementById('fav-grid');
+    const toastArea = document.getElementById('fav-toast');
+    const countEl   = document.getElementById('fav-count');
+    if (!grid) return;
+
+    // ── CSRF ──────────────────────────────────────────────────────
+    const token = () =>
+        document.querySelector('input[name="__RequestVerificationToken"]')?.value ?? '';
+
+    // ── AJAX helper ───────────────────────────────────────────────
+    async function post(url, params) {
+        const body = new URLSearchParams(params);
+        body.append('__RequestVerificationToken', token());
+        const r = await fetch(url, {
+            method: 'POST', body,
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
-    </script>
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function toast(msg, isOk = true) {
+        const icon = isOk
+            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+            : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        const t = document.createElement('div');
+        t.className = `fav-toast-item ${isOk ? 'ok' : 'err'}`;
+        t.innerHTML = `${icon}<span>${msg}</span>`;
+        toastArea.appendChild(t);
+        setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 280); }, 3200);
+    }
+
+    // ── Actualizar contador ───────────────────────────────────────
+    function updateCount() {
+        const n = grid.querySelectorAll('.fav-card:not(.is-removing)').length;
+        if (countEl) countEl.textContent = n;
+        document.querySelectorAll('[data-fav-count]').forEach(el => el.textContent = n);
+    }
+
+    // ── Estado vacío ──────────────────────────────────────────────
+    function showEmptyState() {
+        document.querySelector('.fav-header')?.remove();
+        grid.closest('.fav-wrap').innerHTML = `
+            <div class="fav-empty" style="animation:pgIn .45s cubic-bezier(.4,0,.2,1)">
+                <div class="fav-empty-icon">♡</div>
+                <h3>Aún no tienes favoritos</h3>
+                <p>Guarda los productos que más te gusten para encontrarlos fácilmente.</p>
+                <a href="/Compras/Catalogo" class="btn-explore">
+                    <i class="fas fa-store" style="font-size:.85rem"></i>
+                    Explorar tienda
+                </a>
+            </div>`;
+    }
+
+    // ── RECARGAR panel del carrito ────────────────────────────────
+    async function refreshCartPanel() {
+        try {
+            const cartContent = document.getElementById('cart-content');
+            if (!cartContent) return;
+            const res = await fetch('/Carrito/CartPartial', {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (res.ok) cartContent.innerHTML = await res.text();
+        } catch { /* silencioso */ }
+    }
+
+    // ── INIT variantes de una card ────────────────────────────────
+    function initCardVariants(card) {
+        const jsonEl = card.querySelector('[data-variants-json]');
+        if (!jsonEl) return;
+
+        let variants = [];
+        try { variants = JSON.parse(jsonEl.textContent || '[]'); }
+        catch { return; }
+        if (!variants.length) return;
+
+        const state = { selectedColor: null, selectedSize: null, selectedVariant: null };
+
+        const colorBtns  = card.querySelectorAll('[data-color-select]');
+        const sizeBtns   = card.querySelectorAll('[data-size-select]');
+        const addBtn     = card.querySelector('[data-add-to-cart]');
+        const priceEl    = card.querySelector('[data-price]');
+        const colorLabel = card.querySelector('[data-color-label]');
+        const sizeLabel  = card.querySelector('[data-size-label]');
+
+        // ── Colores ───────────────────────────────────────────────
+        colorBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.selectedColor   = btn.dataset.colorSelect;
+                state.selectedSize    = null;
+                state.selectedVariant = null;
+
+                colorBtns.forEach(b => b.classList.toggle('active', b === btn));
+                if (colorLabel) colorLabel.textContent = state.selectedColor;
+                if (sizeLabel)  sizeLabel.textContent  = '—';
+
+                // Habilitar/deshabilitar tallas según stock del color
+                sizeBtns.forEach(sb => {
+                    const v = variants.find(v =>
+                        v.color?.toLowerCase() === state.selectedColor?.toLowerCase() &&
+                        v.talla === sb.dataset.sizeSelect
+                    );
+                    sb.disabled = !v || v.stock <= 0;
+                    sb.classList.remove('active');
+                });
+
+                // Si solo hay colores (sin tallas), resolver variante aquí
+                if (!sizeBtns.length) {
+                    state.selectedVariant = variants.find(v =>
+                        v.color?.toLowerCase() === state.selectedColor?.toLowerCase()
+                    ) ?? null;
+                    updatePrice();
+                }
+
+                syncAddBtn();
+            });
+        });
+
+        // ── Tallas ────────────────────────────────────────────────
+        sizeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.disabled) return;
+                state.selectedSize = btn.dataset.sizeSelect;
+
+                sizeBtns.forEach(b => b.classList.toggle('active', b === btn));
+                if (sizeLabel) sizeLabel.textContent = state.selectedSize;
+
+                state.selectedVariant = variants.find(v =>
+                    v.color?.toLowerCase() === state.selectedColor?.toLowerCase() &&
+                    v.talla === state.selectedSize
+                ) ?? null;
+
+                updatePrice();
+                syncAddBtn();
+            });
+        });
+
+        // ── Actualizar precio dinámicamente ───────────────────────
+        function updatePrice() {
+            if (!state.selectedVariant || !priceEl) return;
+            const precio = Number(state.selectedVariant.precio);
+            if (!isNaN(precio) && precio > 0) {
+                // Reemplazar solo el nodo de texto con el precio
+                const nodes = [...priceEl.childNodes];
+                const textNode = nodes.find(n => n.nodeType === 3 && n.textContent.includes('$'));
+                if (textNode) textNode.textContent = '$' + precio.toFixed(2);
+            }
+        }
+
+        // ── Sincronizar estado en el botón ────────────────────────
+        function syncAddBtn() {
+            if (addBtn) addBtn._favState = state;
+        }
+
+        // ── Auto-selección inicial ────────────────────────────────
+        if (colorBtns.length > 0) {
+            colorBtns[0].click();
+            const firstSize = [...sizeBtns].find(b => !b.disabled);
+            if (firstSize) firstSize.click();
+        } else if (sizeBtns.length > 0) {
+            const firstSize = [...sizeBtns].find(b => !b.disabled);
+            if (firstSize) firstSize.click();
+        }
+    }
+
+    // Inicializar todas las cards
+    grid.querySelectorAll('.fav-card').forEach(card => initCardVariants(card));
+
+    // ── QUITAR DE FAVORITOS (delegado) ────────────────────────────
+    grid.addEventListener('click', async e => {
+        const btn = e.target.closest('[data-toggle-fav]');
+        if (!btn) return;
+
+        const card      = btn.closest('.fav-card');
+        const productId = btn.dataset.productId;
+        if (!card || !productId) return;
+
+        btn.classList.add('is-loading');
+        btn.innerHTML = '<span style="border:2px solid #f43f5e;border-right-color:transparent;border-radius:50%;width:12px;height:12px;display:inline-block;animation:fav-spin .5s linear infinite"></span>';
+
+        try {
+            const data = await post('/Favoritos/Toggle', { id: productId });
+            if (data.esFavorito === false || data.ok === true) {
+                card.classList.add('is-removing');
+                setTimeout(() => {
+                    card.remove();
+                    updateCount();
+                    if (!grid.querySelector('.fav-card')) showEmptyState();
+                }, 340);
+                toast('Eliminado de favoritos');
+            } else {
+                btn.classList.remove('is-loading');
+                btn.innerHTML = '<i class="fas fa-heart"></i>';
+            }
+        } catch {
+            btn.classList.remove('is-loading');
+            btn.innerHTML = '<i class="fas fa-heart"></i>';
+            toast('No se pudo actualizar favoritos', false);
+        }
+    });
+
+    // ── AÑADIR AL CARRITO (delegado) ──────────────────────────────
+    grid.addEventListener('click', async e => {
+        const btn = e.target.closest('[data-add-to-cart]');
+        if (!btn || btn.disabled) return;
+
+        const card      = btn.closest('.fav-card');
+        const productId = card?.dataset.cardId;
+        if (!productId) return;
+
+        // Leer estado desde la referencia JS directa
+        const state     = btn._favState ?? null;
+        const variant   = state?.selectedVariant ?? null;
+        const variantId = variant?.id ?? '';
+
+        // ¿El producto tiene variantes definidas?
+        const jsonEl    = card.querySelector('[data-variants-json]');
+        const variants  = jsonEl
+            ? (() => { try { return JSON.parse(jsonEl.textContent); } catch { return []; } })()
+            : [];
+        const hasVar = variants.length > 0;
+
+        // Validación: si hay variantes, debe haber selección completa
+        if (hasVar && !variantId) {
+            const hasColors = card.querySelectorAll('[data-color-select]').length > 0;
+            const hasSizes  = card.querySelectorAll('[data-size-select]').length > 0;
+            const needColor = hasColors && !state?.selectedColor;
+            const needSize  = hasSizes  && !state?.selectedSize;
+
+            const msg = needColor ? 'Selecciona un color primero'
+                      : needSize  ? 'Selecciona una talla'
+                      : 'Selecciona color y talla';
+            toast(msg, false);
+
+            // Shake animación en los selectores
+            card.querySelector('.fav-variants')?.animate(
+                [{ transform:'translateX(-4px)' }, { transform:'translateX(4px)' }, { transform:'translateX(0)' }],
+                { duration: 300, iterations: 2 }
+            );
+            return;
+        }
+
+        // UI optimista — spinner
+        const original = btn.innerHTML;
+        btn.disabled   = true;
+        btn.innerHTML  = '<span style="border:2px solid rgba(255,255,255,.7);border-right-color:transparent;border-radius:50%;width:13px;height:13px;display:inline-block;animation:fav-spin .5s linear infinite"></span>';
+
+        try {
+            const params = { productoID: productId, cantidad: 1 };
+            if (hasVar && variantId) params.varianteID = variantId;
+
+            const data = await post('/Carrito/AgregarDesdeCard', params);
+
+            if (data.success || data.ok) {
+                // Badge del carrito
+                document.querySelectorAll('[data-cart-count], #cart-count').forEach(el => {
+                    el.textContent = data.count ?? '';
+                });
+
+                // Recargar el contenido del panel del carrito
+                await refreshCartPanel();
+
+                toast('¡Añadido al carrito!');
+
+                // Feedback visual en el botón
+                btn.classList.add('success');
+                btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> ¡Añadido!';
+
+                setTimeout(() => {
+                    btn.classList.remove('success');
+                    btn.innerHTML = original;
+                    btn.disabled  = false;
+                }, 2200);
+            } else {
+                throw new Error(data.message || data.error || 'Error al agregar');
+            }
+        } catch (err) {
+            toast(err.message || 'No se pudo añadir al carrito', false);
+            btn.innerHTML = original;
+            btn.disabled  = false;
+        }
+    });
+
+    // Keyframe spinner
+    if (!document.getElementById('fav-spin-kf')) {
+        const s = document.createElement('style');
+        s.id = 'fav-spin-kf';
+        s.textContent = '@@keyframes fav-spin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(s);
+    }
+
+})();
+</script>
 }

@@ -25,12 +25,6 @@
                     <meta itemprop="position" content="1" />
                 </li>
                 <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
-                    <a href="@Url.Action("Index", "Cuenta")" class="breadcrumb-link" itemprop="item">
-                        <span itemprop="name">Mi Cuenta</span>
-                    </a>
-                    <meta itemprop="position" content="2" />
-                </li>
-                <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
                     <span class="breadcrumb-current" itemprop="name" aria-current="page">Iniciar Sesión</span>
                     <meta itemprop="position" content="3" />
                 </li>
@@ -156,7 +150,7 @@
                             <input asp-for="RememberMe" type="checkbox" class="form-check-input" id="rememberMe" />
                             <span class="form-check-label">Recordarme</span>
                         </label>
-                        <a asp-controller="Cuenta" asp-action="OlvidoPassword" class="forgot-link">
+                        <a asp-controller="Cuenta" asp-action="OlvidePassword" class="forgot-link">
                             ¿Olvidaste tu contraseña?
                         </a>
                     </div>
