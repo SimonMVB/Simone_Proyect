@@ -40,6 +40,7 @@ namespace Simone.Data
         // ==================== INVENTARIO ====================
         public DbSet<MovimientosInventario> MovimientosInventario { get; set; }
         public DbSet<CatalogoEstados> CatalogoEstados { get; set; }
+        public DbSet<ReservaStock> ReservasStock { get; set; } = null!;
 
         // ==================== CARRITO ====================
         public DbSet<Carrito> Carrito { get; set; }
@@ -150,8 +151,10 @@ namespace Simone.Data
                       .HasForeignKey(cu => cu.UsuarioId)
                       .OnDelete(DeleteBehavior.Cascade);
 
+                // WithMany(p => p.CuponesUsados) conecta la navigation property existente
+                // en Promocion, evitando que EF cree una segunda FK shadow "PromocionID1"
                 entity.HasOne(cu => cu.Promocion)
-                      .WithMany()
+                      .WithMany(p => p.CuponesUsados)
                       .HasForeignKey(cu => cu.PromocionID)
                       .OnDelete(DeleteBehavior.Cascade);
             });

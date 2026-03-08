@@ -41,16 +41,19 @@ namespace Simone.Models
         /// Número de quincena (1 o 2)
         /// 1 = días 1-15, 2 = días 16-fin de mes
         /// </summary>
+        [Range(1, 2, ErrorMessage = "El número de quincena debe ser 1 o 2.")]
         public int NumeroQuincena { get; set; }
 
         /// <summary>
         /// Año del período
         /// </summary>
+        [Range(2000, 2100, ErrorMessage = "El año debe ser un valor válido.")]
         public int Anio { get; set; }
 
         /// <summary>
         /// Mes del período
         /// </summary>
+        [Range(1, 12, ErrorMessage = "El mes debe estar entre 1 y 12.")]
         public int Mes { get; set; }
 
         // ==================== MONTOS ====================

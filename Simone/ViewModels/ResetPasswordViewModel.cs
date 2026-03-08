@@ -4,19 +4,19 @@ namespace Simone.ViewModels
 {
     public class ResetPasswordViewModel
     {
-        [Required(ErrorMessage = "El correo electrónico es requerido")]
+        [Required(ErrorMessage = "El correo electrÃ³nico es requerido")]
         [EmailAddress]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "La nueva contraseña es requerida")]
+        [Required(ErrorMessage = "La nueva contraseÃ±a es requerida")]
         [StringLength(100, ErrorMessage = "La {0} debe tener al menos {2} caracteres.", MinimumLength = 8)]
         [DataType(DataType.Password)]
-        [Display(Name = "Nueva contraseña")]
+        [Display(Name = "Nueva contraseÃ±a")]
         public string Password { get; set; }
 
         [DataType(DataType.Password)]
-        [Display(Name = "Confirmar contraseña")]
-        [Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")]
+        [Display(Name = "Confirmar contraseÃ±a")]
+        [Compare("Password", ErrorMessage = "Las contraseÃ±as no coinciden.")]
         public string ConfirmPassword { get; set; }
 
         [Required]

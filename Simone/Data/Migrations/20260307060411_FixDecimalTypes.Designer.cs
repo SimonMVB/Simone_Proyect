@@ -12,15 +12,15 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20260301223757_Inicial")]
-    partial class Inicial
+    [Migration("20260307060411_FixDecimalTypes")]
+    partial class FixDecimalTypes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "8.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -679,7 +679,7 @@ namespace Simone.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal>("PorcentajeComision")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("VentaID")
                         .HasColumnType("int");
@@ -922,14 +922,9 @@ namespace Simone.Migrations
                     b.Property<DateTime>("FechaUso")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("PromocionID1")
-                        .HasColumnType("int");
-
                     b.HasKey("UsuarioId", "PromocionID");
 
                     b.HasIndex("PromocionID");
-
-                    b.HasIndex("PromocionID1");
 
                     b.ToTable("CuponesUsados");
                 });
@@ -1914,6 +1909,12 @@ namespace Simone.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ProductoID"));
 
+                    b.Property<decimal?>("Alto")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal?>("Ancho")
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<int>("CategoriaID")
                         .HasColumnType("int");
 
@@ -1932,6 +1933,9 @@ namespace Simone.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
+                    b.Property<decimal?>("Largo")
+                        .HasColumnType("decimal(10,2)");
+
                     b.Property<string>("Marca")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
@@ -1940,6 +1944,9 @@ namespace Simone.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("Peso")
+                        .HasColumnType("decimal(10,3)");
 
                     b.Property<decimal>("PrecioCompra")
                         .HasColumnType("decimal(18,2)");
@@ -2290,6 +2297,9 @@ namespace Simone.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEntrega")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaEnvioHub")
@@ -3145,14 +3155,10 @@ namespace Simone.Migrations
             modelBuilder.Entity("Simone.Models.CuponesUsados", b =>
                 {
                     b.HasOne("Simone.Models.Promocion", "Promocion")
-                        .WithMany()
+                        .WithMany("CuponesUsados")
                         .HasForeignKey("PromocionID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Simone.Models.Promocion", null)
-                        .WithMany("CuponesUsados")
-                        .HasForeignKey("PromocionID1");
 
                     b.HasOne("Simone.Models.Usuario", "Usuario")
                         .WithMany()

@@ -9,25 +9,25 @@ namespace Simone.ViewModels
         [Display(Name = "Nombre completo")]
         public string Nombre { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "La cédula es requerida")]
-        [RegularExpression(@"^\d{10}$", ErrorMessage = "La cédula debe tener 10 dígitos")]
-        [Display(Name = "Cédula")]
+        [Required(ErrorMessage = "La cÃ©dula es requerida")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "La cÃ©dula debe tener 10 dÃ­gitos")]
+        [Display(Name = "CÃ©dula")]
         public string Cedula { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El correo electrónico es requerido")]
-        [EmailAddress(ErrorMessage = "Ingrese un correo electrónico válido")]
-        [Display(Name = "Correo electrónico")]
+        [Required(ErrorMessage = "El correo electrÃ³nico es requerido")]
+        [EmailAddress(ErrorMessage = "Ingrese un correo electrÃ³nico vÃ¡lido")]
+        [Display(Name = "Correo electrÃ³nico")]
         public string Email { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "El número de teléfono es requerido")]
-        [Phone(ErrorMessage = "Ingrese un número de teléfono válido")]
-        [StringLength(20, ErrorMessage = "El teléfono no puede exceder los 20 caracteres")]
-        [Display(Name = "Teléfono")]
+        [Required(ErrorMessage = "El nÃºmero de telÃ©fono es requerido")]
+        [Phone(ErrorMessage = "Ingrese un nÃºmero de telÃ©fono vÃ¡lido")]
+        [StringLength(20, ErrorMessage = "El telÃ©fono no puede exceder los 20 caracteres")]
+        [Display(Name = "TelÃ©fono")]
         public string Telefono { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "La dirección es requerida")]
-        [StringLength(200, ErrorMessage = "La dirección no puede exceder los 200 caracteres")]
-        [Display(Name = "Dirección")]
+        [Required(ErrorMessage = "La direcciÃ³n es requerida")]
+        [StringLength(200, ErrorMessage = "La direcciÃ³n no puede exceder los 200 caracteres")]
+        [Display(Name = "DirecciÃ³n")]
         public string Direccion { get; set; } = string.Empty;
 
         [StringLength(200, ErrorMessage = "La referencia no puede exceder los 200 caracteres")]
@@ -44,16 +44,16 @@ namespace Simone.ViewModels
         [Display(Name = "Provincia")]
         public string Provincia { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "La contraseña es requerida")]
+        [Required(ErrorMessage = "La contraseÃ±a es requerida")]
         [StringLength(100, ErrorMessage = "La {0} debe tener al menos {2} caracteres.", MinimumLength = 8)]
         [DataType(DataType.Password)]
-        [Display(Name = "Contraseña")]
+        [Display(Name = "ContraseÃ±a")]
         public string Password { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Debes confirmar la contraseña")]
+        [Required(ErrorMessage = "Debes confirmar la contraseÃ±a")]
         [DataType(DataType.Password)]
-        [Display(Name = "Confirmar contraseña")]
-        [Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")]
+        [Display(Name = "Confirmar contraseÃ±a")]
+        [Compare("Password", ErrorMessage = "Las contraseÃ±as no coinciden.")]
         public string ConfirmPassword { get; set; } = string.Empty;
     }
 }

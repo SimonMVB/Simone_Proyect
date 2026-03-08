@@ -1,16 +1,20 @@
-﻿using Microsoft.AspNetCore.Http.Features;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Simone.Data;
 using Simone.ModelBinders;
 using Simone.Models;
 using Simone.Services;
 using System.Globalization;
 using System.Linq;
-using Simone.Services;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +26,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<TiendaDbContext>(options =>
     options.UseSqlServer(connectionString)
-    .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
 );
 
 // ============================================================================
@@ -56,7 +59,7 @@ builder.Services.AddSession(options =>
     options.IdleTimeout = TimeSpan.FromMinutes(30);
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
-    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SameSite = SameSiteMode.Strict;
 });
 
 builder.Services.AddHttpContextAccessor();
@@ -86,9 +89,10 @@ const long maxFileSize = 64L * 1024 * 1024; // 64 MB
 builder.Services.Configure<FormOptions>(options =>
 {
     options.MultipartBodyLengthLimit = maxFileSize;
-    options.ValueLengthLimit = int.MaxValue;
-    options.MultipartHeadersLengthLimit = int.MaxValue;
-    options.MemoryBufferThreshold = int.MaxValue;
+    // Límites razonables para prevenir ataques DoS por valores excesivamente grandes
+    options.ValueLengthLimit = 4 * 1024 * 1024;              // 4 MB para valores de formulario
+    options.MultipartHeadersLengthLimit = 16 * 1024;          // 16 KB para cabeceras multipart
+    options.MemoryBufferThreshold = 64 * 1024;                // 64 KB en memoria, el resto a disco
 });
 
 builder.Services.Configure<KestrelServerOptions>(options =>
@@ -108,15 +112,19 @@ builder.Services.Configure<IISServerOptions>(options =>
 // ────────────────────────────────────────────────────────────────────────────
 // CATEGORÍAS Y PRODUCTOS (Sistema Fusionado)
 // ────────────────────────────────────────────────────────────────────────────
+// Registro del tipo concreto primero; la interfaz hace forwarding al mismo scope.
+// Esto permite inyectar tanto ICategoriasService como CategoriasService directamente.
 builder.Services.AddScoped<CategoriasService>();
+builder.Services.AddScoped<ICategoriasService>(sp => sp.GetRequiredService<CategoriasService>());
 builder.Services.AddScoped<SubcategoriasService>();
 
 // ✅ Atributos dinámicos (fusionado - usa Categorias directamente)
 builder.Services.AddScoped<CategoriaAtributoService>();
 builder.Services.AddScoped<ProductoAtributoService>();
 
-// Productos
+// Productos — mismo patrón: tipo concreto + forwarding de interfaz
 builder.Services.AddScoped<ProductosService>();
+builder.Services.AddScoped<IProductosService>(sp => sp.GetRequiredService<ProductosService>());
 
 
 
@@ -127,7 +135,6 @@ builder.Services.AddScoped<IEnvioConsolidadoService, EnvioConsolidadoService>();
 // CARRITO Y PAGOS
 // ────────────────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ICarritoService, CarritoService>();
-builder.Services.AddScoped<CarritoService>();
 builder.Services.AddScoped<CarritoActionFilter>();
 builder.Services.AddScoped<PagosResolver>();
 
@@ -141,8 +148,16 @@ builder.Services.AddScoped<EnviosCarritoService>();
 // ────────────────────────────────────────────────────────────────────────────
 // PROVEEDORES Y BANCOS
 // ────────────────────────────────────────────────────────────────────────────
+// Proveedores — mismo patrón: tipo concreto + forwarding de interfaz
 builder.Services.AddScoped<ProveedorService>();
+builder.Services.AddScoped<IProveedorService>(sp => sp.GetRequiredService<ProveedorService>());
 builder.Services.AddSingleton<IBancosConfigService, BancosConfigService>();
+
+// ────────────────────────────────────────────────────────────────────────────
+// ALMACENAMIENTO DE ARCHIVOS (imágenes, comprobantes) — fuera del proyecto
+// ────────────────────────────────────────────────────────────────────────────
+builder.Services.Configure<UploadsOptions>(builder.Configuration.GetSection("Uploads"));
+builder.Services.AddSingleton<IFileStorageService, FileStorageService>();
 
 // ────────────────────────────────────────────────────────────────────────────
 // UTILIDADES Y LOGGING
@@ -155,10 +170,90 @@ builder.Services.AddScoped<LogService>();
 // ────────────────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ComisionService>();
 builder.Services.AddScoped<FinanzasAdminService>();
+builder.Services.AddScoped<IDevolucionesService, DevolucionesService>();
 
 
 // ============================================================================
-// 7) CONFIGURACIÓN DE MVC Y MODEL BINDERS
+// 7) JWT BEARER AUTHENTICATION (para API Mobile / POS)
+// ============================================================================
+var jwtKey     = builder.Configuration["Jwt:SecretKey"]  ?? "Simone-POS-Super-Secret-JWT-Key-2025-Ecuador-Mobile-App!";
+var jwtIssuer  = builder.Configuration["Jwt:Issuer"]     ?? "SimoneAPI";
+var jwtAudience = builder.Configuration["Jwt:Audience"]  ?? "SimoneMobileApp";
+
+builder.Services.AddAuthentication()
+    .AddJwtBearer("JwtBearer", options =>
+    {
+        options.RequireHttpsMetadata = false; // permitir HTTP en desarrollo
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer              = jwtIssuer,
+            ValidAudience            = jwtAudience,
+            IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            ClockSkew                = TimeSpan.FromMinutes(1)
+        };
+    });
+
+// ============================================================================
+// 7b) CORS — permite conexiones desde la app React Native (cualquier origen en dev)
+// ============================================================================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("ReactNativePolicy", policy =>
+    {
+        policy
+            .AllowAnyOrigin()   // en producción restringe a la IP/dominio del servidor
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
+});
+
+// ============================================================================
+// 7c) SWAGGER / OPENAPI
+// ============================================================================
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title       = "Simone POS API",
+        Version     = "v1",
+        Description = "API REST para la app móvil POS de Simone (React Native)"
+    });
+
+    // Soporte JWT en Swagger UI
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description  = "JWT Token. Formato: Bearer {token}",
+        Name         = "Authorization",
+        In           = ParameterLocation.Header,
+        Type         = SecuritySchemeType.Http,
+        Scheme       = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id   = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+// ============================================================================
+// 7d) MVC Y MODEL BINDERS
 // ============================================================================
 builder.Services.AddControllersWithViews(options =>
 {
@@ -197,20 +292,74 @@ else
     app.UseDeveloperExceptionPage();
 }
 
-app.UseHttpsRedirection();
-app.UseStaticFiles();
+// UseHttpsRedirection solo en producción — en desarrollo la app móvil
+// usa HTTP plano y no puede seguir redirects a HTTPS con cert autofirmado.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
+// ── Headers de seguridad ──────────────────────────────────────────────────
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+    context.Response.Headers["X-XSS-Protection"] = "1; mode=block";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next();
+});
+
+app.UseStaticFiles(); // sirve wwwroot (CSS, JS, imágenes estáticas del proyecto)
+
+// ── Servir archivos subidos por usuarios desde la carpeta externa ─────────
+{
+    var fileStorage = app.Services.GetRequiredService<IFileStorageService>();
+    var uploadsPath = fileStorage.RutaBase;
+    Directory.CreateDirectory(uploadsPath);
+
+    // Las URLs /images/... y /uploads/... se sirven desde la carpeta externa
+    // en lugar de desde wwwroot. Las rutas guardadas en BD siguen siendo las mismas.
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(uploadsPath),
+        RequestPath  = string.Empty,   // sin prefijo: /images/... mapea directo
+        ServeUnknownFileTypes = false,
+        OnPrepareResponse = ctx =>
+        {
+            // Cache de 7 días para imágenes de producto
+            ctx.Context.Response.Headers["Cache-Control"] = "public,max-age=604800";
+        }
+    });
+}
+
+// ── Swagger (solo en desarrollo, accesible en /swagger) ──────────────────
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Simone POS API v1");
+        c.RoutePrefix = "swagger";
+    });
+}
+
+app.UseCors("ReactNativePolicy"); // CORS antes de Auth
 
 app.UseRouting();
 
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseSession();
 
 app.UseRequestLocalization();
 
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// ── API REST (controllers con [ApiController] + rutas /api/v1/...) ────────
+app.MapControllers();
 
 // ============================================================================
 // 10) INICIALIZACIÓN DE LA BASE DE DATOS Y SEED
@@ -265,6 +414,13 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("✅ Base de datos actualizada (sin migraciones pendientes)");
         }
+
+        // ────────────────────────────────────────────────────────────────
+        // PASO 2b: Verificar columnas críticas (por si alguna migración
+        //          incompleta no fue reconocida por EF Core)
+        // ────────────────────────────────────────────────────────────────
+        logger.LogInformation("🔍 Verificando esquema de columnas críticas...");
+        await VerificarEsquemaAsync(db, logger);
 
         // ────────────────────────────────────────────────────────────────
         // PASO 3: Crear roles y usuario administrador
@@ -365,6 +521,87 @@ app.Run();
 // ============================================================================
 
 /// <summary>
+/// Verifica y agrega columnas críticas que pueden faltar si alguna migración
+/// incompleta (sin .Designer.cs) no fue reconocida por EF Core.
+/// Todas las operaciones son idempotentes.
+/// </summary>
+static async Task VerificarEsquemaAsync(TiendaDbContext db, ILogger logger)
+{
+    // Lista de (tabla, columna, definición SQL) que deben existir
+    var columnas = new (string Tabla, string Columna, string Definicion)[]
+    {
+        // SubPedidos
+        ("SubPedidos",          "FechaEntrega",  "datetime2 NULL"),
+        // EnviosConsolidados
+        ("EnviosConsolidados",  "FechaEntrega",  "datetime2 NULL"),
+        // Vendedores — perfil de tienda
+        ("Vendedores",  "Slug",         "nvarchar(100) NULL"),
+        ("Vendedores",  "Bio",          "nvarchar(500) NULL"),
+        ("Vendedores",  "BannerPath",   "nvarchar(300) NULL"),
+        ("Vendedores",  "Verificado",   "bit NOT NULL DEFAULT 0"),
+        ("Vendedores",  "InstagramUrl", "nvarchar(200) NULL"),
+        ("Vendedores",  "TikTokUrl",    "nvarchar(200) NULL"),
+        ("Vendedores",  "FacebookUrl",  "nvarchar(200) NULL"),
+    };
+
+    foreach (var (tabla, columna, def) in columnas)
+    {
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync($@"
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns
+                    WHERE object_id = OBJECT_ID(N'{tabla}') AND name = N'{columna}'
+                )
+                BEGIN
+                    ALTER TABLE [{tabla}] ADD [{columna}] {def};
+                END
+            ");
+            logger.LogDebug("  ✔ {Tabla}.{Columna} verificada", tabla, columna);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning("  ⚠️ No se pudo verificar {Tabla}.{Columna}: {Msg}", tabla, columna, ex.Message);
+        }
+    }
+
+    // Tabla ReservasStock — crear si no existe
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(@"
+            IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name = N'ReservasStock')
+            BEGIN
+                CREATE TABLE ReservasStock (
+                    ReservaStockId      int IDENTITY(1,1) NOT NULL PRIMARY KEY,
+                    ProductoID          int NOT NULL,
+                    ProductoVarianteID  int NULL,
+                    Cantidad            int NOT NULL,
+                    UsuarioId           nvarchar(450) NULL,
+                    Canal               nvarchar(20)  NOT NULL,
+                    SesionPosId         nvarchar(64)  NULL,
+                    FechaCreacion       datetime2     NOT NULL,
+                    Expiracion          datetime2     NOT NULL,
+                    Confirmada          bit           NOT NULL DEFAULT 0,
+                    CONSTRAINT FK_ReservasStock_Productos
+                        FOREIGN KEY (ProductoID) REFERENCES Productos(ProductoID) ON DELETE CASCADE,
+                    CONSTRAINT FK_ReservasStock_ProductoVariantes
+                        FOREIGN KEY (ProductoVarianteID) REFERENCES ProductoVariantes(ProductoVarianteID)
+                );
+                CREATE INDEX IX_ReservasStock_ProductoID         ON ReservasStock(ProductoID);
+                CREATE INDEX IX_ReservasStock_ProductoVarianteID ON ReservasStock(ProductoVarianteID);
+            END
+        ");
+        logger.LogDebug("  ✔ Tabla ReservasStock verificada");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning("  ⚠️ No se pudo verificar tabla ReservasStock: {Msg}", ex.Message);
+    }
+
+    logger.LogInformation("✅ Verificación de esquema completada");
+}
+
+/// <summary>
 /// Crea los roles del sistema y el usuario administrador inicial
 /// </summary>
 static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger logger)
@@ -430,7 +667,6 @@ static async Task CrearRolesYAdmin(IServiceProvider serviceProvider, ILogger log
             logger.LogInformation("  ✓ Usuario administrador '{Email}' creado con éxito", adminEmail);
             logger.LogWarning("  ⚠️ IMPORTANTE: Cambia la contraseña del admin en producción");
             logger.LogInformation("  📧 Email: {Email}", adminEmail);
-            logger.LogInformation("  🔑 Password: {Password}", adminPassword);
         }
         else
         {

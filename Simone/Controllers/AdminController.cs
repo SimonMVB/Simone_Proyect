@@ -11,14 +11,14 @@ using System.Threading.Tasks;
 namespace Simone.Controllers
 {
     [Authorize(Roles = "Administrador")]
-    public class BancoCuenta : Controller
+    public class AdminController : Controller
     {
         private readonly UserManager<Usuario> _userManager;
         private readonly RoleManager<Roles> _roleManager;
-        private readonly ILogger<BancoCuenta> _logger;
+        private readonly ILogger<AdminController> _logger;
         private readonly TiendaDbContext _context;
 
-        public BancoCuenta(UserManager<Usuario> userManager, RoleManager<Roles> roleManager, ILogger<BancoCuenta> logger, TiendaDbContext context)
+        public AdminController(UserManager<Usuario> userManager, RoleManager<Roles> roleManager, ILogger<AdminController> logger, TiendaDbContext context)
         {
             _userManager = userManager;
             _roleManager = roleManager;

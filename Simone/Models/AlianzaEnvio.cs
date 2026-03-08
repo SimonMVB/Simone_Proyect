@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 namespace Simone.Models
 {
     /// <summary>
-    /// Grupo de tiendas que comparten configuración de envío.
+    /// Grupo de tiendas que comparten configuraciÃ³n de envÃ­o.
     /// Todas las tiendas de una alianza deben estar en el mismo Hub.
     /// </summary>
     public class AlianzaEnvio
@@ -25,7 +25,7 @@ namespace Simone.Models
 
         public DateTime FechaCreacion { get; set; } = DateTime.UtcNow;
 
-        // -------- Navegación --------
+        // -------- NavegaciÃ³n --------
         public virtual HubEnvio Hub { get; set; } = null!;
         public virtual ICollection<Vendedor> Vendedores { get; set; } = new List<Vendedor>();
 

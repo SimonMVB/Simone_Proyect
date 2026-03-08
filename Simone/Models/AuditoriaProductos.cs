@@ -10,19 +10,19 @@ namespace Simone.Models
         [Key]
         public int AuditoriaID { get; set; } // Clave primaria
 
-        // Relación con Productos (Opcional)
+        // RelaciÃ³n con Productos (Opcional)
         public int? ProductoID { get; set; }
         public Producto Producto { get; set; }
 
         [Required]
         [StringLength(500)]
-        public string Cambio { get; set; } // Descripción del cambio
+        public string Cambio { get; set; } // DescripciÃ³n del cambio
 
         [Required]
         public DateTime FechaCambio { get; set; } = DateTime.Now; // Fecha del cambio
 
         [Required]
         [StringLength(100)]
-        public string Usuario { get; set; } // Usuario que realizó el cambio
+        public string Usuario { get; set; } // Usuario que realizÃ³ el cambio
     }
 }

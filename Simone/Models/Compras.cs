@@ -11,6 +11,7 @@ namespace Simone.Models
         public int CompraID { get; set; }  // Clave primaria
         public int ProveedorID { get; set; }  // Clave foránea con Proveedores
         public DateTime? FechaCompra { get; set; }  // Puede ser nulo
+        [Column(TypeName = "decimal(18,2)")]
         public decimal? Total { get; set; }  // Puede ser nulo
 
         // Relación con Proveedores

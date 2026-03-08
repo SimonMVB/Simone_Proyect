@@ -31,11 +31,12 @@ namespace Simone.Controllers
         private readonly UserManager<Usuario> _userManager;
         private readonly SignInManager<Usuario> _signInManager;
         private readonly RoleManager<Roles> _roleManager;
-        private readonly CarritoService _carritoManager;
-        private readonly LogService? _logService;
+        private readonly ICarritoService _carritoManager;
+        private readonly LogService _logService;
         private readonly ILogger<CuentaController> _logger;
         private readonly TiendaDbContext _context;
         private readonly IMemoryCache _cache;
+        private readonly IFileStorageService _fileStorage;
 
         #endregion
 
@@ -98,10 +99,11 @@ namespace Simone.Controllers
             SignInManager<Usuario> signInManager,
             RoleManager<Roles> roleManager,
             ILogger<CuentaController> logger,
-            CarritoService carrito,
+            ICarritoService carrito,
             LogService logService,
             TiendaDbContext context,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IFileStorageService fileStorage)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _signInManager = signInManager ?? throw new ArgumentNullException(nameof(signInManager));
@@ -109,8 +111,9 @@ namespace Simone.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _carritoManager = carrito ?? throw new ArgumentNullException(nameof(carrito));
-            _logService = logService; // Puede ser null
+            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
         }
 
         #endregion
@@ -185,8 +188,7 @@ namespace Simone.Controllers
                     TempData["MensajeError"] = MSG_ERROR_CREDENCIALES;
                     await RegistrarLogAsync(model.Email, false, ct);
 
-                    if (_logService != null)
-                        await _logService.Registrar($"Login FAIL {model.Email} (no existe)");
+                    await _logService.Registrar($"Login FAIL {model.Email} (no existe)");
 
                     return View(model);
                 }
@@ -222,8 +224,7 @@ namespace Simone.Controllers
 
                     await RegistrarLogAsync(model.Email, true, ct);
 
-                    if (_logService != null)
-                        await _logService.Registrar($"Login OK {model.Email}");
+                    await _logService.Registrar($"Login OK {model.Email}");
 
                     // Limpia cookie externa residual
                     await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
@@ -276,8 +277,7 @@ namespace Simone.Controllers
                 TempData["MensajeError"] = MSG_ERROR_CREDENCIALES;
                 await RegistrarLogAsync(model.Email, false, ct);
 
-                if (_logService != null)
-                    await _logService.Registrar($"Login FAIL {model.Email}");
+                await _logService.Registrar($"Login FAIL {model.Email}");
 
                 return View(model);
             }
@@ -374,8 +374,7 @@ namespace Simone.Controllers
                         model.Email,
                         usuario.Id);
 
-                    if (_logService != null)
-                        await _logService.Registrar($"Nuevo registro {usuario.Email}");
+                    await _logService.Registrar($"Nuevo registro {usuario.Email}");
 
                     await _signInManager.SignInAsync(usuario, isPersistent: false);
                     return RedirectToAction("Index", "Home");
@@ -423,8 +422,7 @@ namespace Simone.Controllers
                     "Sesión cerrada. Usuario: {Email}",
                     userEmail ?? "Desconocido");
 
-                if (_logService != null)
-                    await _logService.Registrar($"Logout {userEmail}");
+                await _logService.Registrar($"Logout {userEmail}");
 
                 return RedirectToAction(nameof(Login));
             }
@@ -608,8 +606,7 @@ namespace Simone.Controllers
                     usuarioDb.Id,
                     usuarioDb.Email);
 
-                if (_logService != null)
-                    await _logService.Registrar($"Actualizó su perfil: {usuarioDb.Email}");
+                await _logService.Registrar($"Actualizó su perfil: {usuarioDb.Email}");
 
                 TempData["MensajeExito"] = MSG_EXITO_PERFIL_ACTUALIZADO;
                 return RedirectToAction(nameof(Perfil));
@@ -704,8 +701,7 @@ namespace Simone.Controllers
                     provincia,
                     ciudad);
 
-                if (_logService != null)
-                    await _logService.Registrar($"Actualizó dirección de envío: {usuario.Email}");
+                await _logService.Registrar($"Actualizó dirección de envío: {usuario.Email}");
 
                 TempData["MensajeExito"] = MSG_EXITO_DIRECCION_GUARDADA;
 
@@ -777,8 +773,7 @@ namespace Simone.Controllers
                     user.Email,
                     user.Id);
 
-                if (_logService != null)
-                    await _logService.Registrar($"Reset password solicitado {user.Email}");
+                await _logService.Registrar($"Reset password solicitado {user.Email}");
 
                 // TODO: Aquí iría el envío del correo con callbackUrl
                 // await _emailService.SendPasswordResetEmailAsync(user.Email, callbackUrl);
@@ -864,8 +859,7 @@ namespace Simone.Controllers
                     user.Id,
                     user.Email);
 
-                if (_logService != null)
-                    await _logService.Registrar($"Password cambiado: {user.Email}");
+                await _logService.Registrar($"Password cambiado: {user.Email}");
 
                 return Ok(new { ok = true, message = MSG_EXITO_PASSWORD_CAMBIADO });
             }
@@ -956,34 +950,27 @@ namespace Simone.Controllers
         {
             try
             {
-                var carpeta = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    CARPETA_WWWROOT,
-                    CARPETA_PERFILES);
+                // Eliminar imagen anterior desde la carpeta externa
+                _fileStorage.EliminarArchivo(imagenAnterior);
 
-                Directory.CreateDirectory(carpeta);
-
-                // Eliminar imagen anterior si existe
-                if (!string.IsNullOrEmpty(imagenAnterior))
-                {
-                    TryDeleteProfileImage(imagenAnterior);
-                }
-
-                var extension = Path.GetExtension(imagen.FileName).ToLowerInvariant();
-                var nombreArchivo = $"{Guid.NewGuid():N}{extension}";
-                var rutaFisica = Path.Combine(carpeta, nombreArchivo);
-
-                await using var stream = new FileStream(rutaFisica, FileMode.Create);
-                await imagen.CopyToAsync(stream, ct);
-
-                var rutaRelativa = RUTA_IMAGENES_PERFILES + nombreArchivo;
+                // Guardar nueva imagen en carpeta externa (fuera del proyecto)
+                var rutaRelativa = await _fileStorage.GuardarArchivoAsync(
+                    imagen,
+                    subcarpeta:             CARPETA_PERFILES,
+                    nombreBase:             null,           // GUID aleatorio
+                    maxBytes:               MAX_IMAGEN_BYTES,
+                    extensionesPermitidas:  EXTENSIONES_PERMITIDAS.ToArray());
 
                 _logger.LogInformation(
                     "Imagen de perfil guardada. Ruta: {Ruta}, Tamaño: {Size} bytes",
-                    rutaRelativa,
-                    imagen.Length);
+                    rutaRelativa, imagen.Length);
 
                 return new ResultadoGuardadoImagen(true, rutaRelativa);
+            }
+            catch (InvalidOperationException valEx)
+            {
+                _logger.LogWarning(valEx, "Validación de imagen de perfil fallida");
+                return new ResultadoGuardadoImagen(false, null);
             }
             catch (Exception ex)
             {
@@ -993,35 +980,13 @@ namespace Simone.Controllers
         }
 
         /// <summary>
-        /// Intenta eliminar una imagen de perfil de forma segura
+        /// Elimina una imagen de perfil usando el servicio de almacenamiento externo.
         /// </summary>
         private void TryDeleteProfileImage(string? relativePath)
         {
             try
             {
-                if (string.IsNullOrWhiteSpace(relativePath))
-                    return;
-
-                // Solo archivos dentro de /images/Perfiles
-                var normalizedPath = relativePath.Replace('\\', '/');
-                if (!normalizedPath.StartsWith(RUTA_IMAGENES_PERFILES, StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning(
-                        "Intento de eliminar archivo fuera de carpeta permitida: {Path}",
-                        relativePath);
-                    return;
-                }
-
-                var fullPath = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    CARPETA_WWWROOT,
-                    relativePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
-
-                if (System.IO.File.Exists(fullPath))
-                {
-                    System.IO.File.Delete(fullPath);
-                    _logger.LogDebug("Imagen de perfil eliminada: {Path}", fullPath);
-                }
+                _fileStorage.EliminarArchivo(relativePath);
             }
             catch (Exception ex)
             {

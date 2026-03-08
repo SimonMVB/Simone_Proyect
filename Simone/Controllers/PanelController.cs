@@ -40,6 +40,7 @@ namespace Simone.Controllers
         private readonly ProductosService _productosManager;
         private readonly ProveedorService _proveedoresManager;
         private readonly IWebHostEnvironment _env;
+        private readonly IFileStorageService _fileStorage;
         private readonly IMemoryCache _cache;
         private readonly CategoriaAtributoService _categoriaAtributoService;
         private readonly ProductoAtributoService _productoAtributoService;
@@ -69,7 +70,8 @@ namespace Simone.Controllers
 
         private static readonly HashSet<string> MIME_TYPES_PERMITIDOS = new(StringComparer.OrdinalIgnoreCase)
         {
-            "image/jpeg", "image/png", "image/webp", "image/gif"
+            "image/jpeg", "image/jpg", "image/pjpeg",   // JPG variants
+            "image/png", "image/webp", "image/gif"
         };
 
         // Patrones de archivos
@@ -122,9 +124,10 @@ namespace Simone.Controllers
     ProductosService productos,
     ProveedorService proveedores,
     IWebHostEnvironment env,
+    IFileStorageService fileStorage,
     IMemoryCache cache,
-    CategoriaAtributoService categoriaAtributoService,      // ✅ NUEVO
-    ProductoAtributoService productoAtributoService)         // ✅ NUEVO
+    CategoriaAtributoService categoriaAtributoService,
+    ProductoAtributoService productoAtributoService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -135,9 +138,10 @@ namespace Simone.Controllers
             _productosManager = productos ?? throw new ArgumentNullException(nameof(productos));
             _proveedoresManager = proveedores ?? throw new ArgumentNullException(nameof(proveedores));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-            _categoriaAtributoService = categoriaAtributoService ?? throw new ArgumentNullException(nameof(categoriaAtributoService));     // ✅ NUEVO
-            _productoAtributoService = productoAtributoService ?? throw new ArgumentNullException(nameof(productoAtributoService));         // ✅ NUEVO
+            _categoriaAtributoService = categoriaAtributoService ?? throw new ArgumentNullException(nameof(categoriaAtributoService));
+            _productoAtributoService = productoAtributoService ?? throw new ArgumentNullException(nameof(productoAtributoService));
         }
 
         #endregion
@@ -146,7 +150,8 @@ namespace Simone.Controllers
 
         private string CurrentUserId() => _userManager.GetUserId(User)!;
         private bool IsAdmin() => User.IsInRole(ROL_ADMINISTRADOR);
-        private string GalleryRootAbs() => Path.Combine(_env.WebRootPath, FOLDER_IMAGES, FOLDER_PRODUCTOS);
+        // ⚠️ Usa la ruta EXTERNA (fuera del proyecto) configurada en appsettings "Uploads:BasePath"
+        private string GalleryRootAbs() => Path.Combine(_fileStorage.RutaBase, FOLDER_IMAGES, FOLDER_PRODUCTOS);
         private string ProductFolderAbs(int productId) => Path.Combine(GalleryRootAbs(), productId.ToString());
 
         #endregion
@@ -1952,6 +1957,112 @@ namespace Simone.Controllers
 
 
 
+        // ── Perfil público de tienda ──────────────────────────────────────────────
+        [Authorize(Roles = "Administrador")]
+        [HttpGet]
+        public async Task<IActionResult> PerfilTienda(int id, CancellationToken ct = default)
+        {
+            var vendedor = await _context.Vendedores
+                .Include(v => v.Contactos)
+                .FirstOrDefaultAsync(v => v.VendedorId == id, ct);
+
+            if (vendedor == null)
+            {
+                TempData["MensajeError"] = "Tienda no encontrada.";
+                return RedirectToAction(nameof(Usuarios));
+            }
+
+            return View(vendedor);
+        }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> GuardarPerfilTienda(
+            int VendedorId,
+            string? Slug,
+            string? Bio,
+            bool Verificado,
+            string? InstagramUrl,
+            string? TikTokUrl,
+            string? FacebookUrl,
+            IFormFile? Banner,
+            CancellationToken ct = default)
+        {
+            var vendedor = await _context.Vendedores.FindAsync(new object[] { VendedorId }, ct);
+            if (vendedor == null)
+            {
+                TempData["MensajeError"] = "Tienda no encontrada.";
+                return RedirectToAction(nameof(Usuarios));
+            }
+
+            // ── Validar slug ──────────────────────────────────────────────
+            var slugLimpio = Slug?.Trim().ToLowerInvariant()
+                              .Replace(" ", "-")
+                              .Replace("_", "-");
+
+            if (!string.IsNullOrWhiteSpace(slugLimpio))
+            {
+                // Slug único entre otras tiendas
+                var slugExiste = await _context.Vendedores
+                    .AnyAsync(v => v.Slug != null
+                               && v.Slug.ToLower() == slugLimpio
+                               && v.VendedorId != VendedorId, ct);
+
+                if (slugExiste)
+                {
+                    TempData["MensajeError"] = $"El slug '{slugLimpio}' ya está en uso por otra tienda.";
+                    return RedirectToAction(nameof(PerfilTienda), new { id = VendedorId });
+                }
+            }
+
+            // ── Guardar banner si se subió uno ───────────────────────────
+            if (Banner != null && Banner.Length > 0)
+            {
+                var ext = Path.GetExtension(Banner.FileName).ToLowerInvariant();
+                var extOk = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+
+                if (!extOk.Contains(ext))
+                {
+                    TempData["MensajeError"] = "Formato de imagen no permitido. Use JPG, PNG o WEBP.";
+                    return RedirectToAction(nameof(PerfilTienda), new { id = VendedorId });
+                }
+
+                if (Banner.Length > 5 * 1024 * 1024) // 5 MB
+                {
+                    TempData["MensajeError"] = "El banner no puede superar 5 MB.";
+                    return RedirectToAction(nameof(PerfilTienda), new { id = VendedorId });
+                }
+
+                // Eliminar banner anterior (desde ruta externa)
+                _fileStorage.EliminarArchivo(vendedor.BannerPath);
+
+                // Guardar nuevo banner en ruta externa (fuera del proyecto)
+                var nombreBase    = $"banner-{VendedorId}-{Guid.NewGuid():N}";
+                vendedor.BannerPath = await _fileStorage.GuardarArchivoAsync(
+                    Banner,
+                    subcarpeta: "images/Tiendas",
+                    nombreBase: nombreBase,
+                    maxBytes:   5 * 1024 * 1024,
+                    extensionesPermitidas: new[] { ".jpg", ".jpeg", ".png", ".webp" });
+            }
+
+            // ── Actualizar campos ─────────────────────────────────────────
+            vendedor.Slug         = string.IsNullOrWhiteSpace(slugLimpio) ? null : slugLimpio;
+            vendedor.Bio          = Bio?.Trim();
+            vendedor.Verificado   = Verificado;
+            vendedor.InstagramUrl = InstagramUrl?.Trim();
+            vendedor.TikTokUrl    = TikTokUrl?.Trim();
+            vendedor.FacebookUrl  = FacebookUrl?.Trim();
+
+            await _context.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Perfil de tienda actualizado. VendedorId: {VendedorId}, Slug: {Slug}",
+                VendedorId, vendedor.Slug);
+
+            TempData["MensajeExito"] = "Perfil de tienda actualizado correctamente.";
+            return RedirectToAction(nameof(PerfilTienda), new { id = VendedorId });
+        }
+
         [Authorize(Roles = "Administrador")]
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> EliminarUsuario(string id)
@@ -2783,6 +2894,7 @@ namespace Simone.Controllers
         public async Task<IActionResult> AnadirProducto(
             string nombreProducto, string descripcion, string talla, string color, string marca,
             decimal precioCompra, decimal precioVenta, int? proveedorID, int categoriaID, int subcategoriaID, int stock,
+            decimal peso, decimal? alto, decimal? ancho, decimal? largo,
             IFormFile? imagen, IFormFile[]? Imagenes, int? ImagenPrincipalIndex, string? ImagenesIgnore,
             [FromForm] string[]? VarColor, [FromForm] string[]? VarTalla, [FromForm] string[]? VarPrecio, [FromForm] int[]? VarStock)
         {
@@ -2823,6 +2935,13 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
+                if (peso <= 0)
+                {
+                    TempData["Err"] = "El peso del producto es obligatorio y debe ser mayor a 0 kg.";
+                    await FillProductoFormBags();
+                    return View("ProductoForm");
+                }
+
                 var producto = new Producto
                 {
                     Nombre = (nombreProducto ?? string.Empty).Trim(),
@@ -2830,10 +2949,14 @@ namespace Simone.Controllers
                     Descripcion = descripcion?.Trim(),
                     Marca = marca?.Trim(),
                     PrecioCompra = Math.Round(precioCompra, 2),
-                    ProveedorID = proveedorID > 0 ? proveedorID : null,  // ✅ Nullable: solo asigna si > 0
+                    ProveedorID = proveedorID > 0 ? proveedorID : null,
                     CategoriaID = categoriaID,
                     SubcategoriaID = subcategoriaID,
-                    VendedorID = CurrentUserId()
+                    VendedorID = CurrentUserId(),
+                    Peso = Math.Round(peso, 3),
+                    Alto = alto.HasValue && alto > 0 ? Math.Round(alto.Value, 2) : null,
+                    Ancho = ancho.HasValue && ancho > 0 ? Math.Round(ancho.Value, 2) : null,
+                    Largo = largo.HasValue && largo > 0 ? Math.Round(largo.Value, 2) : null
                 };
 
                 if (hasVariants)
@@ -2841,7 +2964,20 @@ namespace Simone.Controllers
                     producto.Talla = null;
                     producto.Color = null;
                     producto.Stock = normVariants.Sum(v => v.Stock);
-                    producto.PrecioVenta = normVariants.Min(v => v.Precio);
+                    var minVariantPrice = normVariants.Min(v => v.Precio);
+
+                    // Validar que el precio mínimo de variante supere el precio de compra
+                    if (minVariantPrice <= precioCompra)
+                    {
+                        _logger.LogWarning("Precio mínimo de variante ({MinPrice}) ≤ precio compra ({PC})", minVariantPrice, precioCompra);
+                        TempData["Err"] = $"El precio mínimo de variante (${minVariantPrice}) debe ser mayor al precio de compra (${precioCompra}).";
+                        await FillProductoFormBags();
+                        ViewBag.Producto = PresetProducto(nombreProducto, descripcion, talla, color, marca,
+                            precioCompra, precioVenta, stock, proveedorID, categoriaID, subcategoriaID);
+                        return View("ProductoForm");
+                    }
+
+                    producto.PrecioVenta = minVariantPrice;
                 }
                 else
                 {
@@ -2897,9 +3033,10 @@ namespace Simone.Controllers
                         return View("ProductoForm");
                     }
 
-                    await trx.CommitAsync();
-
+                    // Atributos dinámicos deben procesarse DENTRO de la transacción
                     await ProcesarAtributosDinamicos(producto.ProductoID, Request.Form);
+
+                    await trx.CommitAsync();
 
                     _logger.LogInformation("Producto creado. ProductoId: {ProductoId}, Variantes: {VarianteCount}",
                         producto.ProductoID, hasVariants ? normVariants.Count : 0);
@@ -2973,7 +3110,8 @@ namespace Simone.Controllers
         public async Task<IActionResult> EditarProducto(
             int productoID, string nombreProducto, string descripcion, string talla, string color, string marca,
             string existingImagenPath, decimal precioCompra, decimal precioVenta, int? proveedorID, int categoriaID,
-            int subcategoriaID, int stock, IFormFile? imagen, IFormFile[]? Imagenes, int? ImagenPrincipalIndex,
+            int subcategoriaID, int stock, decimal peso, decimal? alto, decimal? ancho, decimal? largo,
+            IFormFile? imagen, IFormFile[]? Imagenes, int? ImagenPrincipalIndex,
             string? ImagenesIgnore, [FromForm] string[]? VarColor, [FromForm] string[]? VarTalla,
             [FromForm] string[]? VarPrecio, [FromForm] int[]? VarStock, CancellationToken ct = default)
         {
@@ -3018,20 +3156,43 @@ namespace Simone.Controllers
                     return View("ProductoForm");
                 }
 
+                if (peso <= 0)
+                {
+                    TempData["Err"] = "El peso del producto es obligatorio y debe ser mayor a 0 kg.";
+                    await FillProductoFormBags();
+                    ViewBag.Producto = producto;
+                    return View("ProductoForm");
+                }
+
                 producto.Nombre = (nombreProducto ?? string.Empty).Trim();
                 producto.Descripcion = descripcion?.Trim();
                 producto.Marca = marca?.Trim();
                 producto.PrecioCompra = Math.Round(precioCompra, 2);
-                producto.ProveedorID = proveedorID > 0 ? proveedorID : null;  // ✅ Nullable: solo asigna si > 0
+                producto.ProveedorID = proveedorID > 0 ? proveedorID : null;
                 producto.CategoriaID = categoriaID;
                 producto.SubcategoriaID = subcategoriaID;
+                producto.Peso = Math.Round(peso, 3);
+                producto.Alto = alto.HasValue && alto > 0 ? Math.Round(alto.Value, 2) : null;
+                producto.Ancho = ancho.HasValue && ancho > 0 ? Math.Round(ancho.Value, 2) : null;
+                producto.Largo = largo.HasValue && largo > 0 ? Math.Round(largo.Value, 2) : null;
 
                 if (hasVariants)
                 {
                     producto.Talla = null;
                     producto.Color = null;
                     producto.Stock = normVariants.Sum(v => v.Stock);
-                    producto.PrecioVenta = normVariants.Min(v => v.Precio);
+                    var minVariantPriceEdit = normVariants.Min(v => v.Precio);
+
+                    if (minVariantPriceEdit <= precioCompra)
+                    {
+                        _logger.LogWarning("Precio mínimo de variante ({MinPrice}) ≤ precio compra ({PC}) al editar", minVariantPriceEdit, precioCompra);
+                        TempData["Err"] = $"El precio mínimo de variante (${minVariantPriceEdit}) debe ser mayor al precio de compra (${precioCompra}).";
+                        await FillProductoFormBags();
+                        ViewBag.Producto = producto;
+                        return View("ProductoForm");
+                    }
+
+                    producto.PrecioVenta = minVariantPriceEdit;
                 }
                 else
                 {

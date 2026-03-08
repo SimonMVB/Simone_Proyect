@@ -15,6 +15,7 @@ namespace Simone.Models
         [Required] public string UsuarioId { get; set; } = default!;
         [ForeignKey(nameof(UsuarioId))] public Usuario Usuario { get; set; } = null!;
 
+        [Range(1, 5, ErrorMessage = "La calificación debe ser entre 1 y 5 estrellas.")]
         public int Calificacion { get; set; }
         public string? Comentario { get; set; }
         public DateTime Fecha { get; set; } = DateTime.UtcNow;

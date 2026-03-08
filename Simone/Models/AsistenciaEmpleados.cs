@@ -10,7 +10,7 @@ namespace Simone.Models
         [Key]
         public int AsistenciaID { get; set; } // Clave primaria
 
-        // Relación con Empleados
+        // RelaciÃ³n con Empleados
         [Required]
         public int EmpleadoID { get; set; }
         public Empleados Empleado { get; set; }

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Simone.Data;
 
@@ -11,13 +12,15 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    partial class TiendaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260308060609_pruebass")]
+    partial class pruebass
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "8.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -676,7 +679,7 @@ namespace Simone.Migrations
                         .HasColumnType("bit");
 
                     b.Property<decimal>("PorcentajeComision")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<int>("VentaID")
                         .HasColumnType("int");
@@ -919,14 +922,9 @@ namespace Simone.Migrations
                     b.Property<DateTime>("FechaUso")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("PromocionID1")
-                        .HasColumnType("int");
-
                     b.HasKey("UsuarioId", "PromocionID");
 
                     b.HasIndex("PromocionID");
-
-                    b.HasIndex("PromocionID1");
 
                     b.ToTable("CuponesUsados");
                 });
@@ -2206,6 +2204,54 @@ namespace Simone.Migrations
                     b.ToTable("Proveedores");
                 });
 
+            modelBuilder.Entity("Simone.Models.ReservaStock", b =>
+                {
+                    b.Property<int>("ReservaStockId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReservaStockId"));
+
+                    b.Property<string>("Canal")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Confirmada")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("Expiracion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductoID")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProductoVarianteID")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SesionPosId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UsuarioId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("ReservaStockId");
+
+                    b.HasIndex("ProductoID");
+
+                    b.HasIndex("ProductoVarianteID");
+
+                    b.ToTable("ReservasStock");
+                });
+
             modelBuilder.Entity("Simone.Models.Reseñas", b =>
                 {
                     b.Property<int>("ReseñaID")
@@ -2299,6 +2345,9 @@ namespace Simone.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEntrega")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaEnvioHub")
@@ -2755,12 +2804,39 @@ namespace Simone.Migrations
                     b.Property<int?>("AlianzaId")
                         .HasColumnType("int");
 
+                    b.Property<string>("BannerPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("FacebookUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<int?>("HubId")
                         .HasColumnType("int");
+
+                    b.Property<string>("InstagramUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Slug")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("TikTokUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("Verificado")
+                        .HasColumnType("bit");
 
                     b.HasKey("VendedorId");
 
@@ -3154,14 +3230,10 @@ namespace Simone.Migrations
             modelBuilder.Entity("Simone.Models.CuponesUsados", b =>
                 {
                     b.HasOne("Simone.Models.Promocion", "Promocion")
-                        .WithMany()
+                        .WithMany("CuponesUsados")
                         .HasForeignKey("PromocionID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Simone.Models.Promocion", null)
-                        .WithMany("CuponesUsados")
-                        .HasForeignKey("PromocionID1");
 
                     b.HasOne("Simone.Models.Usuario", "Usuario")
                         .WithMany()
@@ -3522,6 +3594,23 @@ namespace Simone.Migrations
                         .IsRequired();
 
                     b.Navigation("Producto");
+                });
+
+            modelBuilder.Entity("Simone.Models.ReservaStock", b =>
+                {
+                    b.HasOne("Simone.Models.Producto", "Producto")
+                        .WithMany()
+                        .HasForeignKey("ProductoID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Simone.Models.ProductoVariante", "Variante")
+                        .WithMany()
+                        .HasForeignKey("ProductoVarianteID");
+
+                    b.Navigation("Producto");
+
+                    b.Navigation("Variante");
                 });
 
             modelBuilder.Entity("Simone.Models.Reseñas", b =>

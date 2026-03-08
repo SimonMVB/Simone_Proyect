@@ -12,6 +12,7 @@ namespace Simone.Models
 
         public string NombrePrograma { get; set; }  // Nombre del programa
         public string? Descripcion { get; set; }  // Puede ser nulo
+        [Column(TypeName = "decimal(18,2)")]
         public decimal? Descuento { get; set; }  // Puede ser nulo
 
         // Relación con Clientes (Clientes pueden estar en múltiples programas)

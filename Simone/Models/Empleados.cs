@@ -27,6 +27,7 @@ namespace Simone.Models
         public Roles? Rol { get; set; }
 
         public DateTime? FechaContratacion { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal? Salario { get; set; }
 
         public ICollection<Comisiones> Comisiones { get; set; } = new List<Comisiones>();

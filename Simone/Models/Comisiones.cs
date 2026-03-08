@@ -11,7 +11,9 @@ namespace Simone.Models
 
         public int VentaID { get; set; }
         public int EmpleadoID { get; set; }
+        [Column(TypeName = "decimal(5,2)")]
         public decimal PorcentajeComision { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal MontoComision { get; set; }
         public DateTime FechaGeneracion { get; set; }
         public bool Pagada { get; set; }

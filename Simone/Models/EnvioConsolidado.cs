@@ -166,7 +166,10 @@ namespace Simone.Models
         {
             if (string.IsNullOrEmpty(Codigo))
             {
-                Codigo = $"ENV-{DateTime.UtcNow:yyyyMMdd}-{EnvioId:D4}";
+                // No usar EnvioId aquí: puede ser 0 si se llama antes de SaveChanges.
+                // Usar timestamp + random, igual que GenerarCodigoEnvio() en el servicio.
+                var random = new Random().Next(1000, 9999);
+                Codigo = $"ENV-{DateTime.UtcNow:yyyyMMdd}-{random}";
             }
         }
 

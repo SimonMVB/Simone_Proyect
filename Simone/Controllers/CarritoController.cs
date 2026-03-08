@@ -563,19 +563,6 @@ namespace Simone.Controllers
 
         #endregion
 
-        /// <summary>
-        /// Valida que haya stock disponible para la cantidad solicitada
-        /// </summary>
-        private async Task<ValidationResult> ValidarStockDisponibleAsync(
-            Producto producto,
-            int cantidad,
-            int? productoVarianteId)
-        {
-            await Task.CompletedTask;
-            return ValidationResult.Success();
-        }
-
-
         #region Mutaciones - Actualizar Carrito
 
         /// <summary>
@@ -887,13 +874,14 @@ namespace Simone.Controllers
                     usuario.Id, detalles.Count, totalCompra);
 
                 // Procesar carrito (crear venta, actualizar stock, etc.)
-                var procesado = await _carritoService.ProcessCartDetails(carrito.CarritoID, usuario);
+                var (procesado, procesarError) = await _carritoService.ProcessCartDetails(carrito.CarritoID, usuario);
 
                 if (!procesado)
                 {
-                    _logger.LogError("Falló procesar carrito. UsuarioId: {UsuarioId}, CarritoId: {CarritoId}",
-                        usuario.Id, carrito.CarritoID);
-                    TempData["MensajeError"] = "No se pudo procesar la compra. Por favor, intenta nuevamente.";
+                    _logger.LogError("Falló procesar carrito. UsuarioId: {UsuarioId}, CarritoId: {CarritoId}, Error: {Error}",
+                        usuario.Id, carrito.CarritoID, procesarError);
+                    TempData["MensajeError"] = procesarError
+                        ?? "No se pudo procesar la compra. Por favor, intenta nuevamente.";
                     return RedirectToAction(nameof(VerCarrito));
                 }
 

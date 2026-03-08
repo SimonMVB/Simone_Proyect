@@ -21,6 +21,7 @@ namespace Simone.Controllers
 
         // Acción para guardar las preferencias de cookies
         [HttpPost("guardar-preferencias-cookies")]
+        [ValidateAntiForgeryToken]
         public IActionResult GuardarPreferenciasCookies(bool analyticsCookies)
         {
             // Guardar la preferencia de las cookies analíticas en la sesión

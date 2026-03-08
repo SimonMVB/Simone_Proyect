@@ -314,7 +314,95 @@
                 </section>
 
                 <!-- ═══════════════════════════════════════════════════════════ -->
-                <!-- SECCIÓN 2: ATRIBUTOS DINÁMICOS -->
+                <!-- SECCIÓN 2: DATOS DE ENVÍO (PESO Y DIMENSIONES)             -->
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <section class="form-section" aria-labelledby="sec-shipping">
+                    <header class="section-header">
+                        <h2 class="section-title" id="sec-shipping">
+                            <i class="fas fa-box" aria-hidden="true"></i>
+                            Datos de Envío
+                        </h2>
+                        <span class="section-badge">Peso y dimensiones para calcular el costo de envío</span>
+                    </header>
+
+                    <div class="section-content">
+                        <div class="form-grid">
+
+                            <!-- ───── Peso ───── -->
+                            <div class="form-group">
+                                <label class="form-label required" for="Peso">Peso (kg)</label>
+                                <input class="form-input"
+                                       id="Peso"
+                                       name="peso"
+                                       type="number"
+                                       step="0.001"
+                                       min="0.001"
+                                       max="999.999"
+                                       required
+                                       lang="en"
+                                       inputmode="decimal"
+                                       placeholder="Ej: 0.500"
+                                       value="@(esEdicion ? producto!.Peso.ToString("0.000", CultureInfo.InvariantCulture) : "")"
+                                       aria-required="true"
+                                       aria-describedby="PesoHint PesoError" />
+                                <small class="form-text text-muted" id="PesoHint">Obligatorio para calcular tarifas de envío. Ej: 0.500 kg</small>
+                                <div class="form-error" id="PesoError" role="alert"></div>
+                            </div>
+
+                            <!-- ───── Alto ───── -->
+                            <div class="form-group">
+                                <label class="form-label" for="Alto">Alto (cm)</label>
+                                <input class="form-input"
+                                       id="Alto"
+                                       name="alto"
+                                       type="number"
+                                       step="0.01"
+                                       min="0.01"
+                                       lang="en"
+                                       inputmode="decimal"
+                                       placeholder="Opcional"
+                                       value="@(esEdicion && producto!.Alto.HasValue ? producto!.Alto.Value.ToString("0.00", CultureInfo.InvariantCulture) : "")" />
+                                <small class="form-text text-muted">Opcional. Permite calcular peso volumétrico.</small>
+                            </div>
+
+                            <!-- ───── Ancho ───── -->
+                            <div class="form-group">
+                                <label class="form-label" for="Ancho">Ancho (cm)</label>
+                                <input class="form-input"
+                                       id="Ancho"
+                                       name="ancho"
+                                       type="number"
+                                       step="0.01"
+                                       min="0.01"
+                                       lang="en"
+                                       inputmode="decimal"
+                                       placeholder="Opcional"
+                                       value="@(esEdicion && producto!.Ancho.HasValue ? producto!.Ancho.Value.ToString("0.00", CultureInfo.InvariantCulture) : "")" />
+                                <small class="form-text text-muted">Opcional.</small>
+                            </div>
+
+                            <!-- ───── Largo ───── -->
+                            <div class="form-group">
+                                <label class="form-label" for="Largo">Largo (cm)</label>
+                                <input class="form-input"
+                                       id="Largo"
+                                       name="largo"
+                                       type="number"
+                                       step="0.01"
+                                       min="0.01"
+                                       lang="en"
+                                       inputmode="decimal"
+                                       placeholder="Opcional"
+                                       value="@(esEdicion && producto!.Largo.HasValue ? producto!.Largo.Value.ToString("0.00", CultureInfo.InvariantCulture) : "")" />
+                                <small class="form-text text-muted">Opcional.</small>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ═══════════════════════════════════════════════════════════ -->
+                <!-- SECCIÓN 3: ATRIBUTOS DINÁMICOS -->
                 <!-- ═══════════════════════════════════════════════════════════ -->
                 @await Html.PartialAsync("_AtributosDinamicos")
 

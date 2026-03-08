@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Simone.Models
 {
     /// <summary>
-    /// Modelo de Ventas con soporte completo para pagos por transferencia/depósito.
+    /// Modelo de Ventas con soporte completo para pagos por transferencia/depÃ³sito.
     /// Incluye campos para persistir datos de pago directamente en la BD.
     /// </summary>
     public class Ventas
@@ -51,16 +51,16 @@ namespace Simone.Models
 
         #endregion
 
-        #region Datos de Pago por Transferencia/Depósito
+        #region Datos de Pago por Transferencia/DepÃ³sito
 
         /// <summary>
-        /// Nombre completo de quien realizó la transferencia/depósito.
+        /// Nombre completo de quien realizÃ³ la transferencia/depÃ³sito.
         /// </summary>
         [StringLength(200)]
         public string? Depositante { get; set; }
 
         /// <summary>
-        /// Nombre o código del banco donde se realizó el depósito.
+        /// Nombre o cÃ³digo del banco donde se realizÃ³ el depÃ³sito.
         /// Ejemplo: "Banco Pichincha", "BP", etc.
         /// </summary>
         [StringLength(100)]
@@ -75,7 +75,7 @@ namespace Simone.Models
 
         #endregion
 
-        #region Navegación
+        #region NavegaciÃ³n
 
         public virtual ICollection<DetalleVentas> DetalleVentas { get; set; } = new List<DetalleVentas>();
 

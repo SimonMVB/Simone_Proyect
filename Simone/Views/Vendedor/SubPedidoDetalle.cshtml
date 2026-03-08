@@ -276,36 +276,7 @@
                 </div>
             </div>
 
-            <!-- Cambiar Estado Manual -->
-            @if (estados.Contains(Model.Estado) || Model.Estado == "Pendiente")
-            {
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Cambiar Estado</h5>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" asp-action="CambiarEstadoSubPedido">
-                            @Html.AntiForgeryToken()
-                            <input type="hidden" name="subPedidoId" value="@Model.SubPedidoId" />
-                            <div class="mb-3">
-                                <select name="nuevoEstado" class="form-select">
-                                    @foreach (var e in estados)
-                                    {
-                                        <option value="@e" selected="@(Model.Estado == e)">@e</option>
-                                    }
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <textarea name="notasVendedor" class="form-control" rows="2"
-                                      placeholder="Nota (opcional)"></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-outline-primary w-100">
-                                <i class="bi bi-check-lg me-1"></i>Actualizar
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            }
+            @* Dropdown eliminado: los estados solo avanzan con los botones de acción *@
 
             <!-- Fechas -->
             <div class="card mb-4">
@@ -351,7 +322,7 @@
             </div>
 
             <!-- Info Adicional -->
-            <div class="card">
+            <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Información</h5>
                 </div>
@@ -368,6 +339,91 @@
                     </ul>
                 </div>
             </div>
+
+            <!-- Pago del Cliente -->
+            @{
+                var venta = Model.Envio?.Venta;
+            }
+            @if (venta != null)
+            {
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Pago del Cliente</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Método:</span>
+                                <span><strong>@venta.MetodoPago</strong></span>
+                            </li>
+                            @if (!string.IsNullOrWhiteSpace(venta.Depositante))
+                            {
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="text-muted">Depositante:</span>
+                                    <span>@venta.Depositante</span>
+                                </li>
+                            }
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span class="text-muted">Venta #:</span>
+                                <span class="font-monospace">@venta.VentaID</span>
+                            </li>
+                        </ul>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(venta.ComprobanteUrl))
+                    {
+                        var compUrl = venta.ComprobanteUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                            ? venta.ComprobanteUrl
+                            : Url.Content(venta.ComprobanteUrl.StartsWith("/") ? venta.ComprobanteUrl : "~/" + venta.ComprobanteUrl);
+                        var isPdf = compUrl!.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+                        <div class="card-footer text-center">
+                            @if (isPdf)
+                            {
+                                <a href="@compUrl" target="_blank" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>Ver comprobante PDF
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="#" data-bs-toggle="modal" data-bs-target="#modalComprobante">
+                                    <img src="@compUrl" alt="Comprobante"
+                                         class="img-fluid rounded" style="max-height:160px; object-fit:contain;" />
+                                </a>
+                                <p class="text-muted mt-1 mb-0"><small>Click para ampliar</small></p>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card-footer">
+                            <small class="text-muted"><i class="bi bi-exclamation-circle me-1"></i>Sin comprobante adjunto</small>
+                        </div>
+                    }
+                </div>
+
+                <!-- Modal Comprobante -->
+                @if (!string.IsNullOrWhiteSpace(venta.ComprobanteUrl))
+                {
+                    var compUrlModal = venta.ComprobanteUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                        ? venta.ComprobanteUrl
+                        : Url.Content(venta.ComprobanteUrl.StartsWith("/") ? venta.ComprobanteUrl : "~/" + venta.ComprobanteUrl);
+                    if (!compUrlModal!.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <div class="modal fade" id="modalComprobante" tabindex="-1">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title"><i class="bi bi-image me-2"></i>Comprobante</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body text-center">
+                                        <img src="@compUrlModal" alt="Comprobante" class="img-fluid" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            }
         </div>
     </div>
 </div>

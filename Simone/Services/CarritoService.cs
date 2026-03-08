@@ -155,7 +155,11 @@ namespace Simone.Services
         /// <param name="carritoID">ID del carrito a procesar</param>
         /// <param name="user">Usuario que realiza la compra</param>
         /// <param name="ct">Token de cancelación</param>
-        Task<bool> ProcessCartDetails(int carritoID, Usuario user, CancellationToken ct = default);
+        /// <returns>
+        /// Success=true si el carrito fue procesado; Success=false con ErrorMessage describiendo el problema
+        /// (p.ej. stock insuficiente) cuando la operación falla de forma controlada.
+        /// </returns>
+        Task<(bool Success, string? ErrorMessage)> ProcessCartDetails(int carritoID, Usuario user, CancellationToken ct = default);
 
         /// <summary>
         /// Valida que un carrito esté listo para procesar
@@ -1158,7 +1162,7 @@ namespace Simone.Services
         }
 
         /// <inheritdoc />
-        public async Task<bool> ProcessCartDetails(int carritoID, Usuario user, CancellationToken ct = default)
+        public async Task<(bool Success, string? ErrorMessage)> ProcessCartDetails(int carritoID, Usuario user, CancellationToken ct = default)
         {
             ValidateUsuarioActivo(user);
 
@@ -1327,21 +1331,22 @@ namespace Simone.Services
                     carritoID, venta.VentaID, total, carritoDetalles.Count);
                 _logger.LogDebug(LOG_DEBUG_TRANSACCION_COMMIT, "ProcessCartDetails");
 
-                return true;
+                return (true, null);
             }
             catch (InvalidOperationException ex)
             {
                 await transaction.RollbackAsync(ct).ConfigureAwait(false);
                 _logger.LogDebug(LOG_DEBUG_TRANSACCION_ROLLBACK, "ProcessCartDetails");
                 _logger.LogWarning(ex, "Operación inválida al procesar carrito. CarritoId: {CarritoId}", carritoID);
-                throw;
+                // Devolvemos el mensaje al controlador para mostrárselo al usuario
+                return (false, ex.Message);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 await transaction.RollbackAsync(ct).ConfigureAwait(false);
                 _logger.LogDebug(LOG_DEBUG_TRANSACCION_ROLLBACK, "ProcessCartDetails");
                 _logger.LogError(ex, LOG_ERROR_PROCESAR_CARRITO, carritoID);
-                return false;
+                return (false, "Error interno al procesar la compra. Por favor, intenta nuevamente.");
             }
         }
 

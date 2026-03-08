@@ -23,8 +23,8 @@ namespace Simone.Controllers
 {
     /// <summary>
     /// Controlador del panel de vendedor
-    /// Gestiona bancos, envÌos y reportes del vendedor
-    /// VersiÛn optimizada con mejores pr·cticas empresariales
+    /// Gestiona bancos, env√≠os y reportes del vendedor
+    /// Versi√≥n optimizada con mejores pr√°cticas empresariales
     /// </summary>
     [Authorize(Roles = "Administrador,Vendedor")]
     [Route("Vendedor")]
@@ -38,6 +38,7 @@ namespace Simone.Controllers
         private readonly TiendaDbContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly IEnviosConfigService _envios;
+        private readonly IFileStorageService _fileStorage;
 
         #endregion
 
@@ -48,7 +49,6 @@ namespace Simone.Controllers
         private const string ROL_VENDEDOR = "Vendedor";
 
         // Rutas
-        private const string FOLDER_WWWROOT = "wwwroot";
         private const string FOLDER_UPLOADS = "uploads";
         private const string FOLDER_COMPROBANTES = "comprobantes";
         private const string PATTERN_VENTA_FILE = "venta-{0}.*";
@@ -69,51 +69,51 @@ namespace Simone.Controllers
         // Mensajes - General
         private const string MSG_ERROR_USUARIO_NO_DETERMINADO = "No se pudo determinar el usuario actual.";
         private const string MSG_ERROR_CARGAR_DATOS = "No se pudieron cargar los datos.";
-        private const string MSG_ERROR_CODIGO_INVALIDO_PARAM = "CÛdigo inv·lido.";
-        private const string MSG_ERROR_PROVINCIA_INVALIDA_PARAM = "Provincia inv·lida.";
+        private const string MSG_ERROR_CODIGO_INVALIDO_PARAM = "C√≥digo inv√°lido.";
+        private const string MSG_ERROR_PROVINCIA_INVALIDA_PARAM = "Provincia inv√°lida.";
 
         // Mensajes - Bancos
-        private const string MSG_ERROR_CODIGO_INVALIDO = "CÛdigo inv·lido. Usa min˙sculas, n˙meros, '-' o '_' (2-50).";
-        private const string MSG_ERROR_NOMBRE_BANCO_INVALIDO = "Nombre de banco inv·lido (m·ximo 120).";
-        private const string MSG_ERROR_NUMERO_CUENTA_INVALIDO = "N˙mero de cuenta inv·lido (solo dÌgitos, 6-20).";
-        private const string MSG_ERROR_TIPO_CUENTA_INVALIDO = "Tipo de cuenta inv·lido.";
-        private const string MSG_ERROR_TITULAR_INVALIDO = "Titular inv·lido (m·ximo 120).";
-        private const string MSG_ERROR_RUC_INVALIDO = "RUC/CÈdula inv·lido (10 o 13 dÌgitos).";
-        private const string MSG_ERROR_LOGO_INVALIDO = "Ruta de logo inv·lida (debe ser relativa).";
-        private const string MSG_ERROR_CUENTA_DUPLICADA = "Ya existe una cuenta con ese cÛdigo.";
-        private const string MSG_ERROR_CUENTA_NO_ENCONTRADA = "No se encontrÛ la cuenta especificada.";
-        private const string MSG_ERROR_CUENTA_ORIGINAL_NO_ENCONTRADA = "No se encontrÛ la cuenta original para editar.";
-        private const string MSG_ERROR_CODIGO_DUPLICADO = "El nuevo cÛdigo ya pertenece a otra cuenta.";
+        private const string MSG_ERROR_CODIGO_INVALIDO = "C√≥digo inv√°lido. Usa min√∫sculas, n√∫meros, '-' o '_' (2-50).";
+        private const string MSG_ERROR_NOMBRE_BANCO_INVALIDO = "Nombre de banco inv√°lido (m√°ximo 120).";
+        private const string MSG_ERROR_NUMERO_CUENTA_INVALIDO = "N√∫mero de cuenta inv√°lido (solo d√≠gitos, 6-20).";
+        private const string MSG_ERROR_TIPO_CUENTA_INVALIDO = "Tipo de cuenta inv√°lido.";
+        private const string MSG_ERROR_TITULAR_INVALIDO = "Titular inv√°lido (m√°ximo 120).";
+        private const string MSG_ERROR_RUC_INVALIDO = "RUC/C√©dula inv√°lido (10 o 13 d√≠gitos).";
+        private const string MSG_ERROR_LOGO_INVALIDO = "Ruta de logo inv√°lida (debe ser relativa).";
+        private const string MSG_ERROR_CUENTA_DUPLICADA = "Ya existe una cuenta con ese c√≥digo.";
+        private const string MSG_ERROR_CUENTA_NO_ENCONTRADA = "No se encontr√≥ la cuenta especificada.";
+        private const string MSG_ERROR_CUENTA_ORIGINAL_NO_ENCONTRADA = "No se encontr√≥ la cuenta original para editar.";
+        private const string MSG_ERROR_CODIGO_DUPLICADO = "El nuevo c√≥digo ya pertenece a otra cuenta.";
         private const string MSG_EXITO_CUENTA_GUARDADA = "Cuenta guardada correctamente.";
         private const string MSG_EXITO_CUENTA_ELIMINADA = "Cuenta eliminada correctamente.";
         private const string MSG_EXITO_ESTADO_ACTUALIZADO = "Estado actualizado.";
-        private const string MSG_ERROR_GUARDAR_CUENTA = "OcurriÛ un error al guardar la cuenta bancaria.";
-        private const string MSG_ERROR_ELIMINAR_CUENTA = "OcurriÛ un error al eliminar la cuenta bancaria.";
+        private const string MSG_ERROR_GUARDAR_CUENTA = "Ocurri√≥ un error al guardar la cuenta bancaria.";
+        private const string MSG_ERROR_ELIMINAR_CUENTA = "Ocurri√≥ un error al eliminar la cuenta bancaria.";
         private const string MSG_ERROR_TOGGLE_CUENTA = "No se pudo actualizar el estado.";
 
-        // Mensajes - EnvÌos
+        // Mensajes - Env√≠os
         private const string MSG_ERROR_PROVINCIA_OBLIGATORIA = "La provincia es obligatoria.";
-        private const string MSG_ERROR_PROVINCIA_INVALIDA = "Provincia inv·lida (m·x. 120).";
-        private const string MSG_ERROR_CIUDAD_INVALIDA = "Ciudad inv·lida (m·x. 120).";
+        private const string MSG_ERROR_PROVINCIA_INVALIDA = "Provincia inv√°lida (m√°x. 120).";
+        private const string MSG_ERROR_CIUDAD_INVALIDA = "Ciudad inv√°lida (m√°x. 120).";
         private const string MSG_ERROR_PRECIO_RANGO = "El precio debe estar entre 0 y 9999.99.";
-        private const string MSG_ERROR_PRECIO_INVALIDO = "Precio inv·lido. Usa formato 0.00 (ej.: 4,40 o 4.40).";
+        private const string MSG_ERROR_PRECIO_INVALIDO = "Precio inv√°lido. Usa formato 0.00 (ej.: 4,40 o 4.40).";
         private const string MSG_ERROR_PRECIO_FUERA_RANGO = "El precio debe estar entre 0 y 9.999,99.";
-        private const string MSG_ERROR_NOTA_INVALIDA = "La nota supera el lÌmite (m·x. 120).";
+        private const string MSG_ERROR_NOTA_INVALIDA = "La nota supera el l√≠mite (m√°x. 120).";
         private const string MSG_ERROR_TARIFA_DUPLICADA = "Ya existe una regla para ese destino.";
-        private const string MSG_ERROR_TARIFA_NO_ENCONTRADA = "No se encontrÛ la tarifa especificada.";
-        private const string MSG_ERROR_TARIFA_ORIGINAL_NO_ENCONTRADA = "No se encontrÛ la regla original para editar.";
+        private const string MSG_ERROR_TARIFA_NO_ENCONTRADA = "No se encontr√≥ la tarifa especificada.";
+        private const string MSG_ERROR_TARIFA_ORIGINAL_NO_ENCONTRADA = "No se encontr√≥ la regla original para editar.";
         private const string MSG_ERROR_DESTINO_DUPLICADO = "Ya existe otra regla con ese destino.";
         private const string MSG_EXITO_TARIFA_GUARDADA = "Tarifa guardada correctamente.";
         private const string MSG_EXITO_TARIFA_ELIMINADA = "Tarifa eliminada correctamente.";
-        private const string MSG_ERROR_GUARDAR_TARIFA = "OcurriÛ un error al guardar la tarifa.";
-        private const string MSG_ERROR_ELIMINAR_TARIFA = "OcurriÛ un error al eliminar la tarifa.";
+        private const string MSG_ERROR_GUARDAR_TARIFA = "Ocurri√≥ un error al guardar la tarifa.";
+        private const string MSG_ERROR_ELIMINAR_TARIFA = "Ocurri√≥ un error al eliminar la tarifa.";
         private const string MSG_ERROR_TOGGLE_TARIFA = "No se pudo actualizar el estado.";
 
         // Mensajes - Reportes
         private const string MSG_ERROR_VENTA_NO_ENCONTRADA = "Venta no encontrada.";
         private const string MSG_ERROR_SIN_PRODUCTOS_VENDEDOR = "La venta no tiene productos de este vendedor.";
 
-        // LÌmites de validaciÛn
+        // L√≠mites de validaci√≥n
         private const int MIN_CODIGO_LENGTH = 2;
         private const int MAX_CODIGO_LENGTH = 50;
         private const int MIN_CUENTA_LENGTH = 6;
@@ -150,7 +150,7 @@ namespace Simone.Controllers
         #region Constructor
 
         /// <summary>
-        /// Constructor con inyecciÛn de dependencias
+        /// Constructor con inyecci√≥n de dependencias
         /// </summary>
         public VendedorController(
             UserManager<Usuario> userManager,
@@ -158,7 +158,8 @@ namespace Simone.Controllers
             IBancosConfigService bancos,
             TiendaDbContext context,
             IWebHostEnvironment env,
-            IEnviosConfigService envios)
+            IEnviosConfigService envios,
+            IFileStorageService fileStorage)
         {
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -166,6 +167,7 @@ namespace Simone.Controllers
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _env = env ?? throw new ArgumentNullException(nameof(env));
             _envios = envios ?? throw new ArgumentNullException(nameof(envios));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
         }
 
         #endregion
@@ -206,13 +208,10 @@ namespace Simone.Controllers
         #region Helpers - Archivos y Comprobantes
 
         /// <summary>
-        /// Obtiene la ruta absoluta de la carpeta de comprobantes
+        /// Obtiene la ruta absoluta de la carpeta de comprobantes (en almacenamiento externo)
         /// </summary>
         private string UploadsFolderAbs() =>
-            Path.Combine(
-                _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), FOLDER_WWWROOT),
-                FOLDER_UPLOADS,
-                FOLDER_COMPROBANTES);
+            Path.Combine(_fileStorage.RutaBase, FOLDER_UPLOADS, FOLDER_COMPROBANTES);
 
         /// <summary>
         /// Normaliza URL de comprobante
@@ -257,12 +256,11 @@ namespace Simone.Controllers
 
                 if (files.Count == 0)
                 {
-                    _logger.LogDebug("No se encontrÛ comprobante. VentaId: {VentaId}", ventaId);
+                    _logger.LogDebug("No se encontr√≥ comprobante. VentaId: {VentaId}", ventaId);
                     return null;
                 }
 
-                var webroot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), FOLDER_WWWROOT);
-                var rel = Path.GetRelativePath(webroot, files[0]).Replace("\\", "/");
+                var rel = Path.GetRelativePath(_fileStorage.RutaBase, files[0]).Replace("\\", "/");
                 var url = NormalizarCompUrl("/" + rel.TrimStart('/'));
 
                 _logger.LogDebug(
@@ -280,7 +278,7 @@ namespace Simone.Controllers
         }
 
         /// <summary>
-        /// Busca metadatos de depÛsito (depositante y banco)
+        /// Busca metadatos de dep√≥sito (depositante y banco)
         /// </summary>
         private (string? depositante, string? banco) BuscarMetaDeposito(int ventaId)
         {
@@ -354,7 +352,7 @@ namespace Simone.Controllers
 
         #endregion
 
-        #region Index y NavegaciÛn
+        #region Index y Navegaci√≥n
 
         /// <summary>
         /// GET: /Vendedor
@@ -387,7 +385,7 @@ namespace Simone.Controllers
 
         /// <summary>
         /// GET: /Vendedor/AnadirProducto
-        /// Formulario para aÒadir producto
+        /// Formulario para a√±adir producto
         /// </summary>
         [HttpGet("AnadirProducto")]
         public IActionResult AnadirProducto() => View();
@@ -414,7 +412,7 @@ namespace Simone.Controllers
 
         #endregion
 
-        #region Bancos - ValidaciÛn
+        #region Bancos - Validaci√≥n
 
         /// <summary>
         /// Valida los datos de una cuenta bancaria
@@ -524,7 +522,7 @@ namespace Simone.Controllers
             if (!ok)
             {
                 _logger.LogWarning(
-                    "ValidaciÛn fallida. VendorId: {VendorId}, Error: {Error}",
+                    "Validaci√≥n fallida. VendorId: {VendorId}, Error: {Error}",
                     vendorId,
                     err);
 
@@ -591,7 +589,7 @@ namespace Simone.Controllers
                     if (K(vm.Codigo) != K(vm.OriginalCodigo) && IsDup(vm.Codigo, actual))
                     {
                         _logger.LogWarning(
-                            "Nuevo cÛdigo duplicado. VendorId: {VendorId}, NuevoCodigo: {NuevoCodigo}",
+                            "Nuevo c√≥digo duplicado. VendorId: {VendorId}, NuevoCodigo: {NuevoCodigo}",
                             vendorId,
                             vm.Codigo);
 
@@ -647,7 +645,7 @@ namespace Simone.Controllers
             if (string.IsNullOrWhiteSpace(codigo))
             {
                 _logger.LogWarning(
-                    "Intento de eliminar cuenta con cÛdigo inv·lido. VendorId: {VendorId}",
+                    "Intento de eliminar cuenta con c√≥digo inv√°lido. VendorId: {VendorId}",
                     vendorId);
 
                 TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_CODIGO_INVALIDO_PARAM;
@@ -764,10 +762,10 @@ namespace Simone.Controllers
 
         #endregion
 
-        #region EnvÌos - ViewModels
+        #region Env√≠os - ViewModels
 
         /// <summary>
-        /// ViewModel para crear/editar tarifa de envÌo
+        /// ViewModel para crear/editar tarifa de env√≠o
         /// </summary>
         public sealed class EnvioUpsertVm
         {
@@ -782,10 +780,10 @@ namespace Simone.Controllers
 
         #endregion
 
-        #region EnvÌos - ValidaciÛn
+        #region Env√≠os - Validaci√≥n
 
         /// <summary>
-        /// Valida los datos de una tarifa de envÌo
+        /// Valida los datos de una tarifa de env√≠o
         /// </summary>
         private static (bool ok, string? err) ValidateEnvio(EnvioUpsertVm vm)
         {
@@ -808,7 +806,7 @@ namespace Simone.Controllers
         }
 
         /// <summary>
-        /// Compara claves de reglas de envÌo
+        /// Compara claves de reglas de env√≠o
         /// </summary>
         private static bool SameKey(Cfg.TarifaEnvioRegla a, string prov, string? city) =>
             K(a.Provincia) == K(prov) && K(a.Ciudad ?? "") == K(city ?? "");
@@ -851,11 +849,11 @@ namespace Simone.Controllers
 
         #endregion
 
-        #region EnvÌos - Acciones
+        #region Env√≠os - Acciones
 
         /// <summary>
         /// GET: /Vendedor/Envios?vId=&lt;opcional para Admin&gt;
-        /// Listado de tarifas de envÌo del vendedor
+        /// Listado de tarifas de env√≠o del vendedor
         /// </summary>
         [HttpGet("Envios")]
         public async Task<IActionResult> Envios(
@@ -867,14 +865,14 @@ namespace Simone.Controllers
                 var vendorId = CurrentVendorId(vId);
 
                 _logger.LogInformation(
-                    "Cargando tarifas de envÌo. VendorId: {VendorId}",
+                    "Cargando tarifas de env√≠o. VendorId: {VendorId}",
                     vendorId);
 
                 var reglas = (await _envios.GetByProveedorAsync(vendorId))?.ToList()
                              ?? new List<Cfg.TarifaEnvioRegla>();
 
                 _logger.LogDebug(
-                    "Tarifas de envÌo cargadas. VendorId: {VendorId}, Count: {Count}",
+                    "Tarifas de env√≠o cargadas. VendorId: {VendorId}, Count: {Count}",
                     vendorId,
                     reglas.Count);
 
@@ -888,7 +886,7 @@ namespace Simone.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error cargando tarifas de envÌo del vendedor");
+                _logger.LogError(ex, "Error cargando tarifas de env√≠o del vendedor");
                 ViewBag.Reglas = new List<Cfg.TarifaEnvioRegla>();
                 TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_CARGAR_DATOS;
             }
@@ -902,7 +900,7 @@ namespace Simone.Controllers
 
         /// <summary>
         /// POST: /Vendedor/Envios/Save?vId=&lt;opcional para Admin&gt;
-        /// Guarda o actualiza una tarifa de envÌo
+        /// Guarda o actualiza una tarifa de env√≠o
         /// </summary>
         [HttpPost("Envios/Save")]
         [ValidateAntiForgeryToken]
@@ -914,7 +912,7 @@ namespace Simone.Controllers
             var vendorId = CurrentVendorId(vId);
 
             _logger.LogInformation(
-                "Guardando tarifa de envÌo. VendorId: {VendorId}, Provincia: {Provincia}, Ciudad: {Ciudad}, EsNuevo: {EsNuevo}",
+                "Guardando tarifa de env√≠o. VendorId: {VendorId}, Provincia: {Provincia}, Ciudad: {Ciudad}, EsNuevo: {EsNuevo}",
                 vendorId,
                 vm.Provincia,
                 vm.Ciudad ?? "null",
@@ -930,7 +928,7 @@ namespace Simone.Controllers
                     if (!TryParsePrecioFlexible(raw, out var precio))
                     {
                         _logger.LogWarning(
-                            "Precio inv·lido. VendorId: {VendorId}, Precio: {Precio}",
+                            "Precio inv√°lido. VendorId: {VendorId}, Precio: {Precio}",
                             vendorId,
                             raw);
 
@@ -965,7 +963,7 @@ namespace Simone.Controllers
             if (!ok)
             {
                 _logger.LogWarning(
-                    "ValidaciÛn fallida. VendorId: {VendorId}, Error: {Error}",
+                    "Validaci√≥n fallida. VendorId: {VendorId}, Error: {Error}",
                     vendorId,
                     err);
 
@@ -1065,7 +1063,7 @@ namespace Simone.Controllers
             {
                 _logger.LogError(
                     ex,
-                    "Error al guardar tarifa de envÌo. VendorId: {VendorId}, Provincia: {Provincia}",
+                    "Error al guardar tarifa de env√≠o. VendorId: {VendorId}, Provincia: {Provincia}",
                     vendorId,
                     vm.Provincia);
 
@@ -1077,7 +1075,7 @@ namespace Simone.Controllers
 
         /// <summary>
         /// POST: /Vendedor/Envios/Delete?vId=&lt;opcional para Admin&gt;
-        /// Elimina una tarifa de envÌo
+        /// Elimina una tarifa de env√≠o
         /// </summary>
         [HttpPost("Envios/Delete")]
         [ValidateAntiForgeryToken]
@@ -1092,7 +1090,7 @@ namespace Simone.Controllers
             if (string.IsNullOrWhiteSpace(provincia))
             {
                 _logger.LogWarning(
-                    "Intento de eliminar tarifa con provincia inv·lida. VendorId: {VendorId}",
+                    "Intento de eliminar tarifa con provincia inv√°lida. VendorId: {VendorId}",
                     vendorId);
 
                 TempData[VIEWBAG_MENSAJE_ERROR] = MSG_ERROR_PROVINCIA_INVALIDA_PARAM;
@@ -1139,7 +1137,7 @@ namespace Simone.Controllers
             {
                 _logger.LogError(
                     ex,
-                    "Error al eliminar tarifa de envÌo. VendorId: {VendorId}, Prov: {Prov}, Ciudad: {Ciudad}",
+                    "Error al eliminar tarifa de env√≠o. VendorId: {VendorId}, Prov: {Prov}, Ciudad: {Ciudad}",
                     vendorId,
                     provincia,
                     ciudad ?? "null");
@@ -1237,7 +1235,7 @@ namespace Simone.Controllers
                     "Cargando reportes. VendorId: {VendorId}",
                     vendorId);
 
-                // Total por venta SOLO considerando Ìtems del vendedor
+                // Total por venta SOLO considerando √≠tems del vendedor
                 var agregados = await _context.DetalleVentas
                     .AsNoTracking()
                     .Where(dv => dv.Producto != null && dv.Producto.VendedorID == vendorId)
@@ -1444,7 +1442,7 @@ namespace Simone.Controllers
                 if (!tieneProductos)
                 {
                     _logger.LogWarning(
-                        "Vendedor intentÛ marcar venta sin sus productos. VentaId: {VentaId}, VendorId: {VendorId}",
+                        "Vendedor intent√≥ marcar venta sin sus productos. VentaId: {VentaId}, VendorId: {VendorId}",
                         id,
                         vendorId);
 
@@ -1514,19 +1512,19 @@ namespace Simone.Controllers
                 if (ventaId <= 0 || string.IsNullOrWhiteSpace(motivo))
                 {
                     _logger.LogWarning(
-                        "Datos inv·lidos para reportar venta. VentaId: {VentaId}, Motivo: {Motivo}",
+                        "Datos inv√°lidos para reportar venta. VentaId: {VentaId}, Motivo: {Motivo}",
                         ventaId,
                         motivo ?? "null");
 
                     if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                        return Json(new { ok = false, error = "Datos inv·lidos." });
+                        return Json(new { ok = false, error = "Datos inv√°lidos." });
 
-                    TempData[VIEWBAG_MENSAJE_ERROR] = "Datos inv·lidos.";
+                    TempData[VIEWBAG_MENSAJE_ERROR] = "Datos inv√°lidos.";
                     return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
                 }
 
                 _logger.LogInformation(
-                    "Vendedor iniciando reversiÛn de venta. VentaId: {VentaId}, VendorId: {VendorId}, Motivo: {Motivo}",
+                    "Vendedor iniciando reversi√≥n de venta. VentaId: {VentaId}, VendorId: {VendorId}, Motivo: {Motivo}",
                     ventaId,
                     vendorId,
                     motivo);
@@ -1555,7 +1553,7 @@ namespace Simone.Controllers
                 if (misDetalles.Count == 0)
                 {
                     _logger.LogWarning(
-                        "Vendedor intentÛ revertir venta sin sus productos. VentaId: {VentaId}, VendorId: {VendorId}",
+                        "Vendedor intent√≥ revertir venta sin sus productos. VentaId: {VentaId}, VendorId: {VendorId}",
                         ventaId,
                         vendorId);
 
@@ -1574,9 +1572,9 @@ namespace Simone.Controllers
                         ventaId);
 
                     if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                        return Json(new { ok = false, error = "La venta ya est· cancelada." });
+                        return Json(new { ok = false, error = "La venta ya est√° cancelada." });
 
-                    TempData[VIEWBAG_MENSAJE_ERROR] = "La venta ya est· cancelada.";
+                    TempData[VIEWBAG_MENSAJE_ERROR] = "La venta ya est√° cancelada.";
                     return RedirectToAction(nameof(Reportes), new { vId = (User.IsInRole(ROL_ADMINISTRADOR) ? vendorId : null) });
                 }
 
@@ -1731,6 +1729,8 @@ namespace Simone.Controllers
                         .ThenInclude(e => e!.Cliente)
                     .Include(sp => sp.Envio)
                         .ThenInclude(e => e!.Hub)
+                    .Include(sp => sp.Envio)
+                        .ThenInclude(e => e!.Venta)
                     .Include(sp => sp.Items)
                         .ThenInclude(i => i.Producto)
                     .Include(sp => sp.Historial.OrderByDescending(h => h.FechaCambio))
@@ -1822,7 +1822,7 @@ namespace Simone.Controllers
 
                 await _context.SaveChangesAsync(ct);
 
-                _logger.LogInformation("Vendedor cambiÛ estado de SubPedido. SubPedidoId: {SubPedidoId}, De: {Anterior}, A: {Nuevo}, VendedorId: {VendedorId}",
+                _logger.LogInformation("Vendedor cambi√≥ estado de SubPedido. SubPedidoId: {SubPedidoId}, De: {Anterior}, A: {Nuevo}, VendedorId: {VendedorId}",
                     subPedidoId, estadoAnterior, nuevoEstado, vendedorId);
 
                 TempData["MensajeExito"] = $"Estado actualizado a '{nuevoEstado}'.";
@@ -1839,7 +1839,7 @@ namespace Simone.Controllers
 
         /// <summary>
         /// POST: /Vendedor/MarcarListoParaHub
-        /// AcciÛn r·pida para marcar como Listo para enviar al Hub
+        /// Acci√≥n r√°pida para marcar como Listo para enviar al Hub
         /// </summary>
         [HttpPost("MarcarListoParaHub"), ValidateAntiForgeryToken]
         public async Task<IActionResult> MarcarListoParaHub(int subPedidoId, CancellationToken ct = default)
@@ -1849,7 +1849,7 @@ namespace Simone.Controllers
 
         /// <summary>
         /// POST: /Vendedor/MarcarEnviadoAHub
-        /// AcciÛn r·pida para marcar como enviado al Hub
+        /// Acci√≥n r√°pida para marcar como enviado al Hub
         /// </summary>
         [HttpPost("MarcarEnviadoAHub"), ValidateAntiForgeryToken]
         public async Task<IActionResult> MarcarEnviadoAHub(int subPedidoId, CancellationToken ct = default)

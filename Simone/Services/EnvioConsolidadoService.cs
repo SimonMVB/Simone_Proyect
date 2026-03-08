@@ -180,8 +180,8 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
                     ?? usuarioVendedor?.Email
                     ?? "Tienda";
 
-                // Calcular peso estimado
-                var peso = items.Sum(i => PESO_DEFAULT_KG * i.Cantidad);
+                // Calcular peso estimado usando el peso real del producto
+                var peso = items.Sum(i => (i.Producto?.Peso > 0 ? i.Producto.PesoFacturable : PESO_DEFAULT_KG) * i.Cantidad);
 
                 // Obtener tarifa de envío
                 var tarifa = await ObtenerTarifaEnvio(vendedorEntidad?.VendedorId, vendedorEntidad?.AlianzaId, provinciaEnvio, ciudadEnvio, ct);
@@ -228,24 +228,30 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
                 envio.EnvioId, envio.Codigo);
 
             // 10. Crear SubPedidos
+            var costoEnvioRestante = costoFinal;
+            var subPedidosProcesados = 0;
+
             foreach (var (userId, vendedorEntidadId, nombreTienda, items, costoEnvio, peso) in subPedidosData)
             {
+                subPedidosProcesados++;
+
                 // Si no hay VendedorEntidadId, crear uno automáticamente
                 var vendedorIdParaSubPedido = vendedorEntidadId;
 
                 if (!vendedorIdParaSubPedido.HasValue)
                 {
-                    // Buscar o crear Vendedor para este Usuario
-                    var vendedorExistente = await _context.Vendedores
-                        .FirstOrDefaultAsync(v => v.Nombre == nombreTienda, ct);
+                    // Re-verificar el Usuario en BD (podría haberse actualizado por solicitud concurrente)
+                    var usuarioActual = await _context.Usuarios
+                        .FirstOrDefaultAsync(u => u.Id == userId, ct);
 
-                    if (vendedorExistente != null)
+                    if (usuarioActual?.VendedorId.HasValue == true)
                     {
-                        vendedorIdParaSubPedido = vendedorExistente.VendedorId;
+                        // Ya tiene Vendedor asignado (otro proceso lo creó concurrentemente)
+                        vendedorIdParaSubPedido = usuarioActual.VendedorId;
                     }
                     else
                     {
-                        // Crear nuevo Vendedor
+                        // Crear nuevo Vendedor vinculado al UserId (no búsqueda por nombre)
                         var nuevoVendedor = new Vendedor
                         {
                             Nombre = nombreTienda,
@@ -256,18 +262,33 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
                         await _context.SaveChangesAsync(ct);
                         vendedorIdParaSubPedido = nuevoVendedor.VendedorId;
 
-                        // Actualizar Usuario con el nuevo VendedorId
-                        var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == userId, ct);
-                        if (usuario != null)
+                        // Vincular el nuevo VendedorId al Usuario
+                        if (usuarioActual != null)
                         {
-                            usuario.VendedorId = nuevoVendedor.VendedorId;
+                            usuarioActual.VendedorId = nuevoVendedor.VendedorId;
+                            // El SaveChanges al final del bucle persistirá este cambio
                         }
+
+                        _logger.LogInformation(
+                            "Vendedor creado automáticamente para usuario. UserId: {UserId}, VendedorId: {VendedorId}",
+                            userId, nuevoVendedor.VendedorId);
                     }
                 }
 
                 var subtotal = items.Sum(i => i.PrecioUnitario * i.Cantidad);
-                var proporcion = costoTotal > 0 ? costoEnvio / costoTotal : 0;
-                var costoEnvioProporcional = costoFinal * proporcion;
+
+                // Distribuir costo proporcional evitando acumulación de redondeo
+                // El último subpedido recibe el resto exacto para garantizar que la suma = costoFinal
+                decimal costoEnvioProporcional;
+                if (subPedidosProcesados == subPedidosData.Count)
+                {
+                    costoEnvioProporcional = costoEnvioRestante;
+                }
+                else
+                {
+                    costoEnvioProporcional = Math.Round(costoFinal * (costoTotal > 0 ? costoEnvio / costoTotal : 0m), 2);
+                    costoEnvioRestante -= costoEnvioProporcional;
+                }
 
                 var subPedido = new SubPedido
                 {
@@ -277,6 +298,7 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
                     Estado = "Pendiente",
                     Subtotal = subtotal,
                     CostoEnvioProporcional = costoEnvioProporcional,
+                    Total = subtotal + costoEnvioProporcional,
                     PesoEstimadoKg = peso,
                     FechaCreacion = DateTime.UtcNow
                 };
@@ -289,17 +311,22 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
                 {
                     var producto = detalle.Producto!;
 
+                    var pesoUnitarioKg = producto.Peso > 0 ? producto.PesoFacturable : PESO_DEFAULT_KG;
                     var subPedidoItem = new SubPedidoItem
                     {
                         SubPedidoId = subPedido.SubPedidoId,
                         ProductoId = detalle.ProductoID,
+                        VarianteId = detalle.ProductoVarianteID,
                         NombreProducto = producto.Nombre,
-                        SKU = $"SKU-{producto.ProductoID}",
+                        SKU = detalle.Variante?.SKU ?? $"SKU-{producto.ProductoID}",
                         Cantidad = detalle.Cantidad,
                         PrecioUnitario = detalle.PrecioUnitario,
-                        Color = detalle.Variante?.Color,
-                        Talla = detalle.Variante?.Talla,
-                        ImagenPath = producto.ImagenPath
+                        Subtotal = detalle.PrecioUnitario * detalle.Cantidad,
+                        Color = detalle.Variante?.Color ?? producto.Color,
+                        Talla = detalle.Variante?.Talla ?? producto.Talla,
+                        ImagenPath = producto.ImagenPrincipalPath,
+                        PesoUnitarioKg = pesoUnitarioKg,
+                        PesoTotalKg = pesoUnitarioKg * detalle.Cantidad
                     };
 
                     _context.SubPedidoItems.Add(subPedidoItem);
@@ -413,7 +440,8 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
                     ?? usuarioVendedor?.Email
                     ?? "Tienda";
 
-                var peso = items.Sum(i => PESO_DEFAULT_KG * i.Cantidad);
+                // Usar peso real del producto para cálculo preciso
+                var peso = items.Sum(i => (i.Producto?.Peso > 0 ? i.Producto.PesoFacturable : PESO_DEFAULT_KG) * i.Cantidad);
                 var tarifa = await ObtenerTarifaEnvio(vendedorEntidad?.VendedorId, vendedorEntidad?.AlianzaId, provincia, ciudad, ct);
                 var costoIndividual = CalcularCostoEnvio(tarifa, peso);
 
@@ -441,11 +469,20 @@ public class EnvioConsolidadoService : IEnvioConsolidadoService
 
             var costoFinal = costoTotal - descuento;
 
-            // Calcular costo proporcional
-            foreach (var d in detalle)
+            // Calcular costo proporcional evitando acumulación de redondeo
+            var costoFinalRestante = costoFinal;
+            for (var idx = 0; idx < detalle.Count; idx++)
             {
-                var proporcion = costoTotal > 0 ? d.CostoIndividual / costoTotal : 0;
-                d.CostoProporcional = costoFinal * proporcion;
+                var d = detalle[idx];
+                if (idx == detalle.Count - 1)
+                {
+                    d.CostoProporcional = costoFinalRestante; // Último: recibe el resto exacto
+                }
+                else
+                {
+                    d.CostoProporcional = Math.Round(costoFinal * (costoTotal > 0 ? d.CostoIndividual / costoTotal : 0m), 2);
+                    costoFinalRestante -= d.CostoProporcional;
+                }
             }
 
             // Obtener Hub

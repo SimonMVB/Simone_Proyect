@@ -22,17 +22,20 @@ namespace Simone.Controllers
         private readonly ILogger<AdminBancosController> _logger;
         private readonly IWebHostEnvironment _environment;
         private readonly IMemoryCache _cache;
+        private readonly IFileStorageService _fileStorage;
 
         public AdminBancosController(
             IBancosConfigService bancosService,
             ILogger<AdminBancosController> logger,
             IWebHostEnvironment environment,
-            IMemoryCache cache)
+            IMemoryCache cache,
+            IFileStorageService fileStorage)
         {
             _bancosService = bancosService ?? throw new ArgumentNullException(nameof(bancosService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _environment = environment ?? throw new ArgumentNullException(nameof(environment));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
         }
 
         #endregion
@@ -150,7 +153,7 @@ namespace Simone.Controllers
 
             try
             {
-                var fullPath = Path.Combine(_environment.WebRootPath, logoPath.TrimStart('/'));
+                var fullPath = Path.Combine(_fileStorage.RutaBase, logoPath.TrimStart('/'));
 
                 if (!System.IO.File.Exists(fullPath))
                 {

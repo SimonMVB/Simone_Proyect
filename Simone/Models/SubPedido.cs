@@ -49,6 +49,7 @@ namespace Simone.Models
         public DateTime? FechaListo { get; set; }
         public DateTime? FechaEnvioHub { get; set; }
         public DateTime? FechaRecepcionHub { get; set; }
+        public DateTime? FechaEntrega { get; set; }
 
         // -------- Notas --------
         [StringLength(500)]
@@ -164,6 +165,9 @@ namespace Simone.Models
                     break;
                 case EstadosSubPedido.EnHub:
                     FechaRecepcionHub = DateTime.UtcNow;
+                    break;
+                case EstadosSubPedido.Entregado:
+                    FechaEntrega = DateTime.UtcNow;
                     break;
             }
 

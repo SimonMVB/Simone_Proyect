@@ -11,26 +11,26 @@ namespace Simone.Models
         public string NombreCliente { get; set; }
 
         [Required(ErrorMessage = "El correo es obligatorio.")]
-        [EmailAddress(ErrorMessage = "Debe ser un correo v醠ido.")]
-        [Display(Name = "Correo Electr髇ico")]
+        [EmailAddress(ErrorMessage = "Debe ser un correo v谩lido.")]
+        [Display(Name = "Correo Electr贸nico")]
         public string EmailCliente { get; set; }
 
-        [Required(ErrorMessage = "La direcci髇 es obligatoria.")]
-        [Display(Name = "Direcci髇 de Entrega")]
+        [Required(ErrorMessage = "La direcci贸n es obligatoria.")]
+        [Display(Name = "Direcci贸n de Entrega")]
         public string Direccion { get; set; }
 
-        [Required(ErrorMessage = "Debe seleccionar un m閠odo de pago.")]
-        [Display(Name = "M閠odo de Pago")]
+        [Required(ErrorMessage = "Debe seleccionar un m茅todo de pago.")]
+        [Display(Name = "M茅todo de Pago")]
         public string MetodoPago { get; set; }
 
         [Display(Name = "Total a Pagar")]
         public decimal Total { get; set; }
 
         // Detalles de Tarjeta
-        [Display(Name = "N鷐ero de Tarjeta")]
+        [Display(Name = "N煤mero de Tarjeta")]
         public string NumeroTarjeta { get; set; }
 
-        [Display(Name = "Expiraci髇")]
+        [Display(Name = "Expiraci贸n")]
         public string Expiracion { get; set; }
 
         [Display(Name = "CVV")]
@@ -43,7 +43,7 @@ namespace Simone.Models
         [Display(Name = "Banco")]
         public string Banco { get; set; }
 
-        [Display(Name = "Comprobante de Dep髎ito")]
+        [Display(Name = "Comprobante de Dep贸sito")]
         public IFormFile ComprobanteDeposito { get; set; }
 
         // Lista de productos del carrito (puedes definir tu modelo de ItemCarrito)

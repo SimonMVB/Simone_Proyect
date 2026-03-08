@@ -12,15 +12,15 @@ using Simone.Data;
 namespace Simone.Migrations
 {
     [DbContext(typeof(TiendaDbContext))]
-    [Migration("20260302195313_modificacion_Producto")]
-    partial class modificacion_Producto
+    [Migration("20260307055456_posible")]
+    partial class posible
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.8")
+                .HasAnnotation("ProductVersion", "8.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -2302,6 +2302,9 @@ namespace Simone.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEntrega")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaEnvioHub")

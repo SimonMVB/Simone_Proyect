@@ -461,6 +461,16 @@
                                             <i class="fas fa-link-slash"></i>
                                         </button>
                                     </form>
+
+                                    <!-- ✅ Editar perfil público de la tienda -->
+                                    <a asp-controller="Panel"
+                                       asp-action="PerfilTienda"
+                                       asp-route-id="@usuario.VendedorId"
+                                       class="action-btn"
+                                       title="Editar perfil público de la tienda"
+                                       style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;background:#fce4f3;color:#e91e8c;text-decoration:none;font-size:.8rem;">
+                                        <i class="fas fa-store"></i>
+                                    </a>
                                 }
                             </div>
                         </td>

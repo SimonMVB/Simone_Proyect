@@ -16,7 +16,7 @@ namespace Simone.ViewModels.Devoluciones
 
         public string? ReturnUrl { get; set; }
 
-        // Líneas de la venta con tope de devolución
+        // LÃ­neas de la venta con tope de devoluciÃ³n
         public List<LineaVM> Lineas { get; set; } = new();
 
         public class LineaVM

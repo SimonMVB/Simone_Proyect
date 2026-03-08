@@ -228,6 +228,15 @@ namespace Simone.Controllers
 
             var resultado = await _svc.GetVentasAsync(filtro);
 
+            // Escapa un valor CSV: comillas, y neutraliza prefijos de fórmula (CSV injection)
+            static string EscapeCsv(string? value)
+            {
+                if (string.IsNullOrEmpty(value)) return "\"\"";
+                if (value[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
+                    value = "'" + value;
+                return $"\"{value.Replace("\"", "\"\"")}\"";
+            }
+
             var csv = new System.Text.StringBuilder();
             csv.AppendLine("VentaID,Cliente,Email,Fecha,Estado,MetodoPago,Items,Total,Vendedores");
 
@@ -235,14 +244,14 @@ namespace Simone.Controllers
             {
                 csv.AppendLine(string.Join(",",
                     v.VentaId,
-                    $"\"{v.NombreCliente}\"",
-                    $"\"{v.EmailCliente}\"",
-                    v.FechaVenta.ToString("yyyy-MM-dd HH:mm"),
-                    v.Estado,
-                    v.MetodoPago,
+                    EscapeCsv(v.NombreCliente),
+                    EscapeCsv(v.EmailCliente),
+                    EscapeCsv(v.FechaVenta.ToString("yyyy-MM-dd HH:mm")),
+                    EscapeCsv(v.Estado),
+                    EscapeCsv(v.MetodoPago),
                     v.CantidadItems,
                     v.Total.ToString("F2"),
-                    $"\"{string.Join("|", v.Vendedores)}\""
+                    EscapeCsv(string.Join("|", v.Vendedores))
                 ));
             }
 

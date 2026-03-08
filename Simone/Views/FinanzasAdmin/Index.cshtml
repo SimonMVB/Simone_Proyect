@@ -49,24 +49,22 @@
             --ease: cubic-bezier(.4,0,.2,1);
         }
 
-        *, *::before, *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Space Grotesk', sans-serif;
-            background: var(--paper);
-            color: var(--ink);
-            font-size: 14px;
-        }
-
         /* ── LAYOUT ── */
         .fa-wrap {
             max-width: 1400px;
             margin: 0 auto;
             padding: 2rem 1.5rem 4rem;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 14px;
+            color: var(--ink);
+            background: var(--paper);
+            min-height: 60vh;
+        }
+
+        .fa-wrap *,
+        .fa-wrap *::before,
+        .fa-wrap *::after {
+            box-sizing: border-box;
         }
 
         /* ── TOP BAR ── */

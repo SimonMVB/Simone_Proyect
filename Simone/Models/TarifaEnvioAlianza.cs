@@ -1,13 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     /// <summary>
     /// Tarifa de envío por destino (provincia/ciudad).
-    /// Puede pertenecer a una Alianza o a un Vendedor individual.
+    /// Puede pertenecer a una Alianza O a un Vendedor individual (nunca ambos, nunca ninguno).
     /// </summary>
-    public class TarifaEnvioAlianza
+    public class TarifaEnvioAlianza : IValidatableObject
     {
         public int TarifaId { get; set; }
 
@@ -42,5 +43,19 @@ namespace Simone.Models
         public bool EsDeAlianza => AlianzaId.HasValue;
         public bool EsDeVendedor => VendedorId.HasValue;
         public string DestinoCompleto => Ciudad != null ? $"{Ciudad}, {Provincia}" : $"{Provincia} (toda)";
+
+        // -------- Validación XOR: exactamente uno de AlianzaId / VendedorId debe tener valor --------
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (!AlianzaId.HasValue && !VendedorId.HasValue)
+                yield return new ValidationResult(
+                    "La tarifa debe estar asociada a una Alianza o a un Vendedor.",
+                    new[] { nameof(AlianzaId), nameof(VendedorId) });
+
+            if (AlianzaId.HasValue && VendedorId.HasValue)
+                yield return new ValidationResult(
+                    "La tarifa no puede pertenecer simultáneamente a una Alianza y a un Vendedor.",
+                    new[] { nameof(AlianzaId), nameof(VendedorId) });
+        }
     }
 }

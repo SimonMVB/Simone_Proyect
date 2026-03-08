@@ -220,7 +220,7 @@ namespace Simone.Controllers
 
                 // Usar ViewBag para pasar datos adicionales si es necesario
                 ViewBag.TotalOfertas = productosEnOferta.Count;
-                ViewBag.FechaActualizacion = DateTime.Now;
+                ViewBag.FechaActualizacion = DateTime.UtcNow;
 
                 return View(VISTA_OFERTAS);
             }
@@ -271,7 +271,7 @@ namespace Simone.Controllers
         /// </summary>
         /// <returns>Vista de Nosotros</returns>
         [HttpGet]
-        public IActionResult Nosotros()
+        public async Task<IActionResult> Nosotros(CancellationToken ct = default)
         {
             try
             {
@@ -281,7 +281,7 @@ namespace Simone.Controllers
 
                 // Aquí podrías cargar información de la empresa desde BD o config
                 ViewBag.AnioFundacion = 2020;
-                ViewBag.CantidadProductos = _context.Productos.Count();
+                ViewBag.CantidadProductos = await _context.Productos.CountAsync(ct);
 
                 return View();
             }

@@ -32,10 +32,11 @@ namespace Simone.Controllers
         private readonly ProductosService _productos;
         private readonly CategoriasService _categorias;
         private readonly SubcategoriasService _subcategorias;
-        private readonly CarritoService _carrito;
+        private readonly ICarritoService _carrito;
         private readonly UserManager<Usuario> _userManager;
         private readonly ILogger<ComprasController> _logger;
         private readonly IWebHostEnvironment _env;
+        private readonly IFileStorageService _fileStorage;
         private readonly ResolverPagos _pagosResolver;
         private readonly IBancosConfigService _bancosSvc;
         private readonly EnviosCarritoService _enviosCarrito;
@@ -94,9 +95,10 @@ namespace Simone.Controllers
             ProductosService productos,
             CategoriasService categorias,
             SubcategoriasService subcategorias,
-            CarritoService carrito,
+            ICarritoService carrito,
             ILogger<ComprasController> logger,
             IWebHostEnvironment env,
+            IFileStorageService fileStorage,
             ResolverPagos pagosResolver,
             IBancosConfigService bancosSvc,
             EnviosCarritoService enviosCarrito,
@@ -110,6 +112,7 @@ namespace Simone.Controllers
             _userManager = user ?? throw new ArgumentNullException(nameof(user));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
             _pagosResolver = pagosResolver ?? throw new ArgumentNullException(nameof(pagosResolver));
             _bancosSvc = bancosSvc ?? throw new ArgumentNullException(nameof(bancosSvc));
             _enviosCarrito = enviosCarrito ?? throw new ArgumentNullException(nameof(enviosCarrito));
@@ -188,16 +191,16 @@ namespace Simone.Controllers
         #region Helpers - Archivos
 
         /// <summary>
-        /// Obtiene ruta absoluta de la carpeta de uploads
+        /// Obtiene ruta absoluta de la carpeta de uploads (fuera del proyecto)
         /// </summary>
         private string UploadsFolderAbs() =>
-            Path.Combine(_env.WebRootPath, FOLDER_UPLOADS, FOLDER_COMPROBANTES);
+            Path.Combine(_fileStorage.RutaBase, FOLDER_UPLOADS, FOLDER_COMPROBANTES);
 
         /// <summary>
-        /// Obtiene ruta absoluta de la carpeta de un producto
+        /// Obtiene ruta absoluta de la carpeta de un producto (fuera del proyecto)
         /// </summary>
         private string ProductFolderAbs(int productId) =>
-            Path.Combine(_env.WebRootPath, FOLDER_IMAGES, FOLDER_PRODUCTOS, productId.ToString());
+            Path.Combine(_fileStorage.RutaBase, FOLDER_IMAGES, FOLDER_PRODUCTOS, productId.ToString());
 
         /// <summary>
         /// Valida si el archivo tiene un MIME type permitido
@@ -1435,15 +1438,17 @@ namespace Simone.Controllers
                     BancoSeleccionado);
 
                 // Procesar carrito
-                var ok = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
+                var (ok, procesarError) = await _carrito.ProcessCartDetails(carrito.CarritoID, user);
                 if (!ok)
                 {
                     _logger.LogError(
-                        "Falló procesar carrito. UserId: {UserId}, CarritoId: {CarritoId}",
+                        "Falló procesar carrito. UserId: {UserId}, CarritoId: {CarritoId}, Error: {Error}",
                         user.Id,
-                        carrito.CarritoID);
+                        carrito.CarritoID,
+                        procesarError);
 
-                    TempData["MensajeError"] = "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
+                    TempData["MensajeError"] = procesarError
+                        ?? "No se pudo completar la compra. Revisa tu carrito e intenta nuevamente.";
                     return RedirectToAction(nameof(Resumen));
                 }
 
@@ -1596,8 +1601,52 @@ namespace Simone.Controllers
                     if (venta != null)
                     {
                         var subtotal = detalles.Sum(c => c.Precio * c.Cantidad);
-                        var cupon = HttpContext.Session.GetObjectFromJson<Promocion>(SESSION_KEY_CUPON);
-                        decimal descuento = cupon?.Descuento ?? 0m;
+
+                        // ── Re-validar cupón desde BD (no confiar en el objeto de sesión) ──
+                        decimal descuento = 0m;
+                        var cuponSesion = HttpContext.Session.GetObjectFromJson<Promocion>(SESSION_KEY_CUPON);
+                        if (cuponSesion != null)
+                        {
+                            var ahora = DateTime.UtcNow;
+                            var cuponDb = await _context.Promociones
+                                .FirstOrDefaultAsync(p => p.PromocionID == cuponSesion.PromocionID, ct);
+
+                            var yaCanjado = cuponDb != null && await _context.CuponesUsados
+                                .AnyAsync(cu => cu.PromocionID == cuponDb.PromocionID && cu.UsuarioId == user.Id, ct);
+
+                            bool cuponValido = cuponDb != null
+                                && (cuponDb.FechaInicio == null || cuponDb.FechaInicio <= ahora)
+                                && (cuponDb.FechaFin == null || cuponDb.FechaFin >= ahora)
+                                && !yaCanjado;
+
+                            if (cuponValido)
+                            {
+                                descuento = cuponDb!.Descuento;
+
+                                // Registrar el cupón como usado para este usuario
+                                await _context.CuponesUsados.AddAsync(new CuponesUsados
+                                {
+                                    UsuarioId = user.Id,
+                                    PromocionID = cuponDb.PromocionID,
+                                    FechaUso = ahora
+                                }, ct);
+
+                                _logger.LogInformation(
+                                    "Cupón aplicado. PromocionId: {PromocionId}, Descuento: {Descuento:C}, UserId: {UserId}",
+                                    cuponDb.PromocionID, descuento, user.Id);
+                            }
+                            else
+                            {
+                                _logger.LogWarning(
+                                    "Cupón de sesión rechazado al confirmar compra. PromocionId: {PromocionId}, " +
+                                    "Existe: {Existe}, YaCanjado: {YaCanjado}",
+                                    cuponSesion.PromocionID, cuponDb != null, yaCanjado);
+
+                                // Limpiar cupón inválido de la sesión
+                                HttpContext.Session.Remove(SESSION_KEY_CUPON);
+                            }
+                        }
+
                         decimal baseTotal = Math.Max(0m, subtotal - descuento);
 
                         venta.Total = baseTotal + envioTotal;
@@ -1944,7 +1993,8 @@ namespace Simone.Controllers
                 await using var fs = new FileStream(fileAbs, FileMode.Create, FileAccess.Write, FileShare.None);
                 await archivo.CopyToAsync(fs, ct);
 
-                var rel = Path.GetRelativePath(_env.WebRootPath, fileAbs).Replace("\\", "/");
+                // Construir URL relativa tomando como base el RutaBase del servicio de archivos
+                var rel = Path.GetRelativePath(_fileStorage.RutaBase, fileAbs).Replace("\\", "/");
                 return (true, "/" + rel.TrimStart('/'), null);
             }
             catch (Exception ex)

@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
+using Simone.Services;
 using Simone.ViewModels.Reportes;
 
 namespace Simone.Controllers
@@ -31,6 +32,7 @@ namespace Simone.Controllers
         private readonly TiendaDbContext _context;
         private readonly IWebHostEnvironment _env;
         private readonly ILogger<ReportesController> _logger;
+        private readonly IFileStorageService _fileStorage;
 
         #endregion
 
@@ -40,7 +42,6 @@ namespace Simone.Controllers
         private const string ROL_ADMINISTRADOR = "Administrador";
 
         // Rutas
-        private const string FOLDER_WWWROOT = "wwwroot";
         private const string FOLDER_UPLOADS = "uploads";
         private const string FOLDER_COMPROBANTES = "comprobantes";
         private const string PATTERN_VENTA_FILE = "venta-{0}.*";
@@ -113,11 +114,13 @@ namespace Simone.Controllers
         public ReportesController(
             TiendaDbContext context,
             IWebHostEnvironment env,
-            ILogger<ReportesController> logger)
+            ILogger<ReportesController> logger,
+            IFileStorageService fileStorage)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _env = env ?? throw new ArgumentNullException(nameof(env));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
         }
 
         #endregion
@@ -125,16 +128,10 @@ namespace Simone.Controllers
         #region Helpers - Rutas
 
         /// <summary>
-        /// Obtiene la ruta absoluta de wwwroot
-        /// </summary>
-        private string WebRootAbs() =>
-            _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), FOLDER_WWWROOT);
-
-        /// <summary>
-        /// Obtiene la ruta absoluta de la carpeta de comprobantes
+        /// Obtiene la ruta absoluta de la carpeta de comprobantes (en almacenamiento externo)
         /// </summary>
         private string UploadsFolderAbs() =>
-            Path.Combine(WebRootAbs(), FOLDER_UPLOADS, FOLDER_COMPROBANTES);
+            Path.Combine(_fileStorage.RutaBase, FOLDER_UPLOADS, FOLDER_COMPROBANTES);
 
         #endregion
 
@@ -187,8 +184,7 @@ namespace Simone.Controllers
                     return null;
                 }
 
-                var webroot = WebRootAbs();
-                var rel = Path.GetRelativePath(webroot, files[0]).Replace("\\", "/");
+                var rel = Path.GetRelativePath(_fileStorage.RutaBase, files[0]).Replace("\\", "/");
                 var url = NormalizarCompUrl("/" + rel.TrimStart('/'));
 
                 _logger.LogInformation(
@@ -663,6 +659,33 @@ namespace Simone.Controllers
                 }
 
                 venta.Estado = ESTADO_ENVIADO;
+
+                // Sincronizar SubPedidos relacionados: si están en Pendiente/Preparando/Listo, avanzarlos a EnCaminoHub
+                var envio = await _context.EnviosConsolidados
+                    .Include(e => e.SubPedidos)
+                    .FirstOrDefaultAsync(e => e.VentaId == id, ct);
+
+                if (envio != null)
+                {
+                    var estadosAvanzables = new[] { "Pendiente", "Preparando", "Listo" };
+                    foreach (var sp in envio.SubPedidos.Where(s => estadosAvanzables.Contains(s.Estado)))
+                    {
+                        var estadoAnterior = sp.Estado;
+                        sp.Estado = "EnCaminoHub";
+                        sp.FechaEnvioHub ??= DateTime.UtcNow;
+                        _context.SubPedidoHistorial.Add(new SubPedidoHistorial
+                        {
+                            SubPedidoId = sp.SubPedidoId,
+                            EstadoAnterior = estadoAnterior,
+                            EstadoNuevo = "EnCaminoHub",
+                            Comentario = "Marcado como enviado desde Reportes",
+                            TipoUsuario = "Vendedor",
+                            UsuarioId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                            FechaCambio = DateTime.UtcNow
+                        });
+                    }
+                }
+
                 await _context.SaveChangesAsync(ct);
 
                 _logger.LogInformation(

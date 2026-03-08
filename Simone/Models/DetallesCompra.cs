@@ -14,7 +14,9 @@ namespace Simone.Models
         public int CompraID { get; set; }  // Clave foránea con Compras
         public int ProductoID { get; set; }  // Clave foránea con Productos
         public int Cantidad { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal PrecioUnitario { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
         public decimal? Subtotal { get; set; }
 
         // Relación con Compras

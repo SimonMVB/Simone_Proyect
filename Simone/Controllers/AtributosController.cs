@@ -353,6 +353,7 @@ namespace Simone.Controllers
         /// Cambiar orden de atributo (AJAX)
         /// </summary>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CambiarOrden(int id, int orden)
         {
             try
@@ -372,6 +373,7 @@ namespace Simone.Controllers
         /// Duplicar atributo (AJAX)
         /// </summary>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Duplicar(int id)
         {
             try
@@ -402,6 +404,7 @@ namespace Simone.Controllers
         /// Activar/Desactivar atributo (AJAX)
         /// </summary>
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleActivo(int id)
         {
             try

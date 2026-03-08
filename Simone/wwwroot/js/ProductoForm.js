@@ -1126,6 +1126,10 @@
             if (!form) return;
 
             form.addEventListener('submit', (e) => {
+                // Si jQuery Unobtrusive Validation ya bloqueó el envío (e.defaultPrevented === true),
+                // no deshabilitamos el botón — solo salimos sin hacer nada.
+                if (e.defaultPrevented) return;
+
                 if (!this.prepareSubmit()) {
                     e.preventDefault();
                     State.isSubmitting = false;
@@ -1135,12 +1139,24 @@
         },
 
         prepareSubmit() {
-            // Validar
+            // Capa 1: validación nativa HTML5 (el form tiene novalidate, pero
+            // checkValidity() sigue funcionando y atrapa campos required vacíos)
+            const form = Helpers.$('productoForm');
+            if (form && !form.checkValidity()) {
+                // Marcar visualmente los campos inválidos
+                form.querySelectorAll(':invalid').forEach(field => {
+                    field.classList.add('input-has-error', 'error');
+                });
+                Helpers.toast('Por favor completa todos los campos requeridos', 'error');
+                return false;
+            }
+
+            // Capa 2: validaciones personalizadas (precios, imágenes, variantes)
             if (!ValidationModule.validateForm()) {
                 return false;
             }
 
-            // Preparar envío
+            // Todas las validaciones pasaron — seguro desactivar el botón
             State.isSubmitting = true;
             this.disableSubmitButton();
 

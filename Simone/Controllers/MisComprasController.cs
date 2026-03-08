@@ -14,6 +14,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Simone.Data;
 using Simone.Models;
+using Simone.Services;
 
 namespace Simone.Controllers
 {
@@ -31,6 +32,7 @@ namespace Simone.Controllers
         private readonly TiendaDbContext _context;
         private readonly UserManager<Usuario> _userManager;
         private readonly IWebHostEnvironment _env;
+        private readonly IFileStorageService _fileStorage;
         private readonly ILogger<MisComprasController> _logger;
         private readonly IMemoryCache _cache;
 
@@ -96,12 +98,14 @@ namespace Simone.Controllers
             TiendaDbContext context,
             UserManager<Usuario> userManager,
             IWebHostEnvironment env,
+            IFileStorageService fileStorage,
             ILogger<MisComprasController> logger,
             IMemoryCache cache)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _userManager = userManager ?? throw new ArgumentNullException(nameof(userManager));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+            _fileStorage = fileStorage ?? throw new ArgumentNullException(nameof(fileStorage));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         }
@@ -323,16 +327,10 @@ namespace Simone.Controllers
         #region Helpers - Rutas
 
         /// <summary>
-        /// Obtiene la ruta absoluta de wwwroot
-        /// </summary>
-        private string WebRootAbs() =>
-            _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), FOLDER_WWWROOT);
-
-        /// <summary>
-        /// Obtiene la ruta absoluta de la carpeta de comprobantes
+        /// Obtiene la ruta absoluta de la carpeta de comprobantes (carpeta externa)
         /// </summary>
         private string UploadsFolderAbs() =>
-            Path.Combine(WebRootAbs(), FOLDER_UPLOADS, FOLDER_COMPROBANTES);
+            Path.Combine(_fileStorage.RutaBase, FOLDER_UPLOADS, FOLDER_COMPROBANTES);
 
         /// <summary>
         /// Normaliza una URL para que sea servible en el navegador
@@ -405,7 +403,7 @@ namespace Simone.Controllers
                     return null;
                 }
 
-                var rel = Path.GetRelativePath(WebRootAbs(), files[0])
+                var rel = Path.GetRelativePath(_fileStorage.RutaBase, files[0])
                     .Replace("\\", "/");
 
                 var url = NormalizarCompUrl(URL_PREFIX_SLASH + rel.TrimStart('/'));
@@ -675,6 +673,7 @@ namespace Simone.Controllers
         /// TEMPORAL: Remover antes de producción
         /// </summary>
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public IActionResult DiagnosticoMeta(int id)
         {
             try
@@ -727,10 +726,10 @@ namespace Simone.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error en DiagnosticoMeta para VentaId: {Id}", id);
                 return Json(new
                 {
-                    Error = ex.Message,
-                    StackTrace = ex.StackTrace
+                    Error = "Error al obtener diagnóstico. Ver logs del servidor para detalles."
                 });
             }
         }

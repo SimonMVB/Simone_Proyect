@@ -11,6 +11,7 @@ namespace Simone.Models
 
         public int EmpleadoID { get; set; }  // Clave foránea con Empleados
         public string Concepto { get; set; }  // Descripción del gasto
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Monto { get; set; }  // Monto del gasto
         public DateTime FechaGasto { get; set; }  // Fecha en que se realizó el gasto
         public string? Observaciones { get; set; }  // Puede ser nulo

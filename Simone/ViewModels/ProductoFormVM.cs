@@ -8,7 +8,7 @@ namespace Simone.ViewModels
     {
         public Producto Producto { get; set; } = new();
 
-        // Nuevas im·genes subidas desde el form
+        // Nuevas im√°genes subidas desde el form
         public IFormFile[] NuevasImagenes { get; set; } = System.Array.Empty<IFormFile>();
 
         // Id de imagen marcada como principal (radio en la vista)
@@ -17,7 +17,7 @@ namespace Simone.ViewModels
         // Reordenamiento (id -> orden)
         public Dictionary<int, int> OrdenPorId { get; set; } = new();
 
-        // Im·genes existentes a eliminar
+        // Im√°genes existentes a eliminar
         public int[] EliminarImagenIds { get; set; } = System.Array.Empty<int>();
 
         // Variantes en el form

@@ -1,11 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Simone.Models
 {
     /// <summary>
-    /// Representa una promoci髇 o cup髇 que puede ser aplicado por un cliente.
+    /// Representa una promoci贸n o cup贸n que puede ser aplicado por un cliente.
     /// </summary>
     public class Promocion
     {
@@ -13,17 +14,17 @@ namespace Simone.Models
         public int PromocionID { get; set; }
 
         /// <summary>
-        /// C骴igo 鷑ico del cup髇.
+        /// C贸digo 煤nico del cup贸n.
         /// </summary>
-        [Required(ErrorMessage = "El c骴igo del cup髇 es obligatorio.")]
-        [StringLength(50, ErrorMessage = "El c骴igo del cup髇 no debe exceder los 50 caracteres.")]
+        [Required(ErrorMessage = "El c贸digo del cup贸n es obligatorio.")]
+        [StringLength(50, ErrorMessage = "El c贸digo del cup贸n no debe exceder los 50 caracteres.")]
         public string CodigoCupon { get; set; } = null!;
 
         /// <summary>
-        /// Descripci髇 de la promoci髇.
+        /// Descripci贸n de la promoci贸n.
         /// </summary>
-        [Required(ErrorMessage = "La descripci髇 es obligatoria.")]
-        [StringLength(100, ErrorMessage = "La descripci髇 no debe exceder los 100 caracteres.")]
+        [Required(ErrorMessage = "La descripci贸n es obligatoria.")]
+        [StringLength(100, ErrorMessage = "La descripci贸n no debe exceder los 100 caracteres.")]
         public string Descripcion { get; set; } = null!;
 
         /// <summary>
@@ -31,20 +32,21 @@ namespace Simone.Models
         /// </summary>
         [Required(ErrorMessage = "El descuento es obligatorio.")]
         [Range(0.01, double.MaxValue, ErrorMessage = "El descuento debe ser mayor a 0.")]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Descuento { get; set; }
 
         /// <summary>
-        /// Fecha de inicio de validez de la promoci髇.
+        /// Fecha de inicio de validez de la promoci贸n.
         /// </summary>
         public DateTime? FechaInicio { get; set; }
 
         /// <summary>
-        /// Fecha de finalizaci髇 de la promoci髇.
+        /// Fecha de finalizaci贸n de la promoci贸n.
         /// </summary>
         public DateTime? FechaFin { get; set; }
 
         /// <summary>
-        /// Relaci髇 con los cupones usados por clientes.
+        /// Relaci贸n con los cupones usados por clientes.
         /// </summary>
         public virtual ICollection<CuponesUsados> CuponesUsados { get; set; } = new List<CuponesUsados>();
     }
